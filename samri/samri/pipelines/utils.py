@@ -3,6 +3,7 @@
 from __future__ import print_function, division, unicode_literals, absolute_import
 import csv
 import os
+import json
 import pandas as pd
 # PyBIDS 0.6.5 and 0.10.2 compatibility
 try:
@@ -17,200 +18,16 @@ from copy import deepcopy
 from datetime import datetime
 from shutil import copyfile
 
-GENERIC_PHASES = {
-	"f_only_translation":{
-		"transforms":"Translation",
-		"transform_parameters":(0.1,),
-		"number_of_iterations":[2000,1000,500],
-		"metric":"MeanSquares",
-		"metric_weight":1,
-		"radius_or_number_of_bins":32,
-		"sampling_strategy":"Regular",
-		"sampling_percentage":0.8,
-		"convergence_threshold":1.e-16,
-		"convergence_window_size":20,
-		"smoothing_sigmas":[2,1,0],
-		"sigma_units":"vox",
-		"shrink_factors":[4,2,1],
-		"use_estimate_learning_rate_once":False,
-		"use_histogram_matching":True,
-		},
-	"f_translation":{
-		"transforms":"Translation",
-		"transform_parameters":(0.1,),
-		"number_of_iterations":[400,200],
-		"metric":"MI",
-		"metric_weight":1,
-		"radius_or_number_of_bins":64,
-		"sampling_strategy":"Regular",
-		"sampling_percentage":0.8,
-		"convergence_threshold":1.e-8,
-		"convergence_window_size":20,
-		"smoothing_sigmas":[1,0],
-		"sigma_units":"vox",
-		"shrink_factors":[2,1],
-		"use_estimate_learning_rate_once":False,
-		"use_histogram_matching":True,
-		},
-	"s_translation":{
-		"transforms":"Translation",
-		"transform_parameters":(0.1,),
-		"number_of_iterations":[1000,500,500],
-		"metric":"MeanSquares",
-		"metric_weight":1,
-		"radius_or_number_of_bins":32,
-		"sampling_strategy":"Regular",
-		"sampling_percentage":0.3,
-		"convergence_threshold":1.e-16,
-		"convergence_window_size":20,
-		"smoothing_sigmas":[2,1,0],
-		"sigma_units":"vox",
-		"shrink_factors":[8,4,2,1],
-		# "shrink_factors":[4,2,1],
-		"use_estimate_learning_rate_once":False,
-		"use_histogram_matching":False,
-		},
-	"similarity":{
-		"transforms":"Similarity",
-		"transform_parameters":(0.1,),
-		"number_of_iterations":[1000],
-		"metric":"MI",
-		"metric_weight":1,
-		"radius_or_number_of_bins":32,
-		"sampling_strategy":'Regular',
-		"sampling_percentage":0.75,
-		"convergence_threshold":1.e-6,
-		"convergence_window_size":20,
-		"smoothing_sigmas":[0],
-		"sigma_units":"vox",
-		"shrink_factors":[1],
-		"use_estimate_learning_rate_once":False,
-		"use_histogram_matching":True,
-		},
-	"affine":{
-		"transforms":"Affine",
-		"transform_parameters":(0.1,),
-		"number_of_iterations":[1000,500,250,100],
-		"metric":"MI",
-		"metric_weight":1,
-		"radius_or_number_of_bins":32,
-		"sampling_strategy":'Regular',
-		"sampling_percentage":0.25,
-		"convergence_threshold":1.e-6,
-		"convergence_window_size":10,
-		"smoothing_sigmas":[3,2,1,0],
-		"sigma_units":"vox",
-		"shrink_factors":[8,4,2,1],
-		# "shrink_factors":[4,2,1],
-		"use_estimate_learning_rate_once":False,
-		"use_histogram_matching":False,
-		},
-	"syn":{
-		"transforms":"SyN",
-		# "transform_parameters":(0.05, 1.0, 15),
-		"transform_parameters":(0.1, 3.0, 0),
-		# "number_of_iterations":[50],
-		"number_of_iterations":[1000,500,250,100],
-		# "metric":["MI","CC"],
-		#"metric":"MI",
-		"metric":"CC",
-		# "metric_weight":[0.25,0.75],
-		# "metric_weight":[0.5,0.5],
-		"metric_weight":1,
-		# "radius_or_number_of_bins":[32,5],
-		#"radius_or_number_of_bins":16,
-		"radius_or_number_of_bins":4,
-		# "sampling_strategy":['Regular','Regular'],
-		"sampling_strategy":'Regular',
-		# "sampling_percentage":[0.8,0.8],
-		"sampling_percentage":0.8,
-		# "convergence_threshold":1.e-12,
-		"convergence_threshold":1.e-6,
-		"convergence_window_size":10,
-		# "smoothing_sigmas":[0],
-		"smoothing_sigmas":[3,2,1,0],
-		"sigma_units":"vox",
-		# "shrink_factors":[8,4,2,1],
-		"shrink_factors":[4,2,1],
-		"use_estimate_learning_rate_once":False,
-		"use_histogram_matching":False,
-		},
-	"rigid":{
-		"transforms":"Rigid",
-		"transform_parameters":(0.1,),
-		# "number_of_iterations":[3000,3000,3000,3000],
-		"number_of_iterations":[1000,500,250,100],
-		# GC Before
-		"metric":"MI",
-		"metric_weight":1,
-		# "radius_or_number_of_bins":64,
-		"radius_or_number_of_bins":32,
-		"sampling_strategy":"Regular",
-		"sampling_percentage":0.25,
-		"convergence_threshold":1.e-6,
-		# "convergence_window_size":10,
-		"convergence_window_size":10,
-		"smoothing_sigmas":[3,2,1,0],
-		"sigma_units":"vox",
-		"shrink_factors":[8,4,2,1],
-		"use_estimate_learning_rate_once":False,
-		"use_histogram_matching":True,
-		},
-	}
 
-TRANSFORM_PHASES = {
-	"rigid":{
-		"transforms":"Rigid",
-		"transform_parameters":(0.1,),
-		"number_of_iterations":[3000,3000,3000,3000],
-		"metric":"GC",
-		"metric_weight":1,
-		"radius_or_number_of_bins":64,
-		"sampling_strategy":"Regular",
-		"sampling_percentage":0.2,
-		"convergence_threshold":1.e-10,
-		"convergence_window_size":20,
-		"smoothing_sigmas":[3,2,1,0],
-		"sigma_units":"vox",
-		"shrink_factors":[8,4,2,1],
-		"use_estimate_learning_rate_once":False,
-		"use_histogram_matching":True,
-		},
-	"affine":{
-		"transforms":"Affine",
-		"transform_parameters":(0.1,),
-		"number_of_iterations":[500,500,250],
-		"metric":"MI",
-		"metric_weight":1,
-		"radius_or_number_of_bins":16,
-		"sampling_strategy":None,
-		"sampling_percentage":0.3,
-		"convergence_threshold":1.e-16,
-		"convergence_window_size":20,
-		"smoothing_sigmas":[2,1,0],
-		"sigma_units":"vox",
-		"shrink_factors":[4,2,1],
-		"use_estimate_learning_rate_once":False,
-		"use_histogram_matching":True,
-		},
-	"syn":{
-		"transforms":"SyN",
-		"transform_parameters":(0.1, 2.0, 0.2),
-		"number_of_iterations":[500,500,500,250],
-		"metric":"MI",
-		"metric_weight":1,
-		"radius_or_number_of_bins":16,
-		"sampling_strategy":None,
-		"sampling_percentage":0.3,
-		"convergence_threshold":1.e-16,
-		"convergence_window_size":20,
-		"smoothing_sigmas":[3,2,1,0],
-		"sigma_units":"vox",
-		"shrink_factors":[8,4,2,1],
-		"use_estimate_learning_rate_once":False,
-		"use_histogram_matching":True,
-		},
-	}
+with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "parameters_reg.json")) as f:
+	parameter_info = json.load(f)
+GENERIC_PHASES = parameter_info["GENERIC_PHASES"]
+
+    #phases = parameter_info["GENERIC_PHASES"]
+	#phases["f_only_translation"]["transform_parameters"] = tuple(
+	#	phases["f_only_translation"]["transform_parameters"]
+	#)
+
 
 def bids_data_selection(base, structural_match, functional_match, subjects, sessions,
 	verbose=False,
@@ -295,7 +112,17 @@ def bids_data_selection(base, structural_match, functional_match, subjects, sess
 
 	# Unclear in current BIDS specification, we refer to BOLD/CBV as modalities and func/anat as types
 	# Can be removed after Pybids 0.10.2 migration
-	df = df.rename(columns={'modality': 'type', 'type': 'modality'})
+	if 'datatype' in df.columns:           # newer pybids
+	    df = df.rename(columns={'datatype': 'type', 'suffix': 'modality','acquisition': 'acq'})
+	elif 'modality' in df.columns:
+		df = df.rename(columns={'modality': 'type', 'type': 'modality'})
+	if 'acq' in df.columns and 'acquisition' not in df.columns:
+		df['acquisition'] = df['acq']
+	if 'type' in df.columns and 'datatype' not in df.columns:
+		df['datatype']    = df['type']
+	if 'modality' in df.columns and 'suffix' not in df.columns:
+		df['suffix']      = df['modality']
+
 	# print(df.path)
 	# if "-ind_" in df.path.str[1]:
 	df["ind"] = df.path.str.partition('-ind_')[2].str.partition('_')[0].str.partition('.')[0]
@@ -308,11 +135,13 @@ def bids_data_selection(base, structural_match, functional_match, subjects, sess
 				if joint_conditions:
 					for match in functional_match.keys():
 						_df = _df.loc[_df[match].isin(functional_match[match])]
-					res_df = res_df.append(_df)
+					#res_df = res_df.append(_df)
+					res_df = pd.concat([res_df, _df], ignore_index=True)
 				else:
-					for match in structural_match.keys():
+					for match in functional_match.keys():
 						_df = filter_data(_df, match, functional_match[match])
-						res_df = res_df.append(_df)
+						#res_df = res_df.append(_df)
+						res_df = pd.concat([res_df, _df], ignore_index=True)
 			except:
 				pass
 		if structural_match:
@@ -321,13 +150,16 @@ def bids_data_selection(base, structural_match, functional_match, subjects, sess
 				if joint_conditions:
 					for match in structural_match.keys():
 						_df = _df.loc[_df[match].isin(structural_match[match])]
-					res_df = res_df.append(_df)
+					#res_df = res_df.append(_df)
+					res_df = pd.concat([res_df, _df], ignore_index=True)
 				else:
 					for match in structural_match.keys():
 						_df = filter_data(_df, match, structural_match[match])
-						res_df = res_df.append(_df)
-			except:
-				pass
+						#res_df = res_df.append(_df)
+						res_df = pd.concat([res_df, _df], ignore_index=True)
+			except Exception as e:
+				import traceback; traceback.print_exc()
+				#pass
 		df = res_df
 
 	if subjects:
@@ -673,7 +505,7 @@ def sessions_file(out_dir, df,
 				dict_writer.writerows(sessions_data)
 
 def copy_bids_files(bids_in, bids_out):
-	"""Copy BIDS metadata files.
+    """Copy BIDS metadata files.
 
 	Parameters
 	----------
@@ -684,16 +516,18 @@ def copy_bids_files(bids_in, bids_out):
 		Output BIDS data directory.
 	"""
 
-	bids_file_list = [
-		'participants.tsv',
-		'participants.json',
-		'dataset_description.json',
-		]
-	for i in bids_file_list:
-		in_file = os.path.join(bids_in,i)
-		out_file = os.path.join(bids_out,i)
-		try:
-			copyfile(in_file,out_file)
-		except:
-			print('Copying {} to {} failed.'.format(in_file,out_file))
-			pass
+    bids_file_list = [
+     'participants.tsv',
+     'participants.json',
+     'dataset_description.json',
+    ]
+    for i in bids_file_list:
+        in_file = os.path.join(bids_in,i)
+        out_file = os.path.join(bids_out,i)
+        if os.path.exists(out_file):
+            continue
+        try:
+            copyfile(in_file,out_file)
+        except:
+            print('Copying {} to {} failed.'.format(in_file,out_file))
+            pass

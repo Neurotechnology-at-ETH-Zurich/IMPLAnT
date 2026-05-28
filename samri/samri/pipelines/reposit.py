@@ -149,7 +149,8 @@ def bru2bids(measurements_base,
 			exclude=exclude,
 			measurements=measurements,
 			)
-		print(s_data_selection.columns)
+		if len(s_data_selection)==0:
+			return
 		structural_scan_types = list(s_data_selection['scan_type'].unique())
 		struct_ind = s_data_selection.index.tolist()
 		data_selection = pd.concat([data_selection,s_data_selection], sort=True)
@@ -159,7 +160,6 @@ def bru2bids(measurements_base,
 			exclude=exclude,
 			measurements=measurements,
 			)
-		print(f_data_selection)
 		functional_scan_types = list(f_data_selection['scan_type'].unique())
 		func_ind = f_data_selection.index.tolist()
 		data_selection = pd.concat([data_selection,f_data_selection], sort=True)
@@ -175,11 +175,7 @@ def bru2bids(measurements_base,
 
 	# we start to define nipype workflow elements (nodes, connections, meta)
 	subjects_sessions = data_selection[["subject","session"]].drop_duplicates().values.tolist()
-	if debug:
-		print('Data selection:')
-		print(data_selection)
-		print('Iterating over:')
-		print(subjects_sessions)
+
 	infosource = pe.Node(interface=util.IdentityInterface(fields=['subject_session'], mandatory_inputs=False), name="infosource")
 	infosource.iterables = [('subject_session', subjects_sessions)]
 

@@ -80,11 +80,11 @@ def diagnose(bids_base,
 	'''
 
 	bids_base = path.abspath(path.expanduser(bids_base))
-	print(bids_base)
 	datafind = nio.DataFinder()
 	datafind.inputs.root_paths = bids_base
 	datafind.inputs.match_regex = match_regex
 	datafind_res = datafind.run()
+
 
 	data_selection = zip(*[datafind_res.outputs.sub, datafind_res.outputs.ses, datafind_res.outputs.acq, datafind_res.outputs.task, datafind_res.outputs.mod, datafind_res.outputs.out_paths])
 	data_selection = [list(i) for i in data_selection]

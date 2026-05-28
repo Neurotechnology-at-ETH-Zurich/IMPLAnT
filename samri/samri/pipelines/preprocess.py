@@ -44,7 +44,7 @@ def legacy(bids_base, template,
            functional_match={},
            keep_work=False,
            n_jobs=False,
-           n_jobs_percentage=0.8,
+           n_jobs_percentage=0.3,#0.8
            out_base=None,
            realign="time",
            registration_mask=False,
@@ -57,61 +57,61 @@ def legacy(bids_base, template,
            exclude={},
            ):
     '''
-	Legacy realignment and registration workflow representative of the tweaks and workarounds commonly used in the pre-SAMRI period.
+    Legacy realignment and registration workflow representative of the tweaks and workarounds commonly used in the pre-SAMRI period.
 
-	Parameters
-	----------
-	bids_base : str
-		Path to the BIDS data set root.
-	template : str
-		Path to the template to register the data to.
-	debug : bool, optional
-		Whether to enable nipype debug mode.
-		This increases logging.
-	exclude : dict
-		A dictionary with any combination of "sessions", "subjects", "tasks" as keys and corresponding identifiers as values.
-		If this is specified matching entries will be excluded in the analysis.
-	functional_blur_xy : float, optional
-		Factor by which to smooth data in the xy-plane; if parameter evaluates to false, no smoothing will be applied.
-		Ideally this value should correspond to the resolution or smoothness in the z-direction (assuing z represents the lower-resolution slice-encoding direction).
-	functional_match : dict, optional
-		Dictionary specifying a whitelist to use for functional data inclusion into the workflow; if dictionary is empty no whitelist is present and all data will be considered.
-		The dictionary should have keys which are 'acquisition', 'task', or 'modality', and values which are lists of acceptable strings for the respective BIDS field.
-	keep_work : bool, str
-		Whether to keep the work directory after workflow conclusion (this directory contains all the intermediary processing commands, inputs, and outputs --- it is invaluable for debugging but many times larger in size than the actual output).
-	n_jobs : int, optional
-		Number of processors to maximally use for the workflow; if unspecified a best guess will be estimate based on `n_jobs_percentage` and hardware (but not on current load).
-	n_jobs_percentage : float, optional
-		Percentage of available processors (as in available hardware, not available free load) to maximally use for the workflow (this is overriden by `n_jobs`).
-	out_base : str, optional
-		Output base directory - inside which a directory named `workflow_name` (as well as associated directories) will be created.
-	realign : {"space","time","spacetime",""}, optional
-		Parameter that dictates slictiming correction and realignment of slices. "time" (FSL.SliceTimer) is default, since it works safely. Use others only with caution!
-	registration_mask : str, optional
-		Mask to use for the registration process.
-		This mask will constrain the area for similarity metric evaluation, but the data will not be cropped.
-	sessions : list, optional
-		A whitelist of sessions to include in the workflow, if the list is empty there is no whitelist and all sessions will be considered.
-	structural_match : dict, optional
-		Dictionary specifying a whitelist to use for structural data inclusion into the workflow; if dictionary is empty no whitelist is present and all data will be considered.
-		The dictionary should have keys which are 'acquisition', or 'modality', and values which are lists of acceptable strings for the respective BIDS field.
-	subjects : list, optional
-		A whitelist of subjects to include in the workflow, if the list is empty there is no whitelist and all sessions will be considered.
-	tr : float, optional
-		Repetition time, explicitly.
-		WARNING! This is a parameter waiting for deprecation.
-	workflow_name : str, optional
-		Top level name for the output directory.
-	'''
+    Parameters
+    ----------
+    bids_base : str
+        Path to the BIDS data set root.
+    template : str
+        Path to the template to register the data to.
+    debug : bool, optional
+        Whether to enable nipype debug mode.
+        This increases logging.
+    exclude : dict
+        A dictionary with any combination of "sessions", "subjects", "tasks" as keys and corresponding identifiers as values.
+        If this is specified matching entries will be excluded in the analysis.
+    functional_blur_xy : float, optional
+        Factor by which to smooth data in the xy-plane; if parameter evaluates to false, no smoothing will be applied.
+        Ideally this value should correspond to the resolution or smoothness in the z-direction (assuing z represents the lower-resolution slice-encoding direction).
+    functional_match : dict, optional
+        Dictionary specifying a whitelist to use for functional data inclusion into the workflow; if dictionary is empty no whitelist is present and all data will be considered.
+        The dictionary should have keys which are 'acquisition', 'task', or 'modality', and values which are lists of acceptable strings for the respective BIDS field.
+    keep_work : bool, str
+        Whether to keep the work directory after workflow conclusion (this directory contains all the intermediary processing commands, inputs, and outputs --- it is invaluable for debugging but many times larger in size than the actual output).
+    n_jobs : int, optional
+        Number of processors to maximally use for the workflow; if unspecified a best guess will be estimate based on `n_jobs_percentage` and hardware (but not on current load).
+    n_jobs_percentage : float, optional
+        Percentage of available processors (as in available hardware, not available free load) to maximally use for the workflow (this is overriden by `n_jobs`).
+    out_base : str, optional
+        Output base directory - inside which a directory named `workflow_name` (as well as associated directories) will be created.
+    realign : {"space","time","spacetime",""}, optional
+        Parameter that dictates slictiming correction and realignment of slices. "time" (FSL.SliceTimer) is default, since it works safely. Use others only with caution!
+    registration_mask : str, optional
+        Mask to use for the registration process.
+        This mask will constrain the area for similarity metric evaluation, but the data will not be cropped.
+    sessions : list, optional
+        A whitelist of sessions to include in the workflow, if the list is empty there is no whitelist and all sessions will be considered.
+    structural_match : dict, optional
+        Dictionary specifying a whitelist to use for structural data inclusion into the workflow; if dictionary is empty no whitelist is present and all data will be considered.
+        The dictionary should have keys which are 'acquisition', or 'modality', and values which are lists of acceptable strings for the respective BIDS field.
+    subjects : list, optional
+        A whitelist of subjects to include in the workflow, if the list is empty there is no whitelist and all sessions will be considered.
+    tr : float, optional
+        Repetition time, explicitly.
+        WARNING! This is a parameter waiting for deprecation.
+    workflow_name : str, optional
+        Top level name for the output directory.
+    '''
 
     try:
         import nipype.interfaces.ants.legacy as antslegacy
     except ModuleNotFoundError:
         print('''
-			The `nipype.interfaces.ants.legacy` was not found on this system.
-			You may want to downgrade nipype to e.g. 1.1.1, as this module has been removed in more recent versions:
-			https://github.com/nipy/nipype/issues/3197
-		''')
+            The `nipype.interfaces.ants.legacy` was not found on this system.
+            You may want to downgrade nipype to e.g. 1.1.1, as this module has been removed in more recent versions:
+            https://github.com/nipy/nipype/issues/3197
+        ''')
 
     bids_base, out_base, out_dir, template, registration_mask, data_selection, functional_scan_types, structural_scan_types, subjects_sessions, func_ind, struct_ind = common_select(
         bids_base,
@@ -128,6 +128,7 @@ def legacy(bids_base, template,
 
     if not n_jobs:
         n_jobs = max(int(round(mp.cpu_count() * n_jobs_percentage)), 2)
+    print('n_jobs',n_jobs,flush=True)
 
     get_f_scan = pe.Node(name='get_f_scan', interface=util.Function(function=get_bids_scan,
                                                                     input_names=inspect.getargspec(get_bids_scan)[0],
@@ -339,7 +340,7 @@ def generic(bids_base, template,
             functional_registration_method="composite",
             keep_work=False,
             n_jobs=False,
-            n_jobs_percentage=0.8,
+            n_jobs_percentage=0.3,#0.8
             out_base=None,
             realign="time",
             registration_mask="",
@@ -354,58 +355,58 @@ def generic(bids_base, template,
             exclude={},
             ):
     '''
-	Generic preprocessing and registration workflow for small animal data in BIDS format.
+    Generic preprocessing and registration workflow for small animal data in BIDS format.
 
-	Parameters
-	----------
-	bids_base : str
-		Path to the BIDS data set root.
-	template : str
-		Path to the template to register the data to.
-	autorotate : bool, optional
-		Whether to use a multi-rotation-state transformation start.
-		This allows the registration to commence with the best rotational fit, and may help if the orientation of the data is malformed with respect to the header.
-	debug : bool, optional
-		Whether to enable nipype debug mode.
-		This increases logging.
-	exclude : dict
-		A dictionary with any combination of "sessions", "subjects", "tasks" as keys and corresponding identifiers as values.
-		If this is specified matching entries will be excluded in the analysis.
-	functional_blur_xy : float, optional
-		Factor by which to smooth data in the xy-plane; if parameter evaluates to false, no smoothing will be applied.
-		Ideally this value should correspond to the resolution or smoothness in the z-direction (assuing z represents the lower-resolution slice-encoding direction).
-	functional_match : dict, optional
-		Dictionary specifying a whitelist to use for functional data inclusion into the workflow; if dictionary is empty no whitelist is present and all data will be considered.
-		The dictionary should have keys which are 'acquisition', 'task', or 'modality', and values which are lists of acceptable strings for the respective BIDS field.
-	functional_registration_method : {'composite','functional','structural'}, optional
-		How to register the functional scan to the template.
-		Values mean the following: 'composite' that it will be registered to the structural scan which will in turn be registered to the template, 'functional' that it will be registered directly, 'structural' that it will be registered exactly as the structural scan.
-	keep_work : bool, str
-		Whether to keep the work directory after workflow conclusion (this directory contains all the intermediary processing commands, inputs, and outputs --- it is invaluable for debugging but many times larger in size than the actual output).
-	n_jobs : int, optional
-		Number of processors to maximally use for the workflow; if unspecified a best guess will be estimate based on `n_jobs_percentage` and hardware (but not on current load).
-	n_jobs_percentage : float, optional
-		Percentage of available processors (as in available hardware, not available free load) to maximally use for the workflow (this is overriden by `n_jobs`).
-	out_base : str, optional
-		Output base directory --- inside which a directory named `workflow_name`(as well as associated directories) will be created.
-	realign : {"space","time","spacetime",""}, optional
-		Parameter that dictates slictiming correction and realignment of slices. "time" (FSL.SliceTimer) is default, since it works safely. Use others only with caution!
-	registration_mask : str, optional
-		Mask to use for the registration process.
-		This mask will constrain the area for similarity metric evaluation, but the data will not be cropped.
-	sessions : list, optional
-		A whitelist of sessions to include in the workflow, if the list is empty there is no whitelist and all sessions will be considered.
-	structural_match : dict, optional
-		Dictionary specifying a whitelist to use for structural data inclusion into the workflow; if dictionary is empty no whitelist is present and all data will be considered.
-		The dictionary should have keys which are 'acquisition', or 'modality', and values which are lists of acceptable strings for the respective BIDS field.
-	subjects : list, optional
-		A whitelist of subjects to include in the workflow, if the list is empty there is no whitelist and all sessions will be considered.
-	tr : float, optional
-		Repetition time, explicitly.
-		WARNING! This is a parameter waiting for deprecation.
-	workflow_name : str, optional
-		Top level name for the output directory.
-	'''
+    Parameters
+    ----------
+    bids_base : str
+        Path to the BIDS data set root.
+    template : str
+        Path to the template to register the data to.
+    autorotate : bool, optional
+        Whether to use a multi-rotation-state transformation start.
+        This allows the registration to commence with the best rotational fit, and may help if the orientation of the data is malformed with respect to the header.
+    debug : bool, optional
+        Whether to enable nipype debug mode.
+        This increases logging.
+    exclude : dict
+        A dictionary with any combination of "sessions", "subjects", "tasks" as keys and corresponding identifiers as values.
+        If this is specified matching entries will be excluded in the analysis.
+    functional_blur_xy : float, optional
+        Factor by which to smooth data in the xy-plane; if parameter evaluates to false, no smoothing will be applied.
+        Ideally this value should correspond to the resolution or smoothness in the z-direction (assuing z represents the lower-resolution slice-encoding direction).
+    functional_match : dict, optional
+        Dictionary specifying a whitelist to use for functional data inclusion into the workflow; if dictionary is empty no whitelist is present and all data will be considered.
+        The dictionary should have keys which are 'acquisition', 'task', or 'modality', and values which are lists of acceptable strings for the respective BIDS field.
+    functional_registration_method : {'composite','functional','structural'}, optional
+        How to register the functional scan to the template.
+        Values mean the following: 'composite' that it will be registered to the structural scan which will in turn be registered to the template, 'functional' that it will be registered directly, 'structural' that it will be registered exactly as the structural scan.
+    keep_work : bool, str
+        Whether to keep the work directory after workflow conclusion (this directory contains all the intermediary processing commands, inputs, and outputs --- it is invaluable for debugging but many times larger in size than the actual output).
+    n_jobs : int, optional
+        Number of processors to maximally use for the workflow; if unspecified a best guess will be estimate based on `n_jobs_percentage` and hardware (but not on current load).
+    n_jobs_percentage : float, optional
+        Percentage of available processors (as in available hardware, not available free load) to maximally use for the workflow (this is overriden by `n_jobs`).
+    out_base : str, optional
+        Output base directory --- inside which a directory named `workflow_name`(as well as associated directories) will be created.
+    realign : {"space","time","spacetime",""}, optional
+        Parameter that dictates slictiming correction and realignment of slices. "time" (FSL.SliceTimer) is default, since it works safely. Use others only with caution!
+    registration_mask : str, optional
+        Mask to use for the registration process.
+        This mask will constrain the area for similarity metric evaluation, but the data will not be cropped.
+    sessions : list, optional
+        A whitelist of sessions to include in the workflow, if the list is empty there is no whitelist and all sessions will be considered.
+    structural_match : dict, optional
+        Dictionary specifying a whitelist to use for structural data inclusion into the workflow; if dictionary is empty no whitelist is present and all data will be considered.
+        The dictionary should have keys which are 'acquisition', or 'modality', and values which are lists of acceptable strings for the respective BIDS field.
+    subjects : list, optional
+        A whitelist of subjects to include in the workflow, if the list is empty there is no whitelist and all sessions will be considered.
+    tr : float, optional
+        Repetition time, explicitly.
+        WARNING! This is a parameter waiting for deprecation.
+    workflow_name : str, optional
+        Top level name for the output directory.
+    '''
 
     bids_base, out_base, out_dir, template, registration_mask, data_selection, functional_scan_types, structural_scan_types, subjects_sessions, func_ind, struct_ind = common_select(
         bids_base,
@@ -422,6 +423,8 @@ def generic(bids_base, template,
 
     if not n_jobs:
         n_jobs = max(int(round(mp.cpu_count() * n_jobs_percentage)), 2)
+    print('n_jobs',n_jobs,flush=True)
+
 
     find_physio = pe.Node(name='find_physio', interface=util.Function(function=corresponding_physiofile, input_names=
     inspect.getargspec(corresponding_physiofile)[0], output_names=['physiofile', 'meta_physiofile']))
@@ -671,6 +674,8 @@ def generic(bids_base, template,
             'We could not write the DOT file for visualization (`dot` function from the graphviz package). This is non-critical to the processing, but you should get this fixed.')
 
     workflow.run(plugin="MultiProc", plugin_args={'n_procs': n_jobs})
+    print('n_jobs',n_jobs,flush=True)
+    return
     copy_bids_files(bids_base, os.path.join(out_base, workflow_name))
     if not keep_work:
         workdir = path.join(workflow.base_dir, workdir_name)
@@ -695,58 +700,58 @@ def common_select_highres(bids_base, out_base, workflow_name, template, registra
                   subjects, sessions, exclude, highres_match=""):
     """Common selection and variable processing function for SAMRI preprocessing workflows.
 
-	Parameters
-	----------
+    Parameters
+    ----------
 
     highres_match
-	bids_base : string
-		Path to the BIDS root directory.
-	out_base : string
-		Output base directory - inside which a directory named `workflow_name` (as well as associated directories) will be created.
-	workflow_name : string
-		Top level name for the output directory.
-	template : string
-		Path to the template to register the data to.
-	registration_mask : string
-		Mask to use for the registration process.
-	functional_match : dict
-		Dictionary specifying a whitelist to use for functional data inclusion into the workflow; if dictionary is empty no whitelist is present and all data will be considered.
-	structural_match : dict
-		Dictionary specifying a whitelist to use for structural data inclusion into the workflow; if dictionary is empty no whitelist is present and all data will be considered.
-	subjects : list
-		 A whitelist of subjects to include in the workflow, if the list is empty there is no whitelist and all sessions will be considered.
-	sessions : list
-		A whitelist of sessions to include in the workflow, if the list is empty there is no whitelist and all sessions will be considered.
-	exclude : dict
-		A dictionary with any combination of "sessions", "subjects", "tasks" as keys and corresponding identifiers as values.
-		If this is specified, matching entries will be excluded in the analysis.
+    bids_base : string
+        Path to the BIDS root directory.
+    out_base : string
+        Output base directory - inside which a directory named `workflow_name` (as well as associated directories) will be created.
+    workflow_name : string
+        Top level name for the output directory.
+    template : string
+        Path to the template to register the data to.
+    registration_mask : string
+        Mask to use for the registration process.
+    functional_match : dict
+        Dictionary specifying a whitelist to use for functional data inclusion into the workflow; if dictionary is empty no whitelist is present and all data will be considered.
+    structural_match : dict
+        Dictionary specifying a whitelist to use for structural data inclusion into the workflow; if dictionary is empty no whitelist is present and all data will be considered.
+    subjects : list
+         A whitelist of subjects to include in the workflow, if the list is empty there is no whitelist and all sessions will be considered.
+    sessions : list
+        A whitelist of sessions to include in the workflow, if the list is empty there is no whitelist and all sessions will be considered.
+    exclude : dict
+        A dictionary with any combination of "sessions", "subjects", "tasks" as keys and corresponding identifiers as values.
+        If this is specified, matching entries will be excluded in the analysis.
 
-	Returns
-	-------
+    Returns
+    -------
 
-	bids_base : string
-		Path to the BIDS root directory.
-	out_base : string
-		Output base directory - inside which a directory named `workflow_name` (as well as associated directories) is located.
-	out_dir : string
-		Directory where output is located (gives path to workflow_name).
-	template : string
-		Full path to the template.
-	registration_mask : string
-		Full path to the registration mask.
-	data_selection : df
-		A Pandas dataframe of data from bids_base filtered according to structural_match, functional_match, subjects, and sessions.
-	functional_scan_types : np array
-		Functional scan types.
-	structural_scan_types : np array
-		Structural scan types.
-	subjects_sessions : df
-		Pandas dataframe giving names of subjects and sessions selected from bids_base.
-	func_ind: list
-		List of all functional scan entries.
-	struct_ind: list
-		List of all structural scan entries.
-	"""
+    bids_base : string
+        Path to the BIDS root directory.
+    out_base : string
+        Output base directory - inside which a directory named `workflow_name` (as well as associated directories) is located.
+    out_dir : string
+        Directory where output is located (gives path to workflow_name).
+    template : string
+        Full path to the template.
+    registration_mask : string
+        Full path to the registration mask.
+    data_selection : df
+        A Pandas dataframe of data from bids_base filtered according to structural_match, functional_match, subjects, and sessions.
+    functional_scan_types : np array
+        Functional scan types.
+    structural_scan_types : np array
+        Structural scan types.
+    subjects_sessions : df
+        Pandas dataframe giving names of subjects and sessions selected from bids_base.
+    func_ind: list
+        List of all functional scan entries.
+    struct_ind: list
+        List of all structural scan entries.
+    """
 
     if template:
         if template == "mouse":
@@ -839,57 +844,57 @@ def common_select(bids_base, out_base, workflow_name, template, registration_mas
                   subjects, sessions, exclude):
     """Common selection and variable processing function for SAMRI preprocessing workflows.
 
-	Parameters
-	----------
+    Parameters
+    ----------
 
-	bids_base : string
-		Path to the BIDS root directory.
-	out_base : string
-		Output base directory - inside which a directory named `workflow_name` (as well as associated directories) will be created.
-	workflow_name : string
-		Top level name for the output directory.
-	template : string
-		Path to the template to register the data to.
-	registration_mask : string
-		Mask to use for the registration process.
-	functional_match : dict
-		Dictionary specifying a whitelist to use for functional data inclusion into the workflow; if dictionary is empty no whitelist is present and all data will be considered.
-	structural_match : dict
-		Dictionary specifying a whitelist to use for structural data inclusion into the workflow; if dictionary is empty no whitelist is present and all data will be considered.
-	subjects : list
-		 A whitelist of subjects to include in the workflow, if the list is empty there is no whitelist and all sessions will be considered.
-	sessions : list
-		A whitelist of sessions to include in the workflow, if the list is empty there is no whitelist and all sessions will be considered.
-	exclude : dict
-		A dictionary with any combination of "sessions", "subjects", "tasks" as keys and corresponding identifiers as values.
-		If this is specified, matching entries will be excluded in the analysis.
+    bids_base : string
+        Path to the BIDS root directory.
+    out_base : string
+        Output base directory - inside which a directory named `workflow_name` (as well as associated directories) will be created.
+    workflow_name : string
+        Top level name for the output directory.
+    template : string
+        Path to the template to register the data to.
+    registration_mask : string
+        Mask to use for the registration process.
+    functional_match : dict
+        Dictionary specifying a whitelist to use for functional data inclusion into the workflow; if dictionary is empty no whitelist is present and all data will be considered.
+    structural_match : dict
+        Dictionary specifying a whitelist to use for structural data inclusion into the workflow; if dictionary is empty no whitelist is present and all data will be considered.
+    subjects : list
+         A whitelist of subjects to include in the workflow, if the list is empty there is no whitelist and all sessions will be considered.
+    sessions : list
+        A whitelist of sessions to include in the workflow, if the list is empty there is no whitelist and all sessions will be considered.
+    exclude : dict
+        A dictionary with any combination of "sessions", "subjects", "tasks" as keys and corresponding identifiers as values.
+        If this is specified, matching entries will be excluded in the analysis.
 
-	Returns
-	-------
+    Returns
+    -------
 
-	bids_base : string
-		Path to the BIDS root directory.
-	out_base : string
-		Output base directory - inside which a directory named `workflow_name` (as well as associated directories) is located.
-	out_dir : string
-		Directory where output is located (gives path to workflow_name).
-	template : string
-		Full path to the template.
-	registration_mask : string
-		Full path to the registration mask.
-	data_selection : df
-		A Pandas dataframe of data from bids_base filtered according to structural_match, functional_match, subjects, and sessions.
-	functional_scan_types : np array
-		Functional scan types.
-	structural_scan_types : np array
-		Structural scan types.
-	subjects_sessions : df
-		Pandas dataframe giving names of subjects and sessions selected from bids_base.
-	func_ind: list
-		List of all functional scan entries.
-	struct_ind: list
-		List of all structural scan entries.
-	"""
+    bids_base : string
+        Path to the BIDS root directory.
+    out_base : string
+        Output base directory - inside which a directory named `workflow_name` (as well as associated directories) is located.
+    out_dir : string
+        Directory where output is located (gives path to workflow_name).
+    template : string
+        Full path to the template.
+    registration_mask : string
+        Full path to the registration mask.
+    data_selection : df
+        A Pandas dataframe of data from bids_base filtered according to structural_match, functional_match, subjects, and sessions.
+    functional_scan_types : np array
+        Functional scan types.
+    structural_scan_types : np array
+        Structural scan types.
+    subjects_sessions : df
+        Pandas dataframe giving names of subjects and sessions selected from bids_base.
+    func_ind: list
+        List of all functional scan entries.
+    struct_ind: list
+        List of all structural scan entries.
+    """
 
     if template:
         if template == "mouse":
@@ -916,11 +921,11 @@ def common_select(bids_base, out_base, workflow_name, template, registration_mas
     out_dir = path.join(out_base, workflow_name)
 
     data_selection = bids_data_selection(bids_base, structural_match, functional_match, subjects, sessions)
+    print('data_selection',data_selection,flush=True)
     workdir = out_dir + '_work'
     if not os.path.exists(workdir):
         os.makedirs(workdir)
     data_selection.to_csv(path.join(workdir, 'data_selection.csv'))
-
     modalities = data_selection["modality"]
     skip_biascorrection = False
     if "corrected" in modalities.values:
@@ -965,7 +970,9 @@ def common_select(bids_base, out_base, workflow_name, template, registration_mas
     if True:
         print(data_selection)
         print(subjects_sessions)
+
     return bids_base, out_base, out_dir, template, registration_mask, data_selection, functional_scan_types, structural_scan_types, subjects_sessions, func_ind, struct_ind, skip_biascorrection
+
 
 def biascorrect_only(bids_base, template,
                debug=False,
@@ -1131,7 +1138,7 @@ def structural(bids_base, template,
                functional_match={},
                keep_work=False,
                n_jobs=False,
-               n_jobs_percentage=0.8,
+               n_jobs_percentage=0.3,#0.8
                out_base=None,
                registration_mask="",
                moving_img_mask="",
@@ -1146,64 +1153,64 @@ def structural(bids_base, template,
                num_threads=4
                ):
     """
-	Structural preprocessing and registration workflow for small animal data in BIDS format.
+    Structural preprocessing and registration workflow for small animal data in BIDS format.
 
-	Parameters
-	----------
+    Parameters
+    ----------
     template_highresmatch : str
         Path to reference template matching the resolution of the highres scans for warping
     highrestemplate : str
         Path to higher resolution template for precision registration
     highres_match : str
         Dictionary specifiying a whitelist to use for high resolution structural data inclusion into the workflow
-	bids_base : str
-		Path to the BIDS data set root.
-	template : str
-		Path to the template to register the data to.
-	autorotate : bool, optional
-		Whether to use a multi-rotation-state transformation start.
-		This allows the registration to commence with the best rotational fit, and may help if the orientation of the data is malformed with respect to the header.
-	debug : bool, optional
-		Whether to enable nipype debug mode.
-		This increases logging.
-	exclude : dict
-		A dictionary with any combination of "sessions", "subjects", "tasks" as keys and corresponding identifiers as values.
-		If this is specified matching entries will be excluded in the analysis.
-	functional_blur_xy : float, optional
-		Factor by which to smooth data in the xy-plane; if parameter evaluates to false, no smoothing will be applied.
-		Ideally this value should correspond to the resolution or smoothness in the z-direction (assuing z represents the lower-resolution slice-encoding direction).
-	functional_match : dict, optional
-		Dictionary specifying a whitelist to use for functional data inclusion into the workflow; if dictionary is empty no whitelist is present and all data will be considered.
-		The dictionary should have keys which are 'acquisition', 'task', or 'modality', and values which are lists of acceptable strings for the respective BIDS field.
-	functional_registration_method : {'composite','functional','structural'}, optional
-		How to register the functional scan to the template.
-		Values mean the following: 'composite' that it will be registered to the structural scan which will in turn be registered to the template, 'functional' that it will be registered directly, 'structural' that it will be registered exactly as the structural scan.
-	keep_work : bool, str
-		Whether to keep the work directory after workflow conclusion (this directory contains all the intermediary processing commands, inputs, and outputs --- it is invaluable for debugging but many times larger in size than the actual output).
-	n_jobs : int, optional
-		Number of processors to maximally use for the workflow; if unspecified a best guess will be estimate based on `n_jobs_percentage` and hardware (but not on current load).
-	n_jobs_percentage : float, optional
-		Percentage of available processors (as in available hardware, not available free load) to maximally use for the workflow (this is overriden by `n_jobs`).
-	out_base : str, optional
-		Output base directory --- inside which a directory named `workflow_name`(as well as associated directories) will be created.
-	realign : {"space","time","spacetime",""}, optional
-		Parameter that dictates slictiming correction and realignment of slices. "time" (FSL.SliceTimer) is default, since it works safely. Use others only with caution!
-	registration_mask : str, optional
-		Mask to use for the registration process.
-		This mask will constrain the area for similarity metric evaluation, but the data will not be cropped.
-	sessions : list, optional
-		A whitelist of sessions to include in the workflow, if the list is empty there is no whitelist and all sessions will be considered.
-	structural_match : dict, optional
-		Dictionary specifying a whitelist to use for structural data inclusion into the workflow; if dictionary is empty no whitelist is present and all data will be considered.
-		The dictionary should have keys which are 'acquisition', or 'modality', and values which are lists of acceptable strings for the respective BIDS field.
-	subjects : list, optional
-		A whitelist of subjects to include in the workflow, if the list is empty there is no whitelist and all sessions will be considered.
-	tr : float, optional
-		Repetition time, explicitly.
-		WARNING! This is a parameter waiting for deprecation.
-	workflow_name : str, optional
-		Top level name for the output directory.
-	"""
+    bids_base : str
+        Path to the BIDS data set root.
+    template : str
+        Path to the template to register the data to.
+    autorotate : bool, optional
+        Whether to use a multi-rotation-state transformation start.
+        This allows the registration to commence with the best rotational fit, and may help if the orientation of the data is malformed with respect to the header.
+    debug : bool, optional
+        Whether to enable nipype debug mode.
+        This increases logging.
+    exclude : dict
+        A dictionary with any combination of "sessions", "subjects", "tasks" as keys and corresponding identifiers as values.
+        If this is specified matching entries will be excluded in the analysis.
+    functional_blur_xy : float, optional
+        Factor by which to smooth data in the xy-plane; if parameter evaluates to false, no smoothing will be applied.
+        Ideally this value should correspond to the resolution or smoothness in the z-direction (assuing z represents the lower-resolution slice-encoding direction).
+    functional_match : dict, optional
+        Dictionary specifying a whitelist to use for functional data inclusion into the workflow; if dictionary is empty no whitelist is present and all data will be considered.
+        The dictionary should have keys which are 'acquisition', 'task', or 'modality', and values which are lists of acceptable strings for the respective BIDS field.
+    functional_registration_method : {'composite','functional','structural'}, optional
+        How to register the functional scan to the template.
+        Values mean the following: 'composite' that it will be registered to the structural scan which will in turn be registered to the template, 'functional' that it will be registered directly, 'structural' that it will be registered exactly as the structural scan.
+    keep_work : bool, str
+        Whether to keep the work directory after workflow conclusion (this directory contains all the intermediary processing commands, inputs, and outputs --- it is invaluable for debugging but many times larger in size than the actual output).
+    n_jobs : int, optional
+        Number of processors to maximally use for the workflow; if unspecified a best guess will be estimate based on `n_jobs_percentage` and hardware (but not on current load).
+    n_jobs_percentage : float, optional
+        Percentage of available processors (as in available hardware, not available free load) to maximally use for the workflow (this is overriden by `n_jobs`).
+    out_base : str, optional
+        Output base directory --- inside which a directory named `workflow_name`(as well as associated directories) will be created.
+    realign : {"space","time","spacetime",""}, optional
+        Parameter that dictates slictiming correction and realignment of slices. "time" (FSL.SliceTimer) is default, since it works safely. Use others only with caution!
+    registration_mask : str, optional
+        Mask to use for the registration process.
+        This mask will constrain the area for similarity metric evaluation, but the data will not be cropped.
+    sessions : list, optional
+        A whitelist of sessions to include in the workflow, if the list is empty there is no whitelist and all sessions will be considered.
+    structural_match : dict, optional
+        Dictionary specifying a whitelist to use for structural data inclusion into the workflow; if dictionary is empty no whitelist is present and all data will be considered.
+        The dictionary should have keys which are 'acquisition', or 'modality', and values which are lists of acceptable strings for the respective BIDS field.
+    subjects : list, optional
+        A whitelist of subjects to include in the workflow, if the list is empty there is no whitelist and all sessions will be considered.
+    tr : float, optional
+        Repetition time, explicitly.
+        WARNING! This is a parameter waiting for deprecation.
+    workflow_name : str, optional
+        Top level name for the output directory.
+    """
 
     bids_base, out_base, out_dir, template, registration_mask, data_selection, functional_scan_types, structural_scan_types, subjects_sessions, func_ind, struct_ind, skip_biascorrection = common_select(
         bids_base, out_base, workflow_name, template, registration_mask, functional_match, structural_match,
@@ -1220,6 +1227,7 @@ def structural(bids_base, template,
                                                                       input_names=inspect.getargspec(force_dummy_scans)[
                                                                           0],
                                                                       output_names=['out_file', 'deleted_scans']))
+
     dummy_scans.inputs.desired_dummy_scans = enforce_dummy_scans
 
     events_file = pe.Node(name='events_file', interface=util.Function(function=write_bids_events_file, input_names=
@@ -1311,6 +1319,7 @@ def structural(bids_base, template,
         convert_file.write(json.dumps(GENERIC_PHASES))
 
     workflow.run(plugin="MultiProc", plugin_args={'n_procs': n_jobs})
+
     copy_bids_files(bids_base, os.path.join(out_base, workflow_name))
     if not keep_work:
         workdir = path.join(workflow.base_dir, workdir_name)
@@ -1330,8 +1339,6 @@ def structural(bids_base, template,
             else:
                 raise OSError(str(e))
 
-
-
 #
 
 ## Structural registration with first low-res affine and then high-res elastic
@@ -1345,7 +1352,7 @@ def structural_highres(bids_base, template,
                        highres_match={},
                        keep_work=False,
                        n_jobs=False,
-                       n_jobs_percentage=0.8,
+                       n_jobs_percentage=0.3, ##0.8,
                        out_base=None,
                        realign="time",
                        registration_mask="",
@@ -1359,64 +1366,64 @@ def structural_highres(bids_base, template,
                        presurgery=False
                        ):
     """
-	Structural preprocessing and registration workflow for small animal data in BIDS format.
+    Structural preprocessing and registration workflow for small animal data in BIDS format.
 
-	Parameters
-	----------
+    Parameters
+    ----------
     template_highresmatch : str
         Path to reference template matching the resolution of the highres scans for warping
     highrestemplate : str
         Path to higher resolution template for precision registration
     highres_match : str
         Dictionary specifiying a whitelist to use for high resolution structural data inclusion into the workflow
-	bids_base : str
-		Path to the BIDS data set root.
-	template : str
-		Path to the template to register the data to.
-	autorotate : bool, optional
-		Whether to use a multi-rotation-state transformation start.
-		This allows the registration to commence with the best rotational fit, and may help if the orientation of the data is malformed with respect to the header.
-	debug : bool, optional
-		Whether to enable nipype debug mode.
-		This increases logging.
-	exclude : dict
-		A dictionary with any combination of "sessions", "subjects", "tasks" as keys and corresponding identifiers as values.
-		If this is specified matching entries will be excluded in the analysis.
-	functional_blur_xy : float, optional
-		Factor by which to smooth data in the xy-plane; if parameter evaluates to false, no smoothing will be applied.
-		Ideally this value should correspond to the resolution or smoothness in the z-direction (assuing z represents the lower-resolution slice-encoding direction).
-	functional_match : dict, optional
-		Dictionary specifying a whitelist to use for functional data inclusion into the workflow; if dictionary is empty no whitelist is present and all data will be considered.
-		The dictionary should have keys which are 'acquisition', 'task', or 'modality', and values which are lists of acceptable strings for the respective BIDS field.
-	functional_registration_method : {'composite','functional','structural'}, optional
-		How to register the functional scan to the template.
-		Values mean the following: 'composite' that it will be registered to the structural scan which will in turn be registered to the template, 'functional' that it will be registered directly, 'structural' that it will be registered exactly as the structural scan.
-	keep_work : bool, str
-		Whether to keep the work directory after workflow conclusion (this directory contains all the intermediary processing commands, inputs, and outputs --- it is invaluable for debugging but many times larger in size than the actual output).
-	n_jobs : int, optional
-		Number of processors to maximally use for the workflow; if unspecified a best guess will be estimate based on `n_jobs_percentage` and hardware (but not on current load).
-	n_jobs_percentage : float, optional
-		Percentage of available processors (as in available hardware, not available free load) to maximally use for the workflow (this is overriden by `n_jobs`).
-	out_base : str, optional
-		Output base directory --- inside which a directory named `workflow_name`(as well as associated directories) will be created.
-	realign : {"space","time","spacetime",""}, optional
-		Parameter that dictates slictiming correction and realignment of slices. "time" (FSL.SliceTimer) is default, since it works safely. Use others only with caution!
-	registration_mask : str, optional
-		Mask to use for the registration process.
-		This mask will constrain the area for similarity metric evaluation, but the data will not be cropped.
-	sessions : list, optional
-		A whitelist of sessions to include in the workflow, if the list is empty there is no whitelist and all sessions will be considered.
-	structural_match : dict, optional
-		Dictionary specifying a whitelist to use for structural data inclusion into the workflow; if dictionary is empty no whitelist is present and all data will be considered.
-		The dictionary should have keys which are 'acquisition', or 'modality', and values which are lists of acceptable strings for the respective BIDS field.
-	subjects : list, optional
-		A whitelist of subjects to include in the workflow, if the list is empty there is no whitelist and all sessions will be considered.
-	tr : float, optional
-		Repetition time, explicitly.
-		WARNING! This is a parameter waiting for deprecation.
-	workflow_name : str, optional
-		Top level name for the output directory.
-	"""
+    bids_base : str
+        Path to the BIDS data set root.
+    template : str
+        Path to the template to register the data to.
+    autorotate : bool, optional
+        Whether to use a multi-rotation-state transformation start.
+        This allows the registration to commence with the best rotational fit, and may help if the orientation of the data is malformed with respect to the header.
+    debug : bool, optional
+        Whether to enable nipype debug mode.
+        This increases logging.
+    exclude : dict
+        A dictionary with any combination of "sessions", "subjects", "tasks" as keys and corresponding identifiers as values.
+        If this is specified matching entries will be excluded in the analysis.
+    functional_blur_xy : float, optional
+        Factor by which to smooth data in the xy-plane; if parameter evaluates to false, no smoothing will be applied.
+        Ideally this value should correspond to the resolution or smoothness in the z-direction (assuing z represents the lower-resolution slice-encoding direction).
+    functional_match : dict, optional
+        Dictionary specifying a whitelist to use for functional data inclusion into the workflow; if dictionary is empty no whitelist is present and all data will be considered.
+        The dictionary should have keys which are 'acquisition', 'task', or 'modality', and values which are lists of acceptable strings for the respective BIDS field.
+    functional_registration_method : {'composite','functional','structural'}, optional
+        How to register the functional scan to the template.
+        Values mean the following: 'composite' that it will be registered to the structural scan which will in turn be registered to the template, 'functional' that it will be registered directly, 'structural' that it will be registered exactly as the structural scan.
+    keep_work : bool, str
+        Whether to keep the work directory after workflow conclusion (this directory contains all the intermediary processing commands, inputs, and outputs --- it is invaluable for debugging but many times larger in size than the actual output).
+    n_jobs : int, optional
+        Number of processors to maximally use for the workflow; if unspecified a best guess will be estimate based on `n_jobs_percentage` and hardware (but not on current load).
+    n_jobs_percentage : float, optional
+        Percentage of available processors (as in available hardware, not available free load) to maximally use for the workflow (this is overriden by `n_jobs`).
+    out_base : str, optional
+        Output base directory --- inside which a directory named `workflow_name`(as well as associated directories) will be created.
+    realign : {"space","time","spacetime",""}, optional
+        Parameter that dictates slictiming correction and realignment of slices. "time" (FSL.SliceTimer) is default, since it works safely. Use others only with caution!
+    registration_mask : str, optional
+        Mask to use for the registration process.
+        This mask will constrain the area for similarity metric evaluation, but the data will not be cropped.
+    sessions : list, optional
+        A whitelist of sessions to include in the workflow, if the list is empty there is no whitelist and all sessions will be considered.
+    structural_match : dict, optional
+        Dictionary specifying a whitelist to use for structural data inclusion into the workflow; if dictionary is empty no whitelist is present and all data will be considered.
+        The dictionary should have keys which are 'acquisition', or 'modality', and values which are lists of acceptable strings for the respective BIDS field.
+    subjects : list, optional
+        A whitelist of subjects to include in the workflow, if the list is empty there is no whitelist and all sessions will be considered.
+    tr : float, optional
+        Repetition time, explicitly.
+        WARNING! This is a parameter waiting for deprecation.
+    workflow_name : str, optional
+        Top level name for the output directory.
+    """
 
     bids_base, out_base, out_dir, template, registration_mask, data_selection, highres_data_selection, functional_scan_types, structural_scan_types, subjects_sessions, func_ind, struct_ind, highres_ind = common_select(
         bids_base,
@@ -1434,6 +1441,7 @@ def structural_highres(bids_base, template,
 
     if not n_jobs:
         n_jobs = max(int(round(mp.cpu_count() * n_jobs_percentage)), 2)
+    print('n_jobs',n_jobs,flush=True)
 
     # ADDING SELECTABLE NODES AND EXTENDING WORKFLOW AS APPROPRIATE:
     s_biascorrect, f_biascorrect = real_size_nodes()
