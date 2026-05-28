@@ -1,5 +1,5 @@
 # This Python file uses the following encoding: utf-8
-import SimpleITK as sITK
+import SimpleITK as sitk
 import os
 from picsl_greedy import Greedy3D
 import numpy as np
@@ -36,8 +36,10 @@ class Registration:
         self.fixed_ind = int(number_str)
         self.moving_ind = int(filename.split("ind_")[1].split(".")[0])
 
-        self.fixed_image = sITK.ReadImage(self.LoadMRI.volumes[0].file_path)
-        self.moving_image = sITK.ReadImage(os.path.join(folder, filename))
+        self.fixed_image = sitk.ReadImage(self.LoadMRI.volumes[0].file_path)
+        self.fixed_image = sitk.DICOMOrient(self.fixed_image, self.LoadMRI.volumes[0].DICOMOrient)
+        self.moving_image = sitk.ReadImage(os.path.join(folder, filename))
+        self.moving_image = sitk.DICOMOrient(self.moving_image, self.LoadMRI.volumes[0].DICOMOrient)
 
         if len(self.moving_image.GetSize())==4:
             self.moving_image = self.get3Dimage(self.moving_image)
@@ -66,7 +68,7 @@ class Registration:
         """
         t_index = 0
         size = list(img.GetSize())
-        img3d = sITK.Extract(img, size[:3] + [0], [0, 0, 0, t_index])
+        img3d = sitk.Extract(img, size[:3] + [0], [0, 0, 0, t_index])
 
         return img3d
 

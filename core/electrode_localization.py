@@ -227,7 +227,7 @@ class ElectrodeLoc:
         img_4d= sitk.ReadImage(filename_4d_warped_path)
         vol = sitk.GetArrayFromImage(img_4d)
         if data_view=='sagittal':
-            img_slice = np.fliplr(vol[:,:,round(fitted_points[0][0])].T)
+            img_slice = np.fliplr(vol[:,:,round(fitted_points[0][0])])
         else:
             img_slice = vol[int(fitted_points[0][2]),:,:]
         spacing_4d = img_4d.GetSpacing() #xyz # #

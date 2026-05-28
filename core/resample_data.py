@@ -24,6 +24,7 @@ class ResampleData:
         self.progressbar.setValue(20)
         file_name = self.LoadMRI.volumes[index].file_path
         img = sitk.ReadImage(file_name)
+        img = sitk.DICOMOrient(img, self.LoadMRI.volumes[0].DICOMOrient)
         old_size = img.GetSize()
 
         old_spacing = self.LoadMRI.volumes[index].spacing[::-1] #x,y,z
@@ -89,6 +90,7 @@ class ResampleData:
         self.progressbar.setValue(20)
         file_name = self.LoadMRI.volumes[index].file_path
         img = sitk.ReadImage(file_name)
+        img = sitk.DICOMOrient(img, self.LoadMRI.volumes[0].DICOMOrient)
         old_spacing = self.LoadMRI.volumes[index].spacing[::-1] #x,y,z
 
         old_size = img.GetSize()

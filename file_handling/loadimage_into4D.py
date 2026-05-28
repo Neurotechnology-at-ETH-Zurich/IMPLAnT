@@ -1,5 +1,5 @@
 # This Python file uses the following encoding: utf-8
-import SimpleITK as sITK
+import SimpleITK as sitk
 import numpy as np
 from core.mrid_tags import MRID_tags
 from collections import Counter
@@ -31,8 +31,9 @@ class LoadImage4D:
             return tag_data,num_regions,regions
         else:
             print('not yet implemented')
-
-        return sITK.GetArrayFromImage(sITK.ReadImage(filename))
+        img = sitk.ReadImage(filename)
+        img = sitk.DICOMOrient(img, self.LoadMRI.volumes[0].DICOMOrient)
+        return sitk.GetArrayFromImage(img)
 
 
     def load_anat(self,filename,data_view,idx):
@@ -40,19 +41,14 @@ class LoadImage4D:
         Loads files including "-anat" in filename as anatomical region label mask.
         """
         # Create the actor
-        img = sITK.ReadImage(filename)
+        img = sitk.ReadImage(filename)
+        img = sitk.DICOMOrient(img, self.LoadMRI.volumes[0].DICOMOrient)
         img_dir = img.GetDirection()
         img_dir = np.array(img_dir).reshape(3,3)
-        img_dir_max = [max(col, key=abs) for col in zip(*img_dir)]
-        axes_to_flip = []
-        for i in range(3): #Code is built on z being negative
-            if (img_dir_max[i] < 0 and i!=2) or (img_dir_max[i] > 0 and i==2):
-                axes_to_flip.append(True)
-            else:
-                axes_to_flip.append(False)
-        axes_to_flip[2]=False
-        img_flipped = sITK.Flip(img, axes_to_flip, flipAboutOrigin=False)
-        vol = sITK.GetArrayFromImage(img_flipped)
+        #axes_to_flip = [False,False,False]
+
+        #img_flipped = sitk.Flip(img, axes_to_flip, flipAboutOrigin=False)
+        vol = sitk.GetArrayFromImage(img)
 
         if data_view=='sagittal':
             self.LoadMRI.paintbrush.label_volume[idx] = np.swapaxes(vol, 1, 2)  #transpose and flip in x and y # #
@@ -73,20 +69,14 @@ class LoadImage4D:
         """
         Loads files including "-segmentation" in filename as segmentation label mask.
 
-        !!!HAS TO BE CHECKED!!!
         """
-        img = sITK.ReadImage(filename)
+        img = sitk.ReadImage(filename)
+        img = sitk.DICOMOrient(img, self.LoadMRI.volumes[0].DICOMOrient)
         img_dir = img.GetDirection()
         img_dir = np.array(img_dir).reshape(3,3)
-        img_dir_max = [max(col, key=abs) for col in zip(*img_dir)]
-        axes_to_flip = []
-        for i in range(3): #Code is built on z being negative
-            if (img_dir_max[i] < 0 and i!=2) or (img_dir_max[i] > 0 and i==2):
-                axes_to_flip.append(True)
-            else:
-                axes_to_flip.append(False)
-        img_flipped = sITK.Flip(img, axes_to_flip, flipAboutOrigin=False)
-        vol = sITK.GetArrayFromImage(img_flipped)
+        #axes_to_flip = [False,False,False]
+        #img_flipped = sitk.Flip(img, axes_to_flip, flipAboutOrigin=False)
+        vol = sitk.GetArrayFromImage(img)
 
         #combine segmentation and anat
         if data_view=='sagittal':

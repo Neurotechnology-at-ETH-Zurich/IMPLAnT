@@ -55,7 +55,7 @@ class Paintbrush:
             z,y,x = self.LoadMRI.slice_indices[0]
             self.setup_table(self.label_volume[0][z, :, :], 'axial',0)
             self.setup_table(self.label_volume[0][:, y, :], 'coronal',0)
-            self.setup_table(np.fliplr(self.label_volume[0][:, :, x].T), 'sagittal',0)
+            self.setup_table(np.fliplr(self.label_volume[0][:, :, x]), 'sagittal',0)
         else:
             for idx in range(len(self.LoadMRI.vtk_widgets[0])):
                 z,y,x = self.LoadMRI.slice_indices[idx]
@@ -481,7 +481,7 @@ class Paintbrush:
             elif view_name == 'coronal':
                 slice_img = self.label_volume[data_index][:, y, :]
             elif view_name == 'sagittal':
-                slice_img = np.fliplr(self.label_volume[data_index][:, :, x].T)
+                slice_img = np.fliplr(self.label_volume[data_index][:, :, x])
 
             # Always flatten in Fortran order for VTK
             vtk_array = numpy_support.numpy_to_vtk(slice_img.ravel(),
@@ -504,8 +504,8 @@ class Paintbrush:
             for view_name, widget in vtk_widget_image.items():
                 widget.GetRenderWindow().Render()
 
-        flip_axes = tuple(i for i, flip in enumerate(self.LoadMRI.volumes[data_index].axes_to_flip[::-1]) if flip)
-        vol = np.flip(self.label_volume[data_index], axis=flip_axes)
+        #flip_axes = tuple(i for i, flip in enumerate(self.LoadMRI.volumes[data_index].axes_to_flip[::-1]) if flip)
+        vol = self.label_volume[data_index]
         #change volume in intensity table
         table_class = self.LoadMRI.intensity_table[data_index]
         for i in range(table_class.table.rowCount()):
@@ -530,7 +530,7 @@ class Paintbrush:
         elif view_name == "coronal":  #
             spacing = (self.LoadMRI.volumes[data_index].spacing[2], self.LoadMRI.volumes[data_index].spacing[0], 1)
         elif view_name == "sagittal": #y,z
-            spacing = (self.LoadMRI.volumes[data_index].spacing[0], self.LoadMRI.volumes[data_index].spacing[1], 1)
+            spacing = (self.LoadMRI.volumes[data_index].spacing[1], self.LoadMRI.volumes[data_index].spacing[0], 1)
 
 
         # Prepare your VTK image
