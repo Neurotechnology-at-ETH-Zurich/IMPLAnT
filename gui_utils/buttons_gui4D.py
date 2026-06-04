@@ -119,7 +119,7 @@ class ButtonsGUI_4D:
         msg_box = QMessageBox()
         msg_box.setWindowTitle("Open Main File")
         msg_box.setText(f"Do you want to open the file \n {file_name}?")
-        btn_yes = msg_box.addButton("Yes", QMessageBox.ActionRole)
+        msg_box.addButton("Yes", QMessageBox.ActionRole)
         btn_no = msg_box.addButton("No, other File", QMessageBox.ActionRole)
         btn_cancel = msg_box.addButton("Cancel", QMessageBox.ActionRole)
         msg_box.exec()
@@ -162,7 +162,7 @@ class ButtonsGUI_4D:
             new_text = current_text + "\nFile loaded: " + data_view.upper() + ": " + os.path.basename(file_name)
             self.ui.file_name_displayed_4d.setPlainText(new_text)
 
-            self.MW.save_info_of_mainimage(data_view,data_index,file_name)
+            self.MW.save_info_of_mainimage(data_view,data_index,file_name,True)
             self.LoadMRI.cursor.init_widgets(data_index,data_view)
             self.initialize_zoom_controls(data_index)
 

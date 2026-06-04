@@ -25,12 +25,12 @@ class LoadImage3D:
         """
         self.LoadMRI.actors_non_mainimage[self.LoadMRI.non_mainindex] = {}
         self.img_vtks[self.LoadMRI.non_mainindex]  = {}
-        self.vol[self.LoadMRI.non_mainindex], self.spacing = self.resample_tofit_bregma(filename) #self.resample_tofit(filename)
+        self.vol[self.LoadMRI.non_mainindex], self.spacing = self.resample_tofit(filename) #self.resample_tofit(filename)
 
         # Set-up first slide
         z, y, x = self.LoadMRI.slice_indices[0]
-        self.setup_vtkdata(self.vol[self.LoadMRI.non_mainindex][z, :, :], self.LoadMRI.vtk_widgets[0]["axial"], "axial",0,)
-        self.setup_vtkdata(self.vol[self.LoadMRI.non_mainindex][:, y, :], self.LoadMRI.vtk_widgets[0]["coronal"], "coronal",0)
+        self.setup_vtkdata(np.fliplr(self.vol[self.LoadMRI.non_mainindex][z, :, :]), self.LoadMRI.vtk_widgets[0]["axial"], "axial",0,)
+        self.setup_vtkdata(np.fliplr(self.vol[self.LoadMRI.non_mainindex][:, y, :]), self.LoadMRI.vtk_widgets[0]["coronal"], "coronal",0)
         self.setup_vtkdata(np.fliplr(self.vol[self.LoadMRI.non_mainindex][:, :, x]), self.LoadMRI.vtk_widgets[0]["sagittal"], "sagittal",0)
 
         #render
@@ -112,9 +112,10 @@ class LoadImage3D:
         """
         #load new image
         img = sitk.ReadImage(filename)
-        img = sitk.DICOMOrient(img, self.LoadMRI.volumes[0].DICOMOrient)
+        #img = sitk.DICOMOrient(img, self.LoadMRI.volumes[0].DICOMOrient)
         if len(img.GetSize())==4:
             img = self.get3Dimage(img)
+        img = sitk.Cast(img, sitk.sitkFloat32)
 
         ref_img = sitk.ReadImage(self.LoadMRI.volumes[0].file_path)
         ref_img = sitk.DICOMOrient(ref_img, self.LoadMRI.volumes[0].DICOMOrient)

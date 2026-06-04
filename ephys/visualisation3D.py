@@ -1,6 +1,6 @@
 # This Python file uses the following encoding: utf-8
 import os
-import SimpleITK as sITK
+import SimpleITK as sitk
 import pyvista as pv
 from pyvistaqt import QtInteractor
 from pathlib import Path
@@ -382,8 +382,7 @@ class Visualisation3D:
             return vol_small, unique_vals
 
         def load_background_mesh():
-            background_path = os.path.join(os.path.dirname(os.path.dirname(__file__)),
-                                           "Files", 'Atlas', 'WHS_SD_rat_atlas_v4.nii.gz')
+            background_path = '/media/neurox/DATA/Files/Atlas/WHS_SD_rat_atlas_v4.nii.gz'
 
             img = nib.load(background_path)
             scale_background= 3
@@ -397,8 +396,7 @@ class Visualisation3D:
             return mesh_small
 
         def load_labels():
-            labels_path = os.path.join(os.path.dirname(os.path.dirname(__file__)),
-                                       "Files", 'Atlas', 'WHS_SD_rat_atlas_v4.label')
+            labels_path = '/media/neurox/DATA/Files/Atlas/WHS_SD_rat_atlas_v4.label'
             if Path(labels_path).is_file():
                 return pd.read_csv(labels_path, comment='#', sep='\s+',
                                    names=['IDX', 'R', 'G', 'B', 'A', 'VIS', 'MSH', 'LABEL'])
@@ -463,7 +461,7 @@ class Visualisation3D:
 
     def update_electrode_points(self,filepath,mrid):
         if "electrode_points" not in self.plotter.actors:
-            img = sITK.ReadImage(filepath)
+            img = sitk.ReadImage(filepath)
             self.spacing = img.GetSpacing()[0]
 
         points_electrodes_path = os.path.join(os.path.join(os.path.join(self.session_path,"analysed")),mrid,'channel_atlas_coordinates.xlsx')
@@ -1053,10 +1051,10 @@ class Visualisation3D:
                 print(old_labels,new_labels,flush=True)
                 return
 
-        atlas_image = sITK.ReadImage(os.path.join(os.path.dirname(os.path.dirname((__file__))), "Files",'Atlas','WHS_SD_rat_atlas_v4.nii.gz'))
-        volume = sITK.GetArrayFromImage(atlas_image)
+        atlas_image = sitk.ReadImage('/media/neurox/DATA/Files/Atlas/WHS_SD_rat_atlas_v4.nii.gz')
+        volume = sitk.GetArrayFromImage(atlas_image)
         volume[~np.isin(volume,np.unique(pd.read_excel(points_electrodes_path,header=0).iloc[:, 1].values))]=0
-        label_image = sITK.GetImageFromArray(volume)
+        label_image = sitk.GetImageFromArray(volume)
         label_image.CopyInformation(atlas_image)
         save_path = os.path.join(self.session_path,'analysed','atlas-regions.nii.gz')
-        sITK.WriteImage(label_image, save_path)
+        sitk.WriteImage(label_image, save_path)

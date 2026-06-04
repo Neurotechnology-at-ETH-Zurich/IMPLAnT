@@ -19,7 +19,7 @@ class MRIVolume:
 
 
     @classmethod
-    def from_file(cls, file_path: str) -> "MRIVolume":
+    def from_file(cls, file_path: str,DICOMOrient = "RAS") -> "MRIVolume":
         image_raw = sitk.ReadImage(file_path)
         array_raw = sitk.GetArrayFromImage(image_raw)
         nib_img = nib.load(file_path)
@@ -35,14 +35,13 @@ class MRIVolume:
             volumes = []
             for t in range(image_raw.GetSize()[3]):
                 image = sitk.DICOMOrient(image_raw[:, :, :, t], "LSA")
-                DICOMOrient = "LAS"
+                #DICOMOrient = "LAS"
                 a, b, c = sitk.GetArrayFromImage(image).shape
                 if a < c:
                     volumes.append(sitk.GetArrayFromImage(image))
                 else:
                     image = sitk.DICOMOrient(image_raw[:, :, :, t], "SAL")
                     volumes.append(sitk.GetArrayFromImage(image))
-                    DICOMOrient = "SAL"
             array_4d = np.stack(volumes)
             timestamp4D = [0, 4, 7] if array_4d.shape[0] > 7 else [0, 2, 5]
             slices = {
@@ -51,13 +50,11 @@ class MRIVolume:
                     2: array_4d[timestamp4D[2], :, :, :].copy(),
                 }
         else:
-            DICOMOrient = "LAS"
             image = sitk.DICOMOrient(image_raw, DICOMOrient)
             vol = sitk.GetArrayFromImage(image)
             slices = {0: vol} #, 1: vol, 2: vol}
 
         spacing = image.GetSpacing()[::-1]
-
 
         return cls(
             file_path=file_path,

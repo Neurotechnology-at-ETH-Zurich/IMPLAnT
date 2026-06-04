@@ -59,7 +59,7 @@ class Change_AnatRegion(QDialog):
         y0 = self.MW.Ephys.Visualisation3D.coord_y.value()-1
         z0 = self.MW.Ephys.Visualisation3D.coord_z.value()-1
         point_voxel = [x0,y0,z0]
-        background_path = os.path.join(os.path.dirname(os.path.dirname(__file__)),"Files", 'Atlas', 'WHS_SD_rat_atlas_v4.nii.gz')
+        background_path = '/media/neurox/DATA/Files/Atlas/WHS_SD_rat_atlas_v4.nii.gz'
         img = nib.load(background_path)
         data = img.get_fdata()
         affine = img.affine
@@ -125,4 +125,3 @@ class Change_AnatRegion(QDialog):
 if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
     dlg = Change_AnatRegion()
-    #if dlg.exec() == QtWidgets.QDialog.DialogCode.Accepted:

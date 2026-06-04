@@ -9,6 +9,7 @@ from utils.scale_bar import Scale
 from core.mri_volume import MRIVolume
 from gui_utils.intensity_table import IntensityTable
 from utils.contrast import Contrast
+import SimpleITK as sitk
 
 class LoadMRI(QObject):
     """
@@ -57,17 +58,17 @@ class LoadMRI(QObject):
         # Set-up first slide
         z, y, x = self.slice_indices[data_index]
         if not self.volumes[0].is_4d:
-            self.setup_vtkdata(self.volumes[data_index].slices[2][z, :, :], self.vtk_widgets[0]["axial"], "axial",0,data_index)
-            self.setup_vtkdata(self.volumes[data_index].slices[0][:, y, :], self.vtk_widgets[0]["coronal"], "coronal",0,data_index)
-            self.setup_vtkdata(np.fliplr(self.volumes[data_index].slices[1][:, :, x].T), self.vtk_widgets[0]["sagittal"], "sagittal",0,data_index)
+            self.setup_vtkdata(np.fliplr(self.volumes[data_index].slices[0][z, :, :]), self.vtk_widgets[0]["axial"], "axial",0,data_index)
+            self.setup_vtkdata(np.fliplr(self.volumes[data_index].slices[0][:, y, :]), self.vtk_widgets[0]["coronal"], "coronal",0,data_index)
+            self.setup_vtkdata(np.fliplr(self.volumes[data_index].slices[0][:, :, x]), self.vtk_widgets[0]["sagittal"], "sagittal",0,data_index)
         else:
             for image_index,vtk_widget_image in self.vtk_widgets.items():
                 if data_view=='axial':
-                    self.setup_vtkdata(self.volumes[data_index].slices[image_index][z, :, :], vtk_widget_image["axial"], "axial",image_index,data_index)
+                    self.setup_vtkdata(np.fliplr(self.volumes[data_index].slices[image_index][z, :, :]), vtk_widget_image["axial"], "axial",image_index,data_index)
                 elif data_view=='coronal':
-                    self.setup_vtkdata(self.volumes[data_index].slices[image_index][z, :, :], vtk_widget_image["coronal"], "coronal",image_index,data_index)
+                    self.setup_vtkdata(np.fliplr(self.volumes[data_index].slices[image_index][z, :, :]), vtk_widget_image["coronal"], "coronal",image_index,data_index)
                 elif data_view=='sagittal':
-                    self.setup_vtkdata(self.volumes[data_index].slices[image_index][z, :, :].T, vtk_widget_image["sagittal"], "sagittal",image_index,data_index)
+                    self.setup_vtkdata(np.fliplr(self.volumes[data_index].slices[image_index][z, :, :]), vtk_widget_image["sagittal"], "sagittal",image_index,data_index)
 
         # Add scale_bar and minimap
         for view_name in 'axial','coronal','sagittal':
@@ -103,8 +104,8 @@ class LoadMRI(QObject):
                 spacing = (self.volumes[data_index].spacing[2], self.volumes[data_index].spacing[1], 1)
             elif view_name == "coronal": # y fixed -> (z,x)
                 spacing = (self.volumes[data_index].spacing[2], self.volumes[data_index].spacing[0], 1)
-            elif view_name == "sagittal":# x fixed -> (z,y)
-                spacing = (self.volumes[data_index].spacing[0], self.volumes[data_index].spacing[1], 1)
+            elif view_name == "sagittal":# x fixed -> (y,z)
+                spacing = (self.volumes[data_index].spacing[1], self.volumes[data_index].spacing[0], 1)
         else:
             spacing = (self.volumes[data_index].spacing[2], self.volumes[data_index].spacing[1], 1)
 
@@ -137,13 +138,15 @@ class LoadMRI(QObject):
         # High-quality smoothing for better visual clarity
         reslice = vtk.vtkImageReslice()
         reslice.SetInputData(img_vtk)
-        reslice.SetInterpolationModeToNearestNeighbor() #Cubic()  # Options: Nearest, Linear, Cubic
+        #reslice.SetInterpolationModeToNearestNeighbor() #Cubic()  # Options: Nearest, Linear, Cubic
+        reslice.SetInterpolationModeToCubic()
         reslice.Update()
 
         # Add image to actor to then be added to renderer
         actor = vtk.vtkImageActor()
         actor.SetInputData(reslice.GetOutput())
-        actor.GetProperty().SetInterpolationTypeToNearest() #Linear()
+        #actor.GetProperty().SetInterpolationTypeToNearest() #Linear()
+        actor.GetProperty().SetInterpolationTypeToCubic()
 
         # Attach LUT for contrast and brightness
         prop = actor.GetProperty()
@@ -202,14 +205,13 @@ class LoadMRI(QObject):
         """
         z, y, x = self.slice_indices[data_index].copy() if hasattr(self, 'slice_indices') else [0, 0, 0]
         #threshold ON or OFF
-
         if self.threshold_on == True:
             self.Segmentation.only_update_displayed_image()
         else:
             if not self.volumes[0].is_4d:
-                self.only_display_slide(self.volumes[data_index].slices[image_index][:, y, :], "coronal",0)
-                self.only_display_slide(np.fliplr(self.volumes[data_index].slices[image_index][:, :, x].T), "sagittal",0)
-                self.only_display_slide(self.volumes[data_index].slices[image_index][z, :, :], "axial",0)
+                self.only_display_slide(np.fliplr(self.volumes[data_index].slices[image_index][:, y, :]), "coronal",0)
+                self.only_display_slide(np.fliplr(self.volumes[data_index].slices[image_index][:, :, x]), "sagittal",0)
+                self.only_display_slide(np.fliplr(self.volumes[data_index].slices[image_index][z, :, :]), "axial",0)
             else:
                 if data_view=='sagittal':
                     self.only_display_slide(self.volumes[data_index].slices[image_index][z, :, :].T, data_view,image_index)
@@ -218,12 +220,11 @@ class LoadMRI(QObject):
         #3d volumes added
         if hasattr(self,"non_mainindex"):
             for i in range(self.non_mainindex+1):
-                self.LoadImage3D.only_display_slide(self.LoadImage3D.vol[i][z, :, :], "axial",i)
-                self.LoadImage3D.only_display_slide(self.LoadImage3D.vol[i][:, y, :], "coronal",i)
-                self.LoadImage3D.only_display_slide(np.fliplr(self.LoadImage3D.vol[i][:, :, x].T), "sagittal",i)
+                self.LoadImage3D.only_display_slide(np.fliplr(self.LoadImage3D.vol[i][z, :, :]), "axial",i)
+                self.LoadImage3D.only_display_slide(np.fliplr(self.LoadImage3D.vol[i][:, y, :]), "coronal",i)
+                self.LoadImage3D.only_display_slide(np.fliplr(self.LoadImage3D.vol[i][:, :, x]), "sagittal",i)
 
-
-        if hasattr(self, "SegEvolution"):
+        if hasattr(self,'segmentation_mask'):
             self.SegEvolution.update_evolution_initializtion()
         elif hasattr(self,'SegInitialization'):
             self.SegInitialization.update_bubbles_visible()
@@ -233,11 +234,11 @@ class LoadMRI(QObject):
             #for view_name, img_vtk in self.paintbrush.vtk_label_images.items():
             # Axial view (XY plane at z)
             if data_view == 'axial' or (self.volumes[0].is_4d and data_view=="coronal") or self.volumes[0].is_4d and data_view=="sagittal":
-                slice_img = self.paintbrush.label_volume[data_index][z, :, :]
+                slice_img = np.fliplr(self.paintbrush.label_volume[data_index][z, :, :])
             elif data_view == 'coronal':
-                slice_img = self.paintbrush.label_volume[data_index][:, y, :]
+                slice_img = np.fliplr(self.paintbrush.label_volume[data_index][:, y, :])
             elif data_view == 'sagittal':
-                slice_img = np.fliplr(self.paintbrush.label_volume[data_index][:, :, x].T)
+                slice_img = np.fliplr(self.paintbrush.label_volume[data_index][:, :, x])
             # Always flatten in Fortran order for VTK
             vtk_array = numpy_support.numpy_to_vtk(slice_img.ravel(),
                                                    deep=True,
@@ -273,6 +274,62 @@ class LoadMRI(QObject):
             self.mrid_tags.actor_heatmap[data_index].Modified()
             #self.vtk_widgets_heatmap['axial'].GetRenderWindow().Render()
             self.mrid_tags.add_legend(slice_img,False,data_index)
+
+        if hasattr(self,'TrajPlanning'):
+            self.TrajPlanning.check_points_in_slice()
+
+        if hasattr(self,'TrajPlanning') and self.show_edge_mask:
+            img_vtk=self.tp_imgvtk[data_view]
+            actor = self.tp_actor[data_view]
+            edge_mask = self.tg_edge_mask
+
+            if data_view == 'axial':
+                slice_img = np.fliplr(edge_mask[z, :, :])
+            elif data_view == 'coronal':
+                slice_img = np.fliplr(edge_mask[:, y, :])
+            elif data_view == 'sagittal':
+                slice_img = np.fliplr(edge_mask[:, :, x])
+
+            vtk_data = numpy_support.numpy_to_vtk(slice_img.ravel(), deep=True, array_type=vtk.VTK_FLOAT)
+            # Set scalars and refresh
+            img_vtk.GetPointData().SetScalars(vtk_data)
+            img_vtk.Modified()
+
+        self.update_measurement_visibility(data_index)
+
+        for _,vtk_widget_image in self.vtk_widgets.items():
+            for view_name, widget in vtk_widget_image.items():
+                widget.GetRenderWindow().Render()
+
+
+        def update_measurement_visibility(self,data_index):
+            """
+            Show or hide measurement lines and text depending on whether they
+            belong to the currently visible slice.
+            """
+            for view_name, line_actor,line_slice_index,text_actor,_,dashed_lines,points in self.measurement_lines:
+                renderer = self.measurement_renderer[view_name]
+                if view_name == 'axial' and line_slice_index[0]==self.slice_indices[data_index][0]:
+                    renderer.AddActor(line_actor)
+                    renderer.AddActor(dashed_lines[1])
+                    renderer.AddActor(dashed_lines[3])
+                    text_actor.SetVisibility(1)
+                    renderer.AddActor(points[2])
+                elif view_name == 'coronal' and line_slice_index[1]==self.slice_indices[data_index][1]:
+                    renderer.AddActor(line_actor)
+                    renderer.AddActor(dashed_lines[1])
+                    renderer.AddActor(dashed_lines[3])
+                    text_actor.SetVisibility(1)
+                    renderer.AddActor(points[2])
+                elif view_name == 'sagittal' and line_slice_index[2]==self.slice_indices[data_index][2]:
+                    renderer.AddActor(line_actor)
+                    renderer.AddActor(dashed_lines[1])
+                    renderer.AddActor(dashed_lines[3])
+                    text_actor.SetVisibility(1)
+            vtk_data = numpy_support.numpy_to_vtk(slice_img.ravel(), deep=True, array_type=vtk.VTK_FLOAT)
+            # Set scalars and refresh
+            img_vtk.GetPointData().SetScalars(vtk_data)
+            img_vtk.Modified()
 
         self.update_measurement_visibility(data_index)
 
@@ -356,13 +413,13 @@ class LoadMRI(QObject):
         """
         center = 0.5
         up = 0.9
-        if view_name == "axial":      # slice in XY plane
+        if view_name == "coronal":      # slice in XY plane
             texts = [("L", 0.95, center),
                      ("R", 0.05, center),
                      ("S", center, up),
                      ("I", center, 0.05)]
 
-        elif view_name == "coronal":  # slice in XZ plane
+        elif view_name == "axial":  # slice in XZ plane
             texts = [("L", 0.95, center),
                      ("R", 0.05, center),
                      ("A", center, up),
@@ -388,3 +445,5 @@ class LoadMRI(QObject):
             actor.SetPosition(x, y)
 
             renderer.AddActor2D(actor)
+
+

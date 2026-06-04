@@ -55,7 +55,7 @@ class Paintbrush:
             z,y,x = self.LoadMRI.slice_indices[0]
             self.setup_table(self.label_volume[0][z, :, :], 'axial',0)
             self.setup_table(self.label_volume[0][:, y, :], 'coronal',0)
-            self.setup_table(np.fliplr(self.label_volume[0][:, :, x]), 'sagittal',0)
+            self.setup_table(self.label_volume[0][:, :, x], 'sagittal',0)
         else:
             for idx in range(len(self.LoadMRI.vtk_widgets[0])):
                 z,y,x = self.LoadMRI.slice_indices[idx]
@@ -477,9 +477,9 @@ class Paintbrush:
                     continue
             # Axial view (XY plane at z)
             if view_name == 'axial' or (self.LoadMRI.volumes[0].is_4d and view_name=='coronal') or (self.LoadMRI.volumes[0].is_4d and view_name=='sagittal'):
-                slice_img = self.label_volume[data_index][z, :, :]
+                slice_img = np.fliplr(self.label_volume[data_index][z, :, :])
             elif view_name == 'coronal':
-                slice_img = self.label_volume[data_index][:, y, :]
+                slice_img = np.fliplr(self.label_volume[data_index][:, y, :])
             elif view_name == 'sagittal':
                 slice_img = np.fliplr(self.label_volume[data_index][:, :, x])
 

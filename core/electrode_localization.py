@@ -229,7 +229,7 @@ class ElectrodeLoc:
         if data_view=='sagittal':
             img_slice = np.fliplr(vol[:,:,round(fitted_points[0][0])])
         else:
-            img_slice = vol[int(fitted_points[0][2]),:,:]
+            img_slice = np.fliplr(vol[int(fitted_points[0][2]),:,:])
         spacing_4d = img_4d.GetSpacing() #xyz # #
         spacing = self.LoadMRI.volumes[data_index].spacing
 
@@ -399,7 +399,7 @@ class ChannelVariablesInput(QtWidgets.QDialog):
         self.resize(500, 500)
         self.MW = MW
         self.roi_names = roi_names
-        gui_dir = os.path.join(os.path.dirname(os.path.dirname((__file__))), "Files")
+        gui_dir = '/media/neurox/DATA/Files/'
 
         # Main layout
         main_layout = QtWidgets.QVBoxLayout(self)

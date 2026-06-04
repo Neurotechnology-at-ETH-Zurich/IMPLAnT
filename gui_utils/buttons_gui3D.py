@@ -9,13 +9,12 @@ from core.interactor_style import CustomInteractorStyle
 from utils.minimap_handler import Minimap
 from gui_utils.paintbrush_gui import PaintbrushGUI
 from core.registration import Registration
-from core.segmentation_utils import Segmentation
 from gui_utils.segmentation_gui import SegmentationGUI
 
 # This Python file uses the following encoding: utf-8
 from PySide6.QtWidgets import QDockWidget,QDialog,QVBoxLayout
 from PySide6.QtCore import Qt
-import SimpleITK as sITK
+import SimpleITK as sitk
 from pathlib import Path
 from PySide6.QtWidgets import QMessageBox
 
@@ -37,7 +36,7 @@ class PopupDialog(QDialog):
 
 
 class ButtonsGUI_3D:
-    def __init__(self,MW,data_index):
+    def __init__(self,MW,data_index,label_file=False):
         """
            Initialize the 3D buttons GUI.
 
@@ -47,15 +46,16 @@ class ButtonsGUI_3D:
         self.MW = MW
         self.ui = MW.ui
         self.LoadMRI = MW.LoadMRI
+        print('buttons_3D class',label_file,flush=True)
+        self.buttons_3D(data_index,label_file)
 
-        self.buttons_3D(data_index)
 
 
-
-    def buttons_3D(self,data_index):
+    def buttons_3D(self,data_index,label_file):
         """
         Set up the UI components, VTK widgets, and basic initialization for 3D mode.
         """
+        print('buttons_3D ',label_file,flush=True)
         file_name = self.LoadMRI.volumes[data_index].file_path
         target = self.ui.file_name_displayed_4d
         target.setPlainText("File loaded: " + os.path.basename(file_name))
@@ -66,12 +66,11 @@ class ButtonsGUI_3D:
         lm = self.LoadMRI
         lm.vtk_widgets = {}
         lm.vtk_widgets[0] = {
-            "coronal": self.ui.vtkWidget_data_coronal,
-            "sagittal": self.ui.vtkWidget_data_sagittal,
             "axial": self.ui.vtkWidget_data_axial,
+            "sagittal": self.ui.vtkWidget_data_sagittal,
+            "coronal": self.ui.vtkWidget_data_coronal,
         }
 
-        print('lm.vtk_widgets created', flush=True)
 
         self.ui.actionAddViewImage.triggered.connect(self.MW.add_another_file)
 
@@ -79,7 +78,7 @@ class ButtonsGUI_3D:
         #initialize everything
         self.LoadMRI.image_index = 0
         self.initialize_zoom_controls(data_index)
-        self.initialize_contrast(data_index)
+        self.initialize_contrast(data_index,label_file)
         self.initialize_cursor(data_index)
 
         self.LoadMRI.movingimg_filename = []
@@ -92,10 +91,11 @@ class ButtonsGUI_3D:
 
 
 
-    def initialize_contrast(self,data_index):
+    def initialize_contrast(self,data_index,label_file):
         """
         Initialize contrast and brightness controls for multiple image views.
         """
+        print('labelfile initialize contrast',label_file,flush=True)
         lm = self.LoadMRI
 
         lm.contrast_ui_elements[0] = {
@@ -108,7 +108,7 @@ class ButtonsGUI_3D:
         }
 
         # initialize Contrast class (for each data_view once)
-        lm.contrast[0] = Contrast(lm, data_index=0)
+        lm.contrast[0] = Contrast(lm, data_index=0,label_file=label_file)
 
         self.LoadMRI.contrast_ui_elements[0]["brightness0"].valueChanged.connect(
             lambda value: lm.contrast[0].changed_sliders(value, image_index=0) # lm.contrastClass.changed_sliders(value,image_index=0)
@@ -197,16 +197,16 @@ class ButtonsGUI_3D:
         # initialize Minimap class
         if data_index==0:
             self.LoadMRI.minimap = Minimap(self.LoadMRI)
-        idx=0
+        idx=2
         pan_distance = 0.4
         go_down_btn = getattr(self.ui, f"go_down_data3d{idx}")
         go_up_btn = getattr(self.ui, f"go_up_data3d{idx}")
         go_right_btn = getattr(self.ui, f"go_right_data3d{idx}")
         go_left_btn = getattr(self.ui, f"go_left_data3d{idx}")
-        go_down_btn.clicked.connect(lambda _, v='coronal', i=0: self.LoadMRI.minimap.pan_arrows(view_name=v,diff_x=0,diff_y=-pan_distance,data_index=idx,data_3d=True))
-        go_up_btn.clicked.connect(lambda _, v='coronal', i=0: self.LoadMRI.minimap.pan_arrows(view_name=v,diff_x=0,diff_y=pan_distance,data_index=idx,data_3d=True))
-        go_right_btn.clicked.connect(lambda _, v='coronal', i=0: self.LoadMRI.minimap.pan_arrows(view_name=v,diff_x=pan_distance,diff_y=0,data_index=idx,data_3d=True))
-        go_left_btn.clicked.connect(lambda _, v='coronal', i=0: self.LoadMRI.minimap.pan_arrows(view_name=v,diff_x=-pan_distance,diff_y=0,data_index=idx,data_3d=True))
+        go_down_btn.clicked.connect(lambda _, v='coronal', i=2: self.LoadMRI.minimap.pan_arrows(view_name=v,diff_x=0,diff_y=-pan_distance,data_index=idx,data_3d=True))
+        go_up_btn.clicked.connect(lambda _, v='coronal', i=2: self.LoadMRI.minimap.pan_arrows(view_name=v,diff_x=0,diff_y=pan_distance,data_index=idx,data_3d=True))
+        go_right_btn.clicked.connect(lambda _, v='coronal', i=2: self.LoadMRI.minimap.pan_arrows(view_name=v,diff_x=pan_distance,diff_y=0,data_index=idx,data_3d=True))
+        go_left_btn.clicked.connect(lambda _, v='coronal', i=2: self.LoadMRI.minimap.pan_arrows(view_name=v,diff_x=-pan_distance,diff_y=0,data_index=idx,data_3d=True))
         idx=1
         go_down_btn = getattr(self.ui, f"go_down_data3d{idx}")
         go_up_btn = getattr(self.ui, f"go_up_data3d{idx}")
@@ -216,15 +216,15 @@ class ButtonsGUI_3D:
         go_up_btn.clicked.connect(lambda _, v='sagittal', i=1: self.LoadMRI.minimap.pan_arrows(view_name=v,diff_x=0,diff_y=pan_distance,data_index=idx,data_3d=True))
         go_right_btn.clicked.connect(lambda _, v='sagittal', i=1: self.LoadMRI.minimap.pan_arrows(view_name=v,diff_x=pan_distance,diff_y=0,data_index=idx,data_3d=True))
         go_left_btn.clicked.connect(lambda _, v='sagittal', i=1: self.LoadMRI.minimap.pan_arrows(view_name=v,diff_x=-pan_distance,diff_y=0,data_index=idx,data_3d=True))
-        idx=2
+        idx=0
         go_down_btn = getattr(self.ui, f"go_down_data3d{idx}")
         go_up_btn = getattr(self.ui, f"go_up_data3d{idx}")
         go_right_btn = getattr(self.ui, f"go_right_data3d{idx}")
         go_left_btn = getattr(self.ui, f"go_left_data3d{idx}")
-        go_down_btn.clicked.connect(lambda _, v='axial', i=2: self.LoadMRI.minimap.pan_arrows(view_name=v,diff_x=0,diff_y=-pan_distance,data_index=idx,data_3d=True))
-        go_up_btn.clicked.connect(lambda _, v='axial', i=2: self.LoadMRI.minimap.pan_arrows(view_name=v,diff_x=0,diff_y=pan_distance,data_index=idx,data_3d=True))
-        go_right_btn.clicked.connect(lambda _, v='axial', i=2: self.LoadMRI.minimap.pan_arrows(view_name=v,diff_x=pan_distance,diff_y=0,data_index=idx,data_3d=True))
-        go_left_btn.clicked.connect(lambda _, v='axial', i=2: self.LoadMRI.minimap.pan_arrows(view_name=v,diff_x=-pan_distance,diff_y=0,data_index=idx,data_3d=True))
+        go_down_btn.clicked.connect(lambda _, v='axial', i=0: self.LoadMRI.minimap.pan_arrows(view_name=v,diff_x=0,diff_y=-pan_distance,data_index=idx,data_3d=True))
+        go_up_btn.clicked.connect(lambda _, v='axial', i=0: self.LoadMRI.minimap.pan_arrows(view_name=v,diff_x=0,diff_y=pan_distance,data_index=idx,data_3d=True))
+        go_right_btn.clicked.connect(lambda _, v='axial', i=0: self.LoadMRI.minimap.pan_arrows(view_name=v,diff_x=pan_distance,diff_y=0,data_index=idx,data_3d=True))
+        go_left_btn.clicked.connect(lambda _, v='axial', i=0: self.LoadMRI.minimap.pan_arrows(view_name=v,diff_x=-pan_distance,diff_y=0,data_index=idx,data_3d=True))
 
 
     def initialize_measurement(self):
@@ -333,7 +333,6 @@ class ButtonsGUI_3D:
 
 
     def resample100um(self,index):
-        print('index combobox',self.ui.comboBox_resamplefiles.currentIndex(),flush=True)
         self.LoadMRI.Resample.progressbar = self.ui.progressBar_100um
         filename_end = 'resampled100um.nii.gz'
         file_name = self.LoadMRI.volumes[index].file_path[:-7]
@@ -423,8 +422,9 @@ class ButtonsGUI_3D:
          self.popup.close()
 
     def check_dimensions_movingimg(self,index):
-        image = sITK.ReadImage(self.LoadMRI.movingimg_filename[index])
-        volume = sITK.GetArrayFromImage(image)
+        image = sitk.ReadImage(self.LoadMRI.movingimg_filename[index])
+        image = sitk.DICOMOrient(image, self.LoadMRI.volumes[0].DICOMOrient)
+        volume = sitk.GetArrayFromImage(image)
         moving_ind = self.LoadMRI.movingimg_filename[index][:-7].split("ind_")[1]
         fixed_ind = self.MW.LoadMRI.volumes[0].file_path[:-7].split("ind_")[1]
         transform_filename = f"transformation_ind_{moving_ind}-to-ind_{fixed_ind}.txt"
@@ -450,8 +450,7 @@ class ButtonsGUI_3D:
 
 
 
-
-    def initialize_segmentation(self):
+    def initialize_segmentation(self,samri=False):
         """
         Initialize segmenation workflow.
         """
@@ -465,15 +464,15 @@ class ButtonsGUI_3D:
             dock.setObjectName(dock_name)
             dock.setWidget(self.ui.groupBox_segmentation)
             self.MW.addDockWidget(Qt.RightDockWidgetArea, dock)
-
-            #Connect paintbrush for segmentation and MRID-tags
-            self.LoadMRI.SegmentationGUI = SegmentationGUI(self.MW)
-            #self.LoadMRI.Segmentation = Segmentation(self.LoadMRI)
+            self.LoadMRI.SegmentationGUI = SegmentationGUI(self.MW,samri)
         else:
+            if samri:
+                self.LoadMRI.SegmentationGUI = SegmentationGUI(self.MW,samri)
             dock.show()
             dock.raise_()
 
         self.LoadMRI.SegmentationGUI.on_threshold_changed(checked=True)
+
 
 
 

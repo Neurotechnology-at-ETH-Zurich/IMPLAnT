@@ -122,6 +122,8 @@ def map_channels_to_atlas(ch_coord, fitted_mrid_points,moving_coordinates, fixed
     #                 )
 #
     #        atlasCoord=fixed_coordinates[atlasIdx][0]
+    #        print('Matched Coord at idx, coord',idx, coord,fixed_coordinates[atlasIdx],flush=True)
+
     #        x,y,z =atlasCoord.astype(int)
     #        label=atlas[x,y,z]
     #        anat_region=atlaslabelsdf["Anatomical Regions"][atlaslabelsdf["Labels"]==label].values[0]

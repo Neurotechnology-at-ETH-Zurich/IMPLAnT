@@ -41,8 +41,8 @@ class IntensityTable(QObject):
         self.intensity_volumes.append(vol)
         self.original_image = []
         self.file_name = []
+        self.opacity_index = []
         self.table = table
-        print('TABLE ',self.table,flush=True)
         self.opactiy_values = []
 
         self.create_table(data_index)
@@ -58,7 +58,8 @@ class IntensityTable(QObject):
             z, y, x = self.MW.LoadMRI.slice_indices[data_index]
             intensity = vol[z,y,x]
             item = self.table.item(i, 2)
-            item.setText(f"{intensity:.3f}")
+            if item is not None:
+                item.setText(f"{intensity:.3f}")
 
     def create_table(self,data_index):
         """
@@ -68,10 +69,7 @@ class IntensityTable(QObject):
             self.table.customContextMenuRequested.connect(lambda idx: self.show_context_menu(idx,data_index))
         else:
             self.table.customContextMenuRequested.connect(lambda idx: self.show_context_menu(idx,data_index))
-            #self.table.setColumnWidth(0, 30)
-            #self.table.setColumnWidth(1, 210)
-            #self.table.setColumnWidth(2, 60)
-            #self.table.setColumnWidth(3, 60)
+
         header = self.table.horizontalHeader()
         header.setSectionResizeMode(0, QtWidgets.QHeaderView.ResizeToContents)
         header.setSectionResizeMode(1, QtWidgets.QHeaderView.Stretch)   # BIG COLUMN
@@ -142,7 +140,7 @@ class IntensityTable(QObject):
         # Layout
         self.original_image.append(None)
         self.file_name.append(os.path.basename(self.MW.LoadMRI.volumes[data_index].file_path))
-
+        self.opacity_index.append(0)
 
         # Show opactity slidebar
         #self.table.cellClicked.connect(self.on_table_clicked)
@@ -159,6 +157,10 @@ class IntensityTable(QObject):
         self.file_name.append(layer_name)
         self.index+=1
         self.table.insertRow(self.index)
+        if hasattr(self,"non_mainindex"):
+            self.opacity_index.append(self.MW.LoadMRI.non_mainindex)
+        else:
+            self.opacity_index.append(0)
 
         btn = QToolButton()
         btn.setCheckable(True)
@@ -192,8 +194,8 @@ class IntensityTable(QObject):
         intensity_item.setFlags(intensity_item.flags() & ~Qt.ItemIsEditable)
         self.table.setItem(self.index , 2, intensity_item)
 
-        self.MW.LoadMRI.intensity[self.index ]=[]
-        self.MW.LoadMRI.intensity[self.index ] = self.table.item(self.index , 2)
+        self.MW.LoadMRI.intensity[self.index]=[]
+        self.MW.LoadMRI.intensity[self.index] = self.table.item(self.index , 2)
         self.MW.LoadMRI.cursor_ui[f"intensity{self.index}"] = self.table.item(self.index , 2)
 
         # Column 3: Opacity [%]
@@ -210,8 +212,10 @@ class IntensityTable(QObject):
         self.table.setCellWidget(self.index , 3, opacity_spin)
         self.MW.LoadMRI.cursor_ui[f"opacity{self.index }"] = opacity_spin
 
-        self.opactiy_values.append([0.6*100,visibility_enabled,data_index])
-
+        if visibility_enabled:
+            self.opactiy_values.append([0.6*100,visibility_enabled,data_index])
+        else:
+            self.opactiy_values.append([1*100,visibility_enabled,data_index])
 
     def show_context_menu(self, pos,data_index):
         """
@@ -236,11 +240,11 @@ class IntensityTable(QObject):
         if not self.MW.LoadMRI.volumes[0].is_4d:
             for vn in 'axial','coronal','sagittal':
                 if vn=='axial':
-                    slice = self.intensity_volumes[row][self.MW.LoadMRI.slice_indices[data_index][0],:,:]
+                    slice = np.fliplr(self.intensity_volumes[row][self.MW.LoadMRI.slice_indices[data_index][0],:,:])
                 elif vn=='coronal':
-                    slice = self.intensity_volumes[row][:,self.MW.LoadMRI.slice_indices[data_index][1],:]
+                    slice = np.fliplr(self.intensity_volumes[row][:,self.MW.LoadMRI.slice_indices[data_index][1],:])
                 elif vn=='sagittal': #different with .T flip; etc.
-                    slice = np.fliplr(self.intensity_volumes[row][:,:,self.MW.LoadMRI.slice_indices[data_index][2]].T)
+                    slice = np.fliplr(self.intensity_volumes[row][:,:,self.MW.LoadMRI.slice_indices[data_index][2]])
 
                 renderer = self.MW.LoadMRI.renderers[data_index][vn]
                 actors = renderer.GetViewProps()
@@ -357,43 +361,22 @@ class IntensityTable(QObject):
         self.overlay_slider.setValue(value)
         self.MW.LoadMRI.cursor_ui[f"opacity{self.index }"].setValue(value)
 
-
         self.overlay_slider.blockSignals(False)
         self.MW.LoadMRI.cursor_ui[f"opacity{self.index }"].blockSignals(False)
 
         row = self.table.currentRow()
         self.opactiy_values[row][0]=value
         if not self.MW.LoadMRI.volumes[0].is_4d:
-            for vn in 'axial','coronal','sagittal':
-                if vn=='axial':
-                    slice = self.intensity_volumes[row][self.MW.LoadMRI.slice_indices[data_index][0],:,:]
-                elif vn=='coronal':
-                    slice = self.intensity_volumes[row][:,self.MW.LoadMRI.slice_indices[data_index][1],:]
-                elif vn=='sagittal': #different with .T flip; etc.
-                    slice = np.fliplr(self.intensity_volumes[row][:,:,self.MW.LoadMRI.slice_indices[data_index][2]].T)
+            overlay_index = self.opacity_index[row]
+            actors_by_view = self.MW.LoadMRI.actors_non_mainimage.get(overlay_index, {})
+            for vn in ('axial', 'coronal', 'sagittal'):
+                actor = actors_by_view.get(vn)
+                if actor is None:
+                    continue
+                actor.GetProperty().SetOpacity(value / 100)
+                self.MW.LoadMRI.vtk_widgets[data_index][vn].GetRenderWindow().Render()
 
-                renderer = self.MW.LoadMRI.renderers[data_index][vn]
-                actors = renderer.GetViewProps()
-                actors.InitTraversal()
-
-                for _ in range(actors.GetNumberOfItems()):
-                    actor = actors.GetNextProp()
-                    if actor.GetClassName()=="vtkOpenGLTextActor" or actor.GetClassName()=="vtkOpenGLActor" or actor.GetClassName()=="vtkActor2D":
-                        continue
-
-                    image_data = actor.GetInput()
-                    vtk_array = numpy_support.vtk_to_numpy(image_data.GetPointData().GetScalars())
-                    h, w = image_data.GetDimensions()[1], image_data.GetDimensions()[0]
-                    if image_data.GetNumberOfScalarComponents() == 4:
-                        continue
-
-                    vtk_array = vtk_array.reshape(image_data.GetDimensions()[1], image_data.GetDimensions()[data_index])
-                    if np.allclose(vtk_array, slice):
-                        selected_actor = actor
-                        selected_actor.GetProperty().SetOpacity(value/100)
-                        self.MW.LoadMRI.vtk_widgets[data_index][vn].GetRenderWindow().Render()
-                        self.MW.LoadMRI.update_slices(0,0,data_view='coronal')
-                        break
+            self.MW.LoadMRI.update_slices(0, 0, data_view='coronal')
         else:
             for vn in self.MW.LoadMRI.renderers[data_index].keys():
                 renderer = self.MW.LoadMRI.renderers[data_index][vn]
@@ -483,6 +466,7 @@ class IntensityTable(QObject):
 
             # Extract 1 time frame
             img = sITK.ReadImage(self.MW.LoadMRI.volumes[0].file_path)
+            img = sITK.DICOMOrient(img, self.MW.LoadMRI.volumes[0].DICOMOrient)
             reference_image = sITK.Extract(
                 img,
                 size=size,
@@ -526,11 +510,11 @@ class IntensityTable(QObject):
         else:
             for vn in 'axial','coronal','sagittal':
                 if vn=='axial':
-                    slice = self.intensity_volumes[row][self.MW.LoadMRI.slice_indices[data_index][0],:,:]
+                    slice = np.fliplr(self.intensity_volumes[row][self.MW.LoadMRI.slice_indices[data_index][0],:,:])
                 elif vn=='coronal':
-                    slice = self.intensity_volumes[row][:,self.MW.LoadMRI.slice_indices[data_index][1],:]
+                    slice = np.fliplr(self.intensity_volumes[row][:,self.MW.LoadMRI.slice_indices[data_index][1],:])
                 elif vn=='sagittal': #different with .T flip; etc.
-                    slice = np.fliplr(self.intensity_volumes[row][:,:,self.MW.LoadMRI.slice_indices[data_index][2]].T)
+                    slice = np.fliplr(self.intensity_volumes[row][:,:,self.MW.LoadMRI.slice_indices[data_index][2]])
 
                 renderer = self.MW.LoadMRI.renderers[data_index][vn]
                 actors = renderer.GetViewProps()
