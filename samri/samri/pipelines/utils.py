@@ -150,13 +150,16 @@ def bids_data_selection(base, structural_match, functional_match, subjects, sess
 				if joint_conditions:
 					for match in structural_match.keys():
 						_df = _df.loc[_df[match].isin(structural_match[match])]
+						_df = _df[_df["suffix"].apply(lambda x: str(x).isnumeric())]
+
 					#res_df = res_df.append(_df)
 					res_df = pd.concat([res_df, _df], ignore_index=True)
 				else:
 					for match in structural_match.keys():
 						_df = filter_data(_df, match, structural_match[match])
-						#res_df = res_df.append(_df)
-						res_df = pd.concat([res_df, _df], ignore_index=True)
+						_df = _df[_df["suffix"].apply(lambda x: str(x).isnumeric())]
+					#res_df = res_df.append(_df)
+					res_df = pd.concat([res_df, _df], ignore_index=True)
 			except Exception as e:
 				import traceback; traceback.print_exc()
 				#pass

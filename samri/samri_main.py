@@ -1,39 +1,137 @@
 # import samri
+import nipype.interfaces.ants.registration as _nr_reg
+_orig_format = _nr_reg.Registration._format_registration
+
+def _patched_format_registration(self):
+    cmd = _orig_format(self)
+    cmd = cmd.replace(", NULL ]", " ]")
+    import re
+    cmd = re.sub(r"--masks \[ NULL \]\s*", "", cmd)
+    cmd = re.sub(r"--masks \[ (\S+) \]", r"--masks \1", cmd)
+    return cmd
+
+_nr_reg.Registration._format_registration = _patched_format_registration
+
 from samri.samri.pipelines.reposit import bru2bids
-from samri.samri.pipelines.extra_functions import get_data_selection
-from samri.samri.pipelines.diagnostics import diagnose
-from samri.samri.pipelines.preprocess import generic, structural
-from samri.samri.pipelines.glm import l1
-import bids
+from samri.samri.pipelines.preprocess import structural,biascorrect_only
 import os
 from subprocess import call
 import samri.data_fetcher as data_fetcher
 import sys
 import glob
 import json
-
 from PySide6 import QtWidgets
-from PySide6.QtWidgets import QDialog
+import pandas as pd
+from file_handling.loadimage_into3D import LoadImage3D
+from PySide6.QtWidgets import QMessageBox
 
 class InitSAMRI:
-    def __init__(self,MW):
-        ## get all data!
-        sys.path
-        sys.path.append('/Users/mri_registration/.local/bin/Bru2')
-        dlg_samri = SAMRI_InputDialog(MW)
-        if dlg_samri.exec() == QtWidgets.QDialog.DialogCode.Accepted:
-            samri_input = dlg_samri.get_values()
-        else:
-            return
+    def __init__(self,samri_input):
+        # Make ANTs available regardless of how the GUI is launched
+        _ANTS_BIN = "/home/neurox/ants/ants-2.4.3/bin"
+        if os.path.isdir(_ANTS_BIN) and _ANTS_BIN not in os.environ.get("PATH", "").split(":"):
+            os.environ["PATH"] = _ANTS_BIN + ":" + os.environ.get("PATH", "")
+        os.environ["ANTSPATH"] = _ANTS_BIN
 
-        base_path= samri_input['base_path'] #"/Users/mri_registration/SAMRI/samri_output/"
+        self.start_bruker2_bids(samri_input)
 
+    def start_bruker2_bids(self,samri_input):
         server = samri_input['server']
         password = samri_input['password']
-        animal_id = samri_input['animal_id']
+        self.animal_id = samri_input['animal_id']
 
         # Enables bru2bids
         bids_flag = samri_input['bids_flag'] #True
+
+        # Raw data to bids conversion
+        raw_base = samri_input['raw_base'] + self.animal_id
+        if not samri_input['fetch']:
+            self.bids_base = samri_input['raw_base'] + self.animal_id
+            return self.bids_base
+        if not os.path.exists(raw_base):
+            os.makedirs(raw_base)
+
+        self.bids_base = samri_input['raw_base'] + self.animal_id
+        call(['rm','-rf',raw_base+'/.DS_Store'])
+        #call(['chmod', '-R', 'u+rwX', raw_base]) # every new file is writeable
+
+        #A = get_data_selection(raw_base)
+        data_fetcher.main(server=server, password=password, local_path=raw_base, animal_id=self.animal_id,local_fodler=samri_input['raw_base'])
+
+        if bids_flag:
+            # for file in bids_base:
+            exclude_sessions = [""]
+        if samri_input['exclude_existing'] and os.path.exists(self.bids_base):
+            if os.path.exists(self.bids_base+"/bids/sub-"+self.animal_id):
+                #if os.path.exists(self.bids_base+"/bids/sub-"+self.animal_id):
+                for file in os.listdir(self.bids_base+"/bids/sub-"+self.animal_id):
+                    filename = os.fsdecode(file)
+                    if filename.startswith("ses-"):
+                        exclude_sessions.append(filename.split("ses-")[-1])
+
+        bru2bids(raw_base,
+                #functional_match={"acquisition": ["geEPI"]},
+                # structural_match={"acquisition": ["T2starMapMGE"]},
+                structural_match={"acquisition": ["TurboRARE", "UTE","TOF", "T1Flash", "T2TurboRARE", "T2TurboRAREhighRes", "T2MapMSME", "RAREInvRec", "TurboRARE3D", "T2starMapMGE"]},
+                out_base=self.bids_base,
+                exclude={"session": exclude_sessions},
+                keep_work=True,
+                )
+
+        # Run Diagnostics
+        ##diagnose(self.bids_base+"/bids/sub-"+self.animal_id) - not working: wrong mach_regex?
+
+        return self.bids_base
+
+
+    def biascorrection(self,samri_input):
+        # Enables registering
+        #base_path= samri_input['base_path'] #"/Users/mri_registration/SAMRI/samri_output/"
+        #working_session = samri_input['working_session']
+        #register = samri_input['register'] #False
+
+        # Registers post-op images to pre-op images
+        #presurgery = samri_input['presurgery'] #False
+        # Enables elastic registering
+        #elastic = samri_input['elastic'] #True
+        register_key = samri_input['register_key'] #["TurboRARE"]
+        #num_threads = samri_input['num_threads'] #8
+        tasks = samri_input['tasks'] #["coronal"]
+
+        # Sessions to be excluded
+        sessions = [""]
+        for file in os.listdir(self.bids_base+"/bids/sub-"+self.animal_id):
+            filename = os.fsdecode(file)
+            if filename.startswith("ses-"):
+                if filename.split("ses-")[-1] != samri_input['working_session'][0]:
+                    sessions.append(filename.split("ses-")[-1])
+
+        atlas = samri_input['atlas_folder'] + '/WHS_SD_rat_T2star_v1.01.nii.gz'
+        atlas_mask = []
+        if samri_input['atlas_mask']:
+            atlas_mask= samri_input['atlas_folder'] + '/WHS_SD_rat_brainmask_v1.01.nii.gz' #WHS_SD_v2_brainmask_bin.nii.gz' ##'/WHS_SD_v2_brainmask_bin.01.nii.gz'
+
+        filepath = biascorrect_only(bids_base=self.bids_base+'/bids',
+            template=atlas,
+            debug=True,
+            exclude={"session": sessions},
+            functional_match={},
+            keep_work=True,
+            n_jobs=False,
+            n_jobs_percentage=0.8,
+            out_base=self.bids_base+'/results',
+            registration_mask=atlas_mask,
+            sessions=[],
+            structural_match={"acq": register_key, "task": tasks, "type": ["anat"]},
+            subjects=[],
+            workflow_name='generic',
+            #enforce_dummy_scans=DUMMY_SCANS,
+        )
+
+        return filepath
+
+
+    def start_registration(self,samri_input):
         # Enables registering
         register = samri_input['register'] #False
 
@@ -44,208 +142,244 @@ class InitSAMRI:
         register_key = samri_input['register_key'] #["TurboRARE"]
         num_threads = samri_input['num_threads'] #8
         tasks = samri_input['tasks'] #["coronal"]
-        working_session = samri_input['working_session']
 
         # Sessions to be excluded
-        sessions = samri_input['sessions_excluded']
+        sessions = [""]
+        for file in os.listdir(self.bids_base+"/bids/sub-"+self.animal_id):
+            filename = os.fsdecode(file)
+            if filename.startswith("ses-"):
+                if filename.split("ses-")[-1] != samri_input['working_session'][0]:
+                    sessions.append(filename.split("ses-")[-1])
 
         # Moving image mask
-        moving_img_mask_name = samri_input['moving_img_mask_name']
-        moving_img_mask_path = os.path.join(base_path, animal_id, "bids", "sub-"+animal_id, "ses-"+working_session,"anat", moving_img_mask_name)
+        moving_img_mask_path = []
+        if samri_input['moving_mask']:
+            moving_img_mask_path = samri_input['moving_img_mask_name']
 
-        # Raw data to bids conversion
-        raw_base = samri_input['raw_base'] + animal_id #"./samri_bindata/"+ animal_id
-        if not os.path.exists(raw_base):
-            os.makedirs(raw_base)
-
-        # bids_base = "./samri_output/" + animal_id + interm + session
-        bids_base = samri_input['raw_base'] + animal_id #"./samri_output/" + animal_id
-        call(['rm','-rf',raw_base+'/.DS_Store'])
-
-        atlas = samri_input['moving_img_mask_name'] + 'WHS_SD_rat_T2star_v1.01.nii.gz' #"/Users/mri_registration/SAMRI/WHS_SD_rat_atlas_v4_pack/WHS_SD_rat_T2star_v1.01.nii.gz"
-        atlas_mask= samri_input['moving_img_mask_name'] + 'WHS_SD_v2_brainmask_bin.01.nii.gz' #"/Users/mri_registration/SAMRI/WHS_SD_rat_atlas_v4_pack/WHS_SD_v2_brainmask_bin.nii.gz"
-
-        #A = get_data_selection(raw_base)
-        data_fetcher.main(server=server, password=password, local_path=raw_base, animal_id=animal_id)
-
-        return
-
-        if bids_flag:
-            # for file in bids_base:
-            exclude_sessions = [""]
-        if os.path.exists(bids_base):
-            ## ADDED THIS; NOT SURE IF VALID?
-            if os.path.exists(bids_base+"/bids/sub-"+animal_id):
-                for file in os.listdir(bids_base+"/bids/sub-"+animal_id):
-                    filename = os.fsdecode(file)
-                    if filename.startswith("ses-"):
-                        exclude_sessions.append(filename.split("ses-")[-1])
-
-        bru2bids(raw_base,
-                #functional_match={"acquisition": ["geEPI"]},
-                 # structural_match={"acquisition": ["T2starMapMGE"]},
-                structural_match={"acquisition": ["TurboRARE", "UTE","TOF", "T1Flash", "T2TurboRARE", "T2TurboRAREhighRes", "T2MapMSME", "RAREInvRec", "TurboRARE3D", "T2starMapMGE"]},
-                out_base=bids_base,
-                exclude={"session": exclude_sessions},
-                keep_work=True,
-                )
-
-        return
-        # Run Diagnostics
-        # print(bids_base)
-        # diagnose(bids_base+"/bids/sub-rTBY38")
+        atlas = samri_input['atlas_folder'] + '/WHS_SD_rat_T2star_v1.01.nii.gz'
+        atlas_mask = []
+        if samri_input['atlas_mask']:
+            atlas_mask= samri_input['atlas_folder'] + '/WHS_SD_rat_brainmask_v1.01.nii.gz' #WHS_SD_v2_brainmask_bin.nii.gz' ##'/WHS_SD_v2_brainmask_bin.01.nii.gz'
 
         if register:
-            structural(bids_base=bids_base,
-                   template=atlas,
-                   out_base=bids_base+'/results',
-                   presurgery=presurgery,
-                   structural_match={"acquisition": register_key, "task": tasks, "type": ["anat"]},
-                   debug=True,
-                   keep_work=True,
-                   elastic=elastic,
-                   moving_img_mask=moving_img_mask_path,
-                   registration_mask=atlas_mask,
-                   num_threads=num_threads,
-                   # reference_template=reference_template
-                   # presurgery_template=presurgery_atlas,
-                   exclude={"session": sessions}
-                   )
+            filepath = structural(
+                bids_base=self.bids_base+'/bids',
+                template=atlas,
+                out_base=self.bids_base+'/results',
+                presurgery=presurgery,
+                structural_match={"acq": register_key, "task": tasks, "type": ["anat"]},
+                debug=True,
+                keep_work=True,
+                elastic=elastic,
+                moving_img_mask=moving_img_mask_path,
+                registration_mask=atlas_mask,
+                num_threads=num_threads,
+                reference_template=atlas,
+                # presurgery_template=presurgery_atlas,
+                exclude={"session": sessions}
+                )
+
+        return filepath
+
+
+    def visualize_results(self,MW):
+        MW.ui.stackedWidget_3d.setVisible(False)
+
+        path_main = "/media/neurox/DATA/Files/Atlas/WHS_SD_rat_atlas_v4.nii.gz" #for atlas
+        MW.load_main_image(path_main,full_restart=False,label_file=True)
+        MW.ui.dockWidget_ephys.setVisible(False)
+        MW.ui.textEdit_SAMRI_reg.setVisible(True)
+
+        #add image
+        csv_path = f"{self.bids_base}/results/generic_work/data_selection.csv"
+        df = pd.read_csv(csv_path, index_col=0)
+        idx = df.loc[df['path'] == self.output_filepath].index[0]
+        img_path = f"{self.bids_base}/results/generic_work/_ind_type_{idx}/s_warp/"
+        if MW.ui.comboBox_movingimg.findText(os.path.basename(img_path)) == -1:
+            MW.LoadMRI.LoadImage3D = LoadImage3D(MW, img_path)
+        vol = MW.LoadMRI.LoadImage3D.open_file(img_path)
+        MW.LoadMRI.intensity_table[0].update_table(os.path.basename(img_path), vol,0)
+        MW.ui.comboBox_movingimg.addItem(os.path.basename(img_path))
+        MW.LoadMRI.movingimg_filename.append(img_path)
+        MW.LoadMRI.combo_Regimgname = MW.ui.comboBox_movingimg
 
 
 
 
-class SAMRI_InputDialog(QDialog):
+class SAMRI_InputDialog:
     def __init__(self, MW,parent=None):
-        super().__init__(parent)
         self.MW = MW
-        self.setWindowTitle("SAMRI Configuration")
-        self.setMinimumWidth(600)
-        self.setMinimumHeight(800)
-        main_layout = QtWidgets.QVBoxLayout(self)
+        self.raw_base = self.MW.ui.lineEdit_rawBase
+        self.raw_base.setText("/media/neurox/DATA/")
+        self.raw_base.textChanged.connect(self.check_rawbase)
+        self.MW.ui.pushButton_browse.clicked.connect(self.browse_path)
 
-        # Scroll area for all fields
-        scroll = QtWidgets.QScrollArea()
-        scroll.setWidgetResizable(True)
-        container = QtWidgets.QWidget()
-        form = QtWidgets.QFormLayout(container)
-        scroll.setWidget(container)
-        main_layout.addWidget(scroll)
-
-        # --- Fields ---
-        self.bru2_path, bru2_widget = self.make_path_row("/Users/mri_registration/.local/bin/Bru2")
-        self.base_path, base_widget = self.make_path_row("/Users/mri_registration/SAMRI/samri_output/")
-        self.raw_base, rawbase_widget = self.make_path_row("./samri_bindata/")
-        self.atlas, atlas_widget = self.make_path_row("/home/neurox/Documents/MRID-GUI/Files/Atlas")
         with open('samri/bruker_info.json') as f:
             bruker_info = json.load(f)
-        self.server       = QtWidgets.QLineEdit(bruker_info["server"])
-        self.password     = QtWidgets.QLineEdit(bruker_info["password"])
+        self.server       = self.MW.ui.lineEdit_server
+        self.server.setText(bruker_info["server"])
+        self.password     = self.MW.ui.lineEdit_password
+        self.password.setText(bruker_info["password"])
         self.password.setEchoMode(QtWidgets.QLineEdit.EchoMode.Password)
-        self.animal_id    = QtWidgets.QLineEdit()
-        self.working_session   = QtWidgets.QLineEdit()
-        self.sessions_excluded = QtWidgets.QLineEdit("")  # comma-separated
-        #self.register_key = QtWidgets.QLineEdit("TurboRARE")  # comma-separated
-        self.register_key = QtWidgets.QComboBox()
-        self.register_key.addItems(["TurboRARE", "UTE", "TOF", "T1Flash", "T2TurboRARE",
-                                     "T2TurboRAREhighRes", "T2MapMSME", "RAREInvRec",
-                                     "TurboRARE3D", "T2starMapMGE"])
 
-        # Tasks
-        self.tasks = QtWidgets.QComboBox()
-        self.tasks.addItems(["coronal", "sagittal", "axial"])
-
-        #self.tasks        = QtWidgets.QLineEdit("coronal")    # comma-separated
-        self.num_threads  = QtWidgets.QSpinBox()
-        self.num_threads.setValue(int(os.cpu_count()-3)) #29
-        self.num_threads.setRange(1, int(os.cpu_count()-3)) #29
-        self.moving_img_mask_name = QtWidgets.QLineEdit()
-
-
-        self.bids_flag  = QtWidgets.QCheckBox()
+        self.bids_flag = self.MW.ui.checkBox_bidsflag
         self.bids_flag.setChecked(True)
-        self.register   = QtWidgets.QCheckBox()
-        self.register.setChecked(False)
-        self.presurgery = QtWidgets.QCheckBox()
-        self.presurgery.setChecked(False)
-        self.elastic    = QtWidgets.QCheckBox()
-        self.elastic.setChecked(True)
 
-        # --- Add to form ---
-        form.addRow("Bru2 path:",           bru2_widget)
-        form.addRow("Base path:",           base_widget)
-        form.addRow("Raw Base:",            rawbase_widget)
-        form.addRow("Atlas Files:",         atlas_widget)
-        form.addRow("Server:",              self.server)
-        form.addRow("Password:",            self.password)
-        form.addRow("Animal ID:",           self.animal_id)
-        form.addRow("Working session:",     self.working_session)
-        form.addRow("Excluded sessions:",   self.sessions_excluded)
-        form.addRow("Register key:",        self.register_key)
-        form.addRow("Tasks:",               self.tasks)
-        form.addRow("Num threads:",         self.num_threads)
-        form.addRow("Moving mask:",         self.moving_img_mask_name)
-        form.addRow("Enable bids_flag:",    self.bids_flag)
-        form.addRow("Register:",            self.register)
-        form.addRow("Presurgery:",          self.presurgery)
-        form.addRow("Elastic:",             self.elastic)
+        self.animal_id = self.MW.ui.lineEdit_animalid
+        self.animal_id.textChanged.connect(self.check_rawbase)
 
-        # --- OK / Cancel ---
-        buttons = QtWidgets.QDialogButtonBox(
-            QtWidgets.QDialogButtonBox.StandardButton.Ok |
-            QtWidgets.QDialogButtonBox.StandardButton.Cancel
-        )
-        buttons.accepted.connect(self.accept)
-        buttons.rejected.connect(self.reject)
-        main_layout.addWidget(buttons)
+        self.MW.ui.pushButton_fetch.clicked.connect(lambda: self.get_values(fetch=True))
+        self.MW.ui.pushButton_continue.clicked.connect(lambda: self.get_values(fetch=False))
+        self.MW.ui.pushButton_re_fetch.clicked.connect(lambda: self.get_values(fetch=True,exclude_existing=False))
 
-    def make_path_row(self, default_path):
-        """Creates a QLineEdit + Browse button in an HBoxLayout."""
-        container = QtWidgets.QWidget()
-        layout = QtWidgets.QHBoxLayout(container)
-        layout.setContentsMargins(0, 0, 0, 0)
-        line_edit = QtWidgets.QLineEdit(default_path)
-        btn = QtWidgets.QPushButton("Browse")
-        btn.clicked.connect(lambda: self.browse_path(line_edit))
-        layout.addWidget(line_edit)
-        layout.addWidget(btn)
-        return line_edit, container
 
-    def browse_path(self, line_edit):
-        path = QtWidgets.QFileDialog.getExistingDirectory(self, "Select Folder", line_edit.text())
+    def browse_path(self):
+        path = QtWidgets.QFileDialog.getExistingDirectory(self, "Select Folder", self.raw_base.text())
         if path:
-            line_edit.setText(path)
+            self.raw_base.setText(path)
 
+    def check_rawbase(self):
+        if os.path.exists(self.raw_base.text() + self.animal_id.text()):
+            self.MW.ui.pushButton_continue.setEnabled(True)
+            self.MW.ui.pushButton_re_fetch.setEnabled(True)
+        else:
+            self.MW.ui.pushButton_continue.setEnabled(False)
+            self.MW.ui.pushButton_re_fetch.setEnabled(False)
 
-    def get_values(self):
+    def get_values(self,fetch=True,exclude_existing=True):
         """Call after exec() to retrieve all values."""
-        animal_id = self.animal_id.text()
-        working_session = self.working_session.text()
-        base_path = self.base_path.text()
-
-
-        return {
-            "bru2_path":            self.bru2_path.text(),
-            "base_path":            base_path,
+        samri_input = {
             "server":               self.server.text(),
             "password":             self.password.text(),
-            "animal_id":            animal_id,
-            "working_session":      working_session,
-            "sessions_excluded":    [s.strip() for s in self.sessions_excluded.text().split(",")],
-            #"register_key":         [k.strip() for k in self.register_key.text().split(",")],
-            "register_key":         [self.register_key.currentText()],
-            "tasks":                [self.tasks.currentText()],
-            "num_threads":          self.num_threads.value(),
-            "moving_img_mask_name": self.moving_img_mask_name.text(),
+            "animal_id":            self.animal_id.text(),
             "bids_flag":            self.bids_flag.isChecked(),
-            "register":             self.register.isChecked(),
-            "presurgery":           self.presurgery.isChecked(),
-            "elastic":              self.elastic.isChecked(),
             "raw_base":             self.raw_base.text(),
-            "atlas_folder":         self.atlas.text(),
+            "fetch":                fetch,
+            "exclude_existing":     exclude_existing,
         }
-
+        self.MW.fetch_data(samri_input)
 
 if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
     dlg = SAMRI_InputDialog()
+
+
+class SAMRI_InputDock:
+    def __init__(self, MW,parent=None):
+        self.MW = MW
+        self.ui = MW.ui
+
+        self.connect_buttons()
+
+
+    def connect_buttons(self):
+        self.ui.lineEdit_animalID.setText(f"Animal ID: {self.MW.Samri.animal_id}")
+        self.ui.lineEdit_bru2_path.setText("/media/neurox/DATA/")
+        self.ui.lineEdit_base_path.setText("/media/neurox/DATA/")
+        self.ui.lineEdit_atlas_path.setText("/media/neurox/DATA/Files/Atlas")
+
+        self.ui.pushButton_browseBru2.clicked.connect(lambda: self.browse_path(self.ui.lineEdit_bru2_path))
+        self.ui.pushButton_browseBase.clicked.connect(lambda: self.browse_path(self.ui.lineEdit_base_path))
+        self.ui.pushButton_browseAtlas.clicked.connect(lambda: self.browse_path(self.ui.lineEdit_atlas_path))
+        self.ui.pushButton_browseMov.clicked.connect(lambda: self.browse_path(self.ui.lineEdit_movMask,file=True))
+
+        # fill comboboxes
+        if not os.path.exists(self.MW.Samri.bids_base+"/bids/sub-"+self.MW.Samri.animal_id):
+            #pop up asking for the view if 4D data used
+            msg_box = QMessageBox()
+            msg_box.setWindowTitle("Animal ID not found")
+            msg_box.setText("NO such Animal ID found!")
+            msg_box.addButton("OK", QMessageBox.ActionRole)
+            msg_box.exec()
+            return
+        for file in os.listdir(self.MW.Samri.bids_base+"/bids/sub-"+self.MW.Samri.animal_id):
+            filename = os.fsdecode(file)
+            if filename.startswith("ses-"):
+                self.ui.comboBox_working_session.addItem(filename.split("ses-")[-1])
+
+        self.ui.comboBox_register_key.addItems(["TurboRARE", "UTE", "TOF", "T1Flash", "T2TurboRARE",
+                                     "T2TurboRAREhighRes", "T2MapMSME", "RAREInvRec",
+                                     "TurboRARE3D", "T2starMapMGE"])
+
+        self.ui.comboBox_tasks.addItems(["coronal", "sagittal", "axial"])
+
+        #fill spinbox
+        self.ui.spinBox_num_threads.setValue(6) #int(os.cpu_count()-7)) #25
+        self.ui.spinBox_num_threads.setRange(1, 8) #29
+
+        # fill moving mask text line
+        self.update_mov_mask_path()
+
+        self.ui.pushButton_createMovMask.clicked.connect(self.create_mov_mask)
+        self.ui.buttonBox.accepted.connect(self.get_values)
+        self.ui.buttonBox.rejected.connect(self.reject)
+
+        self.ui.checkBox_mov_mask.toggled.connect(self.ui.pushButton_createMovMask.setEnabled)
+        self.ui.checkBox_mov_mask.toggled.connect(self.ui.pushButton_browseMov.setEnabled)
+        self.ui.checkBox_mov_mask.toggled.connect(self.ui.lineEdit_movMask.setEnabled)
+        self.ui.pushButton_createMovMask.setEnabled(self.ui.checkBox_mov_mask.isChecked())
+
+        self.ui.comboBox_working_session.currentIndexChanged.connect(self.update_mov_mask_path)
+        self.ui.comboBox_register_key.currentIndexChanged.connect(self.update_mov_mask_path)
+
+        self.ui.checkBox_biascorrection.toggled.connect(
+            lambda checked: self.ui.checkBox_registration.setChecked(False) if checked else None
+        )
+
+        self.ui.checkBox_registration.toggled.connect(
+            lambda checked: self.ui.checkBox_biascorrection.setChecked(False) if checked else None
+        )
+
+
+    def create_mov_mask(self):
+        path = self.matches[0]
+
+        self.MW.load_main_image(path,full_restart=False)
+        self.ui.dockWidget_ephys.setVisible(False)
+        self.ui.textEdit_SAMRI_reg.setVisible(True)
+        self.MW.ButtonsGUI_3D.initialize_segmentation(samri=True)
+
+    def update_mov_mask_path(self):
+        folder = (self.MW.Samri.bids_base + "/bids/sub-" + self.MW.Samri.animal_id
+                  + "/ses-" + self.ui.comboBox_working_session.currentText() + "/anat")
+        key = self.ui.comboBox_register_key.currentText()
+        self.matches = [p for p in glob.glob(os.path.join(folder, f"*-{key}_*.nii.gz")) if '-mask' not in os.path.basename(p)]
+        mov_mask_path = self.matches[0][:-7] + "-mask.nii.gz"
+        if os.path.exists(mov_mask_path):
+            self.ui.lineEdit_movMask.setText(mov_mask_path)
+        else:
+            self.ui.lineEdit_movMask.setText('No mask found: Browse or Create Mask')
+
+    def browse_path(self, text_edit,file=False):
+        if file:
+            folder = (self.MW.Samri.bids_base + "/bids/sub-" + self.MW.Samri.animal_id
+                      + "/ses-" + self.ui.comboBox_working_session.currentText() + "/anat")
+            path, _ = QtWidgets.QFileDialog.getOpenFileName(None,"Select Mask", folder ,"NIfTI files (*.nii.gz)")
+        else:
+            path = QtWidgets.QFileDialog.getExistingDirectory(self.MW, "Select Folder", text_edit.toPlainText())
+        if path:
+            text_edit.setText(path)
+
+    def get_values(self):
+        """Call after exec() to retrieve all values."""
+        samri_input = {}
+        samri_input["bru2_path"] =          self.ui.lineEdit_bru2_path.toPlainText()
+        samri_input["base_path"] =          self.ui.lineEdit_base_path.toPlainText()
+        samri_input["working_session"] =    [self.ui.comboBox_working_session.currentText()]
+        samri_input["register_key"]=        [self.ui.comboBox_register_key.currentText()]
+        samri_input["tasks"]=               [self.ui.comboBox_tasks.currentText()]
+        samri_input["num_threads"]=         self.ui.spinBox_num_threads.value()
+        samri_input["moving_img_mask_name"]=self.ui.lineEdit_movMask.toPlainText()
+        samri_input["register"]=            self.ui.checkBox_registration.isChecked()
+        samri_input["presurgery"]=          self.ui.checkBox_presurgery.isChecked()
+        samri_input["elastic"]=             self.ui.checkBox_elastic.isChecked()
+        samri_input["atlas_folder"]=        self.ui.lineEdit_atlas_path.toPlainText()
+        samri_input["moving_mask"]=         self.ui.checkBox_mov_mask.isChecked()
+        samri_input["atlas_mask"]=          self.ui.checkBox_atlasmask.isChecked()
+        samri_input["biascorrection"]=      self.ui.checkBox_biascorrection.isChecked()
+
+        self.MW.start_registration(samri_input)
+
+
+    def reject(self):
+        return None

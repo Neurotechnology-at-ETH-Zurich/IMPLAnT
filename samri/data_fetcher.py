@@ -7,7 +7,7 @@ import paramiko
 #Data fetcher from Bruker Host PC
 #Collects the bruker scan files given the subject id
 
-def main(server, password, local_path, animal_id):
+def main(server, password, local_path, animal_id,local_fodler):
     # server = ""
     port = 22
     # password = ""
@@ -20,7 +20,7 @@ def main(server, password, local_path, animal_id):
     # local_path = "./fetcher_test/"
     #Set below the directory where the scan data is originally stored
     remote_path = "/opt/PV6.0.1/data/mri/"
-    local_files=get_local_data_list(animal_id)
+    local_files=get_local_data_list(animal_id,local_fodler)
     get_data(client, files, local_path, remote_path,local_files)
 
 def createSSHClient(server, port, user, password):
@@ -54,8 +54,8 @@ def get_data(client, files, local_path, remote_path, local_files):
             print("complete")
     scp.close()
 
-def get_local_data_list(animal_id):
-    file_list=glob.glob("./samri_bindata/" + animal_id +"/*")
+def get_local_data_list(animal_id,local_fodler):
+    file_list=glob.glob(local_fodler + animal_id +"/*") #"./samri_bindata/"
     files = []
     for file in file_list:
         files.append(file.split("/")[-1])

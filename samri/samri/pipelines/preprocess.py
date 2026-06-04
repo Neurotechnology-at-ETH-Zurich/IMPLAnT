@@ -675,7 +675,7 @@ def generic(bids_base, template,
 
     workflow.run(plugin="MultiProc", plugin_args={'n_procs': n_jobs})
     print('n_jobs',n_jobs,flush=True)
-    return
+
     copy_bids_files(bids_base, os.path.join(out_base, workflow_name))
     if not keep_work:
         workdir = path.join(workflow.base_dir, workdir_name)
@@ -1083,6 +1083,7 @@ def biascorrect_only(bids_base, template,
                 (s_biascorrect, datasink, [('output_image', 'biascorrected')])
             ]
 
+
             workflow_config = {'execution': {'crashdump_dir': path.join(out_base, 'crashdump'), }}
             if debug:
                 workflow_config['logging'] = {
@@ -1109,7 +1110,7 @@ def biascorrect_only(bids_base, template,
             with open(path.join(workflow.base_dir, workdir_name, 'registration_parameters.txt'), 'w') as convert_file:
                 convert_file.write(json.dumps(GENERIC_PHASES))
 
-            workflow.run(plugin="MultiProc", plugin_args={'n_procs': n_jobs})
+            result = workflow.run(plugin="MultiProc", plugin_args={'n_procs': n_jobs})
             copy_bids_files(bids_base, os.path.join(out_base, workflow_name))
             if not keep_work:
                 workdir = path.join(workflow.base_dir, workdir_name)
@@ -1128,6 +1129,10 @@ def biascorrect_only(bids_base, template,
                                 shutil.rmtree(file_object_path)
                     else:
                         raise OSError(str(e))
+
+            for node in result.nodes():
+                if node.name == 'get_s_scan':
+                    return node.result.outputs.nii_path
 
 
 # Preprocessing and registration function only for structural scans
@@ -1318,7 +1323,7 @@ def structural(bids_base, template,
     with open(path.join(workflow.base_dir, workdir_name, 'registration_parameters.txt'), 'w') as convert_file:
         convert_file.write(json.dumps(GENERIC_PHASES))
 
-    workflow.run(plugin="MultiProc", plugin_args={'n_procs': n_jobs})
+    result = workflow.run(plugin="MultiProc", plugin_args={'n_procs': n_jobs})
 
     copy_bids_files(bids_base, os.path.join(out_base, workflow_name))
     if not keep_work:
@@ -1339,6 +1344,9 @@ def structural(bids_base, template,
             else:
                 raise OSError(str(e))
 
+    for node in result.nodes():
+        if node.name == 'get_s_scan':
+            return node.result.outputs.nii_path
 #
 
 ## Structural registration with first low-res affine and then high-res elastic
