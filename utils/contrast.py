@@ -1,7 +1,15 @@
 # This Python file uses the following encoding: utf-8
 import vtk
 import numpy as np
+import shlex
 
+#if label:
+#
+#    self.build_label_lut(path_label)
+#        #if self.label:
+#    lut_vtk = self.label_lut
+#    actor.GetProperty().SetInterpolationTypeToNearest()
+#else:
 
 class Contrast:
     """
@@ -15,10 +23,11 @@ class Contrast:
     - Updates all registered VTK actors and renderers immediately.
     - Designed to be initialized once per loaded volume.
     """
-    def __init__(self, LoadMRI,data_index:int):
+    def __init__(self, LoadMRI,data_index:int,label_file=False):
         """
         Initialize contrast management for all available image indices.
         """
+        self.label_file = label_file
         self.initialise_class( LoadMRI,data_index)
 
     def initialise_class(self,LoadMRI,data_index):
@@ -47,20 +56,32 @@ class Contrast:
         self.vminmax_auto = [0.0001, 0.999] #auto
 
         for image_index,vtk_widget_image in self.LoadMRI.vtk_widgets.items():
-            # Level and window for auto and reset
-            vmin, vmax = np.percentile(self.LoadMRI.volumes[data_index].slices[image_index], [self.vminmax_perc[0]*100, self.vminmax_perc[1]*100]) #in percentage
-            vmin_auto, vmax_auto = np.percentile(self.LoadMRI.volumes[data_index].slices[image_index], [self.vminmax_auto[0]*100, self.vminmax_auto[1]*100]) #in percentage
-            self.initial_window[image_index] = vmax - vmin
-            self.initial_level[image_index] = (vmax + vmin)/2
-            self.window_auto[image_index] = vmax_auto - vmin_auto
-            self.level_auto[image_index] = (vmax_auto + vmin_auto)/2
+            print('self.label_file',self.label_file,flush=True)
+            if self.label_file:
+                path_label = "/media/neurox/DATA/Files/Atlas/WHS_SD_rat_atlas_v4.label"
+                self.lut_vtk[image_index] = self.build_label_lut(image_index,path_label)
+                # window/level not used; record neutral values so other code doesn't crash
+                self.initial_window[image_index] = 1
+                self.initial_level[image_index]  = 0
+                self.window_auto[image_index]    = 1
+                self.level_auto[image_index]     = 0
+                self.window[image_index]         = 1
+                self.level[image_index]          = 0
+            else:
+                # Level and window for auto and reset
+                vmin, vmax = np.percentile(self.LoadMRI.volumes[data_index].slices[image_index], [self.vminmax_perc[0]*100, self.vminmax_perc[1]*100]) #in percentage
+                vmin_auto, vmax_auto = np.percentile(self.LoadMRI.volumes[data_index].slices[image_index], [self.vminmax_auto[0]*100, self.vminmax_auto[1]*100]) #in percentage
+                self.initial_window[image_index] = vmax - vmin
+                self.initial_level[image_index] = (vmax + vmin)/2
+                self.window_auto[image_index] = vmax_auto - vmin_auto
+                self.level_auto[image_index] = (vmax_auto + vmin_auto)/2
 
-            self.window[image_index] = self.initial_window[image_index]
-            self.level[image_index] = self.initial_level[image_index]
-            #apply initial lut
-            self.compute_lut(image_index,data_index)
+                self.window[image_index] = self.initial_window[image_index]
+                self.level[image_index] = self.initial_level[image_index]
+                #apply initial lut
+                self.compute_lut(image_index,data_index)
 
-            self.update_lut_window_level(image_index)
+                self.update_lut_window_level(image_index)
 
             #attach ui widgets
             self.display_level_sliders[image_index] =  ui[f"display_level{image_index}"]
@@ -106,6 +127,8 @@ class Contrast:
         """
         Updates the LUT and re-renders all VTK actors using the current selected window (contrast) and level (brightness).
         """
+        if self.label_file:
+            return
 
         vmin = self.level[image_index] - self.window[image_index] / 2
         vmax = self.level[image_index] + self.window[image_index] / 2
@@ -232,3 +255,50 @@ class Contrast:
         self.display_level_sliders[image_index].blockSignals(block_bool)
         self.display_window_sliders[image_index].blockSignals(block_bool)
 
+
+    def _parse_label_file(self, path):
+        """
+        Returns dict: {index: (r, g, b, a, name)} with rgba in 0-1.
+        Handles ITK-SNAP files and simple `idx R G B [A] name` lines.
+        """
+        labels = {}
+        with open(path) as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith("#"):
+                    continue
+                # split, but keep quoted name as one token
+                tokens = shlex.split(line)
+
+                idx = int(tokens[0])
+                r   = int(tokens[1])
+                g   = int(tokens[2])
+                b   = int(tokens[3])
+                a    = int(tokens[4])
+                name = tokens[7]
+
+                labels[idx] = (r/255.0, g/255.0, b/255.0, a, name)
+        return labels
+
+
+    def build_label_lut(self, image_index, label_file):
+        labels = self._parse_label_file(label_file)
+        self.label_map = getattr(self, "label_map", {})
+        self.label_map[image_index] = labels
+        max_idx = max(labels.keys()) if labels else 0
+
+        lut = vtk.vtkLookupTable()
+        lut.SetNumberOfTableValues(max_idx + 1)
+        lut.SetTableRange(0, max_idx)
+        lut.SetIndexedLookup(False)
+        lut.Build()
+
+        for i in range(max_idx + 1):
+            lut.SetTableValue(i, 0.0, 0.0, 0.0, 0.0)
+        for idx, (r, g, b, a, _name) in labels.items():
+            lut.SetTableValue(idx, r, g, b, a)
+        lut.SetTableValue(0, 0.0, 0.0, 0.0, 0.0)
+
+        self.lut_vtk[image_index] = lut
+        self.LoadMRI.tp_labels = labels
+        return lut
