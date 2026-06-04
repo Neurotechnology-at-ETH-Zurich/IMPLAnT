@@ -5,6 +5,9 @@ import subprocess
 import json
 from PySide6.QtWidgets import QStyle
 from PySide6.QtWidgets import QMessageBox, QFileDialog
+import scipy.io
+from pymatreader import read_mat
+
 
 class VideoPlayer:
     def __init__(self,MW):
@@ -50,6 +53,8 @@ class VideoPlayer:
         self.currently_play = True
         self.player.setVideoOutput(self.MW.ui.widget_video)
 
+        self.synchronize_frames(file_path)
+
     def get_frame_rate(self,file_path):
         result = subprocess.run(
             ["ffprobe", "-v", "quiet", "-print_format", "json", "-show_streams", file_path],
@@ -70,6 +75,7 @@ class VideoPlayer:
         else:
             self.player.play()
             self.currently_play = True
+
             icon = self.MW.style().standardIcon(QStyle.SP_MediaPlay)
             self.MW.ui.pushButton_videoPlay.setIcon(icon)
 
@@ -78,4 +84,14 @@ class VideoPlayer:
         frame = self.MW.ui.spinBox_frame.value()
         ms = int((frame / self.frame_rate) * 1000)
         self.player.setPosition(ms)
+
+    def synchronize_frames(self,file_path):
+        mat_path = file_path[:-4] + '.mat'
+        mat = scipy.io.loadmat(mat_path,squeeze_me=True,struct_as_record=False)
+        mat = read_mat(mat_path)
+        print(mat,flush=True)
+        samples_on_off = mat['position']['sample']
+
+        #from samples to sth (each row is one frame)
+        #'amplifier_sample_rate': 20000, 'video_sample_rate': 30
 
