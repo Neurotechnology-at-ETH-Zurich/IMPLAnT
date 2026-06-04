@@ -2,14 +2,11 @@
 from core.segmentation_utils import Segmentation, SegmentationInitialization
 from core.segmentation.evolution import SegmentationEvolution
 from PySide6.QtGui import QStandardItem
-
+from PySide6.QtWidgets import QDockWidget
+from utils.zoom import zoom_notifier
 
 class SegmentationGUI:
     """
-    ---------------------------------------------
-    !!!AT THE MOMENT NO ACTIVE PART OF THE GUI!!!
-    ---------------------------------------------
-
     The SegmentationGUI class connects the segmentation workflow (thresholding, bubble initialization,
     and level-set evolution) to the application's Qt UI.
 
@@ -20,9 +17,10 @@ class SegmentationGUI:
     MW : object
         The main window instance containing the Qt UI and MRI data management (LoadMRI).
     """
-    def __init__(self,MW):
+    def __init__(self,MW,samri=False):
         """Initialize the segmentation GUI and connect UI elements to corresponding handlers."""
         self.LoadMRI = MW.LoadMRI
+        self.MW = MW
         self.ui = MW.ui
         self.initialization_first_time = True
         self.ui.checkBox_threshold.stateChanged.connect(self.on_threshold_changed)
@@ -30,7 +28,14 @@ class SegmentationGUI:
         self.ui.pushButton_Back2.clicked.connect(self.threshold_seg)
         self.ui.pushButton_Next2.clicked.connect(self.evolution)
         self.ui.pushButton_Back3.clicked.connect(self.active_bubbles)
-        #self.ui.pushButton_Finish.clicked.connect(self.seg_finsih)
+        self.ui.pushButton_Finish.clicked.connect(self.seg_finish)
+        if samri:
+            self.ui.pushButton_Back1.setEnabled(True)
+        self.ui.pushButton_Back1.clicked.connect(self.seg_finish)
+        self.samri = samri
+        self.evolution_first_time = True
+        self.ui.stackedWidget_segmentation.setCurrentIndex(0)
+
 
     def on_threshold_changed(self, checked:bool):
         """
@@ -92,7 +97,7 @@ class SegmentationGUI:
 
     def threshold_seg(self):
         """Display the threshold adjustment page."""
-        self.ui.stackedWidget.setCurrentIndex(0)
+        self.ui.stackedWidget_segmentation.setCurrentIndex(0)
         self.update_threshold_display()
 
 
@@ -116,12 +121,15 @@ class SegmentationGUI:
             self.ui.doubleSpinBox_lower.setEnabled(False)
             self.ui.ScrollBar_upper.setEnabled(True)
             self.ui.doubleSpinBox_upper.setEnabled(True)
+
         self.LoadMRI.Segmentation.only_update_displayed_image()
+        for view_name in 'axial','coronal','sagittal':
+            self.LoadMRI.renderers[0][view_name].GetRenderWindow().Render()
 
         #create table entry or update with new volume
         indices = [i for i, val in enumerate(self.LoadMRI.intensity_table[0].file_name) if val == 'Threshold Image']
         if not indices:
-            self.LoadMRI.intensity_table[0].update_table('Threshold Image',self.LoadMRI.th_img/ 32767.0, 0)
+            self.LoadMRI.intensity_table[0].update_table('Threshold Image',self.LoadMRI.th_img/ 32767.0, 0,visibility_enabled=False)
         else:
             index = indices[0]
             self.LoadMRI.intensity_table[0].intensity_volumes[index] = self.LoadMRI.th_img/ 32767.0
@@ -193,7 +201,7 @@ class SegmentationGUI:
             Creates a table for bubble management and connects UI elements
             for radius control and bubble addition/removal.
         """
-        self.ui.stackedWidget.setCurrentIndex(1)
+        self.ui.stackedWidget_segmentation.setCurrentIndex(1)
         if self.initialization_first_time:
             #Get radius
             self.LoadMRI.SegInitialization = SegmentationInitialization(self.LoadMRI)
@@ -208,13 +216,22 @@ class SegmentationGUI:
             self.ui.horizontalSlider_Bubradius.valueChanged.connect(lambda val: self.get_bubble_radius('Slider',val=val))
             self.ui.pushButton_addBubbles.clicked.connect(lambda val: self.LoadMRI.SegInitialization.draw_bubble(self.ui.pushButton_Next2))
             #info if row in table is selected
-            print('bin ich hier?',flush=True)
             self.ui.tableView_activeBub.selectionModel().selectionChanged.connect(self.LoadMRI.SegInitialization.row_selected)
             #delete bubble
             self.ui.pushButton_delete.clicked.connect(self.delete_bubble)
 
             self.initialization_first_time = False
         else:
+            self.ui.stackedWidget_3d.setVisible(False)
+            box = self.ui.page_3D
+            layout = box.layout()
+            layout.setColumnStretch(0, 1)
+            layout.setColumnStretch(1, 1)
+            layout.setColumnStretch(2, 1)
+            layout.setColumnStretch(3, 0)
+            if getattr(self.LoadMRI, "SegEvolution", None) is not None:
+                self.LoadMRI.SegEvolution.reset()
+
             self.LoadMRI.SegInitialization.table.show()
 
 
@@ -287,21 +304,27 @@ class SegmentationGUI:
         """
             Switch to the segmentation evolution page and initialize the
             level-set (or bubble evolution) process.
-
-            TODO: still in process
         """
-        self.ui.stackedWidget.setCurrentIndex(2)
-        #if self.evolution_first_time:
-            # SChange button icons: play, pause
-        button = self.ui.toolButton_runEvo
-        spin_iterations = self.ui.doubleSpinBox_Segiter
-        self.LoadMRI.SegEvolution = SegmentationEvolution(self.LoadMRI,self.LoadMRI.SegInitialization,self.LoadMRI.Segmentation,button,spin_iterations)
-        #self.LoadMRI.SegEvolution.initialize_segmentation_itk()
-        #self.ui.toolButton_runEvo.clicked.connect(lambda val: self.LoadMRI.SegEvolution.segmentation_itk(iterations=20))
+        self.ui.stackedWidget_segmentation.setCurrentIndex(2)
+
+        if self.evolution_first_time:
+            button = self.ui.toolButton_runEvo
+            spin_iterations = self.ui.doubleSpinBox_Segiter
+            btn_resetCamera = self.ui.pushButton_seg3D
+            self.LoadMRI.SegEvolution = SegmentationEvolution(self.LoadMRI,self.LoadMRI.SegInitialization,self.LoadMRI.Segmentation,button,spin_iterations,btn_resetCamera)
+
+            button.clicked.connect(self.LoadMRI.SegEvolution.on_play_pause)
+            self.ui.doubleSpinBox_SegStep.setValue(self.LoadMRI.SegEvolution.CHUNK)
+            self.ui.doubleSpinBox_SegStep.valueChanged.connect(lambda v: setattr(self.LoadMRI.SegEvolution, "CHUNK", int(v)))
+            self.evolution_first_time = False
+            self.ui.toolButton_forwardEvo.clicked.connect(lambda: self.LoadMRI.SegEvolution.play_oneStep())
+            self.ui.toolButton_backwardEvo.clicked.connect(lambda: self.LoadMRI.SegEvolution.reset())
+
         self.LoadMRI.SegEvolution.vtkwidget_3d = self.ui.vtkWidget_data_seg3D
-        self.ui.toolButton_forwardEvo.clicked.connect(lambda val: self.LoadMRI.SegEvolution.segmentation_itk(iterations=2))
         self.ui.lineEdit_vis3D.setVisible(True)
         self.ui.frame_vis3D.setVisible(True)
+        self.ui.stackedWidget_3d.setVisible(True)
+        self.ui.stackedWidget_3d.setCurrentIndex(1)
         box = self.ui.page_3D
         layout = box.layout()
         layout.setColumnStretch(0, 1)
@@ -310,10 +333,26 @@ class SegmentationGUI:
         layout.setColumnStretch(3, 1)
 
 
-        #    self.evolution_first_time = False
-        #else:
-        #    self.load_mri.SegEvolution.new_evolution()
+    def seg_finish(self):
+        dock = self.MW.findChild(QDockWidget, "dock_segmentation")
+        dock.close()
 
+        if self.samri:
+            self.ui.textEdit_SAMRI_reg.setVisible(False)
+            self.ui.textEdit_SAMRI_reg.setVisible(False)
+            self.ui.tabWidget.setCurrentIndex(5)
+            self.MW.Samri_input.update_mov_mask_path()
+            #to be able to create another mask
+            # Disconnect scroll signals
+            self.LoadMRI.cursor_ui["scroll_0"].valueChanged.disconnect()
+            self.LoadMRI.cursor_ui["scroll_1"].valueChanged.disconnect()
+            self.LoadMRI.cursor_ui["scroll_2"].valueChanged.disconnect()
+
+            if hasattr(self.MW.LoadMRI, "minimap"):
+                zoom_notifier.factorChanged.disconnect(self.LoadMRI.minimap.create_small_rectangle)
+            ##del self.MW.LoadMRI # = None
+
+        return
 
 
 

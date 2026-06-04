@@ -6,21 +6,26 @@ from PySide6.QtWidgets import QStyle
 from scipy import ndimage as ndi
 from PySide6.QtCore import QThread, Signal, QObject, Slot
 import vtk
-from vtk.util import numpy_support
-from PySide6.QtCore import Qt
 from scipy.ndimage import median_filter
 
 class SegmentationEvolution(QObject):
-    def __init__(self,LoadMRI,SegInitialization,Threshold,button,spin_iterations):
+    def __init__(self,LoadMRI,SegInitialization,Threshold,button,spin_iterations,btn_resetCamera,samri=False):
         super().__init__()
 
+        if samri:
+            self.volumes = LoadMRI
+            self.btn_resetCamera = btn_resetCamera
+            return
+
         self.LoadMRI = LoadMRI
+        self.volumes = LoadMRI.volumes
         self.SegInit = SegInitialization
         self.Thres = Threshold
-        self.th_img = self.LoadMRI.th_img
-        self.actor_bubble = self.SegInit.actor_bubble
+        self.th_img = self.LoadMRI.th_img.copy()
+        self.actor_bubble = self.SegInit.actor_bubble.copy()
         self.button  = button
         self.spin_iterations = spin_iterations
+        self.btn_resetCamera = btn_resetCamera
 
         self._play_icon  = button.style().standardIcon(QStyle.SP_MediaPlay)
         self._pause_icon = button.style().standardIcon(QStyle.SP_MediaPause)
@@ -31,6 +36,7 @@ class SegmentationEvolution(QObject):
 
         self.last_phi   = None   # sitk.Image, signed level-set state
         self.last_speed = None
+        self.last_update3d = 0
 
         self.evolution_actors = {}
         self.evolved_actors = {
@@ -44,39 +50,30 @@ class SegmentationEvolution(QObject):
         self.CURVATURE    = 0.3 #0.3
         self.ADVECTION    = 1.5 #1.5
 
-
-        self.MAX_ITERS    = 5000
-        self.CHUNK        = 10 #25
+        self.MAX_ITERS    = 10000
+        self.CHUNK        = 150
         self.RMS_TOL      = 1e-5
         self.total_iterations = 0
+        self._3d_first    = True
 
-        ## create_initialwrapper
-        #self.ls_array = self.initialize_level_set()
-        #for vn in 'axial','coronal','sagittal':
-        #    self.visualize_level_set(vn,self.ls_array,255)
-
-        ##make selected circle lines invisible
-        for i in 0,1,2:
-            actor_cirlce = self.SegInit.actor_selected[i]
+        ## make selected circle invisible
+        for actor_cirlce in self.SegInit.actor_selected:
             actor_cirlce[2].SetVisibility(0)
 
-        ## make circles invisible
-        for i,[_, actor,center,radius,c_px,_] in enumerate(self.SegInit.actor_bubble):
-            actor.SetVisibility(0)
-            actor.SetVisibility(0)
-            actor_cirlce = self.SegInit.actor_selected[i]
-            actor_cirlce[2].SetVisibility(0)
-
-        button.clicked.connect(self.on_play_pause)
-        #button.clicked.connect(lambda val: self.LoadMRI.SegEvolution.evolve())
 
     def on_play_pause(self):
+        self.MAX_ITERS    = 10000
         if self.running:
             self.button.setIcon(self._pause_icon)
             self.stop_evolution()
         else:
             self.button.setIcon(self._play_icon)
             self.start_evolution()
+
+    def play_oneStep(self):
+        self.MAX_ITERS    = self.total_iterations+self.CHUNK
+        self.button.setIcon(self._play_icon)
+        self.start_evolution()
 
 
     def bubbles_to_initial_levelset(self,shape_zyx, spacing_xyz, bubbles):
@@ -96,27 +93,13 @@ class SegmentationEvolution(QObject):
 
     def _build_speed_and_init(self):
         # dedupe (each 3D bubble stored 3× — once per view)
-        th = self.LoadMRI.th_img
-        print(f"[diag] th_img dtype={th.dtype} shape={th.shape}",flush=True)
-        print(f"[diag] th_img min={th.min()} max={th.max()} mean={th.mean():.3f}",flush=True)
-
         unique = {}
         for view_name, _a, _c, radius, c_px, _ in self.SegInit.actor_bubble:
             unique[(c_px[0], c_px[1], c_px[2], radius)] = None
+
         bubbles = list(unique.keys())
         if not bubbles:
            return None, None, None, None
-        shape_zyx = self.LoadMRI.th_img.shape
-        for i, (cz, cy, cx, r) in enumerate(bubbles):
-           z, y, x = int(cz), int(cy), int(cx)
-           in_bounds = (0 <= z < shape_zyx[0]
-                        and 0 <= y < shape_zyx[1]
-                        and 0 <= x < shape_zyx[2])
-           if in_bounds:
-               print(f"[bubble {i}] (z,y,x)=({z},{y},{x}) r={r}  "
-                     f"th_img={self.LoadMRI.th_img[z,y,x]}")
-           else:
-               print(f"[bubble {i}] OUT OF BOUNDS (z,y,x)=({z},{y},{x}) shape={shape_zyx}")
 
         shape_zyx   = self.LoadMRI.th_img.shape
         spacing_xyz = tuple(self.LoadMRI.volumes[0].spacing[::-1])
@@ -143,16 +126,16 @@ class SegmentationEvolution(QObject):
 
         speed_np = np.where(positive, speed_np, -1.0).astype(np.float32)
         speed = sitk.GetImageFromArray(speed_np)
-        speed.SetSpacing([spacing_xyz[0],spacing_xyz[1],spacing_xyz[0]*2])#spacing_xyz)
-        phi0.SetSpacing([spacing_xyz[0],spacing_xyz[1],spacing_xyz[0]*2])
-        print(spacing_xyz,shape_zyx,flush=True)
+        ## spacing of y decrease! [0]*2
+        speed.SetSpacing([spacing_xyz[2],spacing_xyz[1],spacing_xyz[0]])
+        phi0.SetSpacing([spacing_xyz[2],spacing_xyz[1],spacing_xyz[0]])
 
         return phi0, speed, bubbles, shape_zyx
 
     def _postprocess(self, mask_bool,min_voxels=20, min_mean_speed=0.1):
-        #m = ndi.binary_opening(mask_bool, iterations=1)
-        #m = ndi.binary_closing(m, iterations=1)
-        m = mask_bool
+        m = ndi.binary_opening(mask_bool, iterations=3)
+        m = ndi.binary_closing(m, iterations=1)
+        #m = mask_bool
         lbl, n = ndi.label(m)
         if n > 1:
             # mean speed value per component
@@ -251,24 +234,22 @@ class SegmentationEvolution(QObject):
             return
         img = sitk.GetImageFromArray(mask.astype(np.uint8))
         img.CopyInformation(self.LoadMRI.volumes[0].ref_image)
-        sitk.WriteImage(img, '/home/neurox/Downloads/MRID data/anat/segmentation.nii.gz')
+        mask_path = self.LoadMRI.volumes[0].file_path[:-7] + "-mask.nii.gz"
+        sitk.WriteImage(img, mask_path)
         z, y, x = self.LoadMRI.slice_indices[0].copy()
-        self.visualize(mask[z, :, :], self.LoadMRI.vtk_widgets[0]["axial"], "axial")
-        self.visualize(mask[:, y, :], self.LoadMRI.vtk_widgets[0]["coronal"], "coronal")
-        self.visualize(np.fliplr(mask[:, :, x].T), self.LoadMRI.vtk_widgets[0]["sagittal"], "sagittal")
-        if visualisation_3d:
-            self.visualize_3d( mask, self.LoadMRI.SegEvolution.vtkwidget_3d)
-
+        self.visualize(np.fliplr(mask[z, :, :]), self.LoadMRI.vtk_widgets[0]["axial"], "axial")
+        self.visualize(np.fliplr(mask[:, y, :]), self.LoadMRI.vtk_widgets[0]["coronal"], "coronal")
+        self.visualize(np.fliplr(mask[:, :, x]), self.LoadMRI.vtk_widgets[0]["sagittal"], "sagittal")
+        if visualisation_3d or (self.spin_iterations.value()-self.last_update3d)>100:
+            self.visualize_3d(mask, self.LoadMRI.SegEvolution.vtkwidget_3d)
+            self.last_update3d = self.spin_iterations.value()
 
     def update_evolution_initializtion(self):
         mask = self.LoadMRI.segmentation_mask
         z, y, x = self.LoadMRI.slice_indices[0].copy()
-        self.visualize(mask[z, :, :], self.LoadMRI.vtk_widgets[0]["axial"], "axial")
-        self.visualize(mask[:, y, :], self.LoadMRI.vtk_widgets[0]["coronal"], "coronal")
-        self.visualize(np.fliplr(mask[:, :, x].T), self.LoadMRI.vtk_widgets[0]["sagittal"], "sagittal")
-        #for _,vtk_widget_image in self.LoadMRI.vtk_widgets.items():
-        #    for view_name, widget in vtk_widget_image.items():
-        #        widget.GetRenderWindow().Render()
+        self.visualize(np.fliplr(mask[z, :, :]), self.LoadMRI.vtk_widgets[0]["axial"], "axial")
+        self.visualize(np.fliplr(mask[:, y, :]), self.LoadMRI.vtk_widgets[0]["coronal"], "coronal")
+        self.visualize(np.fliplr(mask[:, :, x]), self.LoadMRI.vtk_widgets[0]["sagittal"], "sagittal")
 
     def visualize_3d(self, mask, vtk_widget):
         """Render the mask as a 3D isosurface in a QVTKRenderWindowInteractor."""
@@ -276,65 +257,136 @@ class SegmentationEvolution(QObject):
         m = np.ascontiguousarray(mask.astype(np.uint8))   # (Nz, Ny, Nx), x fastest — good
         nz, ny, nx = m.shape
 
+        if not hasattr(self, "_3d_renderer"):
+            self._build_3d_pipeline(vtk_widget)
+
+        imp = self._3d_importer
+        imp.SetDataScalarTypeToUnsignedChar()
+        imp.SetNumberOfScalarComponents(1)
+        imp.SetWholeExtent(0, nx - 1, 0, ny - 1, 0, nz - 1)
+        imp.SetDataExtent(0, nx - 1, 0, ny - 1, 0, nz - 1)
+        #imp.SetDataExtentToWholeExtent()
+        imp.SetDataSpacing(self.volumes[0].spacing[::-1])
+        imp.SetDataOrigin(self.volumes[0].ref_image.GetOrigin())
+        imp.CopyImportVoidPointer(m.tobytes(), m.nbytes)
+        imp.Modified()
+        imp.Update()
+
+        # keep numpy buffer alive — VTK only holds the pointer
+        self._3d_mask_buf = m
+
+        # optional: reset camera only on the very first dataset
+        if getattr(self, "_3d_first", True):
+            self._3d_renderer.ResetCamera()
+            self._3d_first = False
+            self.btn_resetCamera.clicked.connect(lambda: self._3d_renderer.ResetCamera())
+
+        vtk_widget.GetRenderWindow().Render()
+
+    def _build_3d_pipeline(self, vtk_widget):
         importer = vtk.vtkImageImport()
         importer.SetDataScalarTypeToUnsignedChar()
         importer.SetNumberOfScalarComponents(1)
-        importer.SetWholeExtent(0, nx - 1, 0, ny - 1, 0, nz - 1)
-        importer.SetDataExtentToWholeExtent()
-
-        # spacing in (x, y, z) order
-        spacing = self.LoadMRI.volumes[0].spacing[::-1]
-        importer.SetDataSpacing(spacing)
-        importer.SetDataOrigin(self.LoadMRI.volumes[0].ref_image.GetOrigin())
-
-        # numpy is (z, y, x) contiguous; VTK expects x fastest → transpose
-        importer.CopyImportVoidPointer(m.tobytes(), m.nbytes)
-        importer.Update()
-
-        # 2. Marching cubes — isosurface at 0.5 gives the boundary of the binary
         mc = vtk.vtkDiscreteMarchingCubes()
         mc.SetInputConnection(importer.GetOutputPort())
-        mc.GenerateValues(1, 1, 1)   # extract label 1
-        mc.Update()
+        mc.GenerateValues(1, 1, 1)
 
-        # 4. Mapper + actor
         mapper = vtk.vtkPolyDataMapper()
         mapper.SetInputConnection(mc.GetOutputPort())
         mapper.ScalarVisibilityOff()
 
         actor = vtk.vtkActor()
         actor.SetMapper(mapper)
-        actor.GetProperty().SetColor(0.85, 0.30, 0.30)  # red-ish
-        actor.GetProperty().SetOpacity(1.0)
-
-        # 5. Renderer
+        actor.GetProperty().SetColor(0.85, 0.30, 0.30)
         renderer = vtk.vtkRenderer()
         renderer.SetBackground(0.1, 0.1, 0.1)
         renderer.AddActor(actor)
-        renderer.ResetCamera()
 
         rw = vtk_widget.GetRenderWindow()
-        # remove any old renderers so repeated calls don't stack
-        while rw.GetRenderers().GetNumberOfItems() > 0:
-            rw.RemoveRenderer(rw.GetRenderers().GetFirstRenderer())
         rw.AddRenderer(renderer)
-        vtk_widget.GetRenderWindow().Render()
 
-        # keep a reference to prevent GC
+        # stash everything on self
+        self._3d_importer = importer
+        self._3d_mc       = mc
+        self._3d_mapper   = mapper
         self._3d_actor    = actor
         self._3d_renderer = renderer
+
+        mri_importer, mri_arr = self._sitk_to_vtk_image(self.volumes[0].ref_image)
+
+        # Opacity transfer function: dark voxels invisible, brighter tissue faintly visible
+        opacity_tf = vtk.vtkPiecewiseFunction()
+        opacity_tf.AddPoint(0,    0.00)
+        opacity_tf.AddPoint(40,   0.00)
+        opacity_tf.AddPoint(80,   0.05)
+        opacity_tf.AddPoint(180,  0.15)
+        opacity_tf.AddPoint(255,  0.25)
+
+        # Colour transfer function: grayscale
+        color_tf = vtk.vtkColorTransferFunction()
+        color_tf.AddRGBPoint(0,   0.0, 0.0, 0.0)
+        color_tf.AddRGBPoint(255, 1.0, 1.0, 1.0)
+
+        vol_prop = vtk.vtkVolumeProperty()
+        vol_prop.SetColor(color_tf)
+        vol_prop.SetScalarOpacity(opacity_tf)
+        vol_prop.ShadeOff()                 # shading makes it look noisy; turn off for MRI
+        vol_prop.SetInterpolationTypeToLinear()
+
+        vol_mapper = vtk.vtkSmartVolumeMapper()
+        vol_mapper.SetInputConnection(mri_importer.GetOutputPort())
+
+        volume = vtk.vtkVolume()
+        volume.SetMapper(vol_mapper)
+        volume.SetProperty(vol_prop)
+
+        renderer.AddVolume(volume)
+
+        # keep refs alive so Python doesn't GC them mid-render
+        self._3d_mri_importer = mri_importer
+        self._3d_mri_array    = mri_arr
+        self._3d_volume       = volume
+        self._3d_vol_prop     = vol_prop
+
+
+    def _sitk_to_vtk_image(self, sitk_img):
+        """SimpleITK Image → vtkImageData (uint8, 1 component)."""
+        arr = sitk.GetArrayFromImage(sitk_img)          # (z, y, x)
+        # normalise to 0..255 for fast GPU sampling
+        arr = arr.astype(np.float32)
+        lo, hi = np.percentile(arr, (1, 99))
+        arr = np.clip((arr - lo) / max(hi - lo, 1e-6), 0, 1)
+        arr = (arr * 255).astype(np.uint8)
+        arr = np.ascontiguousarray(arr)
+
+        nz, ny, nx = arr.shape
+        imp = vtk.vtkImageImport()
+        imp.SetDataScalarTypeToUnsignedChar()
+        imp.SetNumberOfScalarComponents(1)
+        imp.SetWholeExtent(0, nx - 1, 0, ny - 1, 0, nz - 1)
+        imp.SetDataExtent (0, nx - 1, 0, ny - 1, 0, nz - 1)
+        imp.SetDataSpacing(*sitk_img.GetSpacing())      # sitk already (x, y, z)
+        imp.SetDataOrigin(*sitk_img.GetOrigin())
+        imp.CopyImportVoidPointer(arr.tobytes(), arr.nbytes)
+        imp.Update()
+        return imp, arr
 
 
     def visualize(self, evolved_slice, vtk_widget, view_name):
         """
         Visualize only the evolved bubbles as red overlay in VTK.
 
-
         Parameters:
         - evolved_slice: 2D numpy array of the slice (negative = inside bubble)
         - vtk_widget: the corresponding VTK widget
         - view_name: string name for the view ("axial", "coronal", "sagittal")
         """
+        if self._3d_first:
+            for i,[_, actor,center,radius,c_px,_] in enumerate(self.SegInit.actor_bubble):
+                actor.SetVisibility(0)
+            for actor_cirlce in self.SegInit.actor_selected:
+                actor_cirlce[2].SetVisibility(0)
+
         h, w = evolved_slice.shape
 
         # Create empty RGB image (black background)
@@ -345,17 +397,12 @@ class SegmentationEvolution(QObject):
         bubble_mask = evolved_slice.astype(bool)
 
         # Color bubbles red
-        rgba[bubble_mask, 0] = 255  # R
+        rgba[bubble_mask, 0] = 139 #255  # R
         rgba[bubble_mask, 1] = 0    # G
         rgba[bubble_mask, 2] = 0    # B
         rgba[bubble_mask, 3] = 180    # A
 
         # Convert to VTK image
-        #vtk_data = numpy_support.numpy_to_vtk(rgb.ravel(), deep=True, array_type=vtk.VTK_UNSIGNED_CHAR)
-        #img_vtk = vtk.vtkImageData()
-        #img_vtk.SetDimensions(w, h, 1)
-        #img_vtk.GetPointData().SetScalars(vtk_data)
-        #img_vtk.AllocateScalars(vtk.VTK_UNSIGNED_CHAR, 3)  # RGB
         importer = vtk.vtkImageImport()
         importer.SetDataScalarTypeToUnsignedChar()
         importer.SetNumberOfScalarComponents(4)
@@ -369,8 +416,8 @@ class SegmentationEvolution(QObject):
             spacing = (self.LoadMRI.volumes[0].spacing[2], self.LoadMRI.volumes[0].spacing[1], 1.0)
         elif view_name == "coronal": # y fixed -> (z,x)
             spacing = (self.LoadMRI.volumes[0].spacing[2], self.LoadMRI.volumes[0].spacing[0], 1.0)
-        elif view_name == "sagittal":# x fixed -> (z,y)
-            spacing = (self.LoadMRI.volumes[0].spacing[0], self.LoadMRI.volumes[0].spacing[1], 1.0)
+        elif view_name == "sagittal":# x fixed -> (y,z)
+            spacing = (self.LoadMRI.volumes[0].spacing[1], self.LoadMRI.volumes[0].spacing[0], 1.0)
         importer.SetDataSpacing(spacing)
         importer.SetDataOrigin(0.0, 0.0, 0.01)   # tiny nudge to win Z-fight
         importer.Update()
@@ -382,16 +429,62 @@ class SegmentationEvolution(QObject):
             renderer.RemoveActor(old)
 
         actor = vtk.vtkImageActor()
-        actor.GetMapper().SetInputData(importer.GetOutput()) #img_vtk)
+        actor.GetMapper().SetInputData(importer.GetOutput())
 
         # Add actor to renderer
         renderer.AddActor(actor)
-        #renderer.ResetCamera()
-
-        vtk_widget.GetRenderWindow().Render()
 
         # Keep reference
         self.evolved_actors[view_name] = actor
+
+        vtk_widget.GetRenderWindow().Render()
+
+    def reset(self):
+        # 1. stop any running worker and wait for the thread
+        if self.thread is not None:
+            if self.worker is not None:
+                self.worker.progress.disconnect()
+                self.worker.finished.disconnect()
+                self.worker.abort()
+            self.thread.quit()
+            self.thread.wait(2000)      # give it up to 2 s to exit
+
+        # 2. remove 2D overlay actors
+        for view_name in ('axial', 'coronal', 'sagittal'):
+            renderer = self.LoadMRI.renderers[0][view_name]
+            old = self.evolved_actors.get(view_name)
+            if isinstance(old, vtk.vtkImageActor):
+                renderer.RemoveActor(old)
+            self.evolved_actors[view_name] = []   # back to initial
+
+        # 3. remove 3D isosurface + volume (if built)
+        if hasattr(self, "_3d_renderer"):
+            if hasattr(self, "_3d_actor"):
+                self._3d_renderer.RemoveActor(self._3d_actor)
+            if hasattr(self, "_3d_volume"):
+                self._3d_renderer.RemoveViewProp(self._3d_volume)
+            self.vtkwidget_3d.GetRenderWindow().Render() if hasattr(self, "vtkwidget_3d") else None
+            # force pipeline rebuild next time
+            for attr in ("_3d_renderer", "_3d_importer", "_3d_mc", "_3d_mapper",
+                         "_3d_actor", "_3d_mri_importer", "_3d_mri_array",
+                         "_3d_volume", "_3d_vol_prop", "_3d_mask_buf"):
+                if hasattr(self, attr):
+                    delattr(self, attr)
+            self._3d_first = True
+
+        # 4. clear cached evolution state so next run starts from new bubbles
+        self.last_phi = None
+        self.last_speed = None
+        self.total_iterations = 0
+        self.spin_iterations.setValue(0)
+
+        # 5. clear the mask on LoadMRI
+        if hasattr(self.LoadMRI, "segmentation_mask"):
+            del self.LoadMRI.segmentation_mask
+
+        #update to show bubbles again
+        self.LoadMRI.update_slices(0,0,'coronal')
+
 
 class EvolutionWorker(QObject):
     progress = Signal(object,object,object)   # emits current mask (numpy bool array)
@@ -421,7 +514,6 @@ class EvolutionWorker(QObject):
             gac.SetAdvectionScaling(p["advection"])
             gac.SetMaximumRMSError(p["rms_tol"])
             gac.SetNumberOfIterations(p["chunk"])
-            gac.AddCommand(sitk.sitkIterationEvent, lambda: self.on_iter(gac))
 
             phi = self.phi0
             total = self.last_total
@@ -430,7 +522,6 @@ class EvolutionWorker(QObject):
                 total += gac.GetElapsedIterations()
                 self.mask = sitk.GetArrayFromImage(phi) < 0
                 self.progress.emit(self.mask,phi,total)
-                print(f"[worker] iter={total}  rms={gac.GetRMSChange():.5f}  voxels={int(self.mask.sum())}",flush=True)
                 if gac.GetElapsedIterations() < p["chunk"]:
                     break  # converged
 
@@ -438,9 +529,3 @@ class EvolutionWorker(QObject):
             self.finished.emit(final,phi,total)
         except Exception as e:
             self.error.emit(str(e))
-
-    def on_iter(self, filter):
-        it = filter.GetElapsedIterations()
-        if it % 20 == 0:
-            print(f"iter {it}  rms={filter.GetRMSChange():.5f}", flush=True)
-        #

@@ -5,13 +5,7 @@ from vtk.util import numpy_support
 from vtkmodules.vtkFiltersSources import vtkRegularPolygonSource
 from vtkmodules.vtkRenderingCore import vtkActor,vtkPolyDataMapper
 from PySide6.QtGui import QStandardItemModel,QFont,QStandardItem
-import math
-import SimpleITK as sitk
-#import itk
-from PySide6.QtWidgets import QStyle
-import SimpleITK as sITK
-import os
-import nibabel as nib
+
 
 class Segmentation:
     def __init__(self,LoadMRI):
@@ -36,35 +30,31 @@ class Segmentation:
 
         # Prepare slices
         vol_actors = {
-            'axial': self.LoadMRI.th_img[z, :, :],
-            'coronal': self.LoadMRI.th_img[:, y, :],
-            'sagittal': np.fliplr(self.LoadMRI.th_img[:, :, x].T)
+            'axial': np.fliplr(self.LoadMRI.th_img[z, :, :]),
+            'coronal': np.fliplr(self.LoadMRI.th_img[:, y, :]),
+            'sagittal': np.fliplr(self.LoadMRI.th_img[:, :, x])
         }
 
-        if not hasattr(self, 'mask_vtk'):
-            self.mask_vtk = {}
-            self.mask_actor = {}
-            self.map_colors = {}
+        th_img_float = self.LoadMRI.th_img.astype(np.float32)  # convert to float
+        if not hasattr(self, 'lut'):
+            self.lut = {}
+            #set to blue if outside threshold bounds
+            self.lut = vtk.vtkLookupTable()
+            self.lut.SetTableRange(th_img_float.min(), th_img_float.max())
+            self.lut.SetNumberOfTableValues(256)
+            self.lut.Build()
+            for i in range(256):
+                val = th_img_float.min() + (th_img_float.max() - th_img_float.min()) * i / 255.0
+                if val < 0:
+                    blue_intensity = -val / abs(th_img_float.min())  # scale 0 -> min_val to 0->1
+                    self.lut.SetTableValue(i, 0, 0, blue_intensity, 1)  # blue
+                elif val == 0:
+                        self.lut.SetTableValue(i, 0, 0, 0, 0)
+                else:
+                    gray = val / th_img_float.max()
+                    self.lut.SetTableValue(i, gray, gray, gray, 1)  # grayscale
 
         for view_name in vol_actors:
-            th_img_float = self.LoadMRI.th_img.astype(np.float32)  # convert to float
-            if not hasattr(self, 'lut'):
-                self.lut = {}
-                #set to blue if outside threshold bounds
-                self.lut = vtk.vtkLookupTable()
-                self.lut.SetTableRange(th_img_float.min(), th_img_float.max())
-                self.lut.SetNumberOfTableValues(256)
-                self.lut.Build()
-                for i in range(256):
-                    val = th_img_float.min() + (th_img_float.max() - th_img_float.min()) * i / 255.0
-                    if val < 0:
-                        blue_intensity = -val / abs(th_img_float.min())  # scale 0 -> min_val to 0->1
-                        self.lut.SetTableValue(i, 0, 0, blue_intensity, 1)  # blue
-                    else:
-                        gray = val / th_img_float.max()
-                        self.lut.SetTableValue(i, gray, gray, gray, 1)  # grayscale
-
-
             """Convert 3D NumPy array to vtkImageData"""
             vtk_mask_data = numpy_support.numpy_to_vtk(vol_actors[view_name].ravel(), deep=True, array_type=vtk.VTK_SHORT)
             mask_vtk = vtk.vtkImageData()
@@ -76,24 +66,16 @@ class Segmentation:
                 spacing = (self.LoadMRI.volumes[0].spacing[2], self.LoadMRI.volumes[0].spacing[1], 1)
             elif view_name == "coronal": # y fixed -> (z,x)
                 spacing = (self.LoadMRI.volumes[0].spacing[2], self.LoadMRI.volumes[0].spacing[0], 1)
-            elif view_name == "sagittal":# x fixed -> (z,y)
-                spacing = (self.LoadMRI.volumes[0].spacing[0], self.LoadMRI.volumes[0].spacing[1], 1)
+            elif view_name == "sagittal":# x fixed -> (y,z)
+                spacing = (self.LoadMRI.volumes[0].spacing[1], self.LoadMRI.volumes[0].spacing[0], 1)
 
             mask_vtk.SetSpacing(spacing)
             mask_vtk.GetPointData().SetScalars(vtk_mask_data)
 
-            #display intensity
-            #self.LoadMRI.intensity[0]= intensity
-            #if 0 in self.LoadMRI.cursor.intensity:
-            #   self.LoadMRI.cursor.intensity[0].setText(f"{intensity:.3f}")
-            #print('TODO: intensity table')
-            #if hasattr(self.LoadMRI,'SegInitialization'):
-            #    self.LoadMRI.SegInitialization.update_bubbles_visible()
-
-
             map_colors = vtk.vtkImageMapToColors()
             map_colors.SetLookupTable(self.lut)
             map_colors.SetInputData(mask_vtk)
+            map_colors.SetOutputFormatToRGBA()
             map_colors.Update()
 
             #remove and read everytime, otherwise contrast and brightness changes
@@ -104,11 +86,10 @@ class Segmentation:
 
             mask_actor = vtk.vtkImageActor()
             mask_actor.GetMapper().SetInputConnection(map_colors.GetOutputPort())
+            mask_actor.ForceOpaqueOff()   # allow transparency
+            mask_actor.SetOpacity(1.0)
             self.LoadMRI.renderers[0][view_name].AddActor(mask_actor)
             self.LoadMRI.actors_non_mainimage[0][view_name] = mask_actor
-
-            self.LoadMRI.renderers[0][view_name].GetRenderWindow().Render()
-
 
     def smooth_binary_threshold(self,image, lower=None, upper=None, imin=None, imax=None):
         #update threshold data
@@ -165,22 +146,23 @@ class SegmentationInitialization:
         self.th_img = self.LoadMRI.th_img
 
     def get_bubble_center(self,view_name):
+        shape = self.LoadMRI.volumes[0].slices[0].shape
         if view_name == "axial":      # z fixed -> (x,y)
             self.center = [
-                self.LoadMRI.slice_indices[0][2]*self.LoadMRI.volumes[0].spacing[2],
+                (shape[2]-self.LoadMRI.slice_indices[0][2])*self.LoadMRI.volumes[0].spacing[2],
                 self.LoadMRI.slice_indices[0][1]*self.LoadMRI.volumes[0].spacing[1],
                 1.1 #otherwise not visible
             ]
         elif view_name == "coronal": # y fixed -> (z,x)
             self.center = [
-                self.LoadMRI.slice_indices[0][2]*self.LoadMRI.volumes[0].spacing[2],
+                (shape[2]-self.LoadMRI.slice_indices[0][2])*self.LoadMRI.volumes[0].spacing[2],
                 self.LoadMRI.slice_indices[0][0]*self.LoadMRI.volumes[0].spacing[0],
                 1.1 #otherwise not visible
             ]
         elif view_name == "sagittal":# x fixed -> (y,z)
             self.center = [
-                (self.LoadMRI.volumes[0].slices[0].shape[0]-self.LoadMRI.slice_indices[0][0])*self.LoadMRI.volumes[0].spacing[0],
-                self.LoadMRI.slice_indices[0][1]*self.LoadMRI.volumes[0].spacing[1],
+                (shape[1]-self.LoadMRI.slice_indices[0][1])*self.LoadMRI.volumes[0].spacing[1],
+                self.LoadMRI.slice_indices[0][0]*self.LoadMRI.volumes[0].spacing[0],
                 1.1 #otherwise not visible
             ]
         self.center_px = self.LoadMRI.slice_indices[0].copy()
@@ -214,10 +196,11 @@ class SegmentationInitialization:
 
             renderer = self.LoadMRI.renderers[0][view_name]
             renderer.AddActor(actor)
-            self.LoadMRI.renderers[0][view_name].GetRenderWindow().Render()
+            #self.LoadMRI.renderers[0][view_name].GetRenderWindow().Render()
             self.actor_bubble.append([view_name,actor,self.center,self.radius,self.center_px,polygonSource])
 
             self.create_circle_around_selected_bubble(view_name,self.radius,self.center)
+
 
         self.selected = True
         row = self.model.rowCount()
@@ -228,6 +211,16 @@ class SegmentationInitialization:
         self.model.setItem(row,2, QStandardItem(str(self.center_px[0]+1)))
         self.model.setItem(row,3, QStandardItem(str(self.radius)))
         self.index += 1
+        #select row in table
+        self.table.selectRow(row)
+
+        #make new circle selected circle
+        for i in 1,2,3:
+            actor_entry = self.actor_selected[len(self.actor_bubble)-i]
+            actor_entry[2].SetVisibility(1)
+            polygonSource = actor_entry[3]
+            polygonSource.SetRadius(self.radius)
+            polygonSource.Modified()
 
         for _,vtk_widget_image in self.LoadMRI.vtk_widgets.items():
             for view_name, widget in vtk_widget_image.items():
@@ -259,7 +252,6 @@ class SegmentationInitialization:
     def create_circle_around_selected_bubble(self,view_name,radius,center):
         for i,[view_name, actor,center,radius,c_px,_] in enumerate(self.actor_bubble):
             if i < len(self.actor_bubble)-1:
-                #actor.SetVisibility(0)
                 actor_cirlce = self.actor_selected[i]
                 actor_cirlce[2].SetVisibility(0)
 
@@ -280,6 +272,7 @@ class SegmentationInitialization:
         renderer = self.LoadMRI.renderers[0][view_name]
         renderer.AddActor(actor)
         self.actor_selected.append([view_name,self.index,actor,polygonSource])
+
 
 
     def update_bubbles_visible(self):
