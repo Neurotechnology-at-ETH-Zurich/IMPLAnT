@@ -1110,6 +1110,9 @@ def biascorrect_only(bids_base, template,
             with open(path.join(workflow.base_dir, workdir_name, 'registration_parameters.txt'), 'w') as convert_file:
                 convert_file.write(json.dumps(GENERIC_PHASES))
 
+            for node in workflow._graph.nodes():
+                node.overwrite = True
+
             result = workflow.run(plugin="MultiProc", plugin_args={'n_procs': n_jobs})
             copy_bids_files(bids_base, os.path.join(out_base, workflow_name))
             if not keep_work:
@@ -1130,9 +1133,9 @@ def biascorrect_only(bids_base, template,
                     else:
                         raise OSError(str(e))
 
-            for node in result.nodes():
-                if node.name == 'get_s_scan':
-                    return node.result.outputs.nii_path
+        for node in result.nodes():
+            if node.name == 'get_s_scan':
+                return node.result.outputs.nii_path
 
 
 # Preprocessing and registration function only for structural scans
@@ -1323,6 +1326,9 @@ def structural(bids_base, template,
     with open(path.join(workflow.base_dir, workdir_name, 'registration_parameters.txt'), 'w') as convert_file:
         convert_file.write(json.dumps(GENERIC_PHASES))
 
+    for node in workflow._graph.nodes():
+        node.overwrite = True
+
     result = workflow.run(plugin="MultiProc", plugin_args={'n_procs': n_jobs})
 
     copy_bids_files(bids_base, os.path.join(out_base, workflow_name))
@@ -1344,10 +1350,11 @@ def structural(bids_base, template,
             else:
                 raise OSError(str(e))
 
+
     for node in result.nodes():
         if node.name == 'get_s_scan':
             return node.result.outputs.nii_path
-#
+
 
 ## Structural registration with first low-res affine and then high-res elastic
 ## Uncomment the highres nodes first before running it
