@@ -188,42 +188,49 @@ def map_channels_to_atlas(ch_coord, fitted_mrid_points,moving_coordinates, fixed
         atlasCoordinates_pkl.append(atlasCoord)
 
     if pyrLyExists:
-        pixelValues = dwi1Dsignal
-        pixelValues = (pixelValues - np.min(pixelValues)) / (np.max(pixelValues) - np.min(pixelValues))
-        plot = MplWidget(dwi=True)
-        ax1 = plot.canvas.figure.add_subplot(111)
-        #plt.figure(figsize=(25, 10))
-        # Get unique categories and assign each a color
-        unique_regions = list(set(regionNames))
-        colors = plt.cm.get_cmap("tab10", len(unique_regions))  # Color map
+        plot_dwi_1D_cross_section(dwi1Dsignal,regionNames,pyrChIdx,num_channels,chMap=chMap,savepath=savepath)
 
-        region_to_color = {region: colors(i) for i, region in enumerate(unique_regions)}
-        # Plot line segments with color depending on region
-        for i in range(len(pixelValues) - 1):
-            region = regionNames[i]
-            ax1.plot([i, i + 1], [pixelValues[i], pixelValues[i + 1]],
-                     color=region_to_color[region], linewidth=2)
-
-        # Optional: Add legend
-        for region in unique_regions:
-            ax1.plot([], [], color=region_to_color[region], label=region)
-
-        ax1.axvline(x=pyrChIdx, color='red', linestyle='--', linewidth=2, label='Pyramidal Layer')
-        ax1.set_xticks(np.linspace(0, num_channels - 1, num_channels))
-        ax1.tick_params(axis="x", labelrotation=45)
-        if chMap:
-            print('chMap',chMap,flush=True)
-            ax1.set_xticklabels(chMap)
-        ax1.legend(title="Anatomical Region",fontsize=16,title_fontsize=16) #7
-        ax1.set_xlabel("Channel Index")
-        ax1.set_ylabel("Pixel Value")
-        ax1.set_title("Pixel Values by Region")
-        ax1.tick_params(axis='both', labelsize=16) #6
-        ax1.grid(True)
-        plot.canvas.draw()
-        plot.canvas.figure.savefig(os.path.join(savepath, "dwi_1D_cross_section.pdf"), dpi=2000)
 
     return dwi1Dsignal,regionNames,regionNumbers,pyrLyExists,pyrChIdx,atlasCoordinates_pkl
 
 
+def plot_dwi_1D_cross_section(dwi1Dsignal,regionNames,pyrChIdx,num_channels,chMap=None,savepath=None,mplwidget=None):
+    pixelValues = dwi1Dsignal
+    pixelValues = (pixelValues - np.min(pixelValues)) / (np.max(pixelValues) - np.min(pixelValues))
+    if mplwidget is None:
+        plot = MplWidget(dwi=True)
+    else:
+        plot = mplwidget
+        plot.canvas.figure.clear()
+    ax1 = plot.canvas.figure.add_subplot(111)
+    #plt.figure(figsize=(25, 10))
+    # Get unique categories and assign each a color
+    unique_regions = list(set(regionNames))
+    colors = plt.cm.get_cmap("tab10", len(unique_regions))  # Color map
 
+    region_to_color = {region: colors(i) for i, region in enumerate(unique_regions)}
+    # Plot line segments with color depending on region
+    for i in range(len(pixelValues) - 1):
+        region = regionNames[i]
+        ax1.plot([i, i + 1], [pixelValues[i], pixelValues[i + 1]],
+                 color=region_to_color[region], linewidth=2)
+
+    # Optional: Add legend
+    for region in unique_regions:
+        ax1.plot([], [], color=region_to_color[region], label=region)
+
+    ax1.axvline(x=pyrChIdx, color='red', linestyle='--', linewidth=2, label='Pyramidal Layer')
+    ax1.set_xticks(np.linspace(0, num_channels - 1, num_channels))
+    ax1.tick_params(axis="x", labelrotation=45)
+    if chMap is None:
+        chMap = range(num_channels)
+    ax1.set_xticklabels(chMap)
+    ax1.legend(title="Anatomical Region",fontsize=16,title_fontsize=16) #7
+    ax1.set_xlabel("Channel Index")
+    ax1.set_ylabel("Pixel Value")
+    ax1.set_title("Pixel Values by Region")
+    ax1.tick_params(axis='both', labelsize=16) #6
+    ax1.grid(True)
+    plot.canvas.draw()
+    if savepath:
+        plot.canvas.figure.savefig(os.path.join(savepath, "dwi_1D_cross_section.pdf"), dpi=2000)
