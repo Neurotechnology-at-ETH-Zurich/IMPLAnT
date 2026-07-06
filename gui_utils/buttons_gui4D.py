@@ -9,14 +9,14 @@ from gui_utils.paintbrush_gui import PaintbrushGUI
 from utils.mrid_inputdialog import MRID_InputDialog, ANAT_InputDialog,TRANSFORM_InputDialog
 from PySide6 import QtWidgets
 from core.electrode_localization import ElectrodeLoc
-from PySide6.QtWidgets import QMessageBox, QFileDialog, QDialog, QDockWidget,QVBoxLayout,QTableWidgetItem
-from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QMessageBox, QFileDialog, QDialog, QDockWidget,QVBoxLayout,QTableWidgetItem,QApplication
+from PySide6.QtCore import Qt,QTimer
 import SimpleITK as sITK
 import numpy as np
 from mplwidget import MplWidget
-from file_handling.loadimage_into4D import LoadImage4D
 from ephys.visualisation3D import Visualisation3D
 import time
+from gui_utils.busy_overlay import BusyOverlay
 
 class PopupDialog(QDialog):
     """
@@ -74,6 +74,8 @@ class ButtonsGUI_4D:
         lm.vtk_widgets[2] = {
             f"{data_view}": self.ui.vtkWidget_data02,
         }
+
+        print('have i been here?',data_view,flush=True)
 
         #initialize everything
         self.LoadMRI.image_index = 0
@@ -162,8 +164,8 @@ class ButtonsGUI_4D:
             new_text = current_text + "\nFile loaded: " + data_view.upper() + ": " + os.path.basename(file_name)
             self.ui.file_name_displayed_4d.setPlainText(new_text)
 
-            self.MW.save_info_of_mainimage(data_view,data_index,file_name,True)
-            self.LoadMRI.cursor.init_widgets(data_index,data_view)
+            #self.MW.save_info_of_mainimage(data_view,data_index,file_name,True)
+            self.MW.Cursor.init_widgets(data_index,data_view)
             self.initialize_zoom_controls(data_index)
 
             box = getattr(self.ui, f"groupBox_data{data_index}")
@@ -292,7 +294,7 @@ class ButtonsGUI_4D:
             'label_occ_slider': self.ui.sizeSlider_labelOcc
         }
         #Connect paintbrush for segmentation and MRID-tags
-        self.LoadMRI.paintbrush = Paintbrush(self.LoadMRI)
+        self.MW.Paintbrush = Paintbrush(self.LoadMRI)
 
 
     def initialize_zoom_controls(self, data_index):
@@ -357,8 +359,7 @@ class ButtonsGUI_4D:
 
 
 
-
-    def timestamp4D_changed(self,value:int, image_index: int, data_index:int,data_view:str):
+    def timestamp4D_changed(self,value:int, image_index: int, data_index:int,data_view:str,layer_index=0):
         """
             Synchronize timestamp spinboxes, sliders and image titles when changed by the user.
 
@@ -374,7 +375,22 @@ class ButtonsGUI_4D:
         combobox.setValue(value)
         spinbox.blockSignals(False)
         combobox.blockSignals(False)
-        self.LoadMRI.timestamp4D_changed(value, image_index,data_index,data_view)
+
+        self.MW.Layers[data_index][layer_index].timestamp4D_changed(value, image_index,self.MW.LoadMRI.volumes[data_index].array_4d)
+        renderer = self.LoadMRI.renderers[image_index][data_view].GetRenderWindow().GetRenderers().GetFirstRenderer()
+        camera = renderer.GetActiveCamera()
+        scale = {}
+        fp = {}
+        pos = {}
+        scale[data_view] = camera.GetParallelScale()
+        fp[data_view] = camera.GetFocalPoint()
+        pos[data_view] = camera.GetPosition()
+        self.LoadMRI.contrast[data_index].recompute_luttable(image_index,data_index)
+        camera.SetParallelScale(scale[data_view])
+        camera.SetFocalPoint(fp[data_view])
+        camera.SetPosition(pos[data_view])
+
+        self.LoadMRI.update_slices(image_index,data_index,data_view)
 
         groupBox = getattr(self.ui, f"groupBox_time{data_index}{image_index}")
         title = f"Timestamp t={value}"
@@ -385,17 +401,11 @@ class ButtonsGUI_4D:
 
 
 
-    def continue_mridtags(self,data_view):
+    def continue_mridtags(self):
         """
         Continue MRID-tag workflow by saving data and updating GUI navigation.
         """
         if self.ui.stackedWidget_4D.currentIndex() == 0:
-            # create a dock widget
-            self.ui.groupBox_progressGUI.setVisible(True)
-
-            self.ui.textEdit_progress.setPlainText("Creating unsupervised Heatmap...")
-            self.LoadMRI.mrid_tags.progress = self.ui.progressBar
-            self.LoadMRI.mrid_tags.progress.setValue(10)
 
             self.LoadMRI.vtk_widgets_legend = {}
             for idx in range(len(self.LoadMRI.vtk_widgets[0])):
@@ -410,9 +420,8 @@ class ButtonsGUI_4D:
                     })
                 self.LoadMRI.vtk_widgets_legend[idx] = getattr(self.ui, f"vtkWidget_legend{idx}")
             self.LoadMRI.mrid_tags.heatmap_unsuper = True
-            self.ui.pushButton_segOK.clicked.connect(self.continue_mridtags)
+            self.ui.pushButton_segOK.clicked.connect(self.start_overlay)
             self.LoadMRI.PaintbrushGUI.activate_labels('segmentation')
-            self.LoadMRI.mrid_tags.progress.setValue(30)
         else:
             self.LoadMRI.mrid_tags.heatmap_unsuper = False
 
@@ -426,7 +435,6 @@ class ButtonsGUI_4D:
                 legend = getattr(self.ui,f"groupbox_legend{idx}")
                 legend.setVisible(True)
 
-            self.ui.groupBox_progressGUI.setVisible(False)
             dlg_anat = ANAT_InputDialog(self.MW,1)
             if dlg_anat.exec() == QtWidgets.QDialog.DialogCode.Accepted:
                 filename_seg = dlg_anat.get_values()
@@ -434,21 +442,12 @@ class ButtonsGUI_4D:
                     if filename_seg[i][0] is not None:
                         file_name = filename_seg[i][0]
                         data_view = filename_seg[i][1]
-                        if not  hasattr(self.LoadMRI,"LoadImage4D"):
-                            self.LoadMRI.LoadImage4D = LoadImage4D(self, file_name)
                         self.LoadMRI.mrid_tags.file_name[i] = self.LoadMRI.volumes[i].file_path[:-7]
-                        vol = self.LoadMRI.LoadImage4D.open_file(file_name,data_view)
-                        if vol is not None:
-                            #add to intensity table
-                            keys = list(self.LoadMRI.vtk_widgets[0].keys())
-                            idx = keys.index(data_view)
-                            tabclass = self.LoadMRI.intensity_table[idx]
-                            tabclass.update_table(os.path.basename(file_name), vol,idx)
-                            self.ui.contrast_data.setItemEnabled(idx, False)
+                        self.MW.FileLoader.layer_index += 1
+                        self.MW.FileLoader.initialize_file(file_name,self.MW.FileLoader.layer_index,data_view,i)
                         self.LoadMRI.mrid_tags.heatmap_unsuper = False
-                        print('HIER DEN HEATMAP VERLINKEN', flush=True)
                         #directly generating supervised heatmap!
-                        roi_indices = np.unique(vol)
+                        roi_indices = np.unique(self.MW.Paintbrush.label_volume[i])
                         self.LoadMRI.mrid_tags.update_heatmap(data_view,idx,roi_indices)
 
         if self.ui.stackedWidget_4D.currentIndex() == 0:
@@ -466,10 +465,18 @@ class ButtonsGUI_4D:
             msg_box.exec()
             if msg_box.clickedButton()==btn_cancel:
                 return
-            self.get_gaussian_analysis()
+
+            self.activate_get_gaussian_analysis()
 
         self.ui.stackedWidget_4D.setCurrentIndex(self.ui.stackedWidget_4D.currentIndex()+1)
+        self.overlay.close()
 
+    def start_overlay(self):
+        self.overlay = BusyOverlay(self.MW, message="Processing, please wait…")
+        self.overlay.show()
+        self.overlay.repaint()
+        QApplication.processEvents()
+        QTimer.singleShot(50,  self.continue_mridtags)
 
     def open_input_dialog(self):
         """Open a dialog to input MRID tags and initialize painting tools."""
@@ -499,12 +506,12 @@ class ButtonsGUI_4D:
                         self.ui.checkBox_Brush_MRID.setEnabled(True)
                         self.ui.stackedWidget_4D.setCurrentIndex(0)
                     else:
-                        self.LoadMRI.mrid_tags = MRID_tags(self, tag_data,num_regions,regions)
+                        self.LoadMRI.mrid_tags = MRID_tags(self.MW, tag_data,num_regions,regions)
                         self.LoadMRI.mrid_tags.create_labels()
                         self.LoadMRI.mrid_tags.generate_textfile()
 
                         #Save file
-                        self.ui.pushButton_anatOK.clicked.connect(self.continue_mridtags)
+                        self.ui.pushButton_anatOK.clicked.connect(self.start_overlay)
                         self.ui.checkBox_Brush_MRID.setEnabled(True)
                         self.ui.stackedWidget_4D.setCurrentIndex(0)
                 else:
@@ -512,7 +519,7 @@ class ButtonsGUI_4D:
                     dock.raise_()
 
                 if len(filename_anat)>0:
-                    self.LoadMRI.PaintbrushGUI = PaintbrushGUI(self.MW,True,label=False)
+                    self.LoadMRI.PaintbrushGUI = PaintbrushGUI(self.MW,False,label=False)
                 else:
                     self.LoadMRI.PaintbrushGUI = PaintbrushGUI(self.MW,True,label=True)
 
@@ -520,16 +527,12 @@ class ButtonsGUI_4D:
                     if filename_anat[i][0] is not None:
                         file_name = filename_anat[i][0]
                         data_view = filename_anat[i][1]
-                        if not hasattr(self.LoadMRI,"LoadImage4D"):
-                            self.LoadMRI.LoadImage4D = LoadImage4D(self, file_name)
-                        vol = self.LoadMRI.LoadImage4D.open_file(file_name,data_view)
-                        if vol is not None:
-                            #add to intensity table
-                            keys = list(self.LoadMRI.vtk_widgets[0].keys())
-                            idx = keys.index(data_view)
-                            tabclass = self.LoadMRI.intensity_table[idx]
-                            tabclass.update_table(os.path.basename(file_name), vol,idx)
-                            self.ui.contrast_data.setItemEnabled(idx, False)
+                        self.MW.FileLoader.layer_index += 1
+                        self.MW.FileLoader.initialize_file(file_name,self.MW.FileLoader.layer_index,data_view,i)
+
+                self.LoadMRI.PaintbrushGUI.brush_4D(True,label=False)
+
+
 
 
     def update_zooming(self):
@@ -589,28 +592,28 @@ class ButtonsGUI_4D:
         dlg_transform = TRANSFORM_InputDialog(self.MW)
         if dlg_transform.exec() == QtWidgets.QDialog.DialogCode.Accepted:
             self.transformation_files = dlg_transform.get_values()
-            self.LoadMRI.ElectrodeLoc = ElectrodeLoc(self.LoadMRI,self.MW)
 
-            self.ui.groupBox_progressGUI.setVisible(True)
-            self.LoadMRI.ElectrodeLoc.groupBox_progressGUI = self.ui.groupBox_progressGUI
-            self.ui.textEdit_progress.setPlainText("Finding Gaussian Centers...")
-            self.LoadMRI.ElectrodeLoc.progress = self.ui.progressBar
-            self.LoadMRI.ElectrodeLoc.progress.setValue(10)
+            self.overlay = BusyOverlay(self.MW, message="Processing, please wait…")
+            self.overlay.show()
+            self.overlay.repaint()
+            QApplication.processEvents()
+            QTimer.singleShot(50, self.activate_get_gaussian_analysis)
 
-            self.LoadMRI.ElectrodeLoc.get_gaussian_centers(self.transformation_files)
-            #dock.close()
-            #POPUP
-            msg_box = QMessageBox()
-            msg_box.setWindowTitle("Electrode Localization")
-            msg_box.setText("All Files warped and Gaussian Centers Warped. \n Press CONTINUE to receive final Electrode Localization.")
-            msg_box.addButton("CONTINUE", QMessageBox.ActionRole)
-            btn_cancel = msg_box.addButton("Cancel", QMessageBox.ActionRole)
-            msg_box.exec()
-            if msg_box.clickedButton()==btn_cancel:
-                self.LoadMRI.ElectrodeLoc.groupBox_progressGUI.setVisible(False)
-                return
 
-            self.electrode_localisation()
+    def activate_get_gaussian_analysis(self):
+        self.LoadMRI.ElectrodeLoc = ElectrodeLoc(self.LoadMRI,self.MW)
+        self.LoadMRI.ElectrodeLoc.get_gaussian_centers(self.transformation_files)
+        #dock.close()
+        #POPUP
+        msg_box = QMessageBox()
+        msg_box.setWindowTitle("Electrode Localization")
+        msg_box.setText("All Files warped and Gaussian Centers Warped. \n Press CONTINUE to receive final Electrode Localization.")
+        msg_box.addButton("CONTINUE", QMessageBox.ActionRole)
+        btn_cancel = msg_box.addButton("Cancel", QMessageBox.ActionRole)
+        msg_box.exec()
+        if msg_box.clickedButton()==btn_cancel:
+            return
+        self.activate_electrode_localisation()
 
 
     def electrode_localisation(self):
@@ -618,6 +621,13 @@ class ButtonsGUI_4D:
             Final localisation
             Takes the Coordinates and finds the best-fit to the real-life tag geometry.
         """
+        self.overlay = BusyOverlay(self.MW, message="Processing, please wait…")
+        self.overlay.show()
+        self.overlay.repaint()
+        QApplication.processEvents()
+        QTimer.singleShot(50, self.activate_electrode_localisation)
+
+    def activate_electrode_localisation(self):
         self.LoadMRI.vtk_widgets[3] = {}
 
         if not hasattr(self.LoadMRI,'ElectrodeLoc'):
@@ -626,11 +636,6 @@ class ButtonsGUI_4D:
         for idx in range(len(self.LoadMRI.vtk_widgets[0])):
             data_view = list(self.LoadMRI.vtk_widgets[0].keys())[idx]
             self.LoadMRI.vtk_widgets[3][data_view]= getattr(self.ui,f"vtkWidget_data{idx}3")
-
-        self.LoadMRI.ElectrodeLoc.groupBox_progressGUI = self.ui.groupBox_progressGUI
-        self.ui.textEdit_progress.setPlainText("Finding Final Localisation. Might take a few minutes...")
-        self.LoadMRI.ElectrodeLoc.progress = self.ui.progressBar
-        self.LoadMRI.ElectrodeLoc.progress.setValue(10)
 
         start = time.time()
         result = self.LoadMRI.ElectrodeLoc.getCoordinates()
@@ -712,7 +717,8 @@ class ButtonsGUI_4D:
 
         self.ui.comboBox_mridBarcodes.currentIndexChanged.connect(lambda index: self.fill_table_and_plots(index))
 
-        self.ui.groupBox_progressGUI.setVisible(False)
+        self.overlay.close()
+
 
 
     def fill_table_and_plots(self,index):
