@@ -111,7 +111,7 @@ class CustomInteractorStyle(vtk.vtkInteractorStyleImage):
 
         if self.is_in_minimap_rect(x, y):
             self.dragging_minimap = False
-        elif self.measurement is None:
+        else:
             self.dragging = False
 
         self.changing_measurement_localisation = False

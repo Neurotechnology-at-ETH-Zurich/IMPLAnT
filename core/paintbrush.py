@@ -41,9 +41,15 @@ class Paintbrush:
         Initialize label volume and setup overlay tables for each view.
         """
         self.histogram_needed = histogram_needed
-        for idx in range(len(self.LoadMRI.vtk_widgets)):
-            if idx  in self.layer_index:
+        if is_4d:
+            for_loop_len = len(self.LoadMRI.vtk_widgets[0])
+        else:
+            for_loop_len = len(self.LoadMRI.vtk_widgets)
+
+        for idx in range(for_loop_len):
+            if idx in self.layer_index:
                 continue
+
             # Store Layer
             layer_index = len(self.LoadMRI.MW.Layers[idx])
             lut = self.setup_lut()
