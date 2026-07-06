@@ -153,18 +153,43 @@ If you are fetching raw data directly from a Bruker MRI scanner, create a file `
 ```
 This file is gitignored and never shared. If you don't use a Bruker scanner, you can skip this — the fields will simply be left blank in the UI.
 
+## Data Folder Structure
+
+IMPLAnT expects your session data to follow this folder structure. The app derives paths automatically from the file you load, so keeping this layout is important for registration and localisation to work correctly.
+
+```
+your-session/
+  anat/
+    sub-001_T1w_ind_0.nii.gz          ← pre-surgical MRI (main file)
+    sub-001_T2w_ind_1.nii.gz          ← post-implant MRI (added via Load Another MRI Image)
+    transformation_ind_1-to-ind_0.txt ← registration output (auto-generated)
+  registration/                       ← SAMRI registration output (auto-generated)
+  analysed/                           ← localisation outputs (auto-generated)
+  ephys/
+    recording.dat                     ← electrophysiology recording
+```
+
 ## Usage
-TODO - not yet finished
+
 IMPLAnT follows a three-stage workflow:
 
 **1. Pre-surgical planning**
-Register the subject MRI to the WHS atlas via the *SAMRI* panel. Then load the atlas via *File → Open* and use the *3D Tools* panel to plan electrode trajectories. Position shanks in the axial, sagittal, and coronal views until the target regions are reached.
+1. Open *File → Start SAMRI process* to register the subject MRI to the WHS atlas. Registration time depends on image resolution and the *Num Threads* setting — typically a few hours on a modern workstation with multiple threads.
+2. Optionally, use *Create Moving Mask* to manually segment a brain mask before registration, which improves accuracy. The mask is saved as `filename-mask.nii.gz`.
+3. After successful registration, open *File → Trajectory Planning* and load the pre-surgical MRI. Position shanks in the axial, sagittal, and coronal views until the target regions are reached.
 
-**2. Post-implant localisation**
-After surgery, load the post-implant MRI via *File → Open* and register it to the pre-surgical image. Optionally resample to 50 μm/voxel for higher resolution. Paint anatomical brain regions and electrode traces on the post-surgical image to generate heatmaps. Combined with the WHS atlas files and the implanted shank's `.pkl` file, IMPLAnT automatically localises each channel to its atlas-defined brain region.
+**2. Post-implant electrode localisation**
+1. Load the pre-surgical MRI via *File → Load MRI Image*.
+2. Add the post-implant MRI via *File → Load Another MRI Image*.
+3. Use *3D Tools → Resample* to resample the post-implant image to 50 µm, then *3D Tools → Register* to register it to the pre-surgical data. The resulting transform file is saved automatically to the `anat/` folder. For the Registration at least 4 slices in each direction is needed.
+4. Re-open the GUI via *File → Load MRI Image* and load the 4D post-implant MRI (containing multiple timestamps).
+5. Start the localisation via *4D Tools → MRID-tag label creation*. First paint the anatomical regions, then the electrode traces to generate a heatmap.
+6. Combined with the atlas registration and the implanted shank's `.pkl` file, IMPLAnT automatically assigns each channel to its atlas-defined brain region.
 
 **3. Electrophysiology visualisation**
-Load your electrophysiology data via *File → Open*. Channels are displayed with their anatomical labels from the previous step, allowing direct comparison of signal traces across brain regions.
+1. Load your recording via *File → Load ephys data*.
+2. Channels are displayed with their anatomical labels from the localisation step, allowing direct comparison of signal traces across brain regions.
+3. Electrophysiology data analysis features are planned for a future release.
 
 ## License
 

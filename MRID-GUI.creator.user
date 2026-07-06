@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE QtCreatorProject>
-<!-- Written by QtCreator 19.0.0, 2026-04-17T11:33:14. -->
+<!-- Written by QtCreator 19.0.0, 2026-06-29T17:17:54. -->
 <qtcreator>
  <data>
   <variable>EnvironmentId</variable>
@@ -163,7 +163,7 @@
      <valuelist type="QVariantList" key="PE.EnvironmentAspect.Changes"/>
      <value type="bool" key="PE.EnvironmentAspect.PrintOnRun">false</value>
      <value type="QString" key="PerfRecordArgsId">-e cpu-cycles --call-graph dwarf,4096 -F 250</value>
-     <value type="QString" key="ProjectExplorer.CustomExecutableRunConfiguration.Executable">/home/neurox/Documents/MRID-GUI/venv/bin/python</value>
+     <value type="QString" key="ProjectExplorer.CustomExecutableRunConfiguration.Executable">/home/neurox/Documents/MRID-GUI/.venv10/bin/python</value>
      <value type="QString" key="ProjectExplorer.ProjectConfiguration.DisplayName"></value>
      <value type="QString" key="ProjectExplorer.ProjectConfiguration.Id">ProjectExplorer.CustomExecutableRunConfiguration</value>
      <value type="QString" key="ProjectExplorer.RunConfiguration.BuildKey"></value>
@@ -174,7 +174,7 @@
      <value type="bool" key="RunConfiguration.UseCppDebuggerAuto">false</value>
      <value type="int" key="RunConfiguration.UseQmlDebugger">1</value>
      <value type="bool" key="RunConfiguration.UseQmlDebuggerAuto">false</value>
-     <value type="QString" key="RunConfiguration.WorkingDirectory">/home/neurox/Documents/MRID-GUI/venv</value>
+     <value type="QString" key="RunConfiguration.WorkingDirectory">/home/neurox/Documents/MRID-GUI/.venv10</value>
     </valuemap>
     <value type="qlonglong" key="ProjectExplorer.Target.RunConfigurationCount">1</value>
    </valuemap>
@@ -203,7 +203,7 @@
     <valuelist type="QVariantList" key="PE.EnvironmentAspect.Changes"/>
     <value type="bool" key="PE.EnvironmentAspect.PrintOnRun">false</value>
     <value type="QString" key="PerfRecordArgsId">-e cpu-cycles --call-graph dwarf,4096 -F 250</value>
-    <value type="QString" key="ProjectExplorer.CustomExecutableRunConfiguration.Executable">/home/neurox/Documents/MRID-GUI/venv/bin/python</value>
+    <value type="QString" key="ProjectExplorer.CustomExecutableRunConfiguration.Executable">/home/neurox/Documents/MRID-GUI/.venv10/bin/python</value>
     <value type="QString" key="ProjectExplorer.ProjectConfiguration.DisplayName"></value>
     <value type="QString" key="ProjectExplorer.ProjectConfiguration.Id">ProjectExplorer.CustomExecutableRunConfiguration</value>
     <value type="QString" key="ProjectExplorer.RunConfiguration.BuildKey"></value>
@@ -214,7 +214,7 @@
     <value type="bool" key="RunConfiguration.UseCppDebuggerAuto">false</value>
     <value type="int" key="RunConfiguration.UseQmlDebugger">1</value>
     <value type="bool" key="RunConfiguration.UseQmlDebuggerAuto">false</value>
-    <value type="QString" key="RunConfiguration.WorkingDirectory">/home/neurox/Documents/MRID-GUI/venv</value>
+    <value type="QString" key="RunConfiguration.WorkingDirectory">/home/neurox/Documents/MRID-GUI/.venv10</value>
    </valuemap>
    <value type="qlonglong" key="ProjectExplorer.Target.RunConfigurationCount">1</value>
   </valuemap>

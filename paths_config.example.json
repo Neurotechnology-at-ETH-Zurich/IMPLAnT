@@ -1,0 +1,10 @@
+{
+    "ants_bin": "ants/bin",
+    "raw_base": "/path/to/raw/data/",
+    "atlas_folder": "/path/to/atlas/folder",
+    "atlas_volume": "WHS_SD_rat_atlas_v4.nii.gz",
+    "atlas_labels": "WHS_SD_rat_atlas_v4.label",
+    "atlas_dwi": "WHS_SD_rat_DWI_v1.01.nii.gz",
+    "atlas_template": "WHS_SD_rat_T2star_v1.01.nii.gz",
+    "atlas_mask": "WHS_SD_v2_brainmask_bin.nii.gz"
+}

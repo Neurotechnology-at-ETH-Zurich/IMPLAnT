@@ -5,12 +5,19 @@ build/
 # Python cache
 __pycache__/
 *.pyc
+.qtc_clangd/
 
 # Virtual environments
 venv/
+.venv10/
 .env/
+
+# User-specific config
+paths_config.json
 
 # SAMRI Infos
 samri/bruker_info.json
 samri_bindata/
 
+#Ants
+ants/
