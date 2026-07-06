@@ -15,11 +15,12 @@ class Cursor:
     - Handle mouse dragging to move the cursor across slices.
     - Update voxel intensity readout at the current position.
     """
-    def __init__(self, LoadMRI, ui_elements,data_index,data_view):
+    def __init__(self, MW, ui_elements,data_index,data_view):
         """
         Initialize the cursor handler.
         """
-        self.LoadMRI = LoadMRI
+        self.MW = MW
+        self.LoadMRI = MW.LoadMRI
         self.ui_elements = ui_elements
         self.dragging = False
 
@@ -105,9 +106,7 @@ class Cursor:
         spin_z.blockSignals(False)
 
         if self.LoadMRI.volumes[0].is_4d:
-            self.ui_elements[f"scroll_{data_index}"].blockSignals(True)
-            #for key in [f"scroll_{data_index}"]:
-            #self.ui_elements[key].blockSignals(False)
+            self.ui_elements[f"scroll_{data_index}"].blockSignals(False)
 
     def start_cursor(self,cursor_on:bool,data_index,data_view):
         """
@@ -150,6 +149,7 @@ class Cursor:
                 actor_h = vtk.vtkActor()
                 actor_h.SetMapper(mapper_h)
                 actor_h.GetProperty().SetColor(0, 0, 1)
+                actor_h.GetProperty().SetLineWidth(2)
                 renderer.AddActor(actor_h)
 
                 mapper_v = vtk.vtkPolyDataMapper()
@@ -157,6 +157,7 @@ class Cursor:
                 actor_v = vtk.vtkActor()
                 actor_v.SetMapper(mapper_v)
                 actor_v.GetProperty().SetColor(0, 0, 1)
+                actor_v.GetProperty().SetLineWidth(2)
                 renderer.AddActor(actor_v)
 
                 self.cursor_lines[view_name][image_index] = {
@@ -178,6 +179,7 @@ class Cursor:
                         actor_h = vtk.vtkActor()
                         actor_h.SetMapper(mapper_h)
                         actor_h.GetProperty().SetColor(0, 0, 1)
+                        actor_h.GetProperty().SetLineWidth(2)
                         renderer.AddActor(actor_h)
 
                         mapper_v = vtk.vtkPolyDataMapper()
@@ -185,6 +187,7 @@ class Cursor:
                         actor_v = vtk.vtkActor()
                         actor_v.SetMapper(mapper_v)
                         actor_v.GetProperty().SetColor(0, 0, 1)
+                        actor_v.GetProperty().SetLineWidth(2)
                         renderer.AddActor(actor_v)
 
                         self.cursor_lines[view_name][image_index] = {
@@ -192,9 +195,7 @@ class Cursor:
                             'vertical': {'actor': actor_v, 'source': line_v}
                         }
 
-        for image_index,vtk_widget_image in lm.vtk_widgets.items():
-            for idx, (view_name, vtk_widget) in enumerate(vtk_widget_image.items()):
-                vtk_widget.GetRenderWindow().Render()
+        self.LoadMRI.render()
 
     def update_cursor_lines(self,data_index):
         """
@@ -217,7 +218,7 @@ class Cursor:
             for view_name, vtk_widget in vtk_widget_image.items():
                 vtk_widget.GetRenderWindow().Render()
 
-    def set_line_points(self, view_name:str, line_h: vtk.vtkLineSource, line_v: vtk.vtkLineSource,data_index,height = 1)-> tuple[vtk.vtkLineSource, vtk.vtkLineSource]:
+    def set_line_points(self, view_name:str, line_h: vtk.vtkLineSource, line_v: vtk.vtkLineSource,data_index,height = 1.1)-> tuple[vtk.vtkLineSource, vtk.vtkLineSource]:
         """
         Update the endpoints of the horizontal and vertical crosshair lines
         for the given view based on the current slice indices.
@@ -232,7 +233,7 @@ class Cursor:
         y = lm.slice_indices[data_index][1]*spacing[1]
         x = lm.slice_indices[data_index][2]*spacing[2]
 
-        if view_name == "axial" or (self.LoadMRI.volumes[0].is_4d and view_name=="coronal"):
+        if view_name == "axial" or self.LoadMRI.volumes[0].is_4d:
             line_h.SetPoint1(0, y, height)
             line_h.SetPoint2((shape[2]-1)*spacing[2], y, height)
             line_v.SetPoint1((shape[2]-1)*spacing[2]-x, 0, height)
@@ -242,11 +243,6 @@ class Cursor:
             line_h.SetPoint2((shape[2]-1)*spacing[2], z, height)
             line_v.SetPoint1((shape[2]-1)*spacing[2]-x, 0, height)
             line_v.SetPoint2((shape[2]-1)*spacing[2]-x, (shape[0]-1)*spacing[0], height)
-        elif (self.LoadMRI.volumes[0].is_4d and view_name=="sagittal"):
-            line_v.SetPoint1(y, 0, height)
-            line_v.SetPoint2(y,(shape[2]-1)*spacing[2], height)
-            line_h.SetPoint1(0, x, height)
-            line_h.SetPoint2((shape[1]-1)*spacing[1], x, height)
         elif view_name == "sagittal":
             line_h.SetPoint1(0,z, height)
             line_h.SetPoint2((shape[1]-1)*spacing[1],z, height)
@@ -272,7 +268,7 @@ class Cursor:
                     #    interactor = vtk_widget.GetRenderWindow().GetInteractor()
                     #    interactor.SetInteractorStyle(CustomInteractorStyle(self, view_name,image_index,None,idx))
 
-    def update_cursor_from_interactor(self, interactor, view_name:str,data_index):
+    def update_cursor_from_interactor(self, interactor, view_name:str,data_index,layer_index=0):
         """
         Pick world coordinates from the interactor, convert to voxel indices,
         and update the cursor position accordingly.
@@ -292,7 +288,7 @@ class Cursor:
             pos = picker.GetPickPosition()
             spacing =  lm.volumes[data_index].spacing
             shape = lm.volumes[data_index].slices[0].shape
-            if view_name == "axial" or (self.LoadMRI.volumes[0].is_4d and view_name=='coronal'):
+            if view_name == "axial" or self.LoadMRI.volumes[0].is_4d:
                 xi = shape[2]-1-pos[0]/spacing[2]
                 yi = pos[1]/spacing[1]
                 zi = old_indices[0]
@@ -300,10 +296,6 @@ class Cursor:
                 xi = shape[2]-1-pos[0]/spacing[2]
                 yi = old_indices[1]
                 zi = pos[1]/spacing[0]
-            elif (self.LoadMRI.volumes[0].is_4d and view_name=='sagittal'):
-                xi = pos[1]/spacing[1]
-                yi = pos[0]/spacing[2]
-                zi = old_indices[0]
             elif view_name == "sagittal":
                 xi = old_indices[2]
                 yi = shape[1]-1-pos[0]/spacing[1]
@@ -314,7 +306,7 @@ class Cursor:
             xi = max(0, min(xi, shape[2]-1))
             lm.slice_indices[data_index] = [int(round(zi)),int(round(yi)),int(round(xi))]
         else:
-            actor = lm.actors[0][view_name] #image index
+            actor = self.MW.Layers[data_index][layer_index].actors[view_name][0]
             xmin, xmax, ymin, ymax, zmin, _ = actor.GetBounds()
 
             corners = [
@@ -352,13 +344,9 @@ class Cursor:
                 spacing = lm.volumes[data_index].spacing
                 pos = picker.GetPickPosition()
                 shape = lm.volumes[data_index].slices[0].shape
-                if view_name == "axial" or (self.LoadMRI.volumes[0].is_4d and view_name=='coronal'):
+                if view_name == "axial" or self.LoadMRI.volumes[0].is_4d:
                     xi = shape[2]-1-pos[0]/spacing[2]
                     yi = pos[1]/spacing[1]
-                    zi = old_indices[0]
-                elif self.LoadMRI.volumes[0].is_4d and view_name=='sagittal':
-                    xi = pos[1]/spacing[1]
-                    yi = pos[0]/spacing[2]
                     zi = old_indices[0]
                 elif view_name == "sagittal":
                     xi = old_indices[2]
@@ -377,6 +365,14 @@ class Cursor:
             else:
                 lm.slice_indices[data_index] = old_indices
 
+
+        if self.LoadMRI.volumes[0].is_4d:
+            self.ui_elements[f"scroll_{data_index}"].blockSignals(True)
+        else:
+            self.ui_elements["scroll_0"].blockSignals(True)
+            self.ui_elements["scroll_1"].blockSignals(True)
+            self.ui_elements["scroll_2"].blockSignals(True)
+
         # Refresh all
         if not lm.volumes[0].is_4d:
             lm.update_slices(0,data_index,view_name)
@@ -388,6 +384,12 @@ class Cursor:
         if view_name not in self.cursor_lines:
             self.create_cursor_lines(data_index,view_name)
         self.update_cursor_lines(data_index)
+        if self.LoadMRI.volumes[0].is_4d:
+            self.ui_elements[f"scroll_{data_index}"].blockSignals(False)
+        else:
+            self.ui_elements["scroll_0"].blockSignals(False)
+            self.ui_elements["scroll_1"].blockSignals(False)
+            self.ui_elements["scroll_2"].blockSignals(False)
 
     def scroll_slice(self, view_name:str, delta:int,data_index,val:int=-1):
         """
@@ -396,14 +398,14 @@ class Cursor:
         lm = self.LoadMRI
 
         if val != -1:
-            if view_name == 'axial' or (self.LoadMRI.volumes[0].is_4d and view_name=='coronal') or (self.LoadMRI.volumes[0].is_4d and view_name=='sagittal'):
+            if view_name == 'axial' or self.LoadMRI.volumes[0].is_4d:
                 lm.slice_indices[data_index][0] = np.clip(val, 0, lm.volumes[data_index].slices[0].shape[0]-1)
             elif view_name == 'coronal':
                 lm.slice_indices[data_index][1] = np.clip(val, 0, lm.volumes[data_index].slices[0].shape[1]-1)
             elif view_name == 'sagittal':
                 lm.slice_indices[data_index][2] = np.clip(val, 0, lm.volumes[data_index].slices[0].shape[2]-1)
         else:
-            if view_name == 'axial' or (self.LoadMRI.volumes[0].is_4d and view_name=='coronal') or (self.LoadMRI.volumes[0].is_4d and view_name=='sagittal'):
+            if view_name == 'axial' or self.LoadMRI.volumes[0].is_4d:
                 lm.slice_indices[data_index][0] = np.clip(lm.slice_indices[data_index][0] + delta, 0, lm.volumes[data_index].slices[0].shape[0]-1)
             elif view_name == 'coronal':
                 lm.slice_indices[data_index][1] = np.clip(lm.slice_indices[data_index][1] + delta, 0, lm.volumes[data_index].slices[0].shape[1]-1)
