@@ -1,6 +1,9 @@
 # This Python file uses the following encoding: utf-8
 import os
+import json as _json
 import SimpleITK as sitk
+with open(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'paths_config.json')) as _f:
+    _paths = _json.load(_f)
 import pyvista as pv
 from pyvistaqt import QtInteractor
 from pathlib import Path
@@ -157,6 +160,8 @@ class Visualisation3D:
         self.show_coords(point)
 
     def on_hover(self, obj, event):
+        if 'background' not in self.plotter.actors or 'atlas' not in self.plotter.actors:
+            return
         x, y = self.plotter.iren.get_event_position()
         picker = vtk.vtkPropPicker()
         picker.InitializePickList()
@@ -335,20 +340,22 @@ class Visualisation3D:
                 ##REGION MESH
                 region_mesh = self.mesh_atlas.threshold([target_idx - 0.5, target_idx + 0.5], invert=False)
                 surface = region_mesh.extract_surface(algorithm='dataset_surface')
-                smoothed_region = surface.smooth_taubin(n_iter=50, pass_band=0.1)
-                color = self.cmap.colors[target_idx]
-                self.plotter.add_mesh(
-                    smoothed_region, #region_mesh,
-                    color=color,
-                    opacity=self.opacityRoI,
-                    show_scalar_bar=False,
-                    name='atlas_region',
-                    style='surface',
-                    pickable=False,
-                    reset_camera=False,
-                    render=False,
-                    culling='front',
-                )
+                if surface.n_points > 0:
+                    smoothed_region = surface.smooth_taubin(n_iter=50, pass_band=0.1)
+                    color = self.cmap.colors[target_idx]
+                    if smoothed_region.n_points > 0:
+                        self.plotter.add_mesh(
+                            smoothed_region,
+                            color=color,
+                            opacity=self.opacityRoI,
+                            show_scalar_bar=False,
+                            name='atlas_region',
+                            style='surface',
+                            pickable=False,
+                            reset_camera=False,
+                            render=False,
+                            culling='front',
+                        )
 
                 smoothed_vol = smoothed_vol.cell_data_to_point_data()
 
@@ -382,7 +389,7 @@ class Visualisation3D:
             return vol_small, unique_vals
 
         def load_background_mesh():
-            background_path = '/media/neurox/DATA/Files/Atlas/WHS_SD_rat_atlas_v4.nii.gz'
+            background_path = os.path.join(_paths['atlas_folder'], _paths['atlas_volume'])
 
             img = nib.load(background_path)
             scale_background= 3
@@ -396,7 +403,7 @@ class Visualisation3D:
             return mesh_small
 
         def load_labels():
-            labels_path = '/media/neurox/DATA/Files/Atlas/WHS_SD_rat_atlas_v4.label'
+            labels_path = os.path.join(_paths['atlas_folder'], _paths['atlas_labels'])
             if Path(labels_path).is_file():
                 return pd.read_csv(labels_path, comment='#', sep='\s+',
                                    names=['IDX', 'R', 'G', 'B', 'A', 'VIS', 'MSH', 'LABEL'])
@@ -439,6 +446,7 @@ class Visualisation3D:
 
         self.cmap = ListedColormap(self.rgba)
         self.cmap_background = ListedColormap(rgba_background)
+        self._cmap_bg_colors = (np.array(self.cmap_background.colors)[:, :3] * 255).astype(np.uint8)
 
         self.combobox.addItems(self.atlaslabelsdf['LABEL'].values)
         self.opacity = np.full(len(self.atlaslabelsdf), 0.5)
@@ -483,13 +491,29 @@ class Visualisation3D:
 
         self.plotter.add_mesh(
             poly,
-            color='blue',
+            color='white',
             point_size=10,
             name="electrode_points",
             render_points_as_spheres=True,
             render=False,show_scalar_bar=False, reset_camera=False
         )
 
+        self.draw_trajectory_line(self.plotter, self.coords_list, self.mrid_tags[self.index])
+        _deep   = np.array(self.coords_list[-1], dtype=float)
+        _insert = np.array(self.coords_list[0],  dtype=float)
+        _dir    = _insert - _deep
+        _len    = np.linalg.norm(_dir)
+        if _len > 1e-6:
+            _tip = _insert + (_dir / _len) * 4.0
+            label_pt = pv.PolyData(_tip.reshape(1, 3))
+            self.plotter.add_point_labels(
+                label_pt, [self.mrid_tags[self.index]],
+                font_size=16, text_color='white',
+                shape=None, bold=True,
+                show_points=False, always_visible=True,
+                name=self.mrid_tags[self.index] + '_label',
+                reset_camera=False, render=False,
+            )
         self.plotter.add_point_labels(poly, 'Labels', point_size=20, font_size=12,name='electrode_labels',reset_camera=False,render=False,)
         self.points_poly = poly
         if self.enable_picking==False:
@@ -497,7 +521,26 @@ class Visualisation3D:
             self.enable_picking = True
 
 
-
+    def draw_trajectory_line(self, plotter, coords,name):
+        if coords is None or len(coords) < 2:
+            return
+        deep_mm   = np.array(coords[-1],  dtype=float)
+        insert_mm = np.array(coords[0], dtype=float)
+        direction = insert_mm - deep_mm
+        length = np.linalg.norm(direction)
+        if length < 1e-6:
+            return
+        direction /= length
+        end_mm = insert_mm + direction * 4.0
+        line = pv.Line(deep_mm, end_mm)
+        plotter.add_mesh(
+            line,
+            color='white',
+            line_width=4,
+            name=f"{str(name)}_trajectory_line",
+            render=False,
+            reset_camera=False,
+        )
 
     def add_background(self,mesh_downsampled):
         background = mesh_downsampled.threshold(value=0.5)
@@ -559,8 +602,27 @@ class Visualisation3D:
             poly.lines = np.array(lines_connectivity)
             self.poly_list.append(poly)
             self.plotter.add_mesh(poly, color='gray', line_width=8,name=self.mrid_tags[i],reset_camera=False,render=False,pickable=True)
-            self.plotter.add_point_labels([poly.center],[self.mrid_tags[i]],font_size=10,text_color='white',name=self.mrid_tags[i] + '_label',reset_camera=False,render=False)
             self.poly_otherMrids[i] = poly
+
+            self.draw_trajectory_line(self.plotter, linepoints, self.mrid_tags[i])
+
+            # label at tip of trajectory line
+            _deep   = np.array(linepoints[-1], dtype=float)
+            _insert = np.array(linepoints[0],  dtype=float)
+            _dir    = _insert - _deep
+            _len    = np.linalg.norm(_dir)
+            if _len > 1e-6:
+                _tip = _insert + (_dir / _len) * 4.0
+                label_pt = pv.PolyData(_tip.reshape(1, 3))
+                self.plotter.add_point_labels(
+                    label_pt, [self.mrid_tags[i]],
+                    font_size=16, text_color='white',
+                    shape=None, bold=True,
+                    show_points=False, always_visible=True,
+                    name=self.mrid_tags[i] + '_label',
+                    reset_camera=False, render=False,
+                )
+
 
         if self.electrode_localisation:
             self.manually_pick_point(point=[],idx=0)
@@ -620,10 +682,10 @@ class Visualisation3D:
         base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         if self.btn_slicex.isChecked():
             normal = '-x'
-            self.btn_slicez.setIcon(QIcon(os.path.join(base_dir, "Icons", "ephys","slicing_coronal_back.png")))
+            self.btn_slicex.setIcon(QIcon(os.path.join(base_dir, "Icons", "ephys","slicing_coronal_left.png")))
         else:
             normal = 'x'
-            self.btn_slicez.setIcon(QIcon(os.path.join(base_dir, "Icons", "ephys","slicing_coronal_front.png")))
+            self.btn_slicex.setIcon(QIcon(os.path.join(base_dir, "Icons", "ephys","slicing_coronal_right.png")))
 
         self.render_clipped(normal)
 
@@ -632,10 +694,10 @@ class Visualisation3D:
         base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         if self.btn_slicey.isChecked():
             normal = '-y'
-            self.btn_slicez.setIcon(QIcon(os.path.join(base_dir, "Icons", "ephys","slicing_coronal_back.png")))
+            self.btn_slicey.setIcon(QIcon(os.path.join(base_dir, "Icons", "ephys","slicing_coronal_back.png")))
         else:
             normal = 'y'
-            self.btn_slicez.setIcon(QIcon(os.path.join(base_dir, "Icons", "ephys","slicing_coronal_front.png")))
+            self.btn_slicey.setIcon(QIcon(os.path.join(base_dir, "Icons", "ephys","slicing_coronal_front.png")))
 
         self.render_clipped(normal)
 
@@ -761,11 +823,10 @@ class Visualisation3D:
         self.MW.ui.horizontalSlider_ElectrodeRegion.setEnabled(False)
 
         nifti_vals = np.round(clipped_background.cell_data['NIFTI']).astype(int)
-        colors = np.array([self.cmap_background.colors[int(v)] for v in nifti_vals])
-        clipped_background.cell_data['colors'] = (colors[:, :3] * 255).astype(np.uint8)
+        clipped_background.cell_data['colors'] = self._cmap_bg_colors[nifti_vals]
 
         clipped_background = clipped_background.extract_surface(algorithm='dataset_surface')
-        clipped_background = clipped_background.smooth_taubin(n_iter=50, pass_band=0.1)
+        clipped_background = clipped_background.smooth_taubin(n_iter=15, pass_band=0.1)
 
         self.plotter.add_mesh(
             clipped_background,
@@ -801,12 +862,14 @@ class Visualisation3D:
 
         self.plotter.add_mesh(
             clipped_poly,
-            color='blue',
+            color='white',
             point_size=10,
             name="electrode_points",
             render_points_as_spheres=True,
             render=False,show_scalar_bar=False, reset_camera=False
         )
+
+        self.draw_trajectory_line(self.plotter, self.coords_list,self.mrid_tags[self.index])
 
         self.plotter.remove_actor('electrode_labels')
 
@@ -826,15 +889,23 @@ class Visualisation3D:
                 name=self.mrid_tags[i],
                 reset_camera=False,render=False,pickable=True
             )
-            self.plotter.add_point_labels(
-                [clipped_poly_otherMrids[i].center],
-                [self.mrid_tags[i]],
-                font_size=10,
-                text_color='white',
-                name=self.mrid_tags[i] + '_label',
-                reset_camera=False,
-                render=False
-            )
+            coords_i = np.array(self.totalatlasCoordinates_pkl[i]) * self.spacing
+            self.draw_trajectory_line(self.plotter, coords_i, self.mrid_tags[i])
+            _deep   = np.array(coords_i[-1], dtype=float)
+            _insert = np.array(coords_i[0],  dtype=float)
+            _dir    = _insert - _deep
+            _len    = np.linalg.norm(_dir)
+            if _len > 1e-6:
+                _tip = _insert + (_dir / _len) * 4.0
+                label_pt = pv.PolyData(_tip.reshape(1, 3))
+                self.plotter.add_point_labels(
+                    label_pt, [self.mrid_tags[i]],
+                    font_size=16, text_color='white',
+                    shape=None, bold=True,
+                    show_points=False, always_visible=True,
+                    name=self.mrid_tags[i] + '_label',
+                    reset_camera=False, render=False,
+                )
 
         self.clipped_meshes = True
 
@@ -1051,7 +1122,7 @@ class Visualisation3D:
                 print(old_labels,new_labels,flush=True)
                 return
 
-        atlas_image = sitk.ReadImage('/media/neurox/DATA/Files/Atlas/WHS_SD_rat_atlas_v4.nii.gz')
+        atlas_image = sitk.ReadImage(os.path.join(_paths['atlas_folder'], _paths['atlas_volume']))
         volume = sitk.GetArrayFromImage(atlas_image)
         volume[~np.isin(volume,np.unique(pd.read_excel(points_electrodes_path,header=0).iloc[:, 1].values))]=0
         label_image = sitk.GetImageFromArray(volume)

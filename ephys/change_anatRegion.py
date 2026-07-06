@@ -7,6 +7,9 @@ from PySide6.QtWidgets import QHBoxLayout,QPushButton,QDialog
 from PySide6 import QtWidgets
 import numpy as np
 import os
+import json as _json
+with open(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'paths_config.json')) as _f:
+    _paths = _json.load(_f)
 
 class Change_AnatRegion(QDialog):
     def __init__(self, MW,parent=None):
@@ -59,7 +62,7 @@ class Change_AnatRegion(QDialog):
         y0 = self.MW.Ephys.Visualisation3D.coord_y.value()-1
         z0 = self.MW.Ephys.Visualisation3D.coord_z.value()-1
         point_voxel = [x0,y0,z0]
-        background_path = '/media/neurox/DATA/Files/Atlas/WHS_SD_rat_atlas_v4.nii.gz'
+        background_path = os.path.join(_paths['atlas_folder'], _paths['atlas_volume'])
         img = nib.load(background_path)
         data = img.get_fdata()
         affine = img.affine

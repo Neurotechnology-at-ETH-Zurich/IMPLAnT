@@ -11,6 +11,7 @@ from ephys.mrid_info import MRIDInfo
 from ephys.visualisationEphys import VisualisationEphys
 import xml.etree.ElementTree as ET
 from ephys.change_anatRegion import Change_AnatRegion
+from ephys.filter_data import FilterData
 from PySide6.QtGui import QBrush, QColor
 from PySide6.QtWidgets import QTableWidgetItem
 import numpy
@@ -44,6 +45,8 @@ class InitEphys:
         self.Visualisation3D = Visualisation3D(self.session_path,self.MW,chMap=self.ephys_data.all_channels,Ephys=self)
         self.Visualisation3D.initialize_mridTag(self.mrid_info.mrid,chMap=self.ephys_data.all_channels)
         self.VisEphys = VisualisationEphys(self.MW,self.Visualisation3D,self)
+
+        self.Filter = FilterData(MW)
 
         self.MW.ui.spinBox_channelID.valueChanged.connect(self.Visualisation3D.channel_changed)
         self.MW.ui.horizontalSlider_ElectrodeRegion.valueChanged.connect(self.Visualisation3D.change_opacityRegionOfInterest)
