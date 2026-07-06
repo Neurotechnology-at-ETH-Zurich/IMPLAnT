@@ -3153,7 +3153,8 @@ background-color: rgb(0, 153, 255);</string>
                               <string>&lt;</string>
                              </property>
                              <property name="icon">
-                              <iconset theme="QIcon::ThemeIcon::GoDown"/>
+                              <iconset>
+                               <normaloff>Icons/mri/downArrow.png</normaloff>Icons/mri/downArrow.png</iconset>
                              </property>
                             </widget>
                            </item>
@@ -3163,7 +3164,8 @@ background-color: rgb(0, 153, 255);</string>
                               <string>&gt;</string>
                              </property>
                              <property name="icon">
-                              <iconset theme="QIcon::ThemeIcon::GoUp"/>
+                              <iconset>
+                               <normaloff>Icons/mri/upArrow.png</normaloff>Icons/mri/upArrow.png</iconset>
                              </property>
                             </widget>
                            </item>
@@ -3172,12 +3174,20 @@ background-color: rgb(0, 153, 255);</string>
                              <property name="text">
                               <string>&lt;</string>
                              </property>
+                             <property name="icon">
+                              <iconset>
+                               <normaloff>Icons/mri/leftArrow.png</normaloff>Icons/mri/leftArrow.png</iconset>
+                             </property>
                             </widget>
                            </item>
                            <item>
                             <widget class="QToolButton" name="go_right_data00">
                              <property name="text">
                               <string>&gt;</string>
+                             </property>
+                             <property name="icon">
+                              <iconset>
+                               <normaloff>Icons/mri/rightArrow.png</normaloff>Icons/mri/rightArrow.png</iconset>
                              </property>
                             </widget>
                            </item>
@@ -3190,12 +3200,20 @@ background-color: rgb(0, 153, 255);</string>
                              <property name="text">
                               <string>+</string>
                              </property>
+                             <property name="icon">
+                              <iconset>
+                               <normaloff>Icons/mri/plus.png</normaloff>Icons/mri/plus.png</iconset>
+                             </property>
                             </widget>
                            </item>
                            <item>
                             <widget class="QToolButton" name="zoom_out_data00">
                              <property name="text">
                               <string>-</string>
+                             </property>
+                             <property name="icon">
+                              <iconset>
+                               <normaloff>Icons/mri/minus.png</normaloff>Icons/mri/minus.png</iconset>
                              </property>
                             </widget>
                            </item>
@@ -3280,12 +3298,20 @@ background-color: rgb(131, 131, 131);
                              <property name="text">
                               <string>+</string>
                              </property>
+                             <property name="icon">
+                              <iconset>
+                               <normaloff>Icons/mri/plus.png</normaloff>Icons/mri/plus.png</iconset>
+                             </property>
                             </widget>
                            </item>
                            <item>
                             <widget class="QToolButton" name="zoom_out_data01">
                              <property name="text">
                               <string>-</string>
+                             </property>
+                             <property name="icon">
+                              <iconset>
+                               <normaloff>Icons/mri/minus.png</normaloff>Icons/mri/minus.png</iconset>
                              </property>
                             </widget>
                            </item>
@@ -3319,7 +3345,8 @@ background-color: rgb(0, 153, 255);</string>
                               <string>&lt;</string>
                              </property>
                              <property name="icon">
-                              <iconset theme="QIcon::ThemeIcon::GoDown"/>
+                              <iconset>
+                               <normaloff>Icons/mri/downArrow.png</normaloff>Icons/mri/downArrow.png</iconset>
                              </property>
                             </widget>
                            </item>
@@ -3329,7 +3356,8 @@ background-color: rgb(0, 153, 255);</string>
                               <string>&gt;</string>
                              </property>
                              <property name="icon">
-                              <iconset theme="QIcon::ThemeIcon::GoUp"/>
+                              <iconset>
+                               <normaloff>Icons/mri/upArrow.png</normaloff>Icons/mri/upArrow.png</iconset>
                              </property>
                             </widget>
                            </item>
@@ -3338,12 +3366,20 @@ background-color: rgb(0, 153, 255);</string>
                              <property name="text">
                               <string>&lt;</string>
                              </property>
+                             <property name="icon">
+                              <iconset>
+                               <normaloff>Icons/mri/leftArrow.png</normaloff>Icons/mri/leftArrow.png</iconset>
+                             </property>
                             </widget>
                            </item>
                            <item>
                             <widget class="QToolButton" name="go_right_data01">
                              <property name="text">
                               <string>&gt;</string>
+                             </property>
+                             <property name="icon">
+                              <iconset>
+                               <normaloff>Icons/mri/rightArrow.png</normaloff>Icons/mri/rightArrow.png</iconset>
                              </property>
                             </widget>
                            </item>
@@ -3504,7 +3540,8 @@ background-color: rgb(131, 131, 131);
                               <string>&lt;</string>
                              </property>
                              <property name="icon">
-                              <iconset theme="QIcon::ThemeIcon::GoDown"/>
+                              <iconset>
+                               <normaloff>Icons/mri/downArrow.png</normaloff>Icons/mri/downArrow.png</iconset>
                              </property>
                             </widget>
                            </item>
@@ -3514,7 +3551,8 @@ background-color: rgb(131, 131, 131);
                               <string>&gt;</string>
                              </property>
                              <property name="icon">
-                              <iconset theme="QIcon::ThemeIcon::GoUp"/>
+                              <iconset>
+                               <normaloff>Icons/mri/upArrow.png</normaloff>Icons/mri/upArrow.png</iconset>
                              </property>
                             </widget>
                            </item>
@@ -3523,12 +3561,20 @@ background-color: rgb(131, 131, 131);
                              <property name="text">
                               <string>&lt;</string>
                              </property>
+                             <property name="icon">
+                              <iconset>
+                               <normaloff>Icons/mri/leftArrow.png</normaloff>Icons/mri/leftArrow.png</iconset>
+                             </property>
                             </widget>
                            </item>
                            <item>
                             <widget class="QToolButton" name="go_right_data02">
                              <property name="text">
                               <string>&gt;</string>
+                             </property>
+                             <property name="icon">
+                              <iconset>
+                               <normaloff>Icons/mri/rightArrow.png</normaloff>Icons/mri/rightArrow.png</iconset>
                              </property>
                             </widget>
                            </item>
@@ -3540,6 +3586,10 @@ background-color: rgb(131, 131, 131);
                             <widget class="QToolButton" name="zoom_in_data02">
                              <property name="text">
                               <string>+</string>
+                             </property>
+                             <property name="icon">
+                              <iconset>
+                               <normaloff>Icons/mri/plus.png</normaloff>Icons/mri/plus.png</iconset>
                              </property>
                              <property name="iconSize">
                               <size>
@@ -3553,6 +3603,10 @@ background-color: rgb(131, 131, 131);
                             <widget class="QToolButton" name="zoom_out_data02">
                              <property name="text">
                               <string>-</string>
+                             </property>
+                             <property name="icon">
+                              <iconset>
+                               <normaloff>Icons/mri/minus.png</normaloff>Icons/mri/minus.png</iconset>
                              </property>
                             </widget>
                            </item>
@@ -5280,7 +5334,7 @@ background-color: rgb(0, 153, 255);</string>
                             <item>
                              <widget class="QToolButton" name="go_down_data3d2">
                               <property name="text">
-                               <string>&lt;</string>
+                               <string/>
                               </property>
                               <property name="icon">
                                <iconset>
@@ -5291,7 +5345,7 @@ background-color: rgb(0, 153, 255);</string>
                             <item>
                              <widget class="QToolButton" name="go_up_data3d2">
                               <property name="text">
-                               <string>&gt;</string>
+                               <string/>
                               </property>
                               <property name="icon">
                                <iconset>
@@ -5302,7 +5356,7 @@ background-color: rgb(0, 153, 255);</string>
                             <item>
                              <widget class="QToolButton" name="go_left_data3d2">
                               <property name="text">
-                               <string>&lt;</string>
+                               <string/>
                               </property>
                               <property name="icon">
                                <iconset>
@@ -5313,7 +5367,7 @@ background-color: rgb(0, 153, 255);</string>
                             <item>
                              <widget class="QToolButton" name="go_right_data3d2">
                               <property name="text">
-                               <string>&gt;</string>
+                               <string/>
                               </property>
                               <property name="icon">
                                <iconset>
@@ -5930,7 +5984,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                  </property>
                  <property name="icon">
                   <iconset>
-                   <normaloff>:/Icons/nternet/Icons/Internet/measure.png</normaloff>:/Icons/nternet/Icons/Internet/measure.png</iconset>
+                   <normaloff>Icons/mri/measure.png</normaloff>Icons/mri/measure.png</iconset>
                  </property>
                  <property name="iconSize">
                   <size>
@@ -8513,7 +8567,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                     </property>
                     <property name="icon">
                      <iconset>
-                      <normaloff>Icons/Internet/square.png</normaloff>Icons/Internet/square.png</iconset>
+                      <normaloff>Icons/mri/square.png</normaloff>Icons/mri/square.png</iconset>
                     </property>
                     <property name="iconSize">
                      <size>
@@ -8542,7 +8596,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                     </property>
                     <property name="icon">
                      <iconset>
-                      <normaloff>Icons/Internet/circle.png</normaloff>Icons/Internet/circle.png</iconset>
+                      <normaloff>Icons/mri/circle.png</normaloff>Icons/mri/circle.png</iconset>
                     </property>
                     <property name="iconSize">
                      <size>
@@ -8913,7 +8967,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                        </property>
                        <property name="icon">
                         <iconset>
-                         <normaloff>Icons/Internet/square.png</normaloff>Icons/Internet/square.png</iconset>
+                         <normaloff>Icons/mri/square.png</normaloff>Icons/mri/square.png</iconset>
                        </property>
                        <property name="iconSize">
                         <size>
@@ -8942,7 +8996,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                        </property>
                        <property name="icon">
                         <iconset>
-                         <normaloff>Icons/Internet/circle.png</normaloff>Icons/Internet/circle.png</iconset>
+                         <normaloff>Icons/mri/circle.png</normaloff>Icons/mri/circle.png</iconset>
                        </property>
                        <property name="iconSize">
                         <size>

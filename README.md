@@ -11,7 +11,7 @@ Currently, the GUI contains the following functions:
 - **Post-implant localisation** - uses semi-supervised pipeline for MR identification tags to localise electrodes after implantation and automatically assign atlas-defined region labels to each channel to facilitate a more accurate analysis 
 - **Electrophysiology data visualisation** - visualises and curates signal data channel-by-channel, directly linked to the anatomical labels from previous steps
 
-Electrophysiology data preprocessing and analysis is planned to be implemented in the next few weeks.
+Electrophysiology data preprocessing and analysis is planned for a future release.
 As far as we are aware, IMPLAnT is the first open-source tool to bridge this entire pipeline in one interface. It is released fully open-source and designed to adapt to a range of experimental protocols.
 
 
@@ -21,9 +21,14 @@ As far as we are aware, IMPLAnT is the first open-source tool to bridge this ent
 
 ![Trajectory Planning](Icons/Github/Trajectory_Planning.png)
 
+**Post-implant electrode localisation** — paint anatomical regions and electrode traces across the post-implant MRI, generating a heatmap that is used to automatically assign each recording channel to its atlas-defined brain region.
+
+![Localisation](Icons/Github/localisation.png)
+
+
 **Electrophysiology visualisation** — view raw signal traces colour-coded by atlas region alongside a 3D rendering of the implanted electrodes, with per-channel anatomical labels and coordinates.
 
-![Ephys](Icons/Github/Ephys.png)
+![Demo](Icons/Github/output.gif)
 
 
 
@@ -140,7 +145,9 @@ cp paths_config.example.json paths_config.json
 
 ### MRID library file
 
-The electrode localization feature requires `mrid_library.pkl`, a lookup file specific to your experimental setup. Place it in the repository root (next to `main_window.py`) or next to the `IMPLAnT` executable. If no file is found, you will be prompted to browse for it manually. A dummy version for testing is included with the app.
+The electrode localization feature requires `mrid_library.pkl`, a lookup file specific to your experimental setup. Place it in the repository root (next to `main_window.py`) or next to the `IMPLAnT` executable. If no file is found, you will be prompted to browse for it manually.
+
+A dummy `mrid_library.pkl` is included in this repository for testing. It contains placeholder entries for all four supported MRID types (`duo`, `trio`, `quad`, `penta`) with uniform geometry values and can be used to verify the localisation pipeline without real calibration data. Replace it with your own calibrated file before running actual experiments.
 
 ### Bruker scanner (optional)
 

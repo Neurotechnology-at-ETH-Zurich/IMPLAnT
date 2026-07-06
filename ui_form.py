@@ -1750,25 +1750,25 @@ class Ui_MainWindow(object):
         self.horizontalLayout_9.setObjectName(u"horizontalLayout_9")
         self.go_down_data00 = QToolButton(self.frame_3)
         self.go_down_data00.setObjectName(u"go_down_data00")
-        icon7 = QIcon(QIcon.fromTheme(QIcon.ThemeIcon.GoDown))
-        self.go_down_data00.setIcon(icon7)
+        self.go_down_data00.setIcon(icon)
 
         self.horizontalLayout_9.addWidget(self.go_down_data00)
 
         self.go_up_data00 = QToolButton(self.frame_3)
         self.go_up_data00.setObjectName(u"go_up_data00")
-        icon8 = QIcon(QIcon.fromTheme(QIcon.ThemeIcon.GoUp))
-        self.go_up_data00.setIcon(icon8)
+        self.go_up_data00.setIcon(icon1)
 
         self.horizontalLayout_9.addWidget(self.go_up_data00)
 
         self.go_left_data00 = QToolButton(self.frame_3)
         self.go_left_data00.setObjectName(u"go_left_data00")
+        self.go_left_data00.setIcon(icon2)
 
         self.horizontalLayout_9.addWidget(self.go_left_data00)
 
         self.go_right_data00 = QToolButton(self.frame_3)
         self.go_right_data00.setObjectName(u"go_right_data00")
+        self.go_right_data00.setIcon(icon3)
 
         self.horizontalLayout_9.addWidget(self.go_right_data00)
 
@@ -1779,11 +1779,13 @@ class Ui_MainWindow(object):
         self.horizontalLayout_2.setObjectName(u"horizontalLayout_2")
         self.zoom_in_data00 = QToolButton(self.frame_3)
         self.zoom_in_data00.setObjectName(u"zoom_in_data00")
+        self.zoom_in_data00.setIcon(icon4)
 
         self.horizontalLayout_2.addWidget(self.zoom_in_data00)
 
         self.zoom_out_data00 = QToolButton(self.frame_3)
         self.zoom_out_data00.setObjectName(u"zoom_out_data00")
+        self.zoom_out_data00.setIcon(icon5)
 
         self.horizontalLayout_2.addWidget(self.zoom_out_data00)
 
@@ -1823,11 +1825,13 @@ class Ui_MainWindow(object):
         self.horizontalLayout_14.setObjectName(u"horizontalLayout_14")
         self.zoom_in_data01 = QToolButton(self.frame_17)
         self.zoom_in_data01.setObjectName(u"zoom_in_data01")
+        self.zoom_in_data01.setIcon(icon4)
 
         self.horizontalLayout_14.addWidget(self.zoom_in_data01)
 
         self.zoom_out_data01 = QToolButton(self.frame_17)
         self.zoom_out_data01.setObjectName(u"zoom_out_data01")
+        self.zoom_out_data01.setIcon(icon5)
 
         self.horizontalLayout_14.addWidget(self.zoom_out_data01)
 
@@ -1847,23 +1851,25 @@ class Ui_MainWindow(object):
         self.horizontalLayout_15.setObjectName(u"horizontalLayout_15")
         self.go_down_data01 = QToolButton(self.frame_17)
         self.go_down_data01.setObjectName(u"go_down_data01")
-        self.go_down_data01.setIcon(icon7)
+        self.go_down_data01.setIcon(icon)
 
         self.horizontalLayout_15.addWidget(self.go_down_data01)
 
         self.go_up_data01 = QToolButton(self.frame_17)
         self.go_up_data01.setObjectName(u"go_up_data01")
-        self.go_up_data01.setIcon(icon8)
+        self.go_up_data01.setIcon(icon1)
 
         self.horizontalLayout_15.addWidget(self.go_up_data01)
 
         self.go_left_data01 = QToolButton(self.frame_17)
         self.go_left_data01.setObjectName(u"go_left_data01")
+        self.go_left_data01.setIcon(icon2)
 
         self.horizontalLayout_15.addWidget(self.go_left_data01)
 
         self.go_right_data01 = QToolButton(self.frame_17)
         self.go_right_data01.setObjectName(u"go_right_data01")
+        self.go_right_data01.setIcon(icon3)
 
         self.horizontalLayout_15.addWidget(self.go_right_data01)
 
@@ -1941,23 +1947,25 @@ class Ui_MainWindow(object):
         self.horizontalLayout_13.setObjectName(u"horizontalLayout_13")
         self.go_down_data02 = QToolButton(self.frame_23)
         self.go_down_data02.setObjectName(u"go_down_data02")
-        self.go_down_data02.setIcon(icon7)
+        self.go_down_data02.setIcon(icon)
 
         self.horizontalLayout_13.addWidget(self.go_down_data02)
 
         self.go_up_data02 = QToolButton(self.frame_23)
         self.go_up_data02.setObjectName(u"go_up_data02")
-        self.go_up_data02.setIcon(icon8)
+        self.go_up_data02.setIcon(icon1)
 
         self.horizontalLayout_13.addWidget(self.go_up_data02)
 
         self.go_left_data02 = QToolButton(self.frame_23)
         self.go_left_data02.setObjectName(u"go_left_data02")
+        self.go_left_data02.setIcon(icon2)
 
         self.horizontalLayout_13.addWidget(self.go_left_data02)
 
         self.go_right_data02 = QToolButton(self.frame_23)
         self.go_right_data02.setObjectName(u"go_right_data02")
+        self.go_right_data02.setIcon(icon3)
 
         self.horizontalLayout_13.addWidget(self.go_right_data02)
 
@@ -1968,12 +1976,14 @@ class Ui_MainWindow(object):
         self.horizontalLayout_10.setObjectName(u"horizontalLayout_10")
         self.zoom_in_data02 = QToolButton(self.frame_23)
         self.zoom_in_data02.setObjectName(u"zoom_in_data02")
+        self.zoom_in_data02.setIcon(icon4)
         self.zoom_in_data02.setIconSize(QSize(14, 16))
 
         self.horizontalLayout_10.addWidget(self.zoom_in_data02)
 
         self.zoom_out_data02 = QToolButton(self.frame_23)
         self.zoom_out_data02.setObjectName(u"zoom_out_data02")
+        self.zoom_out_data02.setIcon(icon5)
 
         self.horizontalLayout_10.addWidget(self.zoom_out_data02)
 
@@ -2946,17 +2956,17 @@ class Ui_MainWindow(object):
 
         self.go_left_data3d2 = QToolButton(self.frame_10)
         self.go_left_data3d2.setObjectName(u"go_left_data3d2")
-        icon9 = QIcon()
-        icon9.addFile(u"../../Downloads/leftArrow.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
-        self.go_left_data3d2.setIcon(icon9)
+        icon7 = QIcon()
+        icon7.addFile(u"../../Downloads/leftArrow.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        self.go_left_data3d2.setIcon(icon7)
 
         self.horizontalLayout_34.addWidget(self.go_left_data3d2)
 
         self.go_right_data3d2 = QToolButton(self.frame_10)
         self.go_right_data3d2.setObjectName(u"go_right_data3d2")
-        icon10 = QIcon()
-        icon10.addFile(u"../../Downloads/rightArrow.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
-        self.go_right_data3d2.setIcon(icon10)
+        icon8 = QIcon()
+        icon8.addFile(u"../../Downloads/rightArrow.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        self.go_right_data3d2.setIcon(icon8)
 
         self.horizontalLayout_34.addWidget(self.go_right_data3d2)
 
@@ -3157,13 +3167,15 @@ class Ui_MainWindow(object):
         self.horizontalLayout_38.setObjectName(u"horizontalLayout_38")
         self.go_down_data3d1_2 = QToolButton(self.frame_12)
         self.go_down_data3d1_2.setObjectName(u"go_down_data3d1_2")
-        self.go_down_data3d1_2.setIcon(icon7)
+        icon9 = QIcon(QIcon.fromTheme(QIcon.ThemeIcon.GoDown))
+        self.go_down_data3d1_2.setIcon(icon9)
 
         self.horizontalLayout_38.addWidget(self.go_down_data3d1_2)
 
         self.go_up_data3d1_2 = QToolButton(self.frame_12)
         self.go_up_data3d1_2.setObjectName(u"go_up_data3d1_2")
-        self.go_up_data3d1_2.setIcon(icon8)
+        icon10 = QIcon(QIcon.fromTheme(QIcon.ThemeIcon.GoUp))
+        self.go_up_data3d1_2.setIcon(icon10)
 
         self.horizontalLayout_38.addWidget(self.go_up_data3d1_2)
 
@@ -3284,7 +3296,7 @@ class Ui_MainWindow(object):
         font6.setBold(False)
         self.checkBox_measurement.setFont(font6)
         icon11 = QIcon()
-        icon11.addFile(u":/Icons/nternet/Icons/Internet/measure.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        icon11.addFile(u"Icons/mri/measure.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.checkBox_measurement.setIcon(icon11)
         self.checkBox_measurement.setIconSize(QSize(50, 50))
         self.checkBox_measurement.setChecked(True)
@@ -4583,7 +4595,7 @@ class Ui_MainWindow(object):
         self.paint_square = QToolButton(self.groupBox_14)
         self.paint_square.setObjectName(u"paint_square")
         icon15 = QIcon()
-        icon15.addFile(u"Icons/Internet/square.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        icon15.addFile(u"Icons/mri/square.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.paint_square.setIcon(icon15)
         self.paint_square.setIconSize(QSize(20, 20))
         self.paint_square.setCheckable(True)
@@ -4596,7 +4608,7 @@ class Ui_MainWindow(object):
         self.paint_round.setObjectName(u"paint_round")
         self.paint_round.setEnabled(True)
         icon16 = QIcon()
-        icon16.addFile(u"Icons/Internet/circle.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        icon16.addFile(u"Icons/mri/circle.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.paint_round.setIcon(icon16)
         self.paint_round.setIconSize(QSize(20, 20))
         self.paint_round.setCheckable(True)
@@ -6518,9 +6530,7 @@ class Ui_MainWindow(object):
 "                background-color: rgba(255, 255, 255, 30);\n"
 "                border-radius: 4px;\n"
 "            }")
-        icon30 = QIcon()
-        icon30.addFile(u"Icons/mri/measure.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
-        self.pushButton_measurement.setIcon(icon30)
+        self.pushButton_measurement.setIcon(icon11)
         self.pushButton_measurement.setIconSize(QSize(40, 40))
         self.pushButton_measurement.setCheckable(True)
 
@@ -7552,10 +7562,10 @@ class Ui_MainWindow(object):
 "</style></head><body style=\" font-family:'Ubuntu Sans'; font-size:11pt; font-weight:400; font-style:normal;\">\n"
 "<p align=\"center\" style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-family:'Sans'; font-size:16pt;\">CORONAL</span></p></body></html>", None))
         self.fit_to_zoom_data3d2.setText(QCoreApplication.translate("MainWindow", u"Fit-to-Zoom", None))
-        self.go_down_data3d2.setText(QCoreApplication.translate("MainWindow", u"<", None))
-        self.go_up_data3d2.setText(QCoreApplication.translate("MainWindow", u">", None))
-        self.go_left_data3d2.setText(QCoreApplication.translate("MainWindow", u"<", None))
-        self.go_right_data3d2.setText(QCoreApplication.translate("MainWindow", u">", None))
+        self.go_down_data3d2.setText("")
+        self.go_up_data3d2.setText("")
+        self.go_left_data3d2.setText("")
+        self.go_right_data3d2.setText("")
         self.zoom_in_data3d2.setText("")
         self.zoom_out_data3d2.setText("")
         self.textEdit_10.setHtml(QCoreApplication.translate("MainWindow", u"<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
