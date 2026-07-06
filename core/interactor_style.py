@@ -15,6 +15,7 @@ class CustomInteractorStyle(vtk.vtkInteractorStyleImage):
         super().__init__()
 
         self.LoadMRI = self_cursor.LoadMRI
+        self.MW = self_cursor.LoadMRI.MW
         self.cursor = self_cursor
         self.interactor_view_name = view_name
         self.interactor_data_index = data_index
@@ -57,13 +58,13 @@ class CustomInteractorStyle(vtk.vtkInteractorStyleImage):
             self.dragging_minimap = True
         elif self.LoadMRI.brush_on:
             self.dragging = True
-            self.LoadMRI.paintbrush.mouse_moves(self.paintbrush_pos,self.dragging,self.interactor_view_name,self.interactor_data_index)
+            self.MW.Paintbrush.mouse_moves(self.paintbrush_pos,self.dragging,self.interactor_view_name,self.interactor_data_index)
         else:
             self.dragging = True
             # add measurement point if Measurement instance exists
             if self.measurement is not None:
-                for idx, (view_name, line_actor, line_slice_index, text_actor, _,_,points) in enumerate(self.LoadMRI.measurement_lines):
-                    renderer_me = self.LoadMRI.measurement_renderer[view_name]
+                for idx, (view_name, line_actor, line_slice_index, text_actor, _,_,points) in enumerate(self.MW.Measurement.measurement_lines):
+                    renderer_me = self.MW.Measurement.measurement_renderer[view_name]
                     if renderer_me.HasViewProp(line_actor):
                         if picker.Pick(x, y, 0, renderer_me):
                             actor = picker.GetViewProp()  # returns the picked actor (or None)
@@ -97,6 +98,8 @@ class CustomInteractorStyle(vtk.vtkInteractorStyleImage):
             else:
                 # update cursor
                 self.cursor.update_cursor_from_interactor(interactor, self.interactor_view_name,self.interactor_data_index)
+        if hasattr(self.LoadMRI,'TrajPlanning'):
+            self.LoadMRI.TrajPlanning.clicked_viewname = self.interactor_view_name
 
     def on_left_button_up(self, obj, event):
         """
@@ -133,7 +136,7 @@ class CustomInteractorStyle(vtk.vtkInteractorStyleImage):
             self.last_pos = [x,y]
             interactor.GetRenderWindow().Render()
         elif self.changing_measurement_localisation:
-            view_name, line_actor,line_slice_index,text_actor,line,dashed_lines,_= self.LoadMRI.measurement_lines[self.changing_index]
+            view_name, line_actor,line_slice_index,text_actor,line,dashed_lines,_= self.MW.Measurement.measurement_lines[self.changing_index]
             midpoint = text_actor.GetPosition()
             picker = vtk.vtkPropPicker()
             renderer = interactor.GetRenderWindow().GetRenderers().GetFirstRenderer()
@@ -156,9 +159,9 @@ class CustomInteractorStyle(vtk.vtkInteractorStyleImage):
                 dashed_lines[2].Modified()
                 dashed_lines[3].GetMapper().Update()
 
-                self.LoadMRI.measurement_renderer[self.interactor_view_name].GetRenderWindow().Render()
+                self.MW.Measurement.measurement_renderer[self.interactor_view_name].GetRenderWindow().Render()
         elif self.changing_meas_point:
-            view_name, line_actor,line_slice_index,text_actor,line,dashed_lines,points= self.LoadMRI.measurement_lines[self.changing_index]
+            view_name, line_actor,line_slice_index,text_actor,line,dashed_lines,points= self.MW.Measurement.measurement_lines[self.changing_index]
             picker = vtk.vtkPropPicker()
             renderer = interactor.GetRenderWindow().GetRenderers().GetFirstRenderer()
             self.paintbrush_pos = None
@@ -202,9 +205,7 @@ class CustomInteractorStyle(vtk.vtkInteractorStyleImage):
                     distance = round(np.linalg.norm(new_point-np.array(line.GetPoint1())),3)
                     text_actor.SetPosition(midpoint)
                     text_actor.SetInput(f"{distance:.3f} mm")
-                self.LoadMRI.measurement_renderer[self.interactor_view_name].GetRenderWindow().Render()
-
-
+                self.MW.Measurement.measurement_renderer[self.interactor_view_name].GetRenderWindow().Render()
 
 
         elif self.panning:
@@ -222,7 +223,7 @@ class CustomInteractorStyle(vtk.vtkInteractorStyleImage):
                         camera.SetFocalPoint(fp[0],fp[1],fp[2])
                         camera.SetPosition(pos[0],pos[1],pos[2])
                         widget.GetRenderWindow().Render()
-            if len(self.LoadMRI.cursor.cursor_lines)==4:
+            if len(self.MW.Cursor.cursor_lines)==4:
                 renderer = self.LoadMRI.renderers[3][self.interactor_view_name]
                 camera = renderer.GetActiveCamera()
                 camera.SetFocalPoint(fp[0],fp[1],fp[2])
@@ -247,16 +248,17 @@ class CustomInteractorStyle(vtk.vtkInteractorStyleImage):
                 old_indices = self.LoadMRI.slice_indices[self.interactor_data_index].copy()
                 pos = picker.GetPickPosition()  # VTK world coordinates
                 # Update slice_indices depending on view
+                shape = self.LoadMRI.volumes[self.interactor_data_index].slices[0].shape
                 if view_name == "axial" or (self.LoadMRI.volumes[0].is_4d and view_name=='coronal')or (self.LoadMRI.volumes[0].is_4d and view_name=='sagittal'):
-                    xi = pos[0]/self.LoadMRI.volumes[self.interactor_data_index].spacing[2]
+                    xi = shape[2] - 1 - pos[0]/self.LoadMRI.volumes[self.interactor_data_index].spacing[2]
                     yi = pos[1]/self.LoadMRI.volumes[self.interactor_data_index].spacing[1]
                     zi = old_indices[0]
                 elif view_name == "sagittal":
                     xi = old_indices[2]
-                    yi = pos[1]/self.LoadMRI.volumes[self.interactor_data_index].spacing[1]
-                    zi = self.LoadMRI.volumes[0].slices[0].shape[0]-1-pos[0]/self.LoadMRI.volumes[self.interactor_data_index].spacing[0]
+                    yi = shape[1] - 1 - pos[0]/self.LoadMRI.volumes[self.interactor_data_index].spacing[1]
+                    zi = pos[1]/self.LoadMRI.volumes[self.interactor_data_index].spacing[0]
                 elif view_name == "coronal":
-                    xi = pos[0]/self.LoadMRI.volumes[self.interactor_data_index].spacing[2]
+                    xi = shape[2] - 1 - pos[0]/self.LoadMRI.volumes[self.interactor_data_index].spacing[2]
                     yi = old_indices[1]
                     zi = pos[1]/self.LoadMRI.volumes[self.interactor_data_index].spacing[0]
                 zi = max(0, min(zi, self.LoadMRI.volumes[self.interactor_data_index].slices[0].shape[0]-1))
@@ -264,7 +266,7 @@ class CustomInteractorStyle(vtk.vtkInteractorStyleImage):
                 xi = max(0, min(xi, self.LoadMRI.volumes[self.interactor_data_index].slices[0].shape[2]-1))
 
                 self.paintbrush_pos = [int(round(zi)),int(round(yi)),int(round(xi))]
-                self.LoadMRI.paintbrush.mouse_moves(self.paintbrush_pos,self.dragging,self.interactor_view_name,self.interactor_data_index)
+                self.MW.Paintbrush.mouse_moves(self.paintbrush_pos,self.dragging,self.interactor_view_name,self.interactor_data_index)
             else:
                 return
         # Zooming with right mouse drag
@@ -296,7 +298,7 @@ class CustomInteractorStyle(vtk.vtkInteractorStyleImage):
                         Zoom.update_bounds(vn, camera, self.LoadMRI.renderers[self.image_index][vn])
                     idx +=1
 
-            if len(self.LoadMRI.cursor.cursor_lines)==4:
+            if len(self.MW.Cursor.cursor_lines)==4:
                 renderer = self.LoadMRI.renderers[3][view_name]
                 camera = renderer.GetActiveCamera()
                 camera.ParallelProjectionOn()
@@ -321,7 +323,6 @@ class CustomInteractorStyle(vtk.vtkInteractorStyleImage):
             Zoom.global_zoom_factor = scale
             Zoom.factorChanged = scale
             zoom_notifier.factorChanged.emit(scale)
-
         #Measuring
         else:
             if self.dragging and self.measurement is None:
@@ -340,8 +341,38 @@ class CustomInteractorStyle(vtk.vtkInteractorStyleImage):
                     ]
                     self.measurement.end_voxel_temp = voxel
                     self.measurement.draw_line(self.interactor_view_name, temporary=True)
-                else:
-                    return
+                #else:
+                #    return
+        if hasattr(self.LoadMRI,'TrajPlanning') and self.LoadMRI.TrajPlanning.show_label:
+            old_indices = self.LoadMRI.slice_indices[0]
+            picker = vtk.vtkPropPicker()
+            renderer = interactor.GetRenderWindow().GetRenderers().GetFirstRenderer()
+            suc = picker.Pick(x, y, 0, renderer)
+
+            if suc:
+                pos = picker.GetPickPosition()
+                spacing =  self.LoadMRI.volumes[0].spacing
+                shape = self.LoadMRI.volumes[0].slices[0].shape
+                if self.interactor_view_name == "axial":
+                    xi = shape[2]-1-pos[0]/spacing[2]
+                    yi = pos[1]/spacing[1]
+                    zi = old_indices[0]
+                elif self.interactor_view_name == "coronal":
+                    xi = shape[2]-1-pos[0]/spacing[2]
+                    yi = old_indices[1]
+                    zi = pos[1]/spacing[0]
+                elif self.interactor_view_name == "sagittal":
+                    xi = old_indices[2]
+                    yi = shape[1]-1-pos[0]/spacing[1]
+                    zi = pos[1]/spacing[0]
+
+                z = max(0, min(zi, shape[0]-1))
+                y = max(0, min(yi, shape[1]-1))
+                x = max(0, min(xi, shape[2]-1))
+
+                value = self.LoadMRI.volumes[0].slices[0][int(z),int(y),int(x)]
+                region_name = self.LoadMRI.tp_labels[value][4]
+                self.LoadMRI.TrajPlanning.visualize_regionname(region_name,self.interactor_view_name,[int(z),int(y),int(x)])
 
         super().OnMouseMove()
 
@@ -394,7 +425,7 @@ class CustomInteractorStyle(vtk.vtkInteractorStyleImage):
                     widget.GetRenderWindow().Render()
                     renderer.ResetCameraClippingRange()
 
-        if len(self.LoadMRI.cursor.cursor_lines)==4:
+        if len(self.MW.Cursor.cursor_lines)==4:
             renderer = self.LoadMRI.renderers[3][self.interactor_view_name]
             camera = renderer.GetActiveCamera()
             camera.ParallelProjectionOn()
@@ -412,10 +443,10 @@ class CustomInteractorStyle(vtk.vtkInteractorStyleImage):
         if self.measurement is not None:
             if self.measurement.start_voxel is not None:
                 #Delete previous text and line if temporary
-                print('ich bin hier',flush=True)
-                self.LoadMRI.measurement_renderer[self.interactor_view_name].RemoveActor(self.measurement.temp_line_actor)
-                self.LoadMRI.measurement_renderer[self.interactor_view_name].RemoveActor(self.measurement.temp_text_actor)
-                self.LoadMRI.measurement_renderer[self.interactor_view_name].GetRenderWindow().Render()
+
+                self.MW.Measurement.measurement_renderer[self.interactor_view_name].RemoveActor(self.measurement.temp_line_actor)
+                self.MW.Measurement.measurement_renderer[self.interactor_view_name].RemoveActor(self.measurement.temp_text_actor)
+                self.MW.Measurement.measurement_renderer[self.interactor_view_name].GetRenderWindow().Render()
                 return
         else:
             interactor = self.GetInteractor()
