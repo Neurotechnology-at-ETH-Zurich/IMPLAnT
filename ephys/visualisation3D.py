@@ -682,10 +682,10 @@ class Visualisation3D:
         base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         if self.btn_slicex.isChecked():
             normal = '-x'
-            self.btn_slicex.setIcon(QIcon(os.path.join(base_dir, "Icons", "ephys","slicing_coronal_left.png")))
+            self.btn_slicex.setIcon(QIcon(os.path.join(base_dir, "Icons", "ephys","slicing_sagittal_left.png")))
         else:
             normal = 'x'
-            self.btn_slicex.setIcon(QIcon(os.path.join(base_dir, "Icons", "ephys","slicing_coronal_right.png")))
+            self.btn_slicex.setIcon(QIcon(os.path.join(base_dir, "Icons", "ephys","slicing_sagittal_right.png")))
 
         self.render_clipped(normal)
 
