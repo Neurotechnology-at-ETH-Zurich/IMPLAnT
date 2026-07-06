@@ -2,14 +2,10 @@
 import vtk
 import numpy as np
 import shlex
-
-#if label:
-#
-#    self.build_label_lut(path_label)
-#        #if self.label:
-#    lut_vtk = self.label_lut
-#    actor.GetProperty().SetInterpolationTypeToNearest()
-#else:
+import os
+import json as _json
+with open(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'paths_config.json')) as _f:
+    _paths = _json.load(_f)
 
 class Contrast:
     """
@@ -28,7 +24,8 @@ class Contrast:
         Initialize contrast management for all available image indices.
         """
         self.label_file = label_file
-        self.initialise_class( LoadMRI,data_index)
+        self.initialise_class(LoadMRI,data_index)
+        self.data_index = data_index
 
     def initialise_class(self,LoadMRI,data_index):
         """
@@ -56,9 +53,8 @@ class Contrast:
         self.vminmax_auto = [0.0001, 0.999] #auto
 
         for image_index,vtk_widget_image in self.LoadMRI.vtk_widgets.items():
-            print('self.label_file',self.label_file,flush=True)
             if self.label_file:
-                path_label = "/media/neurox/DATA/Files/Atlas/WHS_SD_rat_atlas_v4.label"
+                path_label = os.path.join(_paths['atlas_folder'], _paths['atlas_labels'])
                 self.lut_vtk[image_index] = self.build_label_lut(image_index,path_label)
                 # window/level not used; record neutral values so other code doesn't crash
                 self.initial_window[image_index] = 1
@@ -80,8 +76,6 @@ class Contrast:
                 self.level[image_index] = self.initial_level[image_index]
                 #apply initial lut
                 self.compute_lut(image_index,data_index)
-
-                self.update_lut_window_level(image_index)
 
             #attach ui widgets
             self.display_level_sliders[image_index] =  ui[f"display_level{image_index}"]
@@ -141,10 +135,10 @@ class Contrast:
             self.last_range = (vmin, vmax)
 
         # Force all actors to use updated LUT
-        for actors_dict in self.LoadMRI.actors.values(): #if view_name in self.actors[image_index]:
-            for _,actor in actors_dict.items():
-                prop = actor.GetProperty()
-                prop.UseLookupTableScalarRangeOn()
+        for layer_index, layer in self.LoadMRI.MW.Layers[self.data_index].items():
+            for vn, actors_by_index in layer.actors.items():
+                for idx, actor in actors_by_index.items():
+                    actor.GetProperty().UseLookupTableScalarRangeOn()
 
         # change in original and minimap image
         for vn in 'axial','coronal','sagittal':

@@ -1,7 +1,6 @@
 from PySide6 import QtWidgets
 import sys
 from PySide6.QtWidgets import QFileDialog
-from file_handling.loadimage_into4D import LoadImage4D
 import os
 from PySide6.QtWidgets import QHBoxLayout,QPushButton,QDialog,QWidget, QCheckBox, QPlainTextEdit
 import glob
@@ -140,11 +139,7 @@ class MRID_InputDialog(QtWidgets.QDialog):
 
 
         self.file_line_edit.setPlaceholderText(os.path.basename(file_name))
-
-        #only once OK is pressed
-        if not hasattr(self.MW.LoadMRI,"LoadImage4D"):
-            self.MW.LoadMRI.LoadImage4D = LoadImage4D(self.MW, file_name)
-        tag_data,num_regions,regions = self.MW.LoadMRI.LoadImage4D.open_file(file_name,data_view=None)
+        tag_data,num_regions,regions = self.MW.FileLoader.initialize_file(file_name,1,None,0)
 
         self.spin_num_regions.setValue(num_regions)
         self.spin_num_tags.setValue(len(tag_data))
@@ -153,7 +148,6 @@ class MRID_InputDialog(QtWidgets.QDialog):
             self.region_name_edits[nr].setText(str(regions[nr][0]))
 
         for nt in range(len(tag_data)): #tag_data.append((pure_labels[i],counts_dict[pure_labels[i]]))
-            print(self.tag_name_edits,flush=True)
             self.tag_name_edits[nt].setText(str(tag_data[nt][0]))
             self.tag_island_spins[nt].setValue(tag_data[nt][1])
 

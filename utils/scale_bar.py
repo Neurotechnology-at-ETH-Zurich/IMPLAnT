@@ -49,7 +49,6 @@ class Scale:
         else:
             self.use_mm = False
 
-
         for image_index in range(len(self.LoadMRI.renderers)):
             if view_name in self.LoadMRI.renderers[image_index]:
                 # Line actor

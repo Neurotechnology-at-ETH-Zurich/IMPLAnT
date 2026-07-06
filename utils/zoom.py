@@ -35,7 +35,6 @@ class Zoom:
         Reset and centers all views so the selected image fits the window (uniform zoom).
         Emits a signal with the updated zoom factor.
         """
-        print('bin ich hier im fit to window??')
         renderer = vtk_widget.GetRenderWindow().GetRenderers().GetFirstRenderer()
         camera = renderer.GetActiveCamera()
         camera.ParallelProjectionOn()
@@ -68,8 +67,8 @@ class Zoom:
         # Apply relative factor to the other views
         for image_index,vtk_widget_image in vtk_widgets_dict.items():
             for idx, (vn, widget) in enumerate(vtk_widget_image.items()):
-                if idx!=data_index and not data_3d:
-                    continue
+                #if image_index!=data_index and not data_3d:
+                #    continue
 
                 if widget == vtk_widget:
                     if image_index==0:
