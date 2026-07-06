@@ -3,6 +3,7 @@ import SimpleITK as sitk
 import os
 from picsl_greedy import Greedy3D
 import numpy as np
+import ants
 
 class Registration:
     """
@@ -37,23 +38,25 @@ class Registration:
         self.moving_ind = int(filename.split("ind_")[1].split(".")[0])
 
         self.fixed_image = sitk.ReadImage(self.LoadMRI.volumes[0].file_path)
-        self.fixed_image = sitk.DICOMOrient(self.fixed_image, self.LoadMRI.volumes[0].DICOMOrient)
-        self.moving_image = sitk.ReadImage(os.path.join(folder, filename))
-        self.moving_image = sitk.DICOMOrient(self.moving_image, self.LoadMRI.volumes[0].DICOMOrient)
+        #self.fixed_image = sitk.DICOMOrient(self.fixed_image, self.LoadMRI.volumes[0].DICOMOrient)
+        self.moving_filepath = os.path.join(folder, filename)
+        self.moving_image = sitk.ReadImage(self.moving_filepath)
+        #self.moving_image = sitk.DICOMOrient(self.moving_image, self.LoadMRI.volumes[0].DICOMOrient)
+        self.moving_image = sitk.DICOMOrient(self.moving_image, 'RAS')
+        self.fixed_image = sitk.DICOMOrient(self.fixed_image, 'RAS')
 
         if len(self.moving_image.GetSize())==4:
             self.moving_image = self.get3Dimage(self.moving_image)
 
-        self.LoadMRI.progressbar_registration.setValue(20)
         coarest_options = [8,4,2,1]
         finest_options = [1,2,4]
         self.coarsest = coarest_options[self.LoadMRI.coarsest_index] #comboBox_coarsest
         self.finest = finest_options[self.LoadMRI.finest_index] #comboBox_finest
         self.rigid_transformation()
 
-        buttonsgui_3d.popup.close()
+        if hasattr(buttonsgui_3d, 'popup') and buttonsgui_3d.popup is not None:
+            buttonsgui_3d.popup.close()
 
-        self.LoadMRI.progressbar_registration.setValue(100)
 
 
 
@@ -91,54 +94,91 @@ class Registration:
         for k in range(m_CoarsestResolutionLevel, m_FinestResolutionLevel - 1, -1):
             iter_list.append(str(iterations_per_level))  # or set different numbers per level
         # Join with 'x' to make Greedy string
-        n_string = "x".join(iter_list)
+        #n_string = "x".join(iter_list)
 
-        self.LoadMRI.progressbar_registration.setValue(40)
 
-        fixed = self.fixed_image
-        moving = self.moving_image
+        #fixed = self.fixed_image
+        #moving = self.moving_image
 
-        g.execute('-i my_fixed my_moving '
-                  '-a -dof 6 -m NMI '
-                  f'-n {n_string} '
-                  '-V 0 ' #no verbose
-                  '-o my_ncc',
-                  my_fixed = fixed, my_moving = moving,
-                  my_ncc=None)
-        self.LoadMRI.progressbar_registration.setValue(60)
-        g.execute(
-            '-i my_fixed my_moving '
-            '-a -dof 6 -m MI '
-            f'-n {n_string} '
-            '-V 0 '
-            f'-ia my_ncc '
-            '-o my_rigid',
-            my_fixed=fixed,
-            my_moving=moving,
-            my_rigid=None
-        )
-        self.LoadMRI.progressbar_registration.setValue(80)
-        mat_rigid = g['my_rigid']
+        #g.execute('-i my_fixed my_moving '
+        #          '-a -dof 6 -m NMI '           ##NMI
+        #           f'-n {n_string} '
+        #           '-ia-identity '
+        #          '-V 0 ' #no verbose
+        #          '-o my_ncc',
+        #          my_fixed = fixed, my_moving = moving,
+        #          my_ncc=None)
+
+        #g.execute('-i my_fixed my_moving '
+        #    '-a -dof 6 -m NMI '
+        #    f'-n {n_string} '
+        #    f'-ia {identity_path} '  # initialize from identity, RAS convention
+        #    '-V 0 '
+        #    '-o my_rigid',
+        #    my_fixed=fixed,
+        #    my_moving=moving,
+        #    my_rigid=None
+        #  )
+        #g.execute(
+        #    '-i my_fixed my_moving '
+        #    '-a -dof 6 -m MI '
+        #    f'-n {n_string} '
+        #    '-ia-identity '
+        #    '-V 0 '
+        #    #f'-ia my_ncc '
+        #    '-o my_rigid',
+        #    my_fixed=fixed,
+        #    my_moving=moving,
+        #    my_rigid=None
+        #)
+
+        #img_aligned = ants.apply_transforms(
+        #    fixed=fixed,        # resample onto fixed grid
+        #    moving=moving,
+        #    transformlist=reg["fwdtransforms"],
+        #    interpolator="bSpline",
+        #)
+
+
+        #mat_rigid = g['my_rigid']
 
         transform_filename = f"transformation_ind_{self.moving_ind}-to-ind_{self.fixed_ind}.txt"
         output_path = os.path.join(self.LoadMRI.session_path, "anat", transform_filename)
 
-        np.set_printoptions(precision=12, suppress=False)
+        #np.set_printoptions(precision=12, suppress=False)
 
-        RAS2LPS = np.diag([-1, -1, 1, 1])
-        mat_end = RAS2LPS @ mat_rigid @ RAS2LPS
+        #RAS2LPS = np.diag([-1, -1, 1, 1])
+        #mat_end = RAS2LPS @ mat_rigid @ RAS2LPS
+
+#
+        #with open(output_path, "w") as f:
+        #    f.write("#Insight Transform File V1.0\n")
+        #    f.write("#Transform 0\n")
+        #    f.write("Transform: MatrixOffsetTransformBase_double_3_3\n")
+        #    f.write("Parameters: ")
+
+        #    # 9 rotation + 3 translation = 12 parameters
+        #    np.savetxt(f, mat_end[:3, :3].reshape(1, 9), fmt="%.12f", newline=" ")
+         #   f.write(" ")
+        #    np.savetxt(f, mat_end[:3, 3].reshape(1, 3), fmt="%.12f", newline=" ")
+        #    f.write("\nFixedParameters: 0 0 0\n")
+
+        #import shutil
+        fixed_ants = ants.image_read(self.LoadMRI.volumes[0].file_path)
+        moving_ants = ants.image_read(self.moving_filepath)
+        reg = ants.registration(fixed=fixed_ants, moving=moving_ants, type_of_transform="Rigid")
+        #shutil.copy(reg["fwdtransforms"][0], output_path)  # it's already an ITK .mat/.txt file
+        print('ants ',reg["fwdtransforms"][0])
+        tx = ants.read_transform(reg["fwdtransforms"][0])
+        params = tx.parameters
+        fixed_params = tx.fixed_parameters
 
         with open(output_path, "w") as f:
             f.write("#Insight Transform File V1.0\n")
             f.write("#Transform 0\n")
             f.write("Transform: MatrixOffsetTransformBase_double_3_3\n")
-            f.write("Parameters: ")
-
-            # 9 rotation + 3 translation = 12 parameters
-            np.savetxt(f, mat_end[:3, :3].reshape(1, 9), fmt="%.12f", newline=" ")
-            f.write(" ")
-            np.savetxt(f, mat_end[:3, 3].reshape(1, 3), fmt="%.12f", newline=" ")
-            f.write("\nFixedParameters: 0 0 0\n")
+            f.write("Parameters: " + " ".join(f"{p:.12f}" for p in params) + "\n")
+            f.write("FixedParameters: " + " ".join(f"{p:.12f}" for p in fixed_params) + "\n")
 
 
         return
