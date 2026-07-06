@@ -26,7 +26,6 @@ def get_relaxation_unsupervised(filename_data, sessionpath, basestructs, slice_o
     #baseline_std = np.zeros((len(basestructs),))
     heatmaps = np.zeros((len(basestructs), 1, anat.shape[0], anat.shape[1]))
     roi_index = 0 #anatomical regions start at 1
-    print('basestructs',basestructs)
     for j, roi_baseline in enumerate(basestructs):
         roi_index += 1 #labelsdf["Labels"][labelsdf["Anatomical Regions"].str.contains(roi_baseline)]
         img_slice = [s for s in nonzero_slices if np.any(anat[:, :, s] == roi_index)][0]
@@ -79,7 +78,6 @@ def get_relaxation(filename_data, mrid_names, sessionpath, basestructs, slice_or
             # Saving MRID contrast heatmaps as nii.gz files.
             new_heatmap_filename = filename_data + "-" + mrid_name + "-heatmap.nii.gz"
             savepath = os.path.join(sessionpath, 'analysed',mrid_name,slice_orientation)
-            print("why am i here so much? i should be here only once!", mrid_name, mrid_names)
             handlers.save_nii(heatmap_nii, nii_data.affine, os.path.join(savepath, new_heatmap_filename))
 
             filename = filename_data + "-" + mrid_name + "-" + "-heatmap.npy"

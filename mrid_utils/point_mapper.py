@@ -49,63 +49,10 @@ def map_coordinates(fixedImg, movingImg, transform_moving2fixed):
             for z in range(nz):
                 idx = [x, y, z]
                 fixedpnt = fixedImg.TransformIndexToPhysicalPoint(idx)
-                movingpnt = transform_moving2fixed.TransformPoint(fixedpnt)
+                movingpnt = transform_moving2fixed.TransformPoint(fixedpnt) #mri world frame
                 movingidx = movingImg.TransformPhysicalPointToIndex(movingpnt)
                 fixed_coordinates[i, :] = idx
                 moving_coordinates[i, :] = movingidx
                 i = i + 1
 
     return moving_coordinates, fixed_coordinates
-
-
-if __name__ == "__main__":
-    """
-    Finds the corresponding coordinates between moving and fixed image using output_composite.h5 registration tensor
-    """
-    # TODO: HENRIETTE, VARIABLES BELOW GO INTO YOUR GUI
-    root="/Users/eminhanozil/Dropbox (Yanik Lab)/Localization Manuscript 2024/RAT DATA"
-    # root = "/Users/eminhanozil/Dropbox (Yanik Lab)/BMI/data/"
-    fixedPath=os.path.join(root, "WHS_SD_rat_atlas_v4_pack","WHS_SD_rat_T2star_v1.01.nii.gz")
-    fixedImg = load_sitkimage(fixedPath)
-
-    fixedPoints_name="fixed_img-indeces.npy"
-    movingPoints_name="moving_img_resampled25um-indeces.npy"
-
-    animal="rEO_10"
-    # animal = "rEO_06"
-    path = os.path.join(root, animal, "mri")
-    sessions = os.listdir(path)
-    # TODO: HENRIETTE, VARIABLES ABOVE GO INTO YOUR GUI
-
-    for session in sessions:
-        if session.startswith("ses-"):
-            print("Animal: "+animal+" session: "+session)
-            sessionpath = os.path.join(path, session)
-            registerpath = os.path.join(sessionpath, "registration")
-            anatpath = os.path.join(sessionpath, "anat")
-
-            if os.path.exists(registerpath):
-                print(registerpath)
-                transformPath = os.path.join(registerpath, "s_register",
-                                             "output_Composite.h5")
-                movingImgFilename = find_moving_img(registerpath)
-                if movingImgFilename:
-                    movingPath=os.path.join(anatpath, movingImgFilename)
-                    fixedPointsSave = os.path.join(registerpath, fixedPoints_name)
-                    movingPointsSave = os.path.join(registerpath, movingPoints_name)
-
-                    if os.path.exists(movingPointsSave):
-                        print("file exists, skipping")
-
-                    else:
-                        print("Mapped-points file does not exists, executing the mapping")
-                        movingImg = load_sitkimage(movingPath)
-                        transform_moving2fixed = load_transform(transformPath)
-
-                        moving_coordinates, fixed_coordinates = map_coordinates(fixedImg, movingImg, transform_moving2fixed)
-                        np.save(fixedPointsSave, fixed_coordinates)
-                        np.save(movingPointsSave, moving_coordinates)
-
-
-
-

@@ -26,9 +26,6 @@ def get_anat_data(sessionpath, filename_data):
 
     labelsdf = read_labels(os.path.join(sessionpath, "anat", "labels.txt"))
 
-    print("Data shape of anatomy segmentation" + str(np.shape(anat)))
-    print("Data shape of MRI data" + str(np.shape(data)))
-
     return nii_data, data, anat, labelsdf
 
 def get_segmentation_data(sessionpath, filename_data):
@@ -54,9 +51,6 @@ def get_segmentation_data(sessionpath, filename_data):
 
     labelsdf = read_labels(os.path.join(sessionpath, "anat", "labels.txt"))
 
-    #print("Data shape of MRI data" + str(np.shape(data)))
-    #print("Data shape of MRID segmentation" + str(np.shape(segmentation)))
-
     return nii_data, data, segmentation, anat, labelsdf
 
 def read_data(path):
@@ -68,7 +62,6 @@ def read_data(path):
     nii: nii object
     data: mri volume as np array
     """
-    print(path,flush=True)
     nii = nib.load(path)
     data = np.asanyarray(nii.dataobj)
 
