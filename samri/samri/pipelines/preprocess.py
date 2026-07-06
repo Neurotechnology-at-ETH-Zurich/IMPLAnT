@@ -1110,9 +1110,6 @@ def biascorrect_only(bids_base, template,
             with open(path.join(workflow.base_dir, workdir_name, 'registration_parameters.txt'), 'w') as convert_file:
                 convert_file.write(json.dumps(GENERIC_PHASES))
 
-            for node in workflow._graph.nodes():
-                node.overwrite = True
-
             result = workflow.run(plugin="MultiProc", plugin_args={'n_procs': n_jobs})
             copy_bids_files(bids_base, os.path.join(out_base, workflow_name))
             if not keep_work:
@@ -1325,9 +1322,6 @@ def structural(bids_base, template,
 
     with open(path.join(workflow.base_dir, workdir_name, 'registration_parameters.txt'), 'w') as convert_file:
         convert_file.write(json.dumps(GENERIC_PHASES))
-
-    for node in workflow._graph.nodes():
-        node.overwrite = True
 
     result = workflow.run(plugin="MultiProc", plugin_args={'n_procs': n_jobs})
 

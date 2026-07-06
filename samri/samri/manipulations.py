@@ -1,4 +1,5 @@
 import nibabel as nib
+import numpy as np
 from os import path
 
 def flip_axis(img_path,
@@ -21,7 +22,7 @@ def flip_axis(img_path,
 	img_path = path.abspath(path.expanduser(img_path))
 	out_path = path.abspath(path.expanduser(out_path))
 	img = nib.load(img_path)
-	data = img.get_data()
+	data = np.asanyarray(img.dataobj)
 	affine = img.affine
 	if axis == 0:
 	    flipped_data = data[:,::-1,::-1,...]

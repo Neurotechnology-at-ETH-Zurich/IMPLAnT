@@ -1,0 +1,17 @@
+Metadata-Version: 2.4
+Name: SAMRI
+Version: 9999
+Summary: Small animal magnetic resonance imaging via Python.
+Home-page: https://github.com/IBT-FMI/SAMRI
+Author: Horea Christian
+Author-email: chr@chymera.eu
+Keywords: fMRI,pipelines,data analysis,bruker
+Provides: samri
+License-File: LICENSE
+Dynamic: author
+Dynamic: author-email
+Dynamic: home-page
+Dynamic: keywords
+Dynamic: license-file
+Dynamic: provides
+Dynamic: summary

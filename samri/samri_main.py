@@ -15,20 +15,41 @@ _nr_reg.Registration._format_registration = _patched_format_registration
 from samri.samri.pipelines.reposit import bru2bids
 from samri.samri.pipelines.preprocess import structural,biascorrect_only
 import os
+import shutil
 from subprocess import call
 import samri.data_fetcher as data_fetcher
 import sys
 import glob
 import json
+import numpy as np
 from PySide6 import QtWidgets
 import pandas as pd
-from file_handling.loadimage_into3D import LoadImage3D
+import SimpleITK as sitk
+from file_handling.loader import FileLoader
 from PySide6.QtWidgets import QMessageBox
+
+_base_dir = getattr(sys, '_MEIPASS', os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+_exe_dir = os.path.dirname(sys.executable) if getattr(sys, 'frozen', False) else _base_dir
+_config_path = os.path.join(_exe_dir, 'paths_config.json')
+if not os.path.exists(_config_path):
+    _config_path = os.path.join(_base_dir, 'paths_config.example.json')
+with open(_config_path) as _f:
+    _paths = json.load(_f)
+
+def _resolve_ants_bin(raw):
+    if os.path.isabs(raw):
+        return raw
+    if getattr(sys, 'frozen', False):
+        # check next to executable (dist/ants/bin), then one level up (project root ants/bin)
+        exe_dir = os.path.dirname(sys.executable)
+        candidates = [os.path.join(exe_dir, raw), os.path.join(os.path.dirname(exe_dir), raw)]
+    else:
+        candidates = [os.path.join(_base_dir, raw)]
+    return next((c for c in candidates if os.path.isdir(c)), candidates[0])
 
 class InitSAMRI:
     def __init__(self,samri_input):
-        # Make ANTs available regardless of how the GUI is launched
-        _ANTS_BIN = "/home/neurox/ants/ants-2.4.3/bin"
+        _ANTS_BIN = _resolve_ants_bin(_paths['ants_bin'])
         if os.path.isdir(_ANTS_BIN) and _ANTS_BIN not in os.environ.get("PATH", "").split(":"):
             os.environ["PATH"] = _ANTS_BIN + ":" + os.environ.get("PATH", "")
         os.environ["ANTSPATH"] = _ANTS_BIN
@@ -106,10 +127,10 @@ class InitSAMRI:
                 if filename.split("ses-")[-1] != samri_input['working_session'][0]:
                     sessions.append(filename.split("ses-")[-1])
 
-        atlas = samri_input['atlas_folder'] + '/WHS_SD_rat_T2star_v1.01.nii.gz'
+        atlas = os.path.join(samri_input['atlas_folder'], _paths['atlas_template'])
         atlas_mask = []
         if samri_input['atlas_mask']:
-            atlas_mask= samri_input['atlas_folder'] + '/WHS_SD_rat_brainmask_v1.01.nii.gz' #WHS_SD_v2_brainmask_bin.nii.gz' ##'/WHS_SD_v2_brainmask_bin.01.nii.gz'
+            atlas_mask = os.path.join(samri_input['atlas_folder'], _paths['atlas_mask'])
 
         filepath = biascorrect_only(bids_base=self.bids_base+'/bids',
             template=atlas,
@@ -132,6 +153,9 @@ class InitSAMRI:
 
 
     def start_registration(self,samri_input):
+        ##
+
+
         # Enables registering
         register = samri_input['register'] #False
 
@@ -156,10 +180,10 @@ class InitSAMRI:
         if samri_input['moving_mask']:
             moving_img_mask_path = samri_input['moving_img_mask_name']
 
-        atlas = samri_input['atlas_folder'] + '/WHS_SD_rat_T2star_v1.01.nii.gz'
+        atlas = os.path.join(samri_input['atlas_folder'], _paths['atlas_template'])
         atlas_mask = []
         if samri_input['atlas_mask']:
-            atlas_mask= samri_input['atlas_folder'] + '/WHS_SD_rat_brainmask_v1.01.nii.gz' #WHS_SD_v2_brainmask_bin.nii.gz' ##'/WHS_SD_v2_brainmask_bin.01.nii.gz'
+            atlas_mask = os.path.join(samri_input['atlas_folder'], _paths['atlas_mask'])
 
         if register:
             filepath = structural(
@@ -179,14 +203,47 @@ class InitSAMRI:
                 exclude={"session": sessions}
                 )
 
+
+            #copy h5 file to registration folder
+            fixedImg = sitk.ReadImage(os.path.join(samri_input['atlas_folder'], _paths['atlas_volume']))
+            movingImg = sitk.ReadImage(filepath)
+            csv_path = f"{self.bids_base}/results/generic_work/data_selection.csv"
+            df = pd.read_csv(csv_path, index_col=0)
+            original_path = f"{'_'.join(filepath.split('_')[:-1])}.nii.gz"
+            print(df['path'],flush=True)
+            print('op',filepath,original_path,flush=True)
+            idx = df.loc[df['path'] == filepath].index[0] #original_path?
+            transformPath = f"{self.bids_base}/results/generic_work/_ind_type_{idx}/s_register/output_Composite.h5"
+            transform_moving2fixed = sitk.ReadTransform(transformPath)
+            size = fixedImg.GetSize()
+            fixed_px = []
+            moving_px = []
+            for x in range(size[0]):
+                for y in range(size[1]):
+                    for z in range(size[2]):
+                        fixed_px.append([x,y,z])
+                        fixedpnt = fixedImg.TransformIndexToPhysicalPoint([x,y,z]) #mm
+                        movingpnt = transform_moving2fixed.TransformPoint(fixedpnt) #mri
+                        idx_mri = movingImg.TransformPhysicalPointToIndex(movingpnt) #px
+                        moving_px.append(idx_mri)
+
+            #save files
+            folder = f"{self.bids_base}/bids/sub-{self.animal_id}/ses-{samri_input['working_session'][0]}/registration"
+            os.makedirs(folder, exist_ok=True)
+            np.save(f"{folder}/fixed_img-indeces.npy", np.array(fixed_px))
+            np.save(f"{folder}/moving_img_resampled25um-indeces.npy", np.array(moving_px))
+            shutil.copy(transformPath, f"{folder}/output_Composite.h5")
+
+
         return filepath
 
 
-    def visualize_results(self,MW):
+    def visualize_results(self,MW,logging):
+
         MW.ui.stackedWidget_3d.setVisible(False)
 
-        path_main = "/media/neurox/DATA/Files/Atlas/WHS_SD_rat_atlas_v4.nii.gz" #for atlas
-        MW.load_main_image(path_main,full_restart=False,label_file=True)
+        path_main = os.path.join(_paths['atlas_folder'], _paths['atlas_volume'])
+        MW.restart_gui(path_main, full_restart=False,label_file=True,data_view='coronal')
         MW.ui.dockWidget_ephys.setVisible(False)
         MW.ui.textEdit_SAMRI_reg.setVisible(True)
 
@@ -194,15 +251,19 @@ class InitSAMRI:
         csv_path = f"{self.bids_base}/results/generic_work/data_selection.csv"
         df = pd.read_csv(csv_path, index_col=0)
         idx = df.loc[df['path'] == self.output_filepath].index[0]
-        img_path = f"{self.bids_base}/results/generic_work/_ind_type_{idx}/s_warp/"
+        img_path = f"{self.bids_base}/results/generic_work/_ind_type_{idx}/s_warp/{os.path.basename(self.output_filepath)}"
+
         if MW.ui.comboBox_movingimg.findText(os.path.basename(img_path)) == -1:
-            MW.LoadMRI.LoadImage3D = LoadImage3D(MW, img_path)
-        vol = MW.LoadMRI.LoadImage3D.open_file(img_path)
-        MW.LoadMRI.intensity_table[0].update_table(os.path.basename(img_path), vol,0)
+            MW.FileLoader = FileLoader(MW)
+            MW.FileLoader.is_4d = False #3d file
+        else:
+            MW.FileLoader.layer_index += 1
+        MW.FileLoader.initialize_file(img_path,MW.FileLoader.layer_index,'coronal',0)
         MW.ui.comboBox_movingimg.addItem(os.path.basename(img_path))
         MW.LoadMRI.movingimg_filename.append(img_path)
         MW.LoadMRI.combo_Regimgname = MW.ui.comboBox_movingimg
 
+        logging.info("SAMRI finished")
 
 
 
@@ -210,16 +271,19 @@ class SAMRI_InputDialog:
     def __init__(self, MW,parent=None):
         self.MW = MW
         self.raw_base = self.MW.ui.lineEdit_rawBase
-        self.raw_base.setText("/media/neurox/DATA/")
+        self.raw_base.setText(_paths['raw_base'])
         self.raw_base.textChanged.connect(self.check_rawbase)
         self.MW.ui.pushButton_browse.clicked.connect(self.browse_path)
 
-        with open('samri/bruker_info.json') as f:
-            bruker_info = json.load(f)
+        bruker_info_path = os.path.join(_base_dir, 'samri', 'bruker_info.json')
+        bruker_info = {}
+        if os.path.exists(bruker_info_path):
+            with open(bruker_info_path) as f:
+                bruker_info = json.load(f)
         self.server       = self.MW.ui.lineEdit_server
-        self.server.setText(bruker_info["server"])
+        self.server.setText(bruker_info.get("server", ""))
         self.password     = self.MW.ui.lineEdit_password
-        self.password.setText(bruker_info["password"])
+        self.password.setText(bruker_info.get("password", ""))
         self.password.setEchoMode(QtWidgets.QLineEdit.EchoMode.Password)
 
         self.bids_flag = self.MW.ui.checkBox_bidsflag
@@ -274,9 +338,9 @@ class SAMRI_InputDock:
 
     def connect_buttons(self):
         self.ui.lineEdit_animalID.setText(f"Animal ID: {self.MW.Samri.animal_id}")
-        self.ui.lineEdit_bru2_path.setText("/media/neurox/DATA/")
-        self.ui.lineEdit_base_path.setText("/media/neurox/DATA/")
-        self.ui.lineEdit_atlas_path.setText("/media/neurox/DATA/Files/Atlas")
+        self.ui.lineEdit_bru2_path.setText(_paths['raw_base'])
+        self.ui.lineEdit_base_path.setText(_paths['raw_base'])
+        self.ui.lineEdit_atlas_path.setText(_paths['atlas_folder'])
 
         self.ui.pushButton_browseBru2.clicked.connect(lambda: self.browse_path(self.ui.lineEdit_bru2_path))
         self.ui.pushButton_browseBase.clicked.connect(lambda: self.browse_path(self.ui.lineEdit_base_path))
@@ -333,8 +397,7 @@ class SAMRI_InputDock:
 
     def create_mov_mask(self):
         path = self.matches[0]
-
-        self.MW.load_main_image(path,full_restart=False)
+        self.MW.restart_gui(path, full_restart=False,label_file=False,data_view='coronal')
         self.ui.dockWidget_ephys.setVisible(False)
         self.ui.textEdit_SAMRI_reg.setVisible(True)
         self.MW.ButtonsGUI_3D.initialize_segmentation(samri=True)
