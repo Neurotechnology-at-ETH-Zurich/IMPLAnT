@@ -2,7 +2,7 @@
 import os
 from core.paintbrush import Paintbrush
 from utils.contrast import Contrast
-from core.resample_data import ResampleData
+from file_handling.resample_data import ResampleData
 from utils.zoom import Zoom
 from core.measurement import Measurement
 from core.interactor_style import CustomInteractorStyle
@@ -17,6 +17,7 @@ from PySide6.QtCore import Qt
 import SimpleITK as sitk
 from pathlib import Path
 from PySide6.QtWidgets import QMessageBox
+from PySide6.QtGui import QKeySequence,QShortcut
 
 
 
@@ -46,7 +47,6 @@ class ButtonsGUI_3D:
         self.MW = MW
         self.ui = MW.ui
         self.LoadMRI = MW.LoadMRI
-        print('buttons_3D class',label_file,flush=True)
         self.buttons_3D(data_index,label_file)
 
 
@@ -55,7 +55,6 @@ class ButtonsGUI_3D:
         """
         Set up the UI components, VTK widgets, and basic initialization for 3D mode.
         """
-        print('buttons_3D ',label_file,flush=True)
         file_name = self.LoadMRI.volumes[data_index].file_path
         target = self.ui.file_name_displayed_4d
         target.setPlainText("File loaded: " + os.path.basename(file_name))
@@ -95,7 +94,6 @@ class ButtonsGUI_3D:
         """
         Initialize contrast and brightness controls for multiple image views.
         """
-        print('labelfile initialize contrast',label_file,flush=True)
         lm = self.LoadMRI
 
         lm.contrast_ui_elements[0] = {
@@ -111,10 +109,10 @@ class ButtonsGUI_3D:
         lm.contrast[0] = Contrast(lm, data_index=0,label_file=label_file)
 
         self.LoadMRI.contrast_ui_elements[0]["brightness0"].valueChanged.connect(
-            lambda value: lm.contrast[0].changed_sliders(value, image_index=0) # lm.contrastClass.changed_sliders(value,image_index=0)
+            lambda value: lm.contrast[0].changed_sliders(value, image_index=0)
         )
         self.LoadMRI.contrast_ui_elements[0]["contrast0"].valueChanged.connect(
-            lambda value: lm.contrast[0].changed_sliders(value, image_index=0) # lm.contrastClass.changed_sliders(value,image_index=0)
+            lambda value: lm.contrast[0].changed_sliders(value, image_index=0)
         )
         self.LoadMRI.contrast_ui_elements[0]["auto0"].clicked.connect(
             lambda: lm.contrast[0].auto(image_index=0)
@@ -122,6 +120,10 @@ class ButtonsGUI_3D:
         self.LoadMRI.contrast_ui_elements[0]["reset0"].clicked.connect(
             lambda: lm.contrast[0].reset(image_index=0)
         )
+        #ctrl J
+        ctrl_j = QShortcut(QKeySequence("Ctrl+J"), self.ui.groupBox_contrast)
+        ctrl_j.activated.connect(lambda: lm.contrast[0].auto(image_index=0))
+
 
 
     def initialize_cursor(self,data_index):
@@ -149,7 +151,7 @@ class ButtonsGUI_3D:
         spin_z.setMaximum(lm.volumes[data_index].slices[0].shape[0])
 
 
-    def initialize_paintbrush(self):
+    def initialize_paintbrush(self,red_only=False):
         """
         Initialize paintbrush tool controls for MRI segmentation.
         """
@@ -159,6 +161,7 @@ class ButtonsGUI_3D:
         # check if it exists already
         dock = self.MW.findChild(QDockWidget, dock_name)
         if dock is None:
+            self.ui.pushButton_paint_done.setVisible(False)
             dock = QDockWidget("Paintbrush", self.MW)
             dock.setObjectName(dock_name)
             dock.setWidget(self.ui.groupBox_paintbrush_3d)
@@ -172,8 +175,8 @@ class ButtonsGUI_3D:
                 'label_occ_slider': self.ui.sizeSlider_labelOcc3d
             }
             #Connect paintbrush for segmentation and MRID-tags
-            self.LoadMRI.paintbrush = Paintbrush(self.LoadMRI)
-            self.LoadMRI.PaintbrushGUI = PaintbrushGUI(self.MW,True)
+            self.MW.Paintbrush = Paintbrush(self.LoadMRI)
+            self.LoadMRI.PaintbrushGUI = PaintbrushGUI(self.MW,True,red_only=red_only)
         else:
             dock.show()
             dock.raise_()
@@ -252,38 +255,37 @@ class ButtonsGUI_3D:
         data_view = 'coronal'
         if checkbox.isChecked():
             checkbox.setText("ON")
-            self.LoadMRI.cursor.start_cursor(False,0,data_view)
-            self.LoadMRI.measurement_table = self.ui.tableWidget_meaurement
-            measurement = Measurement(self.LoadMRI)
-            self.ui.pushButton_deleteMeasurement.clicked.connect(measurement.delete_measurement)
+            self.MW.Cursor.start_cursor(False,0,data_view)
+            self.MW.Measurement = Measurement(self.LoadMRI,self.ui.tableWidget_meaurement)
+            self.ui.pushButton_deleteMeasurement.clicked.connect(self.MW.Measurement.delete_measurement)
             #self.ui.comboBox_measurementColors.currentIndexChanged.connect(lambda index: measurement.change_color(index))
             self.ui.comboBox_measurementColors.currentIndexChanged.connect(
-                lambda index: (setattr(measurement, "color_index", index), measurement.change_color(index))
+                lambda index: (setattr(self.MW.Measurement, "color_index", index), self.MW.Measurement.change_color(index))
             )
             for image_index,vtk_widget_image in self.LoadMRI.vtk_widgets.items():
                 for view_name, vtk_widget in vtk_widget_image.items():
                     interactor = vtk_widget.GetRenderWindow().GetInteractor()
                     interactor.SetInteractorStyle(None)
-                    interactor.SetInteractorStyle(CustomInteractorStyle(self.LoadMRI.cursor, view_name,image_index,measurement,0))
+                    interactor.SetInteractorStyle(CustomInteractorStyle(self.MW.Cursor, view_name,image_index,self.MW.Measurement,0))
         else:
             checkbox.setText("OFF")
-            self.LoadMRI.cursor.start_cursor(True,0,data_view)
+            self.MW.Cursor.start_cursor(True,0,data_view)
 
     def measurement_function(self):
         checkbox = self.ui.checkBox_measurement
         data_view = 'coronal'
         if checkbox.isChecked():
             checkbox.setText("ON")
-            self.LoadMRI.cursor.start_cursor(False,0,data_view)
-            measurement = Measurement(self.LoadMRI)
+            self.MW.Cursor.start_cursor(False,0,data_view)
+            self.MW.Measurement = Measurement(self.LoadMRI)
             for image_index,vtk_widget_image in self.LoadMRI.vtk_widgets.items():
                 for view_name, vtk_widget in vtk_widget_image.items():
                     interactor = vtk_widget.GetRenderWindow().GetInteractor()
                     interactor.SetInteractorStyle(None)
-                    interactor.SetInteractorStyle(CustomInteractorStyle(self.LoadMRI.cursor, view_name,image_index,measurement,0))
+                    interactor.SetInteractorStyle(CustomInteractorStyle(self.MW.Cursor, view_name,image_index,self.MW.Measurement,0))
         else:
             checkbox.setText("OFF")
-            self.LoadMRI.cursor.start_cursor(True,0,data_view)
+            self.MW.Cursor.start_cursor(True,0,data_view)
 
     def initialize_resampling(self):
         """
@@ -333,7 +335,6 @@ class ButtonsGUI_3D:
 
 
     def resample100um(self,index):
-        self.LoadMRI.Resample.progressbar = self.ui.progressBar_100um
         filename_end = 'resampled100um.nii.gz'
         file_name = self.LoadMRI.volumes[index].file_path[:-7]
         default_name = f"{file_name}_{filename_end}"
@@ -358,7 +359,6 @@ class ButtonsGUI_3D:
         self.ui.pushButton_openfile100um.setEnabled(True)
 
     def resample25um(self,index):
-        self.LoadMRI.Resample.progressbar = self.ui.progressBar_25um
         filename_end = 'resampled.nii.gz'
         file_name = self.LoadMRI.volumes[index].file_path[:-7]
         default_name = f"{file_name}_{filename_end}" #"label_volume.nii.gz"
@@ -399,7 +399,6 @@ class ButtonsGUI_3D:
             lambda: setattr(self.LoadMRI, "Registration", Registration(self.LoadMRI,self,self.ui.comboBox_movingimg.currentIndex()))
         )
 
-        self.LoadMRI.progressbar_registration = self.ui.progressBar_registration
 
         self.ui.pushButton_regCancel.clicked.connect(self.cancel_reg)
 
@@ -422,7 +421,11 @@ class ButtonsGUI_3D:
          self.popup.close()
 
     def check_dimensions_movingimg(self,index):
+        if index < 0 or index >= len(self.LoadMRI.movingimg_filename):
+            return
         image = sitk.ReadImage(self.LoadMRI.movingimg_filename[index])
+        if len(image.GetSize()) == 4:
+            image = sitk.Extract(image, list(image.GetSize()[:3]) + [0], [0, 0, 0, 0])
         image = sitk.DICOMOrient(image, self.LoadMRI.volumes[0].DICOMOrient)
         volume = sitk.GetArrayFromImage(image)
         moving_ind = self.LoadMRI.movingimg_filename[index][:-7].split("ind_")[1]
@@ -440,13 +443,15 @@ class ButtonsGUI_3D:
             self.MW.ui.pushButton_registration.setEnabled(False)
             return
 
-        if volume.shape[1]<4 or volume.shape[2]<4 or volume.shape[3]<4:
-            self.MW.ui.textEdit_pixels.setText('Please select other file. The MRI Scan needs at least 4pixels in each direction.')
+        spatial = volume.shape[-3:]
+        if spatial[0]<4 or spatial[1]<4 or spatial[2]<4:
+            self.MW.ui.textEdit_pixels.setText('Please select other file. The MRI Scan needs at least 4 slices in each direction.')
             self.MW.ui.textEdit_pixels.setVisible(True)
             self.MW.ui.pushButton_registration.setEnabled(False)
         else:
             self.MW.ui.pushButton_registration.setEnabled(True)
-            self.MW.ui.textEdit_pixels.setVisible(False)
+            self.MW.ui.textEdit_pixels.setText('File is ready to be registered.')
+            self.MW.ui.textEdit_pixels.setVisible(True)
 
 
 
@@ -456,6 +461,8 @@ class ButtonsGUI_3D:
         """
         # give the dock a unique object name
         dock_name = "dock_segmentation"
+        if samri:
+            self.ui.tabWidget.setCurrentIndex(0)
 
         # check if it exists already
         dock = self.MW.findChild(QDockWidget, dock_name)
