@@ -1,6 +1,5 @@
 # This Python file uses the following encoding: utf-8
 import os
-from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import (
     QTableWidgetItem, QToolButton, QDoubleSpinBox, QMessageBox
 )
@@ -13,6 +12,7 @@ from PySide6.QtWidgets import QFileDialog
 from PySide6 import QtWidgets
 from PySide6.QtWidgets import QSlider,QAbstractItemView
 from PySide6.QtCore import QObject, QEvent
+from PySide6.QtGui import QIcon
 
 class IntensityTable(QObject):
     """GUI table for managing and visualizing MRI image layers with VTK integration."""
@@ -25,6 +25,7 @@ class IntensityTable(QObject):
         """
         super().__init__(parent)
         self.initialize_class(MW,data_index,table,vol)
+        self.data_index = data_index
         #self.table.viewport().installEventFilter(self)
         #self._event_filter_table_viewport = self.table.viewport()
         #self._event_filter_table_viewport.installEventFilter(self)
@@ -43,11 +44,19 @@ class IntensityTable(QObject):
         self.file_name = []
         self.opacity_index = []
         self.table = table
-        self.opactiy_values = []
+        self.opacity_values = []
+        self.overlay_contrasts = {}      # non_mainindex -> window/level state dict
+        self.contrast_combo_map = []     # combobox position (1+) -> non_mainindex
+
+        icon_dir = os.path.join(os.path.dirname(os.path.dirname((__file__))), "Icons/mri")
+        self.icon_visible = QIcon(os.path.join(icon_dir, "eye_open.png"))
+        self.icon_hidden = QIcon(os.path.join(icon_dir, "eye_closed.png"))
 
         self.create_table(data_index)
         self.setup_slider_overlay()
-
+        self.MW.ui.comboBox_Contrastimage.currentIndexChanged.connect(
+            self.on_contrast_selection_changed
+        )
 
 
     def update_intensity_values(self,data_index):
@@ -61,26 +70,23 @@ class IntensityTable(QObject):
             if item is not None:
                 item.setText(f"{intensity:.3f}")
 
-    def create_table(self,data_index):
+    def create_table(self,data_index,row=0):
         """
         Initialize and populate the intensity table with the first loaded MRI volume.
         """
-        if not self.MW.LoadMRI.volumes[0].is_4d:
-            self.table.customContextMenuRequested.connect(lambda idx: self.show_context_menu(idx,data_index))
-        else:
-            self.table.customContextMenuRequested.connect(lambda idx: self.show_context_menu(idx,data_index))
+        if row==0:
+            if not self.MW.LoadMRI.volumes[0].is_4d:
+                self.table.customContextMenuRequested.connect(lambda idx: self.show_context_menu(idx,data_index))
+            else:
+                self.table.customContextMenuRequested.connect(lambda idx: self.show_context_menu(idx,data_index))
 
-        header = self.table.horizontalHeader()
-        header.setSectionResizeMode(0, QtWidgets.QHeaderView.ResizeToContents)
-        header.setSectionResizeMode(1, QtWidgets.QHeaderView.Stretch)   # BIG COLUMN
-        header.setSectionResizeMode(2, QtWidgets.QHeaderView.ResizeToContents)
-        header.setSectionResizeMode(3, QtWidgets.QHeaderView.ResizeToContents)
+            header = self.table.horizontalHeader()
+            header.setSectionResizeMode(0, QtWidgets.QHeaderView.ResizeToContents)
+            header.setSectionResizeMode(1, QtWidgets.QHeaderView.Stretch)   # BIG COLUMN
+            header.setSectionResizeMode(2, QtWidgets.QHeaderView.ResizeToContents)
+            header.setSectionResizeMode(3, QtWidgets.QHeaderView.ResizeToContents)
 
         self.table.setRowCount(self.index+1)
-
-        icon_dir = os.path.join(os.path.dirname(os.path.dirname((__file__))), "Icons/Internet")
-        self.icon_visible = QIcon(os.path.join(icon_dir, "view.png"))
-        self.icon_hidden = QIcon(os.path.join(icon_dir, "hidden.png"))
 
         btn = QToolButton()
         btn.setCheckable(False)
@@ -89,7 +95,7 @@ class IntensityTable(QObject):
         btn.setIcon(self.icon_visible)
         btn.setToolTip("Toggle visibility")
         btn.setAutoRaise(True)
-        btn.clicked.connect(lambda checked, r=self.index , b=btn: self.toggle_visibility(checked,r, b,data_index))
+        btn.clicked.connect(lambda checked , b=btn: self.MW.Layers[self.data_index][self.index].toggle_visibility(checked,b))
         btn.setStyleSheet("""
             QToolButton {
                 border: none;
@@ -135,33 +141,57 @@ class IntensityTable(QObject):
         self.table.setCellWidget(self.index , 3, opacity_spin)
         self.MW.LoadMRI.cursor_ui[f"opacity{self.index }"] = opacity_spin
 
-        self.opactiy_values.append([100,False,data_index])
+        self.opacity_values.append([100,False,data_index])
 
         # Layout
         self.original_image.append(None)
         self.file_name.append(os.path.basename(self.MW.LoadMRI.volumes[data_index].file_path))
         self.opacity_index.append(0)
 
+        # Populate contrast combobox with the main image
+        self.MW.ui.comboBox_Contrastimage.blockSignals(True)
+        self.MW.ui.comboBox_Contrastimage.clear()
+        self.MW.ui.comboBox_Contrastimage.addItem(os.path.basename(self.MW.LoadMRI.volumes[data_index].file_path))
+        self.MW.ui.comboBox_Contrastimage.blockSignals(False)
+
         # Show opactity slidebar
         #self.table.cellClicked.connect(self.on_table_clicked)
         self.table.selectionModel().selectionChanged.connect(self.on_table_clicked)
-        return
 
 
-    def update_table(self,layer_name:str,vol, data_index,org_img=None, visibility_enabled=True):
+
+    def update_table(self,layer_name:str,vol, data_index,layer_index,org_img=None, visibility_enabled=True):
         """
         Add a new layer (e.g., heatmap, label, another file, etc.) to the table.
         """
+
         self.original_image.append(org_img)
         self.intensity_volumes.append(vol)
         self.file_name.append(layer_name)
         self.index+=1
         self.table.insertRow(self.index)
-        if hasattr(self,"non_mainindex"):
-            self.opacity_index.append(self.MW.LoadMRI.non_mainindex)
-        else:
-            self.opacity_index.append(0)
 
+        self.opacity_index.append(layer_index)
+
+        # Register contrast state for non-main overlay images
+        if layer_index != 0:
+            idx = layer_index-1
+            if idx not in self.overlay_contrasts:
+                vmin, vmax = np.percentile(vol, [0, 99.999])
+                vmin_a, vmax_a = np.percentile(vol, [0.01, 99.9])
+                self.overlay_contrasts[idx] = {
+                    'window':          vmax - vmin,
+                    'level':           (vmax + vmin) / 2,
+                    'initial_window':  vmax - vmin,
+                    'initial_level':   (vmax + vmin) / 2,
+                    'window_auto':     vmax_a - vmin_a,
+                    'level_auto':      (vmax_a + vmin_a) / 2,
+                    'data_max':        max(1, int(vol.max())),
+                }
+                self.contrast_combo_map.append(idx)
+                self.MW.ui.comboBox_Contrastimage.addItem(layer_name)
+
+        row_index = self.index
         btn = QToolButton()
         btn.setCheckable(True)
         btn.setChecked(True)
@@ -169,7 +199,7 @@ class IntensityTable(QObject):
         btn.setIcon(self.icon_visible)
         btn.setToolTip("Toggle visibility")
         btn.setAutoRaise(True)
-        btn.clicked.connect(lambda checked, r=self.index , b=btn: self.toggle_visibility(checked,r, b,data_index))
+        btn.clicked.connect(lambda checked, b=btn, r=row_index: self.MW.Layers[self.data_index][row_index].toggle_visibility(checked,b))
         btn.setStyleSheet("""
             QToolButton {
                 border: none;
@@ -208,14 +238,21 @@ class IntensityTable(QObject):
         opacity_spin.setAlignment(Qt.AlignCenter)
         opacity_spin.setEnabled(visibility_enabled)
         opacity_spin.setToolTip("Adjust layer opacity")
-        opacity_spin.valueChanged.connect(lambda value, i=data_index:self.update_opacity(value,i))
+        opacity_spin.valueChanged.connect(lambda value, slider=self.overlay_slider, box=opacity_spin: (
+            self.opacity_values[row_index].__setitem__(0, value),
+            self.MW.Layers[self.data_index][row_index].set_opacity(value, slider, box)
+        ))
+
+        #self.update_opacity(value, i, r))
         self.table.setCellWidget(self.index , 3, opacity_spin)
         self.MW.LoadMRI.cursor_ui[f"opacity{self.index }"] = opacity_spin
 
         if visibility_enabled:
-            self.opactiy_values.append([0.6*100,visibility_enabled,data_index])
+            self.opacity_values.append([0.6*100,visibility_enabled,data_index])
         else:
-            self.opactiy_values.append([1*100,visibility_enabled,data_index])
+            self.opacity_values.append([1*100,visibility_enabled,data_index])
+
+        return btn
 
     def show_context_menu(self, pos,data_index):
         """
@@ -230,204 +267,6 @@ class IntensityTable(QObject):
         menu.addAction(f"Save image {self.file_name[row]}", lambda: self.save_layer(row))
         menu.addAction("Remove image", lambda: self.remove_layer(row,data_index))
         menu.exec(self.table.mapToGlobal(pos))
-
-
-
-    def toggle_visibility(self,checked,row, btn,data_index):
-        """
-        Toggle visibility of a selected layer in all three orthogonal views.
-        """
-        if not self.MW.LoadMRI.volumes[0].is_4d:
-            for vn in 'axial','coronal','sagittal':
-                if vn=='axial':
-                    slice = np.fliplr(self.intensity_volumes[row][self.MW.LoadMRI.slice_indices[data_index][0],:,:])
-                elif vn=='coronal':
-                    slice = np.fliplr(self.intensity_volumes[row][:,self.MW.LoadMRI.slice_indices[data_index][1],:])
-                elif vn=='sagittal': #different with .T flip; etc.
-                    slice = np.fliplr(self.intensity_volumes[row][:,:,self.MW.LoadMRI.slice_indices[data_index][2]])
-
-                renderer = self.MW.LoadMRI.renderers[data_index][vn]
-                actors = renderer.GetViewProps()
-                actors.InitTraversal()
-
-                for _ in range(actors.GetNumberOfItems()):
-                    actor = actors.GetNextProp()
-                    if actor.GetClassName()=="vtkOpenGLTextActor" or actor.GetClassName()=="vtkOpenGLActor" or actor.GetClassName()=="vtkActor2D":
-                        continue
-
-                    image_data = actor.GetInput()
-                    vtk_array = numpy_support.vtk_to_numpy(image_data.GetPointData().GetScalars())
-                    h, w = image_data.GetDimensions()[1], image_data.GetDimensions()[0]
-                    if image_data.GetNumberOfScalarComponents() == 4:
-                        # RGBA image: reshape to (height, width, 4)
-                        vtk_array = vtk_array.reshape(h, w, 4)
-                        # if you only want the first channel (R), pick it:
-                        vtk_array = vtk_array[:, :, 0]
-                    else:
-                        # single-component image: reshape to (height, width)
-                        vtk_array = vtk_array.reshape(h, w)
-
-                    #vtk_array = numpy_support.vtk_to_numpy(image_data.GetPointData().GetScalars())
-                    vtk_array = vtk_array.reshape(image_data.GetDimensions()[1], image_data.GetDimensions()[0])
-                    if np.allclose(vtk_array, slice):
-                        selected_actor = actor
-
-                        if checked:
-                            btn.setIcon(self.icon_visible)
-                            selected_actor.SetVisibility(True)
-                            #should be image index!!
-                            self.MW.LoadMRI.vtk_widgets[data_index][vn].GetRenderWindow().Render()
-                        else:
-                            btn.setIcon(self.icon_hidden)
-                            selected_actor.SetVisibility(False)
-                            self.MW.LoadMRI.vtk_widgets[data_index][vn].GetRenderWindow().Render()
-                            self.MW.LoadMRI.update_slices(0,0,data_view=vn)
-                        break
-        else:
-            for vn in self.MW.LoadMRI.renderers[data_index].keys():
-                renderer = self.MW.LoadMRI.renderers[data_index][vn]
-                render_window = renderer.GetRenderWindow()
-                renderer_collection = render_window.GetRenderers()
-                renderer_collection.InitTraversal()  # start traversal
-                num_renderers = renderer_collection.GetNumberOfItems()  # get number of renderers
-                for r_idx in range(num_renderers):
-                    ren = renderer_collection.GetNextItem()
-
-                    actors = ren.GetViewProps()
-                    actors.InitTraversal()
-                    for a_idx in range(actors.GetNumberOfItems()):
-                        actor = actors.GetNextProp()
-                        slice = self.intensity_volumes[row][self.MW.LoadMRI.slice_indices[data_index][0],:,:]
-
-                        if actor.GetClassName()=="vtkOpenGLTextActor"or actor.GetClassName()=="vtkActor2D" or actor.GetClassName()=="vtkOpenGLActor":
-                            continue
-
-                        image_data = actor.GetInput()
-                        vtk_array = numpy_support.vtk_to_numpy(image_data.GetPointData().GetScalars())
-                        h, w = image_data.GetDimensions()[1], image_data.GetDimensions()[0]  # note: vtk dims are (x, y, z)
-
-                        if image_data.GetNumberOfScalarComponents() == 4:
-                            # RGBA image: reshape to (height, width, 4)
-                            vtk_array = vtk_array.reshape(h, w, 4)
-                            # if you only want the first channel (R), pick it:
-                            vtk_array = vtk_array[:, :, 0]
-                        else:
-                            # single-component image: reshape to (height, width)
-                            vtk_array = vtk_array.reshape(h, w)
-
-                        vtk_array = vtk_array.reshape(image_data.GetDimensions()[1], image_data.GetDimensions()[data_index])
-
-                        #anat
-                        for idx in range(len(self.MW.LoadMRI.renderers)):
-                            if idx==3:
-                                continue
-                            if actor == self.MW.LoadMRI.paintbrush.overlay_actors[vn][idx]:
-                                true_actor = self.MW.LoadMRI.paintbrush.overlay_actors[vn][idx]
-                                if checked:
-                                    btn.setIcon(self.icon_visible)
-                                    true_actor.SetVisibility(True)
-                                    #should be image index!!
-                                    self.MW.LoadMRI.vtk_widgets[data_index][vn].GetRenderWindow().Render()
-                                else:
-                                    btn.setIcon(self.icon_hidden)
-                                    true_actor.SetVisibility(False)
-                                    self.MW.LoadMRI.vtk_widgets[data_index][vn].GetRenderWindow().Render()
-                                    self.MW.LoadMRI.update_slices(0,0,data_view=vn)
-                                break
-
-                        if vtk_array.shape == slice.shape:
-                            if np.allclose(vtk_array, slice):
-                                selected_actor = actor
-                                if checked:
-                                    btn.setIcon(self.icon_visible)
-                                    selected_actor.SetVisibility(True)
-                                    #should be image index!!
-                                    self.MW.LoadMRI.vtk_widgets[data_index][vn].GetRenderWindow().Render()
-                                else:
-                                    btn.setIcon(self.icon_hidden)
-                                    selected_actor.SetVisibility(False)
-                                    self.MW.LoadMRI.vtk_widgets[data_index][vn].GetRenderWindow().Render()
-                                    self.MW.LoadMRI.update_slices(0,0,data_view=vn)
-                                break
-
-
-    def update_opacity(self,value,data_index):
-        """
-        Adjust opacity of the selected layer across all three orientations.
-        """
-        self.overlay_slider.blockSignals(True)
-        self.MW.LoadMRI.cursor_ui[f"opacity{self.index }"].blockSignals(True)
-
-        self.overlay_slider.setValue(value)
-        self.MW.LoadMRI.cursor_ui[f"opacity{self.index }"].setValue(value)
-
-        self.overlay_slider.blockSignals(False)
-        self.MW.LoadMRI.cursor_ui[f"opacity{self.index }"].blockSignals(False)
-
-        row = self.table.currentRow()
-        self.opactiy_values[row][0]=value
-        if not self.MW.LoadMRI.volumes[0].is_4d:
-            overlay_index = self.opacity_index[row]
-            actors_by_view = self.MW.LoadMRI.actors_non_mainimage.get(overlay_index, {})
-            for vn in ('axial', 'coronal', 'sagittal'):
-                actor = actors_by_view.get(vn)
-                if actor is None:
-                    continue
-                actor.GetProperty().SetOpacity(value / 100)
-                self.MW.LoadMRI.vtk_widgets[data_index][vn].GetRenderWindow().Render()
-
-            self.MW.LoadMRI.update_slices(0, 0, data_view='coronal')
-        else:
-            for vn in self.MW.LoadMRI.renderers[data_index].keys():
-                renderer = self.MW.LoadMRI.renderers[data_index][vn]
-                render_window = renderer.GetRenderWindow()
-                renderer_collection = render_window.GetRenderers()
-                renderer_collection.InitTraversal()  # start traversal
-                num_renderers = renderer_collection.GetNumberOfItems()  # get number of renderers
-                for r_idx in range(num_renderers):
-                    ren = renderer_collection.GetNextItem()
-
-                    actors = ren.GetViewProps()
-                    actors.InitTraversal()
-                    for a_idx in range(actors.GetNumberOfItems()):
-                        actor = actors.GetNextProp()
-                        slice = self.intensity_volumes[row][self.MW.LoadMRI.slice_indices[data_index][0],:,:]
-
-                        if actor.GetClassName()=="vtkOpenGLTextActor"or actor.GetClassName()=="vtkActor2D" or actor.GetClassName()=="vtkOpenGLActor":
-                            continue
-
-                        image_data = actor.GetInput()
-                        vtk_array = numpy_support.vtk_to_numpy(image_data.GetPointData().GetScalars())
-                        h, w = image_data.GetDimensions()[1], image_data.GetDimensions()[0]  # note: vtk dims are (x, y, z)
-
-                        if image_data.GetNumberOfScalarComponents() == 4:
-                            # RGBA image: reshape to (height, width, 4)
-                            vtk_array = vtk_array.reshape(h, w, 4)
-                            # if you only want the first channel (R), pick it:
-                            vtk_array = vtk_array[:, :, 0]
-                        else:
-                            # single-component image: reshape to (height, width)
-                            vtk_array = vtk_array.reshape(h, w)
-
-                        vtk_array = vtk_array.reshape(image_data.GetDimensions()[1], image_data.GetDimensions()[data_index])
-
-                        #anat
-                        for idx in range(len(self.MW.LoadMRI.renderers)):
-                            if actor == self.MW.LoadMRI.paintbrush.overlay_actors[vn][idx]:
-                                true_actor = self.MW.LoadMRI.paintbrush.overlay_actors[vn][idx]
-                                true_actor.GetProperty().SetOpacity(value/100)
-                                self.MW.LoadMRI.vtk_widgets[data_index][vn].GetRenderWindow().Render()
-                                self.MW.LoadMRI.update_slices(0,0,data_view=vn)
-                                break
-
-                        if vtk_array.shape == slice.shape:
-                            if np.allclose(vtk_array, slice):
-                                selected_actor = actor
-                                selected_actor.GetProperty().SetOpacity(value/100)
-                                self.MW.LoadMRI.vtk_widgets[data_index][vn].GetRenderWindow().Render()
-                                self.MW.LoadMRI.update_slices(0,0,data_view=vn)
-                                break
-
 
 
     def save_layer(self,row):
@@ -448,7 +287,7 @@ class IntensityTable(QObject):
                     btn_seg = msg_box.addButton("Segmentation", QMessageBox.ActionRole)
                     msg_box.exec_()
 
-                    label_volume = self.MW.LoadMRI.paintbrush.label_volume.copy()
+                    label_volume = self.MW.Paintbrush.label_volume.copy()
                     if btn_anat:
                         file_name = self.file_name[0][:-7]
                         file_name = f"{file_name}-anat.nii.gz"
@@ -500,11 +339,14 @@ class IntensityTable(QObject):
         !!! Only tested with 3D data!!!
         """
         if self.table.item(row,1).text()=='Label':
+            #for idx in range(len(self.MW.LoadMRI.renderers)):
+            layer = self.MW.Layers[data_index][self.MW.Paintbrush.layer_index[data_index]]
+            for vn, actor in layer.actors.items():
+                self.MW.LoadMRI.renderers[data_index][vn].RemoveActor(actor)
+                #actor = self.overlay_actors[vn][idx]
+                #renderer.RemoveActor(actor)
             for vn in 'axial','coronal','sagittal':
                 renderer = self.MW.LoadMRI.renderers[data_index][vn]
-                for idx in range(len(self.MW.LoadMRI.renderers)):
-                    actor = self.overlay_actors[vn][idx]
-                    renderer.RemoveActor(actor)
                 self.MW.LoadMRI.vtk_widgets[0][vn].GetRenderWindow().Render()
                 self.MW.LoadMRI.update_slices(0,0,data_view=vn)
         else:
@@ -553,8 +395,84 @@ class IntensityTable(QObject):
         self.file_name.pop(row)
         self.index-=1
 
-        self.opactiy_values.pop(row)
+        self.opacity_values.pop(row)
 
+
+    def on_contrast_selection_changed(self, combo_idx):
+        """
+        Reconnect the shared contrast sliders/buttons to whichever image
+        is selected in comboBox_Contrastimage.
+        combo_idx == 0  → main image (lm.contrast[0])
+        combo_idx >= 1  → overlay at self.contrast_combo_map[combo_idx - 1]
+        """
+        lm = self.MW.LoadMRI
+        if not hasattr(lm, 'contrast') or 0 not in lm.contrast:
+            return
+        ui = lm.contrast_ui_elements[0]
+
+        # Disconnect existing bindings (PySide6 raises RuntimeWarning, not RuntimeError)
+        for key in ("contrast0", "brightness0"):
+            try:
+                ui[key].valueChanged.disconnect()
+            except Exception:
+                pass
+        for key in ("auto0", "reset0"):
+            try:
+                ui[key].clicked.disconnect()
+            except Exception:
+                pass
+
+        def _set_sliders(window, level, data_max, block=True):
+            for key in ("contrast0", "brightness0"):
+                ui[key].blockSignals(block)
+            ui["contrast0"].setMaximum(data_max)
+            ui["brightness0"].setMaximum(data_max)
+            ui["contrast0"].setValue(int(window))
+            ui["brightness0"].setValue(int(level))
+            ui["display_window0"].setValue(int(window))
+            ui["display_level0"].setValue(int(level))
+            for key in ("contrast0", "brightness0"):
+                ui[key].blockSignals(False)
+
+        if combo_idx == 0:
+            c = lm.contrast[0]
+            data_max = max(1, int(lm.volumes[0].slices[0].max()))
+            _set_sliders(c.window[0], c.level[0], data_max)
+            ui["contrast0"].valueChanged.connect(lambda val: c.changed_sliders(val, 0))
+            ui["brightness0"].valueChanged.connect(lambda val: c.changed_sliders(val, 0))
+            ui["auto0"].clicked.connect(lambda: c.auto(0))
+            ui["reset0"].clicked.connect(lambda: c.reset(0))
+        else:
+            #non_main_idx = combo_idx #self.contrast_combo_map[combo_idx - 1]
+            state = self.overlay_contrasts[combo_idx-1]
+            _set_sliders(state['window'], state['level'], state['data_max'])
+
+            def _changed(val, s=state, i=combo_idx):
+                s['window'] = ui["contrast0"].value()
+                s['level']  = ui["brightness0"].value()
+                ui["display_window0"].setValue(int(s['window']))
+                ui["display_level0"].setValue(int(s['level']))
+                vmin = s['level'] - s['window'] / 2
+                vmax = s['level'] + s['window'] / 2
+                self.MW.Layers[self.data_index][combo_idx].update_lut(i, vmin, vmax)
+
+            def _auto(_checked=False, s=state, i=combo_idx):
+                s['window'] = s['window_auto']
+                s['level']  = s['level_auto']
+                _set_sliders(s['window'], s['level'], s['data_max'])
+                self.MW.Layers[self.data_index][combo_idx].update_lut(i, s['level'] - s['window']/2, s['level'] + s['window']/2)
+
+            def _reset(_checked=False, s=state, i=combo_idx):
+                s['window'] = s['initial_window']
+                s['level']  = s['initial_level']
+                _set_sliders(s['window'], s['level'], s['data_max'])
+                self.MW.Layers[self.data_index][combo_idx].update_lut(i, s['level'] - s['window']/2, s['level'] + s['window']/2)
+
+
+            ui["contrast0"].valueChanged.connect(_changed)
+            ui["brightness0"].valueChanged.connect(_changed)
+            ui["auto0"].clicked.connect(_auto)
+            ui["reset0"].clicked.connect(_reset)
 
     def setup_slider_overlay(self):
         self.overlay_slider = QSlider(Qt.Horizontal, self.table.viewport())
@@ -571,19 +489,24 @@ class IntensityTable(QObject):
         row = index.row()
         column = index.column()
 
-        if column==3 and self.opactiy_values[row][1]==True:
+        if column==3 and self.opacity_values[row][1]==True:
             index = self.table.model().index(row, column)
-
             rect = self.table.visualRect(index)
 
             slider = self.overlay_slider
+            # Fix: disconnect any previous connections first
+            try:
+                slider.valueChanged.disconnect()
+            except RuntimeError:
+                pass
 
-            self.overlay_slider.setValue(self.opactiy_values[row][0])
-            slider.move(rect.left(), rect.bottom() + 2)
-            slider.raise_()
+            slider.setValue(self.opacity_values[row][0])
+            slider.move(rect.left()-(rect.right()-rect.left())+20, rect.center().y())
             slider.show()
-
-            self.overlay_slider.valueChanged.connect(lambda value, i=self.opactiy_values[row][2]:self.update_opacity(value,i))
+            slider.valueChanged.connect(lambda value, slider=slider, box=self.MW.LoadMRI.cursor_ui[f"opacity{row}"]: (
+                self.opacity_values[row].__setitem__(0, value),
+                self.MW.Layers[self.data_index][row].set_opacity(value,slider,box)
+            ))
 
     def eventFilter(self, obj, event):
         if obj is getattr(self, "_event_filter_table_viewport", None):
