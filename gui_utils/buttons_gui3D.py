@@ -10,6 +10,7 @@ from utils.minimap_handler import Minimap
 from gui_utils.paintbrush_gui import PaintbrushGUI
 from core.registration import Registration
 from gui_utils.segmentation_gui import SegmentationGUI
+from gui_utils.busy_overlay import BusyOverlay
 
 # This Python file uses the following encoding: utf-8
 from PySide6.QtWidgets import QDockWidget,QDialog,QVBoxLayout
@@ -354,8 +355,12 @@ class ButtonsGUI_3D:
                 self.LoadMRI.Resample.file_name100um = default_name
                 return
 
+        overlay = BusyOverlay(self.MW, message="Resampling, please wait…")
+        overlay.run(self._do_resample100um, index)
+
+    def _do_resample100um(self, index):
         default_name = self.LoadMRI.Resample.resampling100um(index)
-        self.ui.textEdit_resample100.setText(f"Resampling Done with saved as \n {default_name}")
+        self.ui.textEdit_resample100.setText(f"Resampling Done, saved as \n {default_name}")
         self.ui.pushButton_openfile100um.setEnabled(True)
 
     def resample25um(self,index):
@@ -376,8 +381,12 @@ class ButtonsGUI_3D:
                 self.ui.textEdit_resample25.setText(f"Existing file \n {default_name}")
                 return
 
+        overlay = BusyOverlay(self.MW, message="Resampling, please wait…")
+        overlay.run(self._do_resample25um, index)
+
+    def _do_resample25um(self, index):
         default_name = self.LoadMRI.Resample.resampling25um(index)
-        self.ui.textEdit_resample25.setText(f"Resampling Done with saved as \n {default_name}")
+        self.ui.textEdit_resample25.setText(f"Resampling Done, saved as \n {default_name}")
 
 
     def initialize_registration(self):
@@ -395,9 +404,7 @@ class ButtonsGUI_3D:
 
         self.ui.comboBox_movingimg.currentIndexChanged.connect(lambda index: self.check_dimensions_movingimg(index))
 
-        self.ui.pushButton_registration.clicked.connect(
-            lambda: setattr(self.LoadMRI, "Registration", Registration(self.LoadMRI,self,self.ui.comboBox_movingimg.currentIndex()))
-        )
+        self.ui.pushButton_registration.clicked.connect(self._start_registration)
 
 
         self.ui.pushButton_regCancel.clicked.connect(self.cancel_reg)
@@ -416,6 +423,13 @@ class ButtonsGUI_3D:
         self.ui.comboBox_finest.currentIndexChanged.connect(
             lambda idx: setattr(self.LoadMRI, "finest_index", idx)
         )
+
+    def _start_registration(self):
+        overlay = BusyOverlay(self.MW, message="Registering, please wait…")
+        overlay.run(self._do_registration)
+
+    def _do_registration(self):
+        self.LoadMRI.Registration = Registration(self.LoadMRI, self, self.ui.comboBox_movingimg.currentIndex())
 
     def cancel_reg(self):
          self.popup.close()

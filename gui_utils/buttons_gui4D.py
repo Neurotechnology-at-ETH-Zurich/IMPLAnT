@@ -434,6 +434,7 @@ class ButtonsGUI_4D:
                 heatmap.setVisible(True)
                 legend = getattr(self.ui,f"groupbox_legend{idx}")
                 legend.setVisible(True)
+            self.ui.gridLayout_data0.setColumnStretch(3, 1)
 
             dlg_anat = ANAT_InputDialog(self.MW,1)
             if dlg_anat.exec() == QtWidgets.QDialog.DialogCode.Accepted:
