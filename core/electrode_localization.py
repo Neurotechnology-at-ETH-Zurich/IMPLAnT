@@ -3,7 +3,10 @@ from mrid_utils import handlers, gauss_aux, warper, chmap
 import numpy as np
 import nibabel as nib
 import os
+import json as _json
 import pickle
+with open(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'paths_config.json')) as _f:
+    _paths = _json.load(_f)
 from PySide6.QtWidgets import QFileDialog
 import vtk
 import SimpleITK as sitk
@@ -92,8 +95,6 @@ class ElectrodeLoc:
             else:
                 print("No valid transformation!")
 
-            self.progress.setValue(int(10+(idx+1)/len(self.LoadMRI.vtk_widgets[0])*20))
-
             for roi_name in roi_names:
                 heatmap_filename = ".".join((self.filename + "-" + roi_name + "-heatmap", "nii", "gz"))
                 heatmap_path = os.path.join(self.sessionpath, "analysed", roi_name,data_view,heatmap_filename)
@@ -101,12 +102,9 @@ class ElectrodeLoc:
                     #warps and resamples heatmaps
                     savepath = os.path.join(self.LoadMRI.session_path, 'analysed',roi_name,data_view)
                     fixed_path = warper.heatmap_warp(self.filename, roi_name, savepath, self.sessionpath, fixed_ind, tx)
-                    self.progress.setValue(int(10+(idx+1)/len(self.LoadMRI.vtk_widgets[0])*60))
                     #save gaussian centers
                     volume3d_resampled = np.asanyarray(nib.load(fixed_path).dataobj)
                     gauss_aux.run_gaussian_analysis(self.filename, savepath, roi_name, data_view, volume3d_resampled, self.labelsdf)
-
-            self.progress.setValue(int(10+(idx+1)/len(self.LoadMRI.vtk_widgets[0])*90))
 
 
     def getCoordinates(self):
@@ -122,7 +120,6 @@ class ElectrodeLoc:
             return None
         else:
             pklfile_path,atlas,atlaslabelsdf,dwi_path,t2s_path,mask_path,moving_coordinates_path, fixed_coordinates_path,channel_separation, total_ch,chMap_file = result
-        self.LoadMRI.ElectrodeLoc.groupBox_progressGUI.setVisible(True)
 
         with open(pklfile_path, 'rb') as f:
             mrid_dict = pickle.load(f)
@@ -140,8 +137,6 @@ class ElectrodeLoc:
         totalchMap = []
         totalatlasCoordinates_pkl = []
 
-        ## Parallelism
-        self.progress.setValue(20)
 
         #over all tags ->
         args_list = [
@@ -157,7 +152,6 @@ class ElectrodeLoc:
             i=1
 
             for future in as_completed(futures):
-                self.progress.setValue(int(20+i/len(roi_names)*50))
                 fitted_points,regionNames,regionNumbers,df,barcode_r,barcode_d,mrid,CA1,dwi1Dsignal,pyrChIdx,chMap,atlasCoordinates_pkl = future.result()
                 totalfitted_points.append(fitted_points)
                 totaldf.append(df)
@@ -171,9 +165,6 @@ class ElectrodeLoc:
                 totalchMap.append(chMap)
                 totalatlasCoordinates_pkl.append(atlasCoordinates_pkl)
                 i+=1
-
-
-        self.progress.setValue(100)
 
 
         return roi_names,totaldf,totalbarcode_r,totalbarcode_d,totalmrid,totalCA1,totaldwi1Dsignal,totalregionNames,totalpyrChIdx,totalfitted_points,totalchMap,totalatlasCoordinates_pkl
@@ -226,24 +217,24 @@ class ElectrodeLoc:
         filename_4d_warped_path = os.path.join(self.savepath, filename_4d_warped)
         img_4d= sitk.ReadImage(filename_4d_warped_path)
         vol = sitk.GetArrayFromImage(img_4d)
-        if data_view=='sagittal':
-            img_slice = np.fliplr(vol[:,:,round(fitted_points[0][0])])
-        else:
-            img_slice = np.fliplr(vol[int(fitted_points[0][2]),:,:])
+        #if data_view=='sagittal':
+        #    img_slice = np.fliplr(vol[:,:,round(fitted_points[0][0])])
+        #else:
+        img_slice = np.fliplr(vol[int(fitted_points[0][2]),:,:])
         spacing_4d = img_4d.GetSpacing() #xyz # #
         spacing = self.LoadMRI.volumes[data_index].spacing
 
         self.visualize_4Dwarpedslice(img_slice,spacing_4d,data_index,data_view)
 
         for idx in range(len(fitted_points)):
-            if data_view=='sagittal':
-                x = self.LoadMRI.volumes[data_index].slices[0].shape[0]-1-fitted_points[idx][2]
-                y = fitted_points[idx][1]
-                spacing = np.array(spacing)
-                spacing[2] = spacing[0]
-            else:
-                x = fitted_points[idx][0]
-                y = fitted_points[idx][1]
+            #if data_view=='sagittal':
+            #    x = self.LoadMRI.volumes[data_index].slices[0].shape[0]-1-fitted_points[idx][2]
+            #    y = fitted_points[idx][1]
+            #    spacing = np.array(spacing)
+            #    spacing[2] = spacing[0]
+            #else:
+            x = fitted_points[idx][0]
+            y = fitted_points[idx][1]
 
             x=(x)*spacing_4d[2]
             y=(y)*spacing_4d[1]
@@ -268,117 +259,118 @@ class ElectrodeLoc:
 
 
     def visualize_4Dwarpedslice(self, img_slice,spacing,data_index,data_view):
-            """
-                Visualize a single slice of the first timestamp to then add the found electrode locations.
+        """
+            Visualize a single slice of the first timestamp to then add the found electrode locations.
 
-                Parameters
-                ----------
-                img_slice : ndarray
-                    2D numpy array representing the heatmap slice to display.
-                reset_camera : bool
-                    Whether to reset the camera to focus on the heatmap area.
-            """
-            # add to vtkwidgets for rendering and zooming
-            vtk_widget = self.LoadMRI.vtk_widgets[3][data_view]
-            vtk_data = numpy_support.numpy_to_vtk(img_slice.ravel(), deep=True, array_type=vtk.VTK_FLOAT)
-            h, w = img_slice.shape
-            spacing = (spacing[2], spacing[1], 1)
+            Parameters
+            ----------
+            img_slice : ndarray
+                2D numpy array representing the heatmap slice to display.
+            reset_camera : bool
+                Whether to reset the camera to focus on the heatmap area.
+        """
+        # add to vtkwidgets for rendering and zooming
+        vtk_widget = self.LoadMRI.vtk_widgets[3][data_view]
+        vtk_data = numpy_support.numpy_to_vtk(img_slice.ravel(), deep=True, array_type=vtk.VTK_FLOAT)
+        h, w = img_slice.shape
+        spacing = (spacing[2], spacing[1], 1)
 
-            #renderer,img_vtk = self.open_mainimage(vtk_widget,vtk_data, spacing,w,h)
-            img_vtk = vtk.vtkImageData()
-            img_vtk.SetDimensions(w, h, 1)  # VTK expects width x height x depth
-            img_vtk.SetSpacing(spacing)
-            img_vtk.GetPointData().SetScalars(vtk_data)
+        #renderer,img_vtk = self.open_mainimage(vtk_widget,vtk_data, spacing,w,h)
+        img_vtk = vtk.vtkImageData()
+        img_vtk.SetDimensions(w, h, 1)  # VTK expects width x height x depth
+        img_vtk.SetSpacing(spacing)
+        img_vtk.GetPointData().SetScalars(vtk_data)
 
-            #create new renderer
-            renderer = self.LoadMRI.renderers[0][data_view]
-            #remove original image
-            renderer.RemoveActor(self.LoadMRI.actors[0][data_view])
+        #create new renderer
+        renderer = self.LoadMRI.renderers[0][data_view]
+        #remove original image
+        renderer.RemoveActor(self.MW.Layers[data_index][0].actors[data_view][0])
+        #renderer.RemoveActor(self.LoadMRI.actors[0][data_view])
 
-            nonzero_y, nonzero_x = np.nonzero(img_slice)
-            spacing_x, spacing_y = spacing[1], spacing[0]  # careful: VTK x=cols, y=rows
-            if len(nonzero_x) == 0 or len(nonzero_y) == 0:
-                ny, nx = np.nonzero(self.LoadMRI.paintbrush.label_volume[self.LoadMRI.slice_indices[0],:,:])
-                # Get pixel bounds
-                x_min, x_max = nx.min(), nx.max()
-                y_min, y_max = ny.min(), ny.max()
+        nonzero_y, nonzero_x = np.nonzero(img_slice)
+        spacing_x, spacing_y = spacing[1], spacing[0]  # careful: VTK x=cols, y=rows
+        if len(nonzero_x) == 0 or len(nonzero_y) == 0:
+            ny, nx = np.nonzero(self.MW.Paintbrush.label_volume[self.LoadMRI.slice_indices[0],:,:])
+            # Get pixel bounds
+            x_min, x_max = nx.min(), nx.max()
+            y_min, y_max = ny.min(), ny.max()
 
-                # Convert pixel coordinates to world coordinates
-                self.center_x = (x_min + x_max) / 2 * spacing_x
-                self.center_y = (y_min + y_max) / 2 * spacing_y
-                self.width = (x_max - x_min) * spacing_x
-                self.height = (y_max - y_min) * spacing_y
+            # Convert pixel coordinates to world coordinates
+            self.center_x = (x_min + x_max) / 2 * spacing_x
+            self.center_y = (y_min + y_max) / 2 * spacing_y
+            self.width = (x_max - x_min) * spacing_x
+            self.height = (y_max - y_min) * spacing_y
 
-            else:
-                # Get pixel bounds
-                x_min, x_max = nonzero_x.min()-1, nonzero_x.max()+1
-                y_min, y_max = nonzero_y.min()-1, nonzero_y.max()+1
+        else:
+            # Get pixel bounds
+            x_min, x_max = nonzero_x.min()-1, nonzero_x.max()+1
+            y_min, y_max = nonzero_y.min()-1, nonzero_y.max()+1
 
-                # Convert pixel coordinates to world coordinates
-                self.center_x = (x_min + x_max) / 2 * spacing_x
-                self.center_y = (y_min + y_max) / 2 * spacing_y
-                self.width = (x_max - x_min) * spacing_x
-                self.height = (y_max - y_min) * spacing_y
+            # Convert pixel coordinates to world coordinates
+            self.center_x = (x_min + x_max) / 2 * spacing_x
+            self.center_y = (y_min + y_max) / 2 * spacing_y
+            self.width = (x_max - x_min) * spacing_x
+            self.height = (y_max - y_min) * spacing_y
 
-            camera_base = self.LoadMRI.renderers[0][data_view].GetActiveCamera()
-            fp = camera_base.GetFocalPoint()
-            pos = camera_base.GetPosition()
+        camera_base = self.LoadMRI.renderers[0][data_view].GetActiveCamera()
+        fp = camera_base.GetFocalPoint()
+        pos = camera_base.GetPosition()
 
-            camera = renderer.GetActiveCamera()
-            camera.SetFocalPoint(self.center_x, self.center_y, fp[2])
-            camera.SetPosition(self.center_x, self.center_y, pos[2])  # small offset in z
-            camera.ParallelProjectionOn()
-            camera.SetParallelScale(max(self.width, self.height)/2)
+        camera = renderer.GetActiveCamera()
+        camera.SetFocalPoint(self.center_x, self.center_y, fp[2])
+        camera.SetPosition(self.center_x, self.center_y, pos[2])  # small offset in z
+        camera.ParallelProjectionOn()
+        camera.SetParallelScale(max(self.width, self.height)/2)
 
-            # Add image to actor to then be added to renderer
-            actor = vtk.vtkImageActor()
-            scalar = img_vtk.GetScalarRange()
-            actor.GetProperty().SetColorWindow(scalar[1])
-            actor.GetProperty().SetColorLevel(scalar[1]/2)
+        # Add image to actor to then be added to renderer
+        actor = vtk.vtkImageActor()
+        scalar = img_vtk.GetScalarRange()
+        actor.GetProperty().SetColorWindow(scalar[1])
+        actor.GetProperty().SetColorLevel(scalar[1]/2)
 
-            actor.SetInputData(img_vtk)
-            actor.Modified()
-            actor.GetProperty().SetInterpolationTypeToNearest() #Linear()
-            actor.GetProperty().SetOpacity(1)
+        actor.SetInputData(img_vtk)
+        actor.Modified()
+        actor.GetProperty().SetInterpolationTypeToNearest() #Linear()
+        actor.GetProperty().SetOpacity(1)
 
-            vmin, vmax = np.percentile(vtk_data, [0,100])
-            lut = vtk.vtkLookupTable()
-            lut.SetTableRange(vmin, vmax)
-            lut.SetValueRange(0.0, 1.0)
-            lut.SetSaturationRange(0.0, 0.0)
-            lut.Build()
-            contrast_class = self.LoadMRI.contrast[data_index]
-            contrast_class.lut_vtk[3]=lut
+        vmin, vmax = np.percentile(vtk_data, [0,100])
+        lut = vtk.vtkLookupTable()
+        lut.SetTableRange(vmin, vmax)
+        lut.SetValueRange(0.0, 1.0)
+        lut.SetSaturationRange(0.0, 0.0)
+        lut.Build()
+        contrast_class = self.LoadMRI.contrast[data_index]
+        contrast_class.lut_vtk[3]=lut
 
-            # make low values (blue end) transparent
-            # now build alpha: all zero voxels → alpha = 0
-            prop = actor.GetProperty()
-            prop.SetLookupTable(lut)
-            prop.UseLookupTableScalarRangeOn()
+        # make low values (blue end) transparent
+        # now build alpha: all zero voxels → alpha = 0
+        prop = actor.GetProperty()
+        prop.SetLookupTable(lut)
+        prop.UseLookupTableScalarRangeOn()
 
-            renderer.AddActor(actor)
+        renderer.AddActor(actor)
 
-            self.LoadMRI.heatmap = True
-            self.actor_heatmap = actor
+        self.LoadMRI.heatmap = True
+        self.actor_heatmap = actor
 
-            vtk_widget.GetRenderWindow().Render()
+        vtk_widget.GetRenderWindow().Render()
 
 
     def get_atlas_points(self,roi_names):
         #pop up asking for the view if 4D data used
         dlg = ChannelVariablesInput(self.MW,roi_names)
         if dlg.exec() == QtWidgets.QDialog.DialogCode.Accepted:
-            pklfile, root, channel_separation, total_ch,moving_coordinates_path, fixed_coordinates_path,chMap_file = dlg.get_values()
-            self.atlas_path=os.path.join(root,"WHS_SD_rat_atlas_v4.nii.gz")
+            pklfile, channel_separation, total_ch,moving_coordinates_path, fixed_coordinates_path,chMap_file = dlg.get_values()
+            self.atlas_path=os.path.join(_paths['atlas_folder'], _paths['atlas_volume'])
             nii_atlas=nib.load(self.atlas_path)
             atlas=np.asanyarray(nii_atlas.dataobj)
 
-            labels_path=os.path.join(root,"WHS_SD_rat_atlas_v4.label") #./atlas_labels.rtf'
+            labels_path=os.path.join(_paths['atlas_folder'], _paths['atlas_labels'])
             atlaslabelsdf=handlers.read_whs_labels(labels_path)
 
-            dwi_path=os.path.join(root,"WHS_SD_rat_DWI_v1.01.nii.gz")
-            t2s_path=os.path.join(root,"WHS_SD_rat_T2star_v1.01.nii.gz")
-            mask_path=os.path.join(root,"WHS_SD_v2_brainmask_bin.nii.gz")
+            dwi_path=os.path.join(_paths['atlas_folder'], _paths['atlas_dwi'])
+            t2s_path=os.path.join(_paths['atlas_folder'], _paths['atlas_template'])
+            mask_path=os.path.join(_paths['atlas_folder'], _paths['atlas_mask'])
 
             return pklfile,atlas,atlaslabelsdf,dwi_path,t2s_path,mask_path,moving_coordinates_path, fixed_coordinates_path,channel_separation, total_ch,chMap_file
 
@@ -399,7 +391,7 @@ class ChannelVariablesInput(QtWidgets.QDialog):
         self.resize(500, 500)
         self.MW = MW
         self.roi_names = roi_names
-        gui_dir = '/media/neurox/DATA/Files/'
+        gui_dir = getattr(sys, '_MEIPASS', os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
         # Main layout
         main_layout = QtWidgets.QVBoxLayout(self)
@@ -412,26 +404,15 @@ class ChannelVariablesInput(QtWidgets.QDialog):
         self.file_line_pkl = QtWidgets.QTextEdit()
 
         self.file_name_pkl = os.path.join(gui_dir,'mrid_library.pkl')
-        self.file_line_pkl.setText(f"File found: {self.file_name_pkl} \n Please select another pkl file if requested")
+        if os.path.exists(self.file_name_pkl):
+            self.file_line_pkl.setText(f"File found: {self.file_name_pkl} \n Please select another pkl file if requested")
+        else:
+            self.file_line_pkl.setText("No mrid_library.pkl found. Please browse to select the file.")
         browse_button = QtWidgets.QPushButton("Browse")
         browse_button.clicked.connect(self.browse_file_pkl)
         file_layout.addWidget(self.file_line_pkl)
         file_layout.addWidget(browse_button)
         main_layout.addLayout(file_layout)
-
-        #ask user for atlas directory to get atlas file and upload matrices
-        file_layout = QtWidgets.QHBoxLayout()
-        self.file_folder = QtWidgets.QTextEdit()
-        self.root = os.path.join(gui_dir,'Atlas')
-        self.file_folder.setText(f"Folder found: {self.root} \n Select another folder, where Atlas data is saved if requested")
-        browse_button = QtWidgets.QPushButton("Browse")
-        browse_button.clicked.connect(self.browse_folder)
-        file_layout.addWidget(self.file_folder)
-        file_layout.addWidget(browse_button)
-        main_layout.addLayout(file_layout)
-
-        #root = QFileDialog.getExistingDirectory(None, 'Select the folder, where Atlas data is saved:', self.LoadMRI.session_path, QFileDialog.ShowDirsOnly)
-        #seledct moving and fixed files!!!
 
         self.channel_separation = QtWidgets.QSpinBox()
         self.channel_separation.setRange(1, 200)
@@ -505,20 +486,6 @@ class ChannelVariablesInput(QtWidgets.QDialog):
         button_layout.addWidget(buttons)
         # Add the whole layout to your main layout
         main_layout.addLayout(button_layout)
-
-    def browse_folder(self):
-        """
-        Opens File Dialog for user to choose labels.txt
-        """
-        self.root = QFileDialog.getExistingDirectory(
-            None,
-            'Select the folder, where Atlas data is saved:',
-            self.MW.LoadMRI.session_path,
-            QFileDialog.ShowDirsOnly)
-        #User cancelled
-        if not self.root:
-            return
-        self.file_folder.setText(os.path.basename(self.root))
 
 
     def browse_file_chMap(self):
@@ -596,13 +563,13 @@ class ChannelVariablesInput(QtWidgets.QDialog):
         total_channels = []
         for roi in self.roi_names:
             total_channels.append(self.total_channels[roi].value())
-        root=self.root
+        #root=self.root
         moving_coordinates=  self.file_name_moving
         fixed_coordinates = self.file_name_fixed
         pklfile = self.file_name_pkl
         chMap_file = self.file_chMap
 
-        return pklfile, root, channel_separation, total_channels,moving_coordinates, fixed_coordinates,chMap_file
+        return pklfile, channel_separation, total_channels,moving_coordinates, fixed_coordinates,chMap_file
 
 
 if __name__ == "__main__":
