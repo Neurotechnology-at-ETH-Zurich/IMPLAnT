@@ -2,13 +2,10 @@
 
 import vtk
 import numpy as np
-from vtkmodules.util import numpy_support
 from PySide6.QtGui import  QColor
 from vtkmodules.vtkCommonCore import vtkPoints
-from vtkmodules.vtkCommonDataModel import (
-    vtkCellArray,
-    vtkPolyData
-)
+from vtkmodules.vtkCommonDataModel import vtkCellArray,vtkPolyData
+from core.image_layer import ImageLayer
 
 class Paintbrush:
     """
@@ -25,42 +22,56 @@ class Paintbrush:
         self.brush_color = "red"
         self.paintover_color = "white"
         self.histogram_color = "all anat"
-        self.paint_actors = {}
-        self.paint_actors_fixed = {
-            'coronal': [],
-            'axial': [],
-            'sagittal': []
-        }
-        # Dictionary to hold actors
-        self.overlay_actors = {}
-        self.vtk_label_images = {}
-        self.color_mappers = {}
+        self.LoadMRI.heatmap = False #cursor in 4th image visible
+        self.LoadMRI.paint = False
+
+        self.brush_actors = {}
+        self.label_volume_index = 0
+        self.last_roi_indices = set()
+        self.layer_index = {}
         self.label_volume = {}
         self.seg_volume = {}
-        for idx in range(len(self.LoadMRI.vtk_widgets[0])):
+        for idx in range(len(self.LoadMRI.vtk_widgets)):
             self.label_volume[idx] = np.zeros_like(self.LoadMRI.volumes[0].slices[0], dtype=np.uint8)
             self.seg_volume[idx] = np.zeros_like(self.LoadMRI.volumes[0].slices[0], dtype=np.uint8)
 
-        self.LoadMRI.heatmap = False #cursor in 4th image visible
-        self.LoadMRI.paint = False
-        self.label_volume_index = 0
 
-
-
-    def start_paintbrush(self):
+    def start_paintbrush(self,is_4d=False,histogram_needed=True):
         """
         Initialize label volume and setup overlay tables for each view.
         """
-        if not self.LoadMRI.volumes[0].is_4d:
-            z,y,x = self.LoadMRI.slice_indices[0]
-            self.setup_table(self.label_volume[0][z, :, :], 'axial',0)
-            self.setup_table(self.label_volume[0][:, y, :], 'coronal',0)
-            self.setup_table(self.label_volume[0][:, :, x], 'sagittal',0)
-        else:
-            for idx in range(len(self.LoadMRI.vtk_widgets[0])):
-                z,y,x = self.LoadMRI.slice_indices[idx]
-                data_view = list(self.LoadMRI.vtk_widgets[0].keys())[idx]
-                self.setup_table(self.label_volume[idx][z, :, :], data_view,idx)
+        self.histogram_needed = histogram_needed
+        for idx in range(len(self.LoadMRI.vtk_widgets)):
+            if idx  in self.layer_index:
+                continue
+            # Store Layer
+            layer_index = len(self.LoadMRI.MW.Layers[idx])
+            lut = self.setup_lut()
+            if is_4d:
+                vol = {0: self.label_volume[idx], 1: self.label_volume[idx], 2: self.label_volume[idx]}
+            else:
+                vol = {0: self.label_volume[idx]}
+            self.LoadMRI.MW.Layers[idx][layer_index] = ImageLayer(
+                volume=vol,  # same array reference — mutations are picked up automatically
+                spacing=self.LoadMRI.volumes[0].spacing,
+                view_names=self.LoadMRI.MW.Layers[idx][0].view_names, #['axial', 'coronal', 'sagittal'],
+                slice_indices=self.LoadMRI.slice_indices[0],
+                is_4d=is_4d,
+                render_fct=self.LoadMRI.render,
+                vtk_dtype=vtk.VTK_UNSIGNED_CHAR,
+                interpolation='nearest',
+                opacity=0.5,
+                lut = lut,
+                flip=True,
+            )
+            self.layer_index[idx] = layer_index
+            if not self.LoadMRI.volumes[0].is_4d:
+                self.LoadMRI.setup_layer('coronal',idx,layer_index) ##data_view
+            else:
+                self.LoadMRI.setup_layer(self.LoadMRI.MW.Layers[0][0].view_names,idx,layer_index)
+                intensity_filename = 'Segmentation Mask'
+                self.LoadMRI.intensity_table[0].update_table(intensity_filename, vol[0],0,layer_index,visibility_enabled=False)
+
 
     def set_size(self,var:int):
         """
@@ -86,6 +97,7 @@ class Paintbrush:
         self.get_paint_settings(filled,view_name,paintbrush_pos,data_index)
 
         if not filled:
+            self.LoadMRI.render()
             return
 
         label_value = self.color_combobox.index(self.brush_color)
@@ -98,13 +110,13 @@ class Paintbrush:
             return
         nz, ny, nx = self.label_volume[data_index].shape
         half = int(self.size // 2)
-
-
+        region = [0]
         if self.brush_type == 'square':
-            if view_name == 'axial' or (self.LoadMRI.volumes[0].is_4d and view_name=='coronal') or (self.LoadMRI.volumes[0].is_4d and view_name=='sagittal'):  # XY plane, spacing Z ignored
+            if view_name == 'axial' or self.LoadMRI.volumes[0].is_4d: # XY plane, spacing Z ignored
                 x0, x1 = max(0, x-half), min(nx - 1, x +half+ (0 if self.size % 2 == 0 else 1))
                 y0, y1 = max(0, y-half), min(ny - 1, y +half+ (0 if self.size % 2 == 0 else 1))
                 # Only overwrite voxels with paintover_value
+                region = self.label_volume[data_index][z, y0:y1, x0:x1].copy()
                 if paintover_value != 0:
                     mask = self.label_volume[data_index][z, y0:y1, x0:x1] == paintover_value-1
                     self.label_volume[data_index][z, y0:y1, x0:x1][mask] = int(label_value)
@@ -146,12 +158,13 @@ class Paintbrush:
                         self.seg_volume[data_index][z0:z1, y0:y1, x] = int(label_value)
                 else:
                     return
+
         elif self.brush_type == 'round':
             radius = int(self.size/2)
             radius_vector = []
             radius_vector.append([0,0])
             if self.size%2==0:
-                if view_name == 'axial' or (self.LoadMRI.volumes[0].is_4d and view_name=='coronal') or (self.LoadMRI.volumes[0].is_4d and view_name=='sagittal'):
+                if view_name == 'axial' or self.LoadMRI.volumes[0].is_4d:
                     x_new = x+0.5
                     y_new = y+0.5
                     vol_shape_x = self.label_volume[data_index].shape[2]
@@ -162,7 +175,7 @@ class Paintbrush:
                     vol_shape_x = self.label_volume[data_index].shape[2]
                     vol_shape_y = self.label_volume[data_index].shape[0]
                 elif view_name == 'sagittal':
-                    x_new = self.LoadMRI.volumes[0].slices[0].shape[0]-z-0.5
+                    x_new = z+0.5
                     y_new = y+0.5
                     vol_shape_x = self.label_volume[data_index].shape[0]
                     vol_shape_y = self.label_volume[data_index].shape[1]
@@ -171,7 +184,7 @@ class Paintbrush:
                         if np.sqrt((xx-0.5)**2+(yy-0.5)**2) < self.size/2*0.98:
                             radius_vector.append([xx-0.5,yy-0.5])
             else:
-                if view_name == 'axial' or (self.LoadMRI.volumes[0].is_4d and view_name=='coronal') or (self.LoadMRI.volumes[0].is_4d and view_name=='sagittal'):
+                if view_name == 'axial' or self.LoadMRI.volumes[0].is_4d:
                     x_new = x
                     y_new = y
                     vol_shape_x = self.label_volume[data_index].shape[2]
@@ -182,7 +195,7 @@ class Paintbrush:
                     vol_shape_x = self.label_volume[data_index].shape[2]
                     vol_shape_y = self.label_volume[data_index].shape[0]
                 elif view_name == 'sagittal':
-                    x_new = self.LoadMRI.volumes[0].slices[0].shape[0]-z
+                    x_new = z
                     y_new = y
                     vol_shape_x = self.label_volume[data_index].shape[0]
                     vol_shape_y = self.label_volume[data_index].shape[1]
@@ -190,8 +203,7 @@ class Paintbrush:
                     for yy in range(int(radius+1)):
                         if np.sqrt(xx**2+yy**2) < self.size/2*0.93:
                             radius_vector.append([xx,yy])
-
-
+            region = []
             for sign_x in +1,+1,-1,-1:
                 for sign_y in +1,-1,+1,-1:
                     for dx,dy in radius_vector:
@@ -200,33 +212,36 @@ class Paintbrush:
 
                         # check bounds
                         if 0 <= xi < vol_shape_x and 0 <= yi < vol_shape_y:
-                            if view_name == 'axial' or (self.LoadMRI.volumes[0].is_4d and view_name=='coronal') or (self.LoadMRI.volumes[0].is_4d and view_name=='sagittal'):
+                            if view_name == 'axial' or self.LoadMRI.volumes[0].is_4d:
+                                region.append(self.label_volume[data_index][z, yi, xi].copy())
                                 if self.label_volume[data_index][z, yi, xi] == paintover_value - 1 or paintover_value == 0:
                                     self.label_volume[data_index][z, yi, xi] = label_value
                                     if label_value > self.LoadMRI.mrid_tags.num_regions:
                                         self.seg_volume[data_index][z, yi, xi] = label_value
                             elif view_name == 'coronal':
+                                region.append(self.label_volume[data_index][yi, y, xi].copy())
                                 if self.label_volume[data_index][yi, y, xi] == paintover_value - 1 or paintover_value == 0:
                                     self.label_volume[data_index][yi, y, xi] = label_value
                                     if label_value > self.LoadMRI.mrid_tags.num_regions:
                                        self.seg_volume[data_index][yi, y, xi] = label_value
-                                # apply mask
-                                self.label_volume[data_index][:, y, :]
                             elif view_name == 'sagittal':
                                 # apply mask
-                                self.label_volume[data_index][:, :, x]
-                                if 0 <= self.LoadMRI.volumes[0].slices[0].shape[0]-xi < vol_shape_x:
-                                    if self.label_volume[data_index][self.LoadMRI.volumes[0].slices[0].shape[0]-xi, yi, x] == paintover_value - 1 or paintover_value == 0:
-                                        self.label_volume[data_index][self.LoadMRI.volumes[0].slices[0].shape[0]-xi, yi, x] = label_value
+                                region.append(self.label_volume[data_index][xi, yi, x].copy())
+                                if 0 <= xi < vol_shape_x:
+                                    if self.label_volume[data_index][xi, yi, x] == paintover_value - 1 or paintover_value == 0:
+                                        self.label_volume[data_index][xi, yi, x] = label_value
                                         if label_value > self.LoadMRI.mrid_tags.num_regions:
-                                           self.seg_volume[data_index][self.LoadMRI.volumes[0].slices[0].shape[0]-xi, yi, x] = label_value
+                                           self.seg_volume[data_index][xi, yi, x] = label_value
 
         # Update the overlay
         self.update_overlay(data_index) #z, y, x)
 
-        self.histogram()
+        if self.histogram_needed:
+            self.histogram()
+
         if self.LoadMRI.heatmap:
-            self.LoadMRI.mrid_tags.update_heatmap(view_name,data_index)
+            roi_indices = list(np.unique(np.append(np.unique(region), label_value)))
+            self.LoadMRI.mrid_tags.update_heatmap(view_name,data_index, roi_indices)
 
 
     def get_paint_settings(self,filled:bool,view_name:str,paintbrush_pos:tuple[int, int, int],data_index):
@@ -238,39 +253,45 @@ class Paintbrush:
             return
 
         z, y, x = map(int, paintbrush_pos)
+        nz, ny, nx = self.label_volume[data_index].shape
+        # VTK world positions account for fliplr: x axis is flipped in axial/coronal, y axis in sagittal
+        cx = (nx - 1 - x) * LM.volumes[data_index].spacing[2]
+        cx_even = (nx - 0.5 - x) * LM.volumes[data_index].spacing[2]
+        cy_sag = (ny - 1 - y) * LM.volumes[data_index].spacing[1]
+        cy_sag_even = (ny - 0.5 - y) * LM.volumes[data_index].spacing[1]
 
         if self.brush_type == 'square':
             # Create cube
             self.source = vtk.vtkCubeSource()
             self.source.SetZLength(0.1)  # flat in slice plane
-            if view_name == 'axial' or (self.LoadMRI.volumes[0].is_4d and view_name=='coronal') or (self.LoadMRI.volumes[0].is_4d and view_name=='sagittal'):
+            if view_name == 'axial' or self.LoadMRI.volumes[0].is_4d:
                 self.source.SetXLength(self.size*LM.volumes[data_index].spacing[2])
                 self.source.SetYLength(self.size*LM.volumes[data_index].spacing[1])
                 if self.size % 2 == 0:
-                    self.source.SetCenter((x - 0.5) * LM.volumes[data_index].spacing[2],(y - 0.5) * LM.volumes[data_index].spacing[1],1 )
+                    self.source.SetCenter(cx_even, (y - 0.5) * LM.volumes[data_index].spacing[1], 1)
                 else:
-                    self.source.SetCenter(x * LM.volumes[data_index].spacing[2],y * LM.volumes[data_index].spacing[1],1 )
+                    self.source.SetCenter(cx, y * LM.volumes[data_index].spacing[1], 1)
             elif view_name == 'coronal':
                 self.source.SetXLength(self.size*LM.volumes[data_index].spacing[2])
                 self.source.SetYLength(self.size*LM.volumes[data_index].spacing[0])
                 if self.size % 2 == 0:
-                    self.source.SetCenter((x - 0.5) * LM.volumes[data_index].spacing[2],(z - 0.5) * LM.volumes[data_index].spacing[0],1 )
+                    self.source.SetCenter(cx_even, (z - 0.5) * LM.volumes[data_index].spacing[0], 1)
                 else:
-                    self.source.SetCenter(x * LM.volumes[data_index].spacing[2],z * LM.volumes[data_index].spacing[0],1 )
+                    self.source.SetCenter(cx, z * LM.volumes[data_index].spacing[0], 1)
             elif (self.LoadMRI.volumes[0].is_4d and view_name=='sagittal'):
                 self.source.SetXLength(self.size*LM.volumes[data_index].spacing[1])
                 self.source.SetYLength(self.size*LM.volumes[data_index].spacing[2])
                 if self.size % 2 == 0:
-                    self.source.SetCenter((y - 0.5) * LM.volumes[data_index].spacing[1],(x - 0.5) * LM.volumes[data_index].spacing[2],1 )
+                    self.source.SetCenter(cy_sag_even, (x - 0.5) * LM.volumes[data_index].spacing[2], 1)
                 else:
-                    self.source.SetCenter(y * LM.volumes[data_index].spacing[1],x * LM.volumes[data_index].spacing[2],1 )
+                    self.source.SetCenter(cy_sag, x * LM.volumes[data_index].spacing[2], 1)
             elif view_name == 'sagittal':
-                self.source.SetXLength(self.size*LM.volumes[data_index].spacing[0])
-                self.source.SetYLength(self.size*LM.volumes[data_index].spacing[1])
+                self.source.SetXLength(self.size*LM.volumes[data_index].spacing[1])
+                self.source.SetYLength(self.size*LM.volumes[data_index].spacing[0])
                 if self.size % 2 == 0:
-                    self.source.SetCenter((self.LoadMRI.volumes[0].slices[0].shape[0]-z - 0.5) * LM.volumes[data_index].spacing[0],(y - 0.5) * LM.volumes[data_index].spacing[1],1 )
+                    self.source.SetCenter(cy_sag_even, (z - 0.5) * LM.volumes[data_index].spacing[0], 1)
                 else:
-                    self.source.SetCenter((self.LoadMRI.volumes[0].slices[0].shape[0]-z-1) * LM.volumes[data_index].spacing[0],y * LM.volumes[data_index].spacing[1],1)
+                    self.source.SetCenter(cy_sag, z * LM.volumes[data_index].spacing[0], 1)
 
             mapper = vtk.vtkPolyDataMapper()
             mapper.SetInputConnection(self.source.GetOutputPort())
@@ -286,12 +307,12 @@ class Paintbrush:
             actor.GetProperty().SetOpacity(1.0)
             for i in range(len(self.LoadMRI.renderers)):
                 renderer = self.LoadMRI.renderers[i][view_name] ## FOR ALL IMAGES
-                if self.paint_actors.get(view_name) is not None:
-                    renderer.RemoveActor(self.paint_actors[view_name])
+                if self.brush_actors.get(view_name) is not None:
+                    renderer.RemoveActor(self.brush_actors[view_name])
                 renderer.AddActor(actor)
-                self.LoadMRI.vtk_widgets[i][view_name].GetRenderWindow().Render() ## FOR ALL IMAGES
-            self.paint_actors[view_name] = None
-            self.paint_actors[view_name] = actor
+                #self.LoadMRI.vtk_widgets[i][view_name].GetRenderWindow().Render() ## FOR ALL IMAGES
+            self.brush_actors[view_name] = None
+            self.brush_actors[view_name] = actor
             return actor
 
         elif self.brush_type == 'round':
@@ -300,21 +321,21 @@ class Paintbrush:
             radius_vector = []
 
             if self.size%2==0:
-                if view_name == 'axial' or (self.LoadMRI.volumes[0].is_4d and view_name=='coronal') or (self.LoadMRI.volumes[0].is_4d and view_name=='sagittal'):
-                    x_new = x+0.5
-                    y_new = y+ 0.5
-                    spacing_x = LM.volumes[data_index].spacing[2]
-                    spacing_y = LM.volumes[data_index].spacing[1]
+                if view_name == 'axial' or self.LoadMRI.volumes[0].is_4d:
+                    x_new = nx - 0.5 - x
+                    y_new = y+0.5
+                    spacing_x = LM.volumes[data_index].spacing[2] #x
+                    spacing_y = LM.volumes[data_index].spacing[1] #y
                 elif view_name == 'coronal':
-                    x_new = x+0.5
+                    x_new = nx - 0.5 - x
                     y_new = z+ 0.5
                     spacing_x = LM.volumes[data_index].spacing[2]
                     spacing_y = LM.volumes[data_index].spacing[0]
                 elif view_name == 'sagittal':
-                    x_new = self.LoadMRI.volumes[0].slices[0].shape[0]-z-1.5
-                    y_new = y+ 0.5
-                    spacing_x = LM.volumes[data_index].spacing[0]
-                    spacing_y = LM.volumes[data_index].spacing[1]
+                    x_new = ny - 0.5 - y
+                    y_new = z + 0.5
+                    spacing_x = LM.volumes[data_index].spacing[1]
+                    spacing_y = LM.volumes[data_index].spacing[0]
 
                 for xx in range(int(radius)):
                     xx +=1
@@ -324,21 +345,21 @@ class Paintbrush:
                             radius_vector.append([xx-0.5,yy-0.5])
                             break
             else:
-                if view_name == 'axial' or (self.LoadMRI.volumes[0].is_4d and view_name=='coronal') or (self.LoadMRI.volumes[0].is_4d and view_name=='sagittal'):
-                    x_new = x
+                if view_name == 'axial' or self.LoadMRI.volumes[0].is_4d:
+                    x_new = nx - 1 - x
                     y_new = y
                     spacing_x = LM.volumes[data_index].spacing[2]
                     spacing_y = LM.volumes[data_index].spacing[1]
                 elif view_name == 'coronal':
-                    x_new = x
+                    x_new = nx - 1 - x
                     y_new = z
                     spacing_x = LM.volumes[data_index].spacing[2]
                     spacing_y = LM.volumes[data_index].spacing[0]
                 elif view_name == 'sagittal':
-                    x_new = self.LoadMRI.volumes[0].slices[0].shape[0]-z-1
-                    y_new = y
-                    spacing_x = LM.volumes[data_index].spacing[0]
-                    spacing_y = LM.volumes[data_index].spacing[1]
+                    x_new = ny - 1 - y
+                    y_new = z
+                    spacing_x = LM.volumes[data_index].spacing[1]
+                    spacing_y = LM.volumes[data_index].spacing[0]
                 for xx in range(int(radius)):
                     xx += 1
                     for yy in range(int(radius)):
@@ -454,133 +475,39 @@ class Paintbrush:
             actor.GetProperty().SetOpacity(1.0)
             for i in range(len(self.LoadMRI.renderers)):
                 renderer = self.LoadMRI.renderers[i][view_name] # FOR ALL IMAGES
-                if self.paint_actors.get(view_name) is not None:
-                    renderer.RemoveActor(self.paint_actors[view_name])
+                if self.brush_actors.get(view_name) is not None:
+                    renderer.RemoveActor(self.brush_actors[view_name])
                 renderer.AddActor(actor)
-                self.LoadMRI.vtk_widgets[i][view_name].GetRenderWindow().Render() # FOR ALL IMAGES
-            self.paint_actors[view_name] = None
-            self.paint_actors[view_name] = actor
+                #self.LoadMRI.vtk_widgets[i][view_name].GetRenderWindow().Render() # FOR ALL IMAGES
+            self.brush_actors[view_name] = None
+            self.brush_actors[view_name] = actor
 
             return actor
 
 
-    def update_overlay(self,data_index): #,z:int, y:int, x:int):
+    def update_overlay(self,data_index):
         """
         Update the VTK overlay actors for all views based on the label volume.
         """
         z, y, x = self.LoadMRI.slice_indices[data_index]
+        layer = self.LoadMRI.MW.Layers[data_index][self.layer_index[data_index]]
+        layer.update_vtk(self.LoadMRI.slice_indices[data_index])
 
-        for view_name, img_vtk in self.vtk_label_images.items():
-            if self.LoadMRI.volumes[0].is_4d:
-                data_view = list(self.LoadMRI.vtk_widgets[0].keys())[data_index]
-                if view_name!=data_view:
-                    continue
-            # Axial view (XY plane at z)
-            if view_name == 'axial' or (self.LoadMRI.volumes[0].is_4d and view_name=='coronal') or (self.LoadMRI.volumes[0].is_4d and view_name=='sagittal'):
-                slice_img = np.fliplr(self.label_volume[data_index][z, :, :])
-            elif view_name == 'coronal':
-                slice_img = np.fliplr(self.label_volume[data_index][:, y, :])
-            elif view_name == 'sagittal':
-                slice_img = np.fliplr(self.label_volume[data_index][:, :, x])
-
-            # Always flatten in Fortran order for VTK
-            vtk_array = numpy_support.numpy_to_vtk(slice_img.ravel(),
-                                                   deep=True,
-                                                   array_type=vtk.VTK_UNSIGNED_CHAR)
-
-            # Set scalars and refresh
-            img_vtk.GetPointData().SetScalars(vtk_array)
-            img_vtk.Modified()
-            self.color_mappers[view_name].Update()
-            for idx in range(len(self.LoadMRI.renderers)):
-                if idx==3:
-                    continue
-                self.overlay_actors[view_name][idx].GetMapper().Update()
-                self.lookup.SetRange(0, len(self.color_combobox)-1)
-                actor = self.overlay_actors[view_name][idx]
-                self.overlay_actors[view_name][idx] = actor
-
-        for _,vtk_widget_image in self.LoadMRI.vtk_widgets.items():
-            for view_name, widget in vtk_widget_image.items():
-                widget.GetRenderWindow().Render()
-
-        #flip_axes = tuple(i for i, flip in enumerate(self.LoadMRI.volumes[data_index].axes_to_flip[::-1]) if flip)
-        vol = self.label_volume[data_index]
-        #change volume in intensity table
-        table_class = self.LoadMRI.intensity_table[data_index]
-        for i in range(table_class.table.rowCount()):
-            if table_class.table.item(i,1).text()=='Label':
-                table_class.intensity_volumes[i] =vol
+        self.LoadMRI.render()
 
 
-    def setup_table(self,slice_img:np.ndarray, view_name:str,data_index):
-        """
-        Create the VTK lookup table (LUT) and image actor for a slice in a view.
-        """
-        # Make slice a flat array of integers
-        vtk_data = numpy_support.numpy_to_vtk(slice_img.ravel(), deep=True, array_type=vtk.VTK_UNSIGNED_CHAR)
 
-        img_vtk = vtk.vtkImageData()
-        h, w = slice_img.shape
-        img_vtk.SetDimensions(w, h, 1)  # VTK expects width x height x depth
-
-        # Correct spacing per view
-        if view_name == "axial" or self.LoadMRI.volumes[0].is_4d:     #x,y
-            spacing = (self.LoadMRI.volumes[data_index].spacing[2], self.LoadMRI.volumes[data_index].spacing[1], 1)
-        elif view_name == "coronal":  #
-            spacing = (self.LoadMRI.volumes[data_index].spacing[2], self.LoadMRI.volumes[data_index].spacing[0], 1)
-        elif view_name == "sagittal": #y,z
-            spacing = (self.LoadMRI.volumes[data_index].spacing[1], self.LoadMRI.volumes[data_index].spacing[0], 1)
-
-
-        # Prepare your VTK image
-        img_vtk.SetSpacing(spacing)
-        img_vtk.GetPointData().SetScalars(vtk_data)
-
-
-        # Create the actor
-        #if view_name not in self.overlay_actors:
+    def setup_lut(self):
         number_colors = len(self.RGB_table)
-        self.lookup = vtk.vtkLookupTable()
-        self.lookup.SetNumberOfTableValues(number_colors)
-        self.lookup.SetRange(0, number_colors-1)
-        self.lookup.Build()
+        lookup = vtk.vtkLookupTable()
+        lookup.SetNumberOfTableValues(number_colors)
+        lookup.SetRange(0, number_colors-1)
+        lookup.Build()
         colors = self.RGB_table
         for i, (r, g, b, a) in enumerate(colors):
-            self.lookup.SetTableValue(i, r, g, b, a)
+            lookup.SetTableValue(i, r, g, b, a)
 
-        # Map label values to colors using LUT
-        color_mapper = vtk.vtkImageMapToColors()
-        color_mapper.SetLookupTable(self.lookup)
-        color_mapper.SetOutputFormatToRGBA()
-        color_mapper.SetInputData(img_vtk)
-        color_mapper.GetLookupTable().SetRange(0, len(self.color_combobox) - 1)
-        color_mapper.Update()
-        self.color_mappers[view_name] = color_mapper
-
-        # Add to renderer; in Ubuntu separate actor need to be created
-        for idx in range(len(self.LoadMRI.renderers)):
-            if idx==3: #heatmap
-                continue
-            actor = vtk.vtkImageActor()
-            actor.GetProperty().SetInterpolationTypeToNearest()
-            actor.GetMapper().SetInputConnection(color_mapper.GetOutputPort())
-            actor.GetProperty().SetOpacity(self.label_occ)
-
-            renderer = self.LoadMRI.renderers[idx][view_name]
-            if view_name in self.overlay_actors:
-                if idx in self.overlay_actors[view_name]:
-                    renderer.RemoveActor(self.overlay_actors[view_name][idx])
-            renderer.AddActor(actor)
-            renderer.GetActiveCamera().SetParallelProjection(True)
-            #self.LoadMRI.vtk_widgets[i][view_name].GetRenderWindow().Render() ## FOR ALL IMAGES´
-            if view_name not in self.overlay_actors:
-                self.overlay_actors[view_name] = {}
-            self.overlay_actors[view_name][idx] = actor
-
-        self.vtk_label_images[view_name] = img_vtk
-
-
+        return lookup
 
 
     def histogram(self):
@@ -649,15 +576,9 @@ class Paintbrush:
         self.LoadMRI.brush['label_occ'].blockSignals(False)
         self.LoadMRI.brush['label_occ_slider'].blockSignals(False)
 
-        for view_name in self.overlay_actors.keys():
-            for idx in self.overlay_actors[view_name]:
-                if self.overlay_actors[view_name][idx] is not None:
-                    self.overlay_actors[view_name][idx].GetProperty().SetOpacity(self.label_occ)
-
-        # re-render
-        for i in range(len(self.LoadMRI.renderers)):
-            if i==3: #heatmap
-                continue
-            for view_name in self.overlay_actors.keys():
-                self.LoadMRI.vtk_widgets[i][view_name].GetRenderWindow().Render()
+        for idx, layer_index in self.layer_index.items():
+            layer = self.LoadMRI.MW.Layers[idx][layer_index]
+            layer.set_opacity(self.label_occ*100)
+            for widget in self.LoadMRI.vtk_widgets[idx].values():
+                widget.GetRenderWindow().Render()
 
