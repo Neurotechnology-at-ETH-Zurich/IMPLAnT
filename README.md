@@ -1,4 +1,4 @@
-![IMPLAnT](Icons/Github/logo_Final.png)
+![IMPLAnT](Icons/Github/IMPLAnT.png)
 # IMPLAnT - Integrated Multimodal Planning, Localisation, Analysis Toolbox
 
 
@@ -118,13 +118,16 @@ IMPLAnT uses the [Waxholm Space (WHS) rat brain atlas](https://www.nitrc.org/pro
 | `WHS_SD_rat_DWI_v1.01.nii.gz` | DWI template |
 | `WHS_SD_v2_brainmask_bin.nii.gz` | Brain mask |
 
+**This step is required — the app will not load atlas data without it.**
+
 Copy `paths_config.example.json` to `paths_config.json` and edit it to match your local setup:
 
 ```bash
 cp paths_config.example.json paths_config.json
 ```
 
-- `atlas_folder`: path to the folder where you saved the atlas files
+Open `paths_config.json` and replace the placeholder values:
+- `atlas_folder`: path to the folder where you saved the atlas files above
 - `raw_base`: root directory where raw Bruker data is stored and BIDS output will be written
 
 ```json
