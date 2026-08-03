@@ -239,6 +239,59 @@ class CustomInteractorStyle(vtk.vtkInteractorStyleImage):
                 Zoom.update_bounds('sagittal', camera, self.LoadMRI.renderers[self.image_index][self.interactor_view_name])
             zoom_notifier.factorChanged.emit(Zoom.global_zoom_factor)
 
+        # Zooming with right mouse drag
+        elif self.zooming:
+            super().OnMouseMove()  # apply VTK dolly to active view first so we read the updated scale
+            renderer = interactor.GetRenderWindow().GetRenderers().GetFirstRenderer()
+
+            camera_main = renderer.GetActiveCamera()
+            scale = camera_main.GetParallelScale()
+            pos = camera_main.GetPosition()
+            fp = camera_main.GetFocalPoint()
+            view_name = self.interactor_view_name
+            for image_index,vtk_widget_image in self.LoadMRI.vtk_widgets.items():
+                for vn, widget in vtk_widget_image.items():
+                    renderer = widget.GetRenderWindow().GetRenderers().GetFirstRenderer()
+                    camera = renderer.GetActiveCamera()
+
+                    if vn == self.interactor_view_name and image_index != self.image_index:
+                        camera.ParallelProjectionOn()
+                        pos_xy = camera.GetPosition()
+                        fp_xy = camera.GetFocalPoint()
+                        camera.SetParallelScale(scale)
+                        camera.SetPosition(pos_xy[0],pos_xy[1],pos[2])
+                        camera.SetFocalPoint(fp_xy[0],fp_xy[1],fp[2])
+                        widget.GetRenderWindow().Render()
+                        renderer.ResetCameraClippingRange()
+                        camera = self.LoadMRI.renderers[0][vn].GetRenderWindow().GetRenderers().GetFirstRenderer().GetActiveCamera()
+                        self.LoadMRI.scale_bar[vn].update_bar(self.LoadMRI.renderers[0][vn],vn,length_cm=1.0)
+                        Zoom.update_bounds(vn, camera, self.LoadMRI.renderers[self.image_index][vn])
+
+            if len(self.MW.Cursor.cursor_lines)==4:
+                renderer = self.LoadMRI.renderers[3][view_name]
+                camera = renderer.GetActiveCamera()
+                camera.ParallelProjectionOn()
+                pos_xy = camera.GetPosition()
+                fp_xy = camera.GetFocalPoint()
+                camera.SetParallelScale(scale)
+                camera.SetPosition(pos_xy[0],pos_xy[1],pos[2])
+                camera.SetFocalPoint(fp_xy[0],fp_xy[1],fp[2])
+                self.LoadMRI.vtk_widgets_heatmap[view_name].GetRenderWindow().Render()
+
+            if not self.LoadMRI.volumes[0].is_4d:
+                camera = self.LoadMRI.renderers[0]['axial'].GetRenderWindow().GetRenderers().GetFirstRenderer().GetActiveCamera()
+                self.LoadMRI.scale_bar['axial'].update_bar(self.LoadMRI.renderers[0]['axial'],'axial',length_cm=1.0)
+                Zoom.update_bounds('axial', camera, self.LoadMRI.renderers[self.image_index][self.interactor_view_name])
+                camera = self.LoadMRI.renderers[0]['coronal'].GetRenderWindow().GetRenderers().GetFirstRenderer().GetActiveCamera()
+                self.LoadMRI.scale_bar['coronal'].update_bar(self.LoadMRI.renderers[0]['coronal'],'coronal',length_cm=1.0)
+                Zoom.update_bounds('coronal', camera, self.LoadMRI.renderers[self.image_index][self.interactor_view_name])
+                camera = self.LoadMRI.renderers[0]['sagittal'].GetRenderWindow().GetRenderers().GetFirstRenderer().GetActiveCamera()
+                self.LoadMRI.scale_bar['sagittal'].update_bar(self.LoadMRI.renderers[0]['sagittal'],'sagittal',length_cm=1.0)
+                Zoom.update_bounds('sagittal', camera, self.LoadMRI.renderers[self.image_index][self.interactor_view_name])
+
+            Zoom.global_zoom_factor = scale
+            Zoom.factorChanged = scale
+            zoom_notifier.factorChanged.emit(scale)
         elif self.LoadMRI.brush_on:
             picker = vtk.vtkPropPicker()
             renderer = interactor.GetRenderWindow().GetRenderers().GetFirstRenderer()
@@ -269,60 +322,7 @@ class CustomInteractorStyle(vtk.vtkInteractorStyleImage):
                 self.MW.Paintbrush.mouse_moves(self.paintbrush_pos,self.dragging,self.interactor_view_name,self.interactor_data_index)
             else:
                 return
-        # Zooming with right mouse drag
-        elif self.zooming:
-            renderer = interactor.GetRenderWindow().GetRenderers().GetFirstRenderer()
 
-            camera_main = renderer.GetActiveCamera()
-            scale = camera_main.GetParallelScale()
-            pos = camera_main.GetPosition()
-            fp = camera_main.GetFocalPoint()
-            view_name = self.interactor_view_name
-            for image_index,vtk_widget_image in self.LoadMRI.vtk_widgets.items():
-                idx = 0
-                for vn, widget in vtk_widget_image.items():
-                    renderer = widget.GetRenderWindow().GetRenderers().GetFirstRenderer()
-                    camera = renderer.GetActiveCamera()
-
-                    if not (vn == self.interactor_view_name and image_index == self.image_index) and idx==self.interactor_data_index:
-                        camera.ParallelProjectionOn()
-                        pos_xy = camera.GetPosition()
-                        fp_xy = camera.GetFocalPoint()
-                        camera.SetParallelScale(scale)
-                        camera.SetPosition(pos_xy[0],pos_xy[1],pos[2])
-                        camera.SetFocalPoint(fp_xy[0],fp_xy[1],fp[2])
-                        widget.GetRenderWindow().Render()
-                        renderer.ResetCameraClippingRange()
-                        camera = self.LoadMRI.renderers[0][vn].GetRenderWindow().GetRenderers().GetFirstRenderer().GetActiveCamera()
-                        self.LoadMRI.scale_bar[vn].update_bar(self.LoadMRI.renderers[0][vn],vn,length_cm=1.0)
-                        Zoom.update_bounds(vn, camera, self.LoadMRI.renderers[self.image_index][vn])
-                    idx +=1
-
-            if len(self.MW.Cursor.cursor_lines)==4:
-                renderer = self.LoadMRI.renderers[3][view_name]
-                camera = renderer.GetActiveCamera()
-                camera.ParallelProjectionOn()
-                pos_xy = camera.GetPosition()
-                fp_xy = camera.GetFocalPoint()
-                camera.SetParallelScale(scale)
-                camera.SetPosition(pos_xy[0],pos_xy[1],pos[2])
-                camera.SetFocalPoint(fp_xy[0],fp_xy[1],fp[2])
-                self.LoadMRI.vtk_widgets_heatmap[view_name].GetRenderWindow().Render()
-
-            if not self.LoadMRI.volumes[0].is_4d:
-                camera = self.LoadMRI.renderers[0]['axial'].GetRenderWindow().GetRenderers().GetFirstRenderer().GetActiveCamera()
-                self.LoadMRI.scale_bar['axial'].update_bar(self.LoadMRI.renderers[0]['axial'],'axial',length_cm=1.0)
-                Zoom.update_bounds('axial', camera, self.LoadMRI.renderers[self.image_index][self.interactor_view_name])
-                camera = self.LoadMRI.renderers[0]['coronal'].GetRenderWindow().GetRenderers().GetFirstRenderer().GetActiveCamera()
-                self.LoadMRI.scale_bar['coronal'].update_bar(self.LoadMRI.renderers[0]['coronal'],'coronal',length_cm=1.0)
-                Zoom.update_bounds('coronal', camera, self.LoadMRI.renderers[self.image_index][self.interactor_view_name])
-                camera = self.LoadMRI.renderers[0]['sagittal'].GetRenderWindow().GetRenderers().GetFirstRenderer().GetActiveCamera()
-                self.LoadMRI.scale_bar['sagittal'].update_bar(self.LoadMRI.renderers[0]['sagittal'],'sagittal',length_cm=1.0)
-                Zoom.update_bounds('sagittal', camera, self.LoadMRI.renderers[self.image_index][self.interactor_view_name])
-
-            Zoom.global_zoom_factor = scale
-            Zoom.factorChanged = scale
-            zoom_notifier.factorChanged.emit(scale)
         #Measuring
         else:
             if self.dragging and self.measurement is None:
@@ -374,7 +374,8 @@ class CustomInteractorStyle(vtk.vtkInteractorStyleImage):
                 region_name = self.LoadMRI.tp_labels[value][4]
                 self.LoadMRI.TrajPlanning.visualize_regionname(region_name,self.interactor_view_name,[int(z),int(y),int(x)])
 
-        super().OnMouseMove()
+        if not self.zooming:
+            super().OnMouseMove()
 
     def on_wheel_forward(self, obj, event):
         """Scroll the slice forward when mouse wheel moves up."""
@@ -456,7 +457,6 @@ class CustomInteractorStyle(vtk.vtkInteractorStyleImage):
             camera = renderer.GetActiveCamera()
             self.scale_pre = camera.GetParallelScale()
 
-
             if not self.is_in_minimap_rect(x, y): # and self.dragging_minimap:
                 self.zooming = True
                 self.pos_last = [x,y]
@@ -473,6 +473,8 @@ class CustomInteractorStyle(vtk.vtkInteractorStyleImage):
         if self.image_index==3:
             return
         window_width, window_height = self.LoadMRI.renderers[self.image_index][self.interactor_view_name].GetSize()
+        if len(self.LoadMRI.minimap.size_rectangle[self.image_index][self.interactor_view_name]) != 2:
+            return False
         (w_norm,h_norm) = self.LoadMRI.minimap.size_rectangle[self.image_index][self.interactor_view_name]
 
         return 0 <= x/window_width <= w_norm and 0 <= y/window_height <= h_norm
