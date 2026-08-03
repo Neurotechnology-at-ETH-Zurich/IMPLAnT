@@ -82,8 +82,8 @@ def interpolate_channels(bottom_coord, top_coord, nchannels, offset, channel_sep
 
     ch_coords = np.zeros((nchannels, 3))
 
-    if offset > 0:
-        bottom = bottom_coord - (offset / px_size) * unitvec
+    if offset > 0: #changed from bottom =
+        bottom_coord = bottom_coord - (offset / px_size) * unitvec
     for i in range(nchannels):
         ch_coords[i, :] = np.round(bottom_coord + (i * unitvec * (channel_separation / px_size)))
 
@@ -102,6 +102,7 @@ def map_channels_to_atlas(ch_coord, fitted_mrid_points,moving_coordinates, fixed
     regionNames = []
     regionNumbers = []
     pyrChIdx = 0
+    pyr_coord = None
     pyrLyExists = False
     label_to_region = dict(zip(atlaslabelsdf["Labels"],atlaslabelsdf["Anatomical Regions"]))
     tree = cKDTree(moving_coordinates)
@@ -150,9 +151,21 @@ def map_channels_to_atlas(ch_coord, fitted_mrid_points,moving_coordinates, fixed
     #    f.write('\n')
 #
     for idx, coord in enumerate(ch_coord):
-        # Query nearest neighbor
-        dist, idx_nearest = tree.query(coord)
-        atlasCoord = fixed_coordinates[idx_nearest]
+        # Query several nearest neighbours; skip any that map to a clear label
+        k = min(20, len(moving_coordinates))
+        _, idx_nearest_list = tree.query(coord, k=k)
+        idx_nearest_list = np.atleast_1d(idx_nearest_list)
+        chosen = idx_nearest_list[0]
+        for idx_nn in idx_nearest_list:
+            cand_coord = fixed_coordinates[idx_nn]
+            cx, cy, cz = cand_coord.astype(int)
+            cand_label = atlas[cx, cy, cz]
+            cand_region = label_to_region[cand_label]
+            if 'clear' not in cand_region.lower():
+                chosen = idx_nn
+                break
+        atlasCoord = fixed_coordinates[chosen]
+
         x, y, z = atlasCoord.astype(int)
         label = atlas[x, y, z]
         anat_region = label_to_region[label]
@@ -178,6 +191,7 @@ def map_channels_to_atlas(ch_coord, fitted_mrid_points,moving_coordinates, fixed
             if currPixVal < minPixVal:
                 minPixVal = currPixVal
                 pyrChIdx = idx
+                pyr_coord = atlasCoord
                 #chMap.append(idx)
 
 
@@ -189,6 +203,19 @@ def map_channels_to_atlas(ch_coord, fitted_mrid_points,moving_coordinates, fixed
 
     if pyrLyExists:
         plot_dwi_1D_cross_section(dwi1Dsignal,regionNames,pyrChIdx,num_channels,chMap=chMap,savepath=savepath)
+        # record the pyramidal-layer channel as a final marker row in the Excel so
+        # ephys can centre ripple detection on it (identified by Channel ID == -1)
+        pyr_channel = chMap[pyrChIdx] if len(chMap) > pyrChIdx else pyrChIdx
+        marker = {
+            "Channel ID": -1,
+            "Channel": pyr_channel,
+            "Channel Label": "pyramidal layer CA1",
+            "Atlas x": pyr_coord[0],
+            "Atlas y": pyr_coord[1],
+            "Atlas z": pyr_coord[2],
+        }
+        df = pd.concat([df, pd.DataFrame([marker])], ignore_index=True)
+        df.to_excel(os.path.join(savepath, "channel_atlas_coordinates.xlsx"), index=False)
 
 
     return dwi1Dsignal,regionNames,regionNumbers,pyrLyExists,pyrChIdx,atlasCoordinates_pkl
