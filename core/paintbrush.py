@@ -171,18 +171,18 @@ class Paintbrush:
             radius_vector.append([0,0])
             if self.size%2==0:
                 if view_name == 'axial' or self.LoadMRI.volumes[0].is_4d:
-                    x_new = x+0.5
+                    x_new = x-0.5
                     y_new = y+0.5
                     vol_shape_x = self.label_volume[data_index].shape[2]
                     vol_shape_y = self.label_volume[data_index].shape[1]
                 elif view_name == 'coronal':
-                    x_new = x+0.5
+                    x_new = x-0.5
                     y_new = z+0.5
                     vol_shape_x = self.label_volume[data_index].shape[2]
                     vol_shape_y = self.label_volume[data_index].shape[0]
                 elif view_name == 'sagittal':
                     x_new = z+0.5
-                    y_new = y+0.5
+                    y_new = y-0.5
                     vol_shape_x = self.label_volume[data_index].shape[0]
                     vol_shape_y = self.label_volume[data_index].shape[1]
                 for xx in range(int(radius+1)):
@@ -209,6 +209,8 @@ class Paintbrush:
                     for yy in range(int(radius+1)):
                         if np.sqrt(xx**2+yy**2) < self.size/2*0.93:
                             radius_vector.append([xx,yy])
+                radius_vector.append([radius,0])
+                radius_vector.append([0,radius])
             region = []
             for sign_x in +1,+1,-1,-1:
                 for sign_y in +1,-1,+1,-1:
