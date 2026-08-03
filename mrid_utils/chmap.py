@@ -38,8 +38,8 @@ def main(mrid_dict,mrid, savepath, sessionpath,atlas,atlaslabelsdf,dwi,t2s,mask,
 
     if map_channels_boolean:
         # Mapping the channels to physical coordinate indeces (integers) in MRI space
-        ch_coords = channel_mapper.map_electrodes_main(fitted_points, mrid_dict[mrid])
-        np.save(os.path.join(savepath, "channel_mri_coordinates.npy"), ch_coords[0])
+        ch_coords = channel_mapper.map_electrodes_main(fitted_points, mrid_dict[mrid],px_size,channel_separation,total_ch)
+        np.save(os.path.join(savepath, "channel_mri_coordinates.npy"), ch_coords)
 
         #moving_coordinates = np.load(moving_idx_path)
         #fixed_coordinates = np.load(fixed_idx_path)
