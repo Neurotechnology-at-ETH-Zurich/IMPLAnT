@@ -4,7 +4,13 @@ import json as _json
 import SimpleITK as sitk
 import numpy as np
 from PySide6.QtWidgets import QFileDialog
-with open(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'paths_config.json')) as _f:
+import sys
+_base_dir = getattr(sys, '_MEIPASS', os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+_exe_dir = os.path.dirname(sys.executable) if getattr(sys, 'frozen', False) else _base_dir
+_config_path = os.path.join(_exe_dir, 'paths_config.json')
+if not os.path.exists(_config_path):
+    _config_path = os.path.join(_base_dir, 'paths_config.example.json')
+with open(_config_path) as _f:
     _paths = _json.load(_f)
 from core.mrid_tags import MRID_tags
 from collections import Counter
@@ -37,24 +43,23 @@ class FileLoader:
 
 
 
-    def open_user_dialog(self,layer_index=0,add_another_file=False):
+    def choose_file(self,path=None,add_another_file=False):
         """
-        Open the initial User Dialog when the application starts.
+        Let the user pick a NIfTI file and confirm the choice.
+        Returns the file path, or None if the user cancelled.
         """
         file_name, _ = QFileDialog.getOpenFileName(
             None,
             "Open NIfTI File",
-            _paths['raw_base'],
+            _paths['raw_base'] if path is None else path,
             "NIfTI files (*.nii.gz)"
         )
-
         #User cancelled
         if not file_name:
-            return None, None
+            return None
 
-        #pop up asking for the view if 4D data used
         msg_box = QMessageBox()
-        if layer_index==0:
+        if not add_another_file:
             msg_box.setWindowTitle("Open Main File")
             msg_box.setText(f"Do you want to open the file \n {file_name}?")
         else:
@@ -65,9 +70,18 @@ class FileLoader:
         btn_cancel = msg_box.addButton("Cancel", QMessageBox.ActionRole)
         msg_box.exec()
         if msg_box.clickedButton()==btn_cancel:
-            return None, None
+            return None
         elif msg_box.clickedButton()==btn_no:
-            self.open_user_dialog(layer_index=layer_index)
+            return self.choose_file(path=path,add_another_file=add_another_file)
+
+        return file_name
+
+    def open_user_dialog(self,layer_index=0,add_another_file=False,path=None):
+        """
+        Open the initial User Dialog when the application starts.
+        """
+        file_name = self.choose_file(path=path,add_another_file=layer_index!=0)
+        if file_name is None:
             return None, None
 
         #pop up asking for the view if 4D data used
@@ -90,6 +104,7 @@ class FileLoader:
         return file_name,data_view
 
     def get_data_view(self,file_name):
+        print(file_name,flush=True)
         if 'coronal' in file_name or 'Coronal' in file_name:
             data_view = "coronal"
         elif 'sagittal' in file_name or 'Sagittal' in file_name:
@@ -134,7 +149,11 @@ class FileLoader:
             else:
                 table = getattr(self.MW.ui, f"tableintensity_data{data_index}")
                 self.MW.LoadMRI.intensity_table[data_index] = IntensityTable(self.MW,data_index,table,vol.slices[0])
-            self.MW.Cursor = Cursor(self.MW, self.MW.LoadMRI.cursor_ui,data_index,data_view)
+            if data_index==0:
+                self.MW.Cursor = Cursor(self.MW, self.MW.LoadMRI.cursor_ui,data_index,data_view)
+            else:
+                #keep the existing cursor, only hook up the widgets of the new data view
+                self.MW.Cursor.init_widgets(data_index,data_view)
 
         self.MW.Cursor.start_cursor(True,data_index,data_view)
 
@@ -197,12 +216,10 @@ class FileLoader:
                     lut.SetValueRange(0.0, 1.0)
                     lut.SetSaturationRange(0.0, 0.0)
                     lut.Build()
-                if isinstance(file_name, sitk.Image):
-                    intensity_filename = 'Forbidden Regions'
-                else:
-                    intensity_filename = os.path.basename(file_name)
-                self.MW.Layers[data_index][layer_index] = ImageLayer({0: vol},self.MW.Layers[data_index][0].spacing,self.MW.Layers[data_index][0].view_names,self.MW.LoadMRI.slice_indices[data_index],False,self.MW.LoadMRI.render,lut=lut)
-                self.MW.Layers[data_index][layer_index].visibility_btn = self.MW.LoadMRI.intensity_table[0].update_table(intensity_filename, vol,0,layer_index)
+                is_forbidden = isinstance(file_name, sitk.Image)
+                intensity_filename = 'Forbidden Regions' if is_forbidden else os.path.basename(file_name)
+                self.MW.Layers[data_index][layer_index] = ImageLayer({0: vol},self.MW.Layers[data_index][0].spacing,self.MW.Layers[data_index][0].view_names,self.MW.LoadMRI.slice_indices[data_index],False,self.MW.LoadMRI.render,lut=lut,opacity=0.6)
+                self.MW.Layers[data_index][layer_index].visibility_btn = self.MW.LoadMRI.intensity_table[0].update_table(intensity_filename, vol,0,layer_index,visibility_enabled=not is_forbidden)
                 self.init_vtk(data_view, data_index,layer_index)
 
             else:
@@ -218,6 +235,33 @@ class FileLoader:
                     return tag_data,num_regions,regions
                 else:
                     print('not yet implemented')
+
+
+    def add_data_view(self,file_name,data_view,data_index):
+        """
+        4D only: load another 4D acquisition of the same brain as its own data set
+        (own group box, own timestamps and contrast), not as an overlay layer.
+
+        The VTK widgets of `data_index` have to be registered in LoadMRI.vtk_widgets
+        before this is called (see ButtonsGUI_4D.add_view_widgets).
+        """
+        self.MW.Layers[data_index] = {}
+
+        #data
+        self.prepare_mainvolume(data_index, file_name, data_view)
+        #contrast and timestamp controls of the new group box
+        self.init_gui(data_view, data_index, False)
+        #vtk
+        vol = self.MW.LoadMRI.volumes[data_index]
+        self.MW.Layers[data_index][0] = ImageLayer(
+            vol.slices,vol.spacing,
+            vol.view_names,
+            self.MW.LoadMRI.slice_indices[data_index],
+            True,
+            self.MW.LoadMRI.render,
+            contrast_class=self.MW.LoadMRI.contrast[data_index],
+        )
+        self.init_vtk(data_view, data_index, 0)
 
 
     def prepare_mainvolume(self, data_index, file_name,data_view):
@@ -245,6 +289,9 @@ class FileLoader:
             img = filename
         else:
             img = sitk.ReadImage(filename)
+
+        if img.GetNumberOfComponentsPerPixel() > 1:
+            img = sitk.VectorIndexSelectionCast(img, 0, sitk.sitkFloat32)
 
         vol = sitk.GetArrayFromImage(img)
         if vol.ndim == 4:
@@ -324,6 +371,13 @@ class FileLoader:
         # Refresh all
         for i in 0,1,2:
             self.MW.LoadMRI.update_slices(i,idx,data_view)
+
+        # Recompute heatmap for any custom ROIs in the loaded segmentation
+        if hasattr(self.MW.LoadMRI, 'mrid_tags'):
+            roi_indices = np.unique(self.MW.Paintbrush.label_volume[idx])
+            roi_indices = roi_indices[roi_indices > self.MW.LoadMRI.mrid_tags.num_regions]
+            if len(roi_indices):
+                self.MW.LoadMRI.mrid_tags.update_heatmap(data_view, idx, roi_indices)
 
     def get_label_names(self,filename):
         """
