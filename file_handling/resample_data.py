@@ -280,54 +280,6 @@ class ResampleData:
         buttons_gui3d.popup.close()
         MW.restart_gui(self.file_name100um,data_view="coronal")
 
-        return
-        data_index = 0
-        #new volume and spacing
-        self.LoadMRI.volumes[data_index] = MRIVolume.from_file(self.file_name100um)
-        self.LoadMRI.is_first_slice = False
-
-        #delete measurement actors
-        if hasattr(MW,'Measurement'):
-            for view_name, line_actor,line_slice_index,text_actor,line,dashed_lines,points in MW.Measurement.measurement_lines:
-                renderer = MW.Measurement.measurement_renderer[view_name]
-                renderer.RemoveActor(line_actor)
-                renderer.RemoveActor(dashed_lines[1])
-                renderer.RemoveActor(dashed_lines[3])
-                renderer.RemoveActor(points[2])
-                text_actor.SetVisibility(0)
-            MW.Measurement.measurement_lines = []
-
-        for idx in self.LoadMRI.minimap.minimap_renderers:
-            for vn in self.LoadMRI.minimap.minimap_renderers[idx]:
-                self.LoadMRI.minimap.minimap_renderers[idx][vn].RemoveAllViewProps()
-            self.LoadMRI.minimap.minimap_renderers[idx] = {}
-
-        for idx in self.LoadMRI.renderers:
-            for vn in self.LoadMRI.renderers[idx]:
-                self.LoadMRI.renderers[idx][vn].RemoveAllViewProps()
-            self.LoadMRI.renderers[idx] = {}
-
-        #remove old renderers
-        for image_index,vtk_widget_image in self.LoadMRI.vtk_widgets.items():
-            for view_name, vtk_widget in vtk_widget_image.items():
-                ren_win = vtk_widget.GetRenderWindow()
-                ren_coll = ren_win.GetRenderers()
-
-                renderers_to_remove = [ren_coll.GetItemAsObject(i) for i in range(ren_coll.GetNumberOfItems())]
-
-                for old_renderer in renderers_to_remove:
-                    ren_win.RemoveRenderer(old_renderer)
-
-        #load file again, update cursor
-        self.LoadMRI = LoadMRI(MW)
-
-        MW.ui.comboBox_resamplefiles.addItem(os.path.basename(self.file_name100um)) #add to combobox for resampling
-        data_view = "coronal" #for 3d data
-        buttons_gui3d.popup.close()
-        MW.restart_gui(self.file_name100um, data_view)
-
-
-
 
     @staticmethod
     def resampling50um_trajectoryPlanning(file_name,new_spacing_mm=0.05):
