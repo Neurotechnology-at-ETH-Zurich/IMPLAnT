@@ -15,7 +15,6 @@ class ResampleData:
         self.LoadMRI = LoadMRI
 
 
-
     def resampling100um(self,index):
         """
             Resample the main MRI image to a z-spacing of 100um).
@@ -23,10 +22,10 @@ class ResampleData:
         """
         file_name = self.LoadMRI.volumes[index].file_path
         img = sitk.ReadImage(file_name)
-        img = sitk.DICOMOrient(img, self.LoadMRI.volumes[0].DICOMOrient)
+        img = sitk.DICOMOrient(img, self.LoadMRI.volumes[0].raw_DICOMOrient)
         old_size = img.GetSize()
 
-        old_spacing = self.LoadMRI.volumes[index].spacing[::-1] #x,y,z
+        old_spacing = img.GetSpacing()  # x,y,z in raw image space
         new_spacing = [old_spacing[0],old_spacing[1],0.1] #x,y,z
 
         new_size = [
@@ -85,8 +84,8 @@ class ResampleData:
         """
         file_name = self.LoadMRI.volumes[index].file_path
         img = sitk.ReadImage(file_name)
-        img = sitk.DICOMOrient(img, self.LoadMRI.volumes[0].DICOMOrient)
-        old_spacing = self.LoadMRI.volumes[index].spacing[::-1] #x,y,z
+        img = sitk.DICOMOrient(img, self.LoadMRI.volumes[0].raw_DICOMOrient)
+        old_spacing = img.GetSpacing()  # x,y,z in raw image space
 
         old_size = img.GetSize()
         # first resample in z
@@ -278,11 +277,14 @@ class ResampleData:
             Replace the currently loaded MRI file with the new resampled one.
             Clears old renderers, actors, and measurement lines from the GUI.
         """
+        buttons_gui3d.popup.close()
+        MW.restart_gui(self.file_name100um,data_view="coronal")
+
+        return
         data_index = 0
         #new volume and spacing
         self.LoadMRI.volumes[data_index] = MRIVolume.from_file(self.file_name100um)
         self.LoadMRI.is_first_slice = False
-
 
         #delete measurement actors
         if hasattr(MW,'Measurement'):
@@ -299,7 +301,6 @@ class ResampleData:
             for vn in self.LoadMRI.minimap.minimap_renderers[idx]:
                 self.LoadMRI.minimap.minimap_renderers[idx][vn].RemoveAllViewProps()
             self.LoadMRI.minimap.minimap_renderers[idx] = {}
-
 
         for idx in self.LoadMRI.renderers:
             for vn in self.LoadMRI.renderers[idx]:
