@@ -50,8 +50,12 @@ class Minimap:
 
         #Create or reuse the mini-map renderer
         if view_name not in self.minimap_renderers[image_index]:
-            mm_renderer = vtk.vtkRenderer()
+            if view_name not in self.LoadMRI.renderers.get(image_index, {}):
+                return
             rw, rh = self.LoadMRI.renderers[image_index][view_name].GetSize()
+            if rw == 0 or rh == 0:
+                return
+            mm_renderer = vtk.vtkRenderer()
             w = min(0.3,rh/rw*0.3)
             h = min(0.3,rw/rh*0.3)
             self.size_rectangle[image_index][view_name] = [w,h]
@@ -140,6 +144,8 @@ class Minimap:
                 for idx in range(len(self.LoadMRI.renderers)):
                     if idx==3:
                         continue
+                    if view_name not in self.minimap_renderers.get(idx, {}):
+                        continue
                     mm_renderer = self.LoadMRI.minimap.minimap_renderers[idx][view_name]
                     self.LoadMRI.zoom_tf[view_name]=False
                     mm_renderer.SetDraw(False)
@@ -150,6 +156,8 @@ class Minimap:
                 for idx in range(len(self.LoadMRI.renderers)):
                     if idx==3:
                         continue
+                    if view_name not in self.minimap_renderers.get(idx, {}):
+                        continue
                     self.LoadMRI.zoom_tf[view_name]=True
                     mm_renderer = self.LoadMRI.minimap.minimap_renderers[idx][view_name]
                     mm_renderer.SetDraw(True)
@@ -157,6 +165,7 @@ class Minimap:
                     if view_name in self.zoom_rects[idx]:
                         self.zoom_rects[idx][view_name].SetVisibility(True)
 
+            mm_renderer = self.minimap_renderers[image_index][view_name] #image 0, not whatever the loop above left behind
             mm_renderer.SetWorldPoint(xmin, ymin, 0, 1.0)
             mm_renderer.WorldToDisplay()
             display_min[view_name] = mm_renderer.GetDisplayPoint()
@@ -351,7 +360,7 @@ class Minimap:
                         renderer.ResetCameraClippingRange()
 
         #return
-        main_renderer = self.LoadMRI.renderers[image_index][view_name]
+        main_renderer = self.LoadMRI.renderers[0][view_name] #image 0 as above - image_index leaks from the loop and ends up on the heatmap panel
         (xmin, xmax, ymin, ymax, _,_) = main_renderer.ComputeVisiblePropBounds()
         world_width = xmax - xmin
         world_height = ymax - ymin
