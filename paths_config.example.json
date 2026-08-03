@@ -2,6 +2,7 @@
     "ants_bin": "ants/bin",
     "raw_base": "/path/to/raw/data/",
     "atlas_folder": "/path/to/atlas/folder",
+    "mrid_library": "/path/to/mrid_library.pkl",
     "atlas_volume": "WHS_SD_rat_atlas_v4.nii.gz",
     "atlas_labels": "WHS_SD_rat_atlas_v4.label",
     "atlas_dwi": "WHS_SD_rat_DWI_v1.01.nii.gz",
