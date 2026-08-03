@@ -166,7 +166,10 @@ class Zoom:
         Update bounds dictionary for a given view.
         """
         half_height = camera.GetParallelScale()
-        aspect = renderer.GetSize()[0] / renderer.GetSize()[1]
+        w, h = renderer.GetSize()
+        if not h:
+            return
+        aspect = w / h
         half_width = half_height * aspect
         cx, cy, cz = camera.GetFocalPoint()
         xmin = cx - half_width

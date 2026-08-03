@@ -27,6 +27,8 @@ class Scale:
         """
         xmin, xmax, ymin, ymax, zmin, zmax = renderer.ComputeVisiblePropBounds()
         window_width, _ = renderer.GetSize()
+        if not window_width or xmax == xmin:
+            return
 
         # Convert min / max bounds to display coordinates
         renderer.SetWorldPoint(xmin, ymin, zmin, 1.0)
@@ -97,8 +99,13 @@ class Scale:
         """
         Update the scale bar position and units after zoom changes
         """
+        if view_name not in self.lines:
+            return
+
         xmin, xmax, ymin, ymax, zmin, zmax = renderer.ComputeVisiblePropBounds()
         window_width, _ = renderer.GetSize()
+        if not window_width or xmax == xmin:
+            return
 
         # Convert min / max bounds to display coordinates
         renderer.SetWorldPoint(xmin, ymin, zmin, 1.0)
