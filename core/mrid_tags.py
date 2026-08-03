@@ -168,26 +168,12 @@ class MRID_tags(QObject):
         for data_index in range(len(self.LoadMRI.vtk_widgets[0])):
             #data_view = list(self.LoadMRI.vtk_widgets[0].keys())[data_index]
             if self.LoadMRI.tag_file:
-                #if data_view=='sagittal':
-                #    label_image = sitk.GetImageFromArray(np.swapaxes(self.MW.Paintbrush.label_volume[data_index], 1, 2))
-                #else:
                 img = sitk.GetImageFromArray(self.MW.Paintbrush.label_volume[data_index])
-                #size = list(self.MW.Paintbrush.label_volume[data_index].shape[::-1]) + [0]  # Extract 1 time frame
             else: #without segmentation labels
-                #if data_view=='sagittal':
-                #    label_volume = np.swapaxes(self.MW.Paintbrush.label_volume[data_index], 1, 2)
-                #else:
                 label_volume = self.MW.Paintbrush.label_volume[data_index].copy()
                 label_volume[label_volume <= self.num_regions] = 0
                 img = sitk.GetImageFromArray(label_volume)
-                #size = list(self.MW.Paintbrush.label_volume[data_index].shape[::-1]) + [0]  # Extract 1 time frame
-            #ref_image = sitk.ReadImage(self.LoadMRI.volumes[data_index].file_path)
-            #reference_image = sitk.Extract(
-            #    ref_image,
-            #    size=size,
-            #    index=[0, 0, 0, 0]  # take time=0 frame
-            #)
-            #label_image = sitk.Flip(label_image, self.LoadMRI.volumes[data_index].axes_to_flip, flipAboutOrigin=False)
+
             img.CopyInformation(self.LoadMRI.volumes[0].oriented_ref_image)
             label_image = sitk.DICOMOrient(img, "".join(self.LoadMRI.volumes[0].raw_DICOMOrient))
 
@@ -244,36 +230,31 @@ class MRID_tags(QObject):
             if self.LoadMRI.tag_file:
                 if self.heatmap_unsuper:
                     _, self.heatmap_nii[data_index], _ = heatmap.get_relaxation_unsupervised(file_name, sessionpath, basestructs, slice_orientation)
-                size = list(self.LoadMRI.volumes[data_index].raw_ref_image.GetSize())
-                size[3] = 0
-                ref3d = sitk.Extract(self.LoadMRI.volumes[data_index].raw_ref_image, size, [0, 0, 0, 0])
-                img = sitk.GetImageFromArray(self.heatmap_nii[data_index].T.astype(np.float32))
-                img.CopyInformation(ref3d)
-                img = sitk.DICOMOrient(img, self.LoadMRI.volumes[data_index].DICOMOrient)
-                self.heatmap_nii[data_index] = sitk.GetArrayFromImage(img)
-
-                img_slice = np.fliplr(self.heatmap_nii[data_index][self.LoadMRI.slice_indices[data_index][0],:,:]) if self.MW.Layers[data_index][0].flip else self.heatmap_nii[data_index][self.LoadMRI.slice_indices[data_index][0],:,:]
-                self.visualize_heatmap(img_slice,True,data_view,data_index)
-                #add to intensity table
-                table_class = self.LoadMRI.intensity_table[data_index]
-                self.MW.FileLoader.layer_index += 1
-                table_class.update_table('Heatmap', self.heatmap_nii[data_index],data_index,self.MW.FileLoader.layer_index,visibility_enabled=False)
             else:
                 _, self.heatmap_nii[data_index], _ = heatmap.get_relaxation(os.path.basename(file_name), self.mrid_names, sessionpath, basestructs, slice_orientation)
 
-                size = list(self.LoadMRI.volumes[data_index].raw_ref_image.GetSize())
-                size[3] = 0
-                ref3d = sitk.Extract(self.LoadMRI.volumes[data_index].raw_ref_image, size, [0, 0, 0, 0])
-                img = sitk.GetImageFromArray(self.heatmap_nii[data_index].T.astype(np.float32))
-                img.CopyInformation(ref3d)
-                img = sitk.DICOMOrient(img, self.LoadMRI.volumes[data_index].DICOMOrient)
-                self.heatmap_nii[data_index] = sitk.GetArrayFromImage(img)
+            size = list(self.LoadMRI.volumes[data_index].raw_ref_image.GetSize())
+            size[3] = 0
+            ref3d = sitk.Extract(self.LoadMRI.volumes[data_index].raw_ref_image, size, [0, 0, 0, 0])
+            img = sitk.GetImageFromArray(self.heatmap_nii[data_index].T.astype(np.float32))
+            img.CopyInformation(ref3d)
+            img = sitk.DICOMOrient(img, self.LoadMRI.volumes[data_index].DICOMOrient)
+            self.heatmap_nii[data_index] = sitk.GetArrayFromImage(img)
 
+            img_slice = np.fliplr(self.heatmap_nii[data_index][self.LoadMRI.slice_indices[data_index][0],:,:]) if self.MW.Layers[data_index][0].flip else self.heatmap_nii[data_index][self.LoadMRI.slice_indices[data_index][0],:,:]
+            reset_camera = 3 not in self.LoadMRI.renderers or data_view not in self.LoadMRI.renderers[3]
+            self.visualize_heatmap(img_slice,reset_camera,data_view,data_index)
+
+            table_class = self.LoadMRI.intensity_table[data_index]
+            if self.LoadMRI.tag_file:
+                #add to intensity table
+                self.MW.FileLoader.layer_index += 1
+                table_class.update_table('Heatmap', self.heatmap_nii[data_index],data_index,self.MW.FileLoader.layer_index,visibility_enabled=False)
+            else:
                 #change volume in intensity table
-                table_class = self.LoadMRI.intensity_table[data_index]
                 for i in range(table_class.table.rowCount()):
                     if table_class.table.item(i,1).text()=='Heatmap':
-                        table_class.intensity_volumes[i]=self.heatmap_nii[data_index].T
+                        table_class.intensity_volumes[i]=self.heatmap_nii[data_index]
 
         self.LoadMRI.tag_file = False
         #after minimaps are created, rectanlges are still needed
@@ -311,7 +292,7 @@ class MRID_tags(QObject):
             seg_raw_sitk = sitk.DICOMOrient(seg_sitk, "".join(self.LoadMRI.volumes[data_index].raw_DICOMOrient))
             segmentation_raw = sitk.GetArrayFromImage(seg_raw_sitk)
 
-            heatmap_sim, _, slice_idx = heatmap.get_relaxation_simultaneously(file_name, roi_index, sessionpath, basestructs, slice_orientation, segmentation_raw)
+            heatmap_sim, _, slice_idx = heatmap.get_relaxation_simultaneously(file_name, roi_index, sessionpath, basestructs, slice_orientation, segmentation_raw.T)
 
             raw_shape = self.heatmap_sim_raw[data_index].shape
             if roi_index not in self.heatmap_per_roi[data_index]:
@@ -328,24 +309,20 @@ class MRID_tags(QObject):
             img.CopyInformation(ref3d)
             img = sitk.DICOMOrient(img, self.LoadMRI.volumes[data_index].DICOMOrient)
             heatmap_sim_oriented = sitk.GetArrayFromImage(img)
+            self.heatmap_nii[data_index] = heatmap_sim_oriented
 
-            #self.heatmap_slice[data_index] = self.heatmap_sim[data_index]
             img_slice = np.fliplr(heatmap_sim_oriented[self.LoadMRI.slice_indices[data_index][0],:,:]) if self.MW.Layers[data_index][0].flip else heatmap_sim_oriented[self.LoadMRI.slice_indices[data_index][0],:,:]
             self.visualize_heatmap(img_slice,False,view_name,data_index) #heatmap_nii, z coordinate
-            print('here i am',flush=True)
+
             #change volume in intensity table
             table_class = self.LoadMRI.intensity_table[data_index]
             for i in range(table_class.table.rowCount()):
                 if table_class.table.item(i,1).text()=='Heatmap':
                     table_class.intensity_volumes[i] = heatmap_sim_oriented
-
-            print("heatmap_sim range:", heatmap_sim.min(), heatmap_sim.max(), flush=True)
-            print("heatmap_sim_display range:", heatmap_sim_oriented.min(), heatmap_sim_oriented.max(), flush=True)
-            print("img_slice range:", img_slice.min(), img_slice.max(), flush=True)
-            print("img_slice shape:", img_slice.shape, flush=True)
-            print("non-zero display z slices:", np.where(heatmap_sim_oriented.max(axis=(1,2)) > 0)[0], flush=True)
-            print("current display z:", self.LoadMRI.slice_indices[data_index][0], flush=True)
-
+            # also update the 4th (heatmap) view's intensity table with the full-size volume
+            heatmap_table = self.LoadMRI.intensity_table.get(3)
+            if heatmap_table is not None and len(heatmap_table.intensity_volumes) > 0:
+                heatmap_table.intensity_volumes[0] = heatmap_sim_oriented
 
 
     def visualize_heatmap(self, img_slice,reset_camera:bool,view_name,data_index):
@@ -361,11 +338,6 @@ class MRID_tags(QObject):
         """
         # add to vtkwidgets for rendering and zooming
         vtk_widget = self.LoadMRI.vtk_widgets[3][view_name]
-        #if view_name != 'sagittal':
-        #img_slice = img_slice.T
-        #img_slice = np.flip(img_slice)
-        #else:
-        #    img_slice = np.flip(img_slice,axis=0)
 
         vtk_data = numpy_support.numpy_to_vtk(img_slice.ravel(), deep=True, array_type=vtk.VTK_FLOAT)
         h, w = img_slice.shape
