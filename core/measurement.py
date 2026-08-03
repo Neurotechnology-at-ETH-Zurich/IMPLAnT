@@ -29,7 +29,7 @@ class Measurement:
         self.temp_line_actor = None # dynamic line vtk.vtkActor
         self.temp_text_actor = None # vtk.vtkBillboardTextActor3D
         self.color_index=0
-        self.colors=[(1,0,0),(0,1,0),(0,1,1),(1,1,0),(1,0,1)]
+        self.colors=[(1,0,0),(0,1,0),(0,0,1),(1,1,0),(1,0,1)]
         self.current_view_name = None
 
 
@@ -230,7 +230,8 @@ class Measurement:
         row = self.measurement_table.rowCount()
         self.measurement_table.insertRow(row)
         item = QTableWidgetItem()
-        item.setBackground(QColor(255, 0, 0))  # red
+        color = self.colors[self.color_index]
+        item.setBackground(QColor(int(color[0]*255), int(color[1]*255), int(color[2]*255)))
         item.setText("")
         self.measurement_table.setItem(row, 0, item)
         self.measurement_table.setItem(row, 1, QTableWidgetItem(str(view_name.capitalize())))
@@ -240,13 +241,14 @@ class Measurement:
 
 
     def delete_measurement(self):
-        #self.measurement_lines.append((view_name, actor, line_slice_index, text_actor,line))
         rows = self.measurement_table.selectionModel().selectedRows()
+        if not rows:
+            return
 
         for index in range(len(rows)):
             selected_row = rows[0].row()
 
-            [view_name, actor, line_slice_index, text_actor,line,dashed_lines,points] = self.measurement_lines[selected_row]
+            [view_name, actor, line_slice_index, text_actor, line, dashed_lines, points] = self.measurement_lines[selected_row]
             renderer = self.measurement_renderer[view_name]
             renderer.RemoveActor(actor)
             renderer.RemoveActor(dashed_lines[1])
@@ -254,24 +256,21 @@ class Measurement:
             renderer.RemoveActor(text_actor)
             renderer.RemoveActor(points[2])
 
-            #remove from list (3 enteries)
             self.measurement_lines.pop(selected_row)
-
-            #remove from table
             self.measurement_table.removeRow(selected_row)
-            #self.measurement_table.selectionModel().selectionChanged.connect(selected_row)
 
-        #re-render
-        self.LoadMRI.renderers[0][view_name].GetRenderWindow().Render()
+            self.LoadMRI.renderers[0][view_name].GetRenderWindow().Render()
 
 
     def change_color(self,index):
-        selected_row = self.measurement_table.selectionModel().selectedRows()[0].row()
+        rows = self.measurement_table.selectionModel().selectedRows()
+        if not rows:
+            return
+        selected_row = rows[0].row()
         [view_name, actor, _, text_actor,_,dashed_lines,points] = self.measurement_lines[selected_row]
 
         color = self.colors[self.color_index]
 
-        #if index ==0:
         actor.GetProperty().SetColor(*color)
         dashed_lines[1].GetProperty().SetColor(*color)
         dashed_lines[3].GetProperty().SetColor(*color)
@@ -279,7 +278,7 @@ class Measurement:
         points[2].GetProperty().SetColor(*color)
 
         item = QTableWidgetItem()
-        item.setBackground(QColor(*color))  # red
+        item.setBackground(QColor(int(color[0]*255), int(color[1]*255), int(color[2]*255)))
         item.setText("")
         self.measurement_table.setItem(selected_row, 0, item)
         #re-render
