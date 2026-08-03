@@ -52,8 +52,10 @@ class LoadMRI(QObject):
             self.renderers[data_index] = {}
         #for layer_index, layer in layers.items():
         main_layer = self.Layers[data_index][0]
+        new_renderer = False
         for view_name in main_layer.view_names:
             if view_name not in self.renderers[data_index]:
+                new_renderer = True
                 if not self.volumes[0].is_4d:
                     self.setup_renderer(data_index,view_name)
                     self.setup_extras(data_index,view_name,data_view)
@@ -69,7 +71,7 @@ class LoadMRI(QObject):
                 if not visibility_at_start:
                     layer.actors[view_name][0].SetVisibility(visibility_at_start)
                 #Update renderer
-                if self.is_first_slice:
+                if self.is_first_slice or new_renderer:
                     self.renderers[data_index][view_name].ResetCamera()
                     self.zoom_tf[view_name]=False
             #4d
@@ -79,11 +81,11 @@ class LoadMRI(QObject):
                     if not visibility_at_start:
                         layer.actors[view_name][img_idx].SetVisibility(visibility_at_start)
                     #Update renderer
-                    if self.is_first_slice:
+                    if self.is_first_slice or new_renderer:
                         self.renderers[img_idx][view_name].ResetCamera()
                         self.zoom_tf[view_name]=False
 
-        if self.is_first_slice:
+        if self.is_first_slice or new_renderer:
             #fit to window to make it look nice
             if self.volumes[0].is_4d:
                 Zoom.fit_to_window(self.vtk_widgets[0][data_view], self.vtk_widgets.values(), self.scale_bar, self.vtk_widgets, data_index)
@@ -172,28 +174,10 @@ class LoadMRI(QObject):
         elif hasattr(self,'SegInitialization'):
             self.SegInitialization.update_bubbles_visible()
 
-        self.render()
-
-        ##
-        return
-
-
-        if not self.volumes[0].is_4d:
-            self.only_display_slide(np.fliplr(self.volumes[data_index].slices[image_index][:, y, :]), "coronal",0)
-            self.only_display_slide(np.fliplr(self.volumes[data_index].slices[image_index][:, :, x]), "sagittal",0)
-            self.only_display_slide(np.fliplr(self.volumes[data_index].slices[image_index][z, :, :]), "axial",0)
-        else:
-            if data_view=='sagittal':
-                self.only_display_slide(self.volumes[data_index].slices[image_index][z, :, :].T, data_view,image_index)
-            else:
-                self.only_display_slide(self.volumes[data_index].slices[image_index][z, :, :], data_view,image_index)
-
-
+        #Heatmap
         if hasattr(self,'mrid_tags') and hasattr(self.mrid_tags,'actor_heatmap'):
-            if data_view=='sagittal':
-                slice_img = np.flip(self.mrid_tags.heatmap_slice[data_index][:, :, z],axis=0)
-            else:
-                slice_img = np.flip(self.mrid_tags.heatmap_slice[data_index][:, :, z].T)
+            raw = self.mrid_tags.heatmap_nii[data_index][z, :, :]
+            slice_img = np.fliplr(raw) if self.Layers[data_index][0].flip else raw
             # Always flatten in Fortran order for VTK
             vtk_data = numpy_support.numpy_to_vtk(slice_img.ravel(), deep=True, array_type=vtk.VTK_FLOAT)
             h, w = slice_img.shape
@@ -208,6 +192,8 @@ class LoadMRI(QObject):
             #self.vtk_widgets_heatmap['axial'].GetRenderWindow().Render()
             self.mrid_tags.add_legend(slice_img,False,data_index)
 
+
+        self.render()
 
 
     def add_axes(self, renderer: vtk.vtkRenderer, img_vtk: vtk.vtkImageData, view_name:str):
