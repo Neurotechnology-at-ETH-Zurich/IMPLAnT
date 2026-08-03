@@ -1,4 +1,5 @@
 import sys
+import os
 import glob
 from scp import SCPClient
 import paramiko
@@ -47,11 +48,25 @@ def scpClient(client):
 def get_data(client, files, local_path, remote_path, local_files):
     scp = SCPClient(client.get_transport(),  progress=progress)
     for file in files:
-        if not file in local_files:
+        if file not in local_files:
             print("Fetching " + file)
-            full_path = remote_path + file
-            scp.get(full_path, local_path=local_path, recursive=True)
+            scp.get(remote_path + file, local_path=local_path, recursive=True)
             print("complete")
+        else:
+            # Session exists locally — check for scan subdirs missing on disk
+            stdin, stdout, stderr = client.exec_command(
+                "ls " + remote_path + file + "/ | grep -E '^[0-9]+$'"
+            )
+            remote_scans = [l.strip() for l in stdout if l.strip()]
+            local_session_path = os.path.join(local_path, file)
+            local_scans = [d for d in os.listdir(local_session_path) if d.isdigit()]
+            missing = [s for s in remote_scans if s not in local_scans]
+            if missing:
+                print(f"Session {file} already exists — fetching {len(missing)} missing scan(s): {missing}")
+                for scan in missing:
+                    scp.get(remote_path + file + "/" + scan,
+                            local_path=local_session_path, recursive=True)
+                print("complete")
     scp.close()
 
 def get_local_data_list(animal_id,local_fodler):

@@ -971,11 +971,11 @@ def get_data_selection(workflow_base,
 											line_considered = True
 											if scan_subdir_resolved:
 												break
-											if re.match(r'^(?!/)<[a-zA-Z0-9-_]+?-[a-zA-Z0-9-_]+?>[\r\n]+', line):
+											if re.match(r'^(?!/)<[a-zA-Z0-9-_]+?-[a-zA-Z0-9-_]+?( \(E\d+\))?>[\r\n]+', line):
 												if fail_suffix and re.match(r'^.+?{}$'.format(fail_suffix), line):
 													continue
 												number = sub_sub_dir
-												m = re.match(r'^(?!/)<(?P<scan_type>.+?)>[\r\n]+', line)
+												m = re.match(r'^(?!/)<(?P<scan_type>[a-zA-Z0-9-_]+?)( \(E\d+\))?>[\r\n]+', line)
 												scan_type = m.groupdict()['scan_type']
 												bids_keys = layout.parse_file_entities('{}/{}'.format(bids_temppath,scan_type))
 												for key in match:
@@ -990,6 +990,12 @@ def get_data_selection(workflow_base,
 														line_considered = False
 														break
 												if line_considered:
+													twodseq = os.path.join(sub_dir, sub_sub_dir, 'pdata', '1', '2dseq')
+													if not os.path.exists(twodseq):
+														print(f'[SAMRI] Scan {sub_sub_dir} in {os.path.basename(sub_dir)}'
+														      f' (protocol: {scan_type}) has no 2dseq — skipping')
+														scan_subdir_resolved = True
+														continue
 													measurement_copy['scan_type'] = str(scan_type).strip(' ')
 													measurement_copy['scan'] = str(int(number))
 													measurement_copy['run'] = run_counter
