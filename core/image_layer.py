@@ -77,9 +77,9 @@ class ImageLayer:
         # Add image to actor to then be added to renderer
         actor = vtk.vtkImageActor()
         actor.SetInputData(reslice.GetOutput())
-        #if self.interpolation=='nearest':
-        #    actor.GetProperty().SetInterpolationTypeToNearest()
-        if self.interpolation=='cubic':
+        if self.interpolation=='nearest':
+            actor.GetProperty().SetInterpolationTypeToNearest()
+        elif self.interpolation=='cubic':
             actor.GetProperty().SetInterpolationTypeToCubic()
         actor.GetProperty().SetOpacity(self.opacity)
 
