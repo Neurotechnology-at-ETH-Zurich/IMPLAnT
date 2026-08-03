@@ -40,7 +40,7 @@ class PaintbrushGUI:
         if not self.LoadMRI.volumes[0].is_4d:
             paint_over = self.paintbrush_function_3D(red_only)
             self.paintbrush_gui(paint_over,red_only)
-            self.brush_3D(state,histogram_needed)
+            self.brush_3D(state,histogram_needed,red_only)
         else:
             paint_over = self.paintbrush_function_4D()
             self.paintbrush_gui(paint_over)
@@ -219,7 +219,7 @@ class PaintbrushGUI:
                     icon_item.setFlags(icon_item.flags() | Qt.ItemIsEnabled)
                     label_item.setFlags(label_item.flags()| Qt.ItemIsEnabled)
 
-    def brush_3D(self,state:bool,histogram_needed:bool=True):
+    def brush_3D(self,state:bool,histogram_needed:bool=True,red_only:bool=False):
         """
         Enable or disable the paintbrush in 3D data GUI.
         """
@@ -229,7 +229,8 @@ class PaintbrushGUI:
             if not self.LoadMRI.paint:
                 self.LoadMRI.paint = True
                 self.MW.Paintbrush.start_paintbrush(is_4d=False,histogram_needed=histogram_needed)
-                self.LoadMRI.intensity_table[0].update_table("Label",self.MW.Paintbrush.label_volume[0],0,self.MW.Paintbrush.layer_index[0],visibility_enabled=False)
+                layer_name = "Forbidden Regions" if red_only else "Label"
+                self.LoadMRI.intensity_table[0].update_table(layer_name,self.MW.Paintbrush.label_volume[0],0,self.MW.Paintbrush.layer_index[0],visibility_enabled=False)
             #else:
             #self.MW.Paintbrush.start_paintbrush()
         else:
