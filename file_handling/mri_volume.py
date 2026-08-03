@@ -26,7 +26,7 @@ class MRIVolume:
         raw_DICOMOrient = nib.aff2axcodes(nib_img.affine)
         raw_DICOMOrient = "".join(raw_DICOMOrient)
 
-        is_4d = array_raw.ndim == 4
+        is_4d = len(image_raw.GetSize()) == 4
 
         array_4d = None
         timestamp4D = []
@@ -51,6 +51,8 @@ class MRIVolume:
                 }
             view_names = [view_name]
         else:
+            if image_raw.GetNumberOfComponentsPerPixel() > 1:
+                image_raw = sitk.VectorIndexSelectionCast(image_raw, 0)
             image = sitk.DICOMOrient(image_raw, DICOMOrient)
             vol = sitk.GetArrayFromImage(image)
             slices = {0: vol}
