@@ -11,7 +11,8 @@ from gui_utils.paintbrush_gui import PaintbrushGUI
 from core.registration import Registration
 from gui_utils.segmentation_gui import SegmentationGUI
 from gui_utils.busy_overlay import BusyOverlay
-
+from samri.samri_logging import SamriWorker
+from PySide6.QtGui import QColor
 # This Python file uses the following encoding: utf-8
 from PySide6.QtWidgets import QDockWidget,QDialog,QVBoxLayout
 from PySide6.QtCore import Qt
@@ -57,7 +58,7 @@ class ButtonsGUI_3D:
         Set up the UI components, VTK widgets, and basic initialization for 3D mode.
         """
         file_name = self.LoadMRI.volumes[data_index].file_path
-        target = self.ui.file_name_displayed_4d
+        target = self.ui.file_name_displayed
         target.setPlainText("File loaded: " + os.path.basename(file_name))
         #target.setPlainText(os.path.basename(file_name))
         target.setReadOnly(True)
@@ -72,7 +73,7 @@ class ButtonsGUI_3D:
         }
 
 
-        self.ui.actionAddViewImage.triggered.connect(self.MW.add_another_file)
+        self.ui.actionAddViewImage.triggered.connect(lambda val: self.MW.add_another_file())
 
 
         #initialize everything
@@ -122,7 +123,8 @@ class ButtonsGUI_3D:
             lambda: lm.contrast[0].reset(image_index=0)
         )
         #ctrl J
-        ctrl_j = QShortcut(QKeySequence("Ctrl+J"), self.ui.groupBox_contrast)
+        ctrl_j = QShortcut(QKeySequence("Ctrl+J"), self.MW)
+        ctrl_j.setContext(Qt.ApplicationShortcut)
         ctrl_j.activated.connect(lambda: lm.contrast[0].auto(image_index=0))
 
 
@@ -259,10 +261,13 @@ class ButtonsGUI_3D:
             self.MW.Cursor.start_cursor(False,0,data_view)
             self.MW.Measurement = Measurement(self.LoadMRI,self.ui.tableWidget_meaurement)
             self.ui.pushButton_deleteMeasurement.clicked.connect(self.MW.Measurement.delete_measurement)
-            #self.ui.comboBox_measurementColors.currentIndexChanged.connect(lambda index: measurement.change_color(index))
             self.ui.comboBox_measurementColors.currentIndexChanged.connect(
                 lambda index: (setattr(self.MW.Measurement, "color_index", index), self.MW.Measurement.change_color(index))
             )
+
+            cb_model = self.ui.comboBox_measurementColors.model()
+            for i, c in enumerate(self.MW.Measurement.colors):
+                cb_model.item(i).setBackground(QColor(int(c[0]*255), int(c[1]*255), int(c[2]*255)))
             for image_index,vtk_widget_image in self.LoadMRI.vtk_widgets.items():
                 for view_name, vtk_widget in vtk_widget_image.items():
                     interactor = vtk_widget.GetRenderWindow().GetInteractor()
@@ -325,7 +330,7 @@ class ButtonsGUI_3D:
         if file_path.is_file():
             self.ui.textEdit_resample100.setText(f"A file called \n {default_name} \n already exists. You can directly open this file.")
             self.ui.pushButton_openfile100um.setEnabled(True)
-            self.LoadMRI.Resample.file_name100um = file_name
+            self.LoadMRI.Resample.file_name100um = default_name
 
         filename_end = 'resampled.nii.gz'
         default_name = f"{file_name}_{filename_end}" #"label_volume.nii.gz"
@@ -403,9 +408,8 @@ class ButtonsGUI_3D:
         self.popup.show()
 
         self.ui.comboBox_movingimg.currentIndexChanged.connect(lambda index: self.check_dimensions_movingimg(index))
-
         self.ui.pushButton_registration.clicked.connect(self._start_registration)
-
+        self.ui.pushButton_loadOtherImage.clicked.connect(self.add_another_image)
 
         self.ui.pushButton_regCancel.clicked.connect(self.cancel_reg)
 
@@ -425,14 +429,101 @@ class ButtonsGUI_3D:
         )
 
     def _start_registration(self):
-        overlay = BusyOverlay(self.MW, message="Registering, please wait…")
-        overlay.run(self._do_registration)
+        index = self.ui.comboBox_movingimg.currentIndex()
+        aligned_paths = []
 
-    def _do_registration(self):
-        self.LoadMRI.Registration = Registration(self.LoadMRI, self, self.ui.comboBox_movingimg.currentIndex())
+        def work():
+            import ants
+            self.LoadMRI.Registration = Registration(self.LoadMRI, self, index)
+            reg = self.LoadMRI.Registration
+
+            transform_filename = (
+                f"transformation-ind_{reg.moving_ind}-to-ind_{reg.fixed_ind}.txt"
+            )
+            transform_path = os.path.join(
+                self.LoadMRI.session_path, "anat", transform_filename
+            )
+            if not os.path.exists(transform_path):
+                return
+
+            fixed_ants = ants.image_read(self.LoadMRI.volumes[0].file_path)
+
+            # reg.moving_image is already DICOMOrient'd to RAS and extracted to 3D
+            moving_for_apply = reg.moving_image
+            if moving_for_apply.GetNumberOfComponentsPerPixel() > 1:
+                moving_for_apply = sitk.VectorIndexSelectionCast(moving_for_apply, 0)
+            import tempfile as _tf
+            with _tf.TemporaryDirectory() as _tmpdir:
+                moving_tmp = os.path.join(_tmpdir, 'moving.nii.gz')
+                sitk.WriteImage(
+                    sitk.Cast(moving_for_apply, sitk.sitkFloat32), moving_tmp
+                )
+                moving_ants = ants.image_read(moving_tmp)
+                img_aligned = ants.apply_transforms(
+                    fixed=fixed_ants,
+                    moving=moving_ants,
+                    transformlist=transform_path,
+                    interpolator="lanczosWindowedSinc",
+                )
+
+            base = reg.moving_filepath
+            suffix = f"-aligned_to_ind_{reg.fixed_ind}.nii.gz"
+            aligned_path = (
+                base[:-7] if base.endswith('.nii.gz') else base[:-4]
+            ) + suffix
+            ants.image_write(img_aligned, aligned_path)
+            aligned_paths.append(aligned_path)
+
+        def on_done():
+            overlay.close()
+
+            if aligned_paths:
+                path = aligned_paths[0]
+                moving_layer_idx = index + 1
+                self.MW.FileLoader.layer_index += 1
+                self.MW.FileLoader.initialize_file(
+                    path, self.MW.FileLoader.layer_index, 'coronal', 0
+                )
+                if moving_layer_idx in self.MW.Layers[0]:
+                    layer = self.MW.Layers[0][moving_layer_idx]
+                    layer.toggle_visibility(False, layer.visibility_btn)
+
+        self.popup.close()
+        overlay = BusyOverlay(self.MW, message="Registering, please wait…")
+        overlay.setGeometry(self.MW.rect())
+        overlay.raise_()
+        overlay.show()
+
+        self._reg_worker = SamriWorker(work, self.MW)
+        self._reg_worker.done.connect(on_done)
+        self._reg_worker.failed.connect(overlay.close)
+        self._reg_worker.failed.connect(self._on_registration_failed)
+        self._reg_worker.start()
+
+    def _on_registration_failed(self, tb):
+        from PySide6.QtWidgets import QMessageBox, QLayout
+        from PySide6.QtCore import Qt
+        import logging
+        logging.error(tb)
+        msg = QMessageBox(self.MW)
+        msg.setWindowTitle("Registration failed")
+        msg.setText("Registration encountered an error.")
+        msg.setDetailedText(tb)
+        msg.addButton("OK", QMessageBox.ActionRole)
+        msg.setWindowFlags(msg.windowFlags() & ~Qt.MSWindowsFixedSizeDialogHint)
+        msg.setSizeGripEnabled(True)
+        msg.layout().setSizeConstraint(QLayout.SetNoConstraint)
+        msg.exec()
 
     def cancel_reg(self):
-         self.popup.close()
+        self.popup.close()
+
+    def add_another_image(self):
+        path = os.path.dirname(self.LoadMRI.volumes[0].file_path)
+        self.MW.add_another_file(path)
+        if len(self.LoadMRI.movingimg_filename):
+            self.check_dimensions_movingimg(0)
+
 
     def check_dimensions_movingimg(self,index):
         if index < 0 or index >= len(self.LoadMRI.movingimg_filename):
@@ -444,10 +535,10 @@ class ButtonsGUI_3D:
         volume = sitk.GetArrayFromImage(image)
         moving_ind = self.LoadMRI.movingimg_filename[index][:-7].split("ind_")[1]
         fixed_ind = self.MW.LoadMRI.volumes[0].file_path[:-7].split("ind_")[1]
-        transform_filename = f"transformation_ind_{moving_ind}-to-ind_{fixed_ind}.txt"
+        transform_filename = f"transformation-ind_{moving_ind}-to-ind_{fixed_ind}.txt"
         file_path = os.path.join(self.LoadMRI.session_path, 'anat',transform_filename)
         file_path1 = Path(file_path)
-        transform_filename = f"transformation_ind_{fixed_ind}-to-ind_{moving_ind}.txt"
+        transform_filename = f"transformation-ind_{fixed_ind}-to-ind_{moving_ind}.txt"
         file_path = os.path.join(self.LoadMRI.session_path, 'anat',transform_filename)
         file_path2 = Path(file_path)
 
