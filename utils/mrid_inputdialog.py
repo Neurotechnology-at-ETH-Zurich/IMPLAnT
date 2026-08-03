@@ -382,6 +382,8 @@ class TRANSFORM_InputDialog(QDialog):
                     # Create the checkbox
                     checkbox = QCheckBox()
                     checkbox.setChecked(False)
+                    checkbox.setStyleSheet("QCheckBox::indicator { width: 24px; height: 24px; }")
+                    checkbox.stateChanged.connect(self._update_ok)
 
                     self.checkbox[data_index].append(checkbox)
                     self.transformation_files[data_index].append(file)
@@ -411,16 +413,28 @@ class TRANSFORM_InputDialog(QDialog):
         # Buttons
         button_layout = QHBoxLayout()
         button_layout.addStretch()
-        btn_ok = QPushButton("All Transformation Files Selected")
+        self.btn_ok = QPushButton("All Transformation Files Selected")
         btn_cancel = QPushButton("Cancel")
 
-        btn_ok.clicked.connect(self.accept)
+        self.btn_ok.setEnabled(False)
+        self.btn_ok.clicked.connect(self.accept)
         btn_cancel.clicked.connect(self.reject)
 
-        button_layout.addWidget(btn_ok)
+        button_layout.addWidget(self.btn_ok)
         button_layout.addWidget(btn_cancel)
         main_layout.addLayout(button_layout)
 
+    def _update_ok(self):
+        any_checked = any(
+            cb.isChecked()
+            for cbs in self.checkbox.values()
+            for cb in cbs
+        )
+        any_browsed = any(
+            self.file_line_txt[di].toPlainText().strip()
+            for di in self.file_line_txt
+        )
+        self.btn_ok.setEnabled(any_checked or any_browsed)
 
     def browse_file(self,data_index,data_view):
         """
@@ -440,6 +454,7 @@ class TRANSFORM_InputDialog(QDialog):
             self.transformation_files[data_index].append([os.path.splitext(f)[0] for f in files])
         text = "The following files were selected:\n" + "\n".join(files)
         self.file_line_txt[data_index].setPlainText(text)
+        self._update_ok()
 
 
     def get_values(self):
