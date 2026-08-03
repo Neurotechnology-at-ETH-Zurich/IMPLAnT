@@ -3,9 +3,15 @@ from mrid_utils import handlers, gauss_aux, warper, chmap
 import numpy as np
 import nibabel as nib
 import os
+import sys
 import json as _json
 import pickle
-with open(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'paths_config.json')) as _f:
+_base_dir = getattr(sys, '_MEIPASS', os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+_exe_dir = os.path.dirname(sys.executable) if getattr(sys, 'frozen', False) else _base_dir
+_config_path = os.path.join(_exe_dir, 'paths_config.json')
+if not os.path.exists(_config_path):
+    _config_path = os.path.join(_base_dir, 'paths_config.example.json')
+with open(_config_path) as _f:
     _paths = _json.load(_f)
 from PySide6.QtWidgets import QFileDialog
 import vtk
@@ -14,6 +20,7 @@ from vtk.util import numpy_support
 from PySide6 import QtWidgets
 import sys
 from concurrent.futures import ProcessPoolExecutor, as_completed
+from core.paintbrush import Paintbrush
 
 
 def process_in_parallel(args):
@@ -142,8 +149,8 @@ class ElectrodeLoc:
         args_list = [
             (mrid, mrid_dict, self.sessionpath, atlas, atlaslabelsdf,
              dwi_path,t2s_path,mask_path,fixed_coordinates_path, moving_coordinates_path,
-             channel_separation, total_ch,chMap_file)
-            for mrid in roi_names
+             channel_separation, total_ch[i],chMap_file)
+            for i, mrid in enumerate(roi_names)
         ]
 
 
@@ -290,10 +297,17 @@ class ElectrodeLoc:
         nonzero_y, nonzero_x = np.nonzero(img_slice)
         spacing_x, spacing_y = spacing[1], spacing[0]  # careful: VTK x=cols, y=rows
         if len(nonzero_x) == 0 or len(nonzero_y) == 0:
-            ny, nx = np.nonzero(self.MW.Paintbrush.label_volume[self.LoadMRI.slice_indices[0],:,:])
-            # Get pixel bounds
-            x_min, x_max = nx.min(), nx.max()
-            y_min, y_max = ny.min(), ny.max()
+            if hasattr(self.MW, 'Paintbrush'):
+                ny, nx = np.nonzero(self.MW.Paintbrush.label_volume[self.LoadMRI.slice_indices[0],:,:])
+                if len(nx) > 0 and len(ny) > 0:
+                    x_min, x_max = nx.min(), nx.max()
+                    y_min, y_max = ny.min(), ny.max()
+                else:
+                    x_min, x_max = 0, w - 1
+                    y_min, y_max = 0, h - 1
+            else:
+                x_min, x_max = 0, w - 1
+                y_min, y_max = 0, h - 1
 
             # Convert pixel coordinates to world coordinates
             self.center_x = (x_min + x_max) / 2 * spacing_x
@@ -403,7 +417,7 @@ class ChannelVariablesInput(QtWidgets.QDialog):
         file_layout = QtWidgets.QHBoxLayout()
         self.file_line_pkl = QtWidgets.QTextEdit()
 
-        self.file_name_pkl = os.path.join(gui_dir,'mrid_library.pkl')
+        self.file_name_pkl = _paths.get('mrid_library', os.path.join(gui_dir, 'mrid_library.pkl'))
         if os.path.exists(self.file_name_pkl):
             self.file_line_pkl.setText(f"File found: {self.file_name_pkl} \n Please select another pkl file if requested")
         else:
@@ -437,7 +451,7 @@ class ChannelVariablesInput(QtWidgets.QDialog):
         self.file_line_fixed = QtWidgets.QTextEdit()
         if os.path.exists(os.path.join(self.MW.LoadMRI.session_path, 'registration','fixed_img-indeces.npy')):
             self.file_name_fixed = os.path.join(self.MW.LoadMRI.session_path, 'registration','fixed_img-indeces.npy')
-            self.file_line_fixed.setText(f"File found: {self.file_name_fixed} \n Select another file if requested")
+            self.file_line_fixed.setText(f"File for FIXED coordinates found: {self.file_name_fixed} \n Select another file if requested")
         else:
             self.file_line_fixed.setText("Please select the fixed coordinates. No such file found.")
         browse_button = QtWidgets.QPushButton("Browse")
@@ -450,7 +464,7 @@ class ChannelVariablesInput(QtWidgets.QDialog):
         self.file_line_mov = QtWidgets.QTextEdit()
         if os.path.exists(os.path.join(self.MW.LoadMRI.session_path, 'registration','moving_img_resampled25um-indeces.npy')):
             self.file_name_moving = os.path.join(self.MW.LoadMRI.session_path, 'registration','moving_img_resampled25um-indeces.npy')
-            self.file_line_mov.setText(f"File found: {self.file_name_moving} \n Select another file if requested")
+            self.file_line_mov.setText(f"File for MOVING coordinates found: {self.file_name_moving} \n Select another file if requested")
         else:
             self.file_line_mov.setText("Please select the moving coordinates. No such file found.")
         browse_button = QtWidgets.QPushButton("Browse")
