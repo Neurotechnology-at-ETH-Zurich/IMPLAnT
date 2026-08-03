@@ -65,6 +65,10 @@ class IntensityTable(QObject):
         """
         for i, vol in enumerate(self.intensity_volumes):
             z, y, x = self.MW.LoadMRI.slice_indices[data_index]
+            nz, ny, nx = vol.shape
+            z = min(z, nz - 1)
+            y = min(y, ny - 1)
+            x = min(x, nx - 1)
             intensity = vol[z,y,x]
             item = self.table.item(i, 2)
             if item is not None:
@@ -164,7 +168,6 @@ class IntensityTable(QObject):
         """
         Add a new layer (e.g., heatmap, label, another file, etc.) to the table.
         """
-
         self.original_image.append(org_img)
         self.intensity_volumes.append(vol)
         self.file_name.append(layer_name)
@@ -233,7 +236,10 @@ class IntensityTable(QObject):
         opacity_spin.setRange(0.0, 100.0) # percentage (0–100)
         opacity_spin.setSingleStep(5.0)
         opacity_spin.setDecimals(1)
-        opacity_spin.setValue(0.6 * 100)  # assume stored 0.0–1.0 internally
+        if visibility_enabled:
+           opacity_spin.setValue(0.6 * 100)  # assume stored 0.0–1.0 internally
+        else:
+            opacity_spin.setValue(1 * 100)
         opacity_spin.setSuffix(" %")
         opacity_spin.setAlignment(Qt.AlignCenter)
         opacity_spin.setEnabled(visibility_enabled)
@@ -278,7 +284,7 @@ class IntensityTable(QObject):
 
         if img_to_save is None:
             vol_to_save = self.intensity_volumes[row]
-            if self.table.item(row,1).text()=='Label':
+            if self.table.item(row,1).text() in ('Label', 'Forbidden Regions'):
                 if self.MW.LoadMRI.volumes[0].is_4d:
                     msg_box = QMessageBox()
                     msg_box.setWindowTitle("Choose which data to save")
@@ -338,7 +344,7 @@ class IntensityTable(QObject):
 
         !!! Only tested with 3D data!!!
         """
-        if self.table.item(row,1).text()=='Label':
+        if self.table.item(row,1).text() in ('Label', 'Forbidden Regions'):
             #for idx in range(len(self.MW.LoadMRI.renderers)):
             layer = self.MW.Layers[data_index][self.MW.Paintbrush.layer_index[data_index]]
             for vn, actor in layer.actors.items():
