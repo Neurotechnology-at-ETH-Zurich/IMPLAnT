@@ -1,25 +1,36 @@
 # This Python file uses the following encoding: utf-8
-from PySide6.QtWidgets import QProgressDialog, QApplication
+from PySide6.QtWidgets import QWidget, QLabel, QVBoxLayout, QApplication
 from PySide6.QtCore import Qt, QTimer
+from PySide6.QtGui import QPainter, QColor
 
 
-class BusyOverlay(QProgressDialog):
+class BusyOverlay(QWidget):
     def __init__(self, parent, message="Processing, please wait…"):
-        super().__init__(message, None, 0, 0, parent)
-        self.setWindowModality(Qt.WindowModal)
-        self.setWindowTitle("Please wait")
-        self.setMinimumDuration(0)
-        self.setMinimumWidth(350)
-        self.setAutoClose(False)
-        self.setAutoReset(False)
+        super().__init__(parent)
+        self.setGeometry(parent.rect())
+
+        label = QLabel(message, self)
+        label.setAlignment(Qt.AlignCenter)
+        label.setStyleSheet("color: white; font-size: 16px; font-weight: bold; background: transparent;")
+
+        layout = QVBoxLayout(self)
+        layout.addWidget(label, alignment=Qt.AlignCenter)
+
+        self.hide()
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.fillRect(self.rect(), QColor(0, 0, 0, 160))
 
     def run(self, fn, *args, **kwargs):
+        self.setGeometry(self.parent().rect())
+        self.raise_()
         self.show()
-        self.setValue(0)
-        self.repaint()
         QApplication.processEvents()
         QTimer.singleShot(50, lambda: self._execute(fn, args, kwargs))
 
     def _execute(self, fn, args, kwargs):
-        fn(*args, **kwargs)
-        self.close()
+        try:
+            fn(*args, **kwargs)
+        finally:
+            self.close()
