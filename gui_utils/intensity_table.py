@@ -13,6 +13,7 @@ from PySide6 import QtWidgets
 from PySide6.QtWidgets import QSlider,QAbstractItemView
 from PySide6.QtCore import QObject, QEvent
 from PySide6.QtGui import QIcon
+import shiboken6
 
 class IntensityTable(QObject):
     """GUI table for managing and visualizing MRI image layers with VTK integration."""
@@ -515,12 +516,20 @@ class IntensityTable(QObject):
             ))
 
     def eventFilter(self, obj, event):
-        if not hasattr(self, "overlay_slider") or not self.overlay_slider.isVisible():
+        # installed on QApplication (app-wide), so this keeps getting called
+        # during teardown after overlay_slider/table's C++ side is already
+        # gone - the Python wrapper still exists (hasattr is True) but touching
+        # it raises "Internal C++ object already deleted", so check validity first
+        if not hasattr(self, "overlay_slider") or not shiboken6.isValid(self.overlay_slider):
+            return False
+        if not self.overlay_slider.isVisible():
             return False
 
         if event.type() == QEvent.Resize and obj is self.MW:
             self.overlay_slider.hide()
         elif event.type() == QEvent.MouseButtonPress:
+            if not shiboken6.isValid(self.table):
+                return False
             viewport = self.table.viewport()
             if obj is not self.overlay_slider and obj is not viewport and not viewport.isAncestorOf(obj):
                 self.overlay_slider.hide()
