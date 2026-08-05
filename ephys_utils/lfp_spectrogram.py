@@ -103,6 +103,13 @@ class LFPSpectrogram(QWidget):
         self._timeline = None
         self._last_args = None   # last (memmap, fs, t_start, t_end), for re-rendering
         self._pending = None     # update_view args deferred while this tab is hidden
+        # {log_freq: render payload}, for the current _cache_base_key (memmap,
+        # t_start, t_end, channel -- everything update_view is called with
+        # EXCEPT log_freq). Toggling the frequency axis without anything else
+        # changing then reuses whichever of the two was already computed,
+        # instead of rerunning the CWT -- see set_log_frequency.
+        self._cache_base_key = None
+        self._cache = {}
         self.log_freq = self.LOG_FREQ
         self._cmap_name = self.COLORMAPS[0]
 
@@ -276,6 +283,20 @@ class LFPSpectrogram(QWidget):
             self._clear()
             return
 
+        # cache keyed on log_freq, for everything else about this call -- an
+        # axis toggle alone (t_start/t_end/channel unchanged) hits this and
+        # skips the CWT entirely; any real change (scroll, channel switch, ...)
+        # invalidates both entries and both get recomputed on next use
+        base_key = (id(lfp_memmap), t_start, t_end, self._channel)
+        if base_key != self._cache_base_key:
+            self._cache_base_key = base_key
+            self._cache = {}
+
+        cached = self._cache.get(self.log_freq)
+        if cached is not None:
+            self._render(cached, t_start, t_end)
+            return
+
         # The lowest frequency has the widest wavelet, so it sets how far past
         # each edge we read (in samples). At F_MIN = 1 Hz that is seconds, not
         # milliseconds — the price of covering the slow end in the same map. The
@@ -324,10 +345,6 @@ class LFPSpectrogram(QWidget):
         x0 = t_abs[0] - dt / 2.0
         y0 = f_ax[0] - df / 2.0
 
-        self.img.setImage(flat_db, autoLevels=False)
-        self.img.setRect(QRectF(x0, y0, t_abs[-1] - t_abs[0] + dt,
-                                f_ax[-1] - f_ax[0] + df))
-
         # Symmetric around 0 dB, so the diverging colours mean what they look
         # like. Clamped: a burst in a band that is otherwise near-empty reaches
         # tens of dB and would flatten everything else, while a very quiet window
@@ -342,6 +359,29 @@ class LFPSpectrogram(QWidget):
         ref_db = flat_db[:, inwin] if inwin.any() else flat_db
         v = float(np.percentile(np.abs(ref_db), 99.9))
         v = float(np.clip(v, self.DB_CLIM_MIN, self.CLIM_DB))
+
+        payload = dict(flat_db=flat_db, t_abs=t_abs, f_ax=f_ax, dt=dt, df=df,
+                       x0=x0, y0=y0, v=v, fmax=fmax)
+        self._cache[self.log_freq] = payload
+        self._render(payload, t_start, t_end)
+
+    def _render(self, payload, t_start, t_end):
+        """Draw an already-computed CWT result -- freshly computed, or a hit
+        in _cache from toggling back to an axis mode already seen for this
+        window/channel."""
+        flat_db = payload['flat_db']
+        t_abs = payload['t_abs']
+        f_ax = payload['f_ax']
+        dt = payload['dt']
+        df = payload['df']
+        x0 = payload['x0']
+        y0 = payload['y0']
+        v = payload['v']
+        fmax = payload['fmax']
+
+        self.img.setImage(flat_db, autoLevels=False)
+        self.img.setRect(QRectF(x0, y0, t_abs[-1] - t_abs[0] + dt,
+                                f_ax[-1] - f_ax[0] + df))
         self.colorbar.setLevels((-v, v))
 
         # spell out the resolution actually achieved: the wavelet's temporal

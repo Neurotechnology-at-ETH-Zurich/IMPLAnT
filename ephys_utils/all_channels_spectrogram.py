@@ -119,9 +119,13 @@ class AllChannelsSpectrogram(QWidget):
         self.ripple_mode = False # False = entire visible window (default),
         #                          True = session-wide ripple-triggered average.
         #                          Toggled by pushButton_Timeframe_spectogram.
-        self._ripple_cache_key = None    # (id(ripple_events), channels, log_freq)
-        self._ripple_cache_spec = None   # (n_ch, n_freqs) mean raw power
-        self._ripple_cache_n = 0         # number of ripples actually averaged
+        # {log_freq: (spec, n_used)}, for the current _ripple_cache_base_key
+        # (id(ripple_events), channels, ripple-detection channels -- everything
+        # about a ripple-triggered run EXCEPT log_freq). Toggling the frequency
+        # axis then reuses whichever of the two was already computed, instead
+        # of rerunning the whole ripple average -- see _update_ripple_triggered.
+        self._ripple_cache_base_key = None
+        self._ripple_cache = {}
         self._title = ''                 # set by _window_spec / _ripple_triggered_spec
 
         # ripple-triggered mode averages over every detected ripple, which can
@@ -134,9 +138,18 @@ class AllChannelsSpectrogram(QWidget):
         # context for the in-flight worker's result, read back in
         # _on_ripple_worker_finished (see the comment in _update_ripple_triggered
         # on why this isn't just closed over in a lambda)
-        self._ripple_pending_cache_key = None
+        self._ripple_pending_base_key = None
+        self._ripple_pending_log_freq = None
         self._ripple_pending_freqs = None
         self._ripple_pending_channel_ids = None
+
+        # window mode: {log_freq: (spec, freqs, channel_ids, title)}, for the
+        # current _window_cache_base_key (everything update_view is called with
+        # EXCEPT log_freq). Toggling the frequency axis without anything else
+        # changing then reuses whichever of the two was already computed,
+        # instead of rerunning the CWT -- see set_log_frequency.
+        self._window_cache_base_key = None
+        self._window_cache = {}
 
         self.wavelet = f"cmor{self.BANDWIDTH}-{self.CENTER}"
         # central frequency of the mother wavelet, needed to turn frequencies
@@ -355,11 +368,28 @@ class AllChannelsSpectrogram(QWidget):
                                            ripple_events, ripple_channels)
             return
 
+        # cache keyed on log_freq, for everything else about this call -- an
+        # axis toggle alone (t_start/t_end/channels unchanged) hits this and
+        # skips the CWT entirely; any real change (scroll, channel skip, ...)
+        # invalidates both entries and both get recomputed on next use
+        base_key = (id(lfp_memmap), t_start, t_end, tuple(int(c) for c in channel_ids))
+        if base_key != self._window_cache_base_key:
+            self._window_cache_base_key = base_key
+            self._window_cache = {}
+
+        cached = self._window_cache.get(self.log_freq)
+        if cached is not None:
+            cached_spec, cached_freqs, cached_channel_ids, cached_title = cached
+            self._title = cached_title
+            self._finish_update_view(cached_spec, cached_freqs, cached_channel_ids)
+            return
+
         spec = self._window_spec(lfp_memmap, fs, freqs, channel_ids,
                                   t_start, t_end)
         if spec is None:
             self._clear()
             return
+        self._window_cache[self.log_freq] = (spec, freqs, channel_ids, self._title)
         self._finish_update_view(spec, freqs, channel_ids)
 
     def _finish_update_view(self, spec, freqs, channel_ids):
@@ -582,8 +612,11 @@ class AllChannelsSpectrogram(QWidget):
         on a session with many events, and shows a BusyOverlay over this tab
         meanwhile so the rest of the GUI stays usable.
 
-        Cached by (ripple_events identity, channels, log_freq), since the
-        result doesn't depend on the currently visible window.
+        Cached by (ripple_events identity, channels, ripple-detection
+        channels), with a separate slot per log_freq -- so toggling the
+        frequency axis reuses whichever of the two was already computed
+        instead of rerunning the average, and only a real change (new
+        ripples, different channels) invalidates both.
         """
         if ripple_events is None or len(ripple_events) == 0:
             self._clear()
@@ -593,16 +626,21 @@ class AllChannelsSpectrogram(QWidget):
         # conversion below creates a new object -- otherwise a non-float64
         # input would allocate a fresh array every call and the cache would
         # never hit.
-        cache_key = (id(ripple_events), tuple(int(c) for c in channel_ids),
-                     tuple(int(c) for c in ripple_channels) if ripple_channels else None,
-                     self.log_freq, len(freqs), float(freqs[0]), float(freqs[-1]))
-        if self._ripple_cache_key == cache_key:
-            self._title = (f'{self._ripple_cache_n} ripples '
+        base_key = (id(ripple_events), tuple(int(c) for c in channel_ids),
+                    tuple(int(c) for c in ripple_channels) if ripple_channels else None)
+        if base_key != self._ripple_cache_base_key:
+            self._ripple_cache_base_key = base_key
+            self._ripple_cache = {}
+
+        cached = self._ripple_cache.get(self.log_freq)
+        if cached is not None:
+            spec, n_used = cached
+            self._title = (f'{n_used} ripples '
                             f'± {1000 * self.RIPPLE_HALF_WINDOW_S:.0f} ms')
-            if self._ripple_cache_spec is None:
+            if spec is None:
                 self._clear()
                 return
-            self._finish_update_view(self._ripple_cache_spec, freqs, channel_ids)
+            self._finish_update_view(spec, freqs, channel_ids)
             return
 
         if self._ripple_thread is not None:
@@ -627,7 +665,8 @@ class AllChannelsSpectrogram(QWidget):
         # connecting to a lambda instead silently falls back to a DIRECT
         # connection, so _on_ripple_worker_finished (and every pyqtgraph/Qt
         # call inside it) would run ON THE WORKER THREAD and crash.
-        self._ripple_pending_cache_key = cache_key
+        self._ripple_pending_base_key = base_key
+        self._ripple_pending_log_freq = self.log_freq
         self._ripple_pending_freqs = freqs
         self._ripple_pending_channel_ids = channel_ids
 
@@ -701,15 +740,23 @@ class AllChannelsSpectrogram(QWidget):
     def _on_ripple_worker_finished(self, spec, n_used):
         """_RippleSpecWorker.finished, on the GUI thread: store the result in
         the cache, hide the overlay, and render (or clear, if no ripple was
-        usable)."""
+        usable).
+
+        If the ripple set/channels changed while this run was in flight (a new
+        detection, a channel skipped, ...), _ripple_cache_base_key has already
+        moved on -- this result belongs to neither the old nor the current
+        state, so it's dropped rather than cached or rendered over whatever
+        a later call may already have drawn.
+        """
         freqs = self._ripple_pending_freqs
         channel_ids = self._ripple_pending_channel_ids
-        self._ripple_cache_key = self._ripple_pending_cache_key
-        self._ripple_cache_spec = spec
-        self._ripple_cache_n = n_used
+        stale = self._ripple_pending_base_key != self._ripple_cache_base_key
         if self._busy_overlay is not None:
             self._busy_overlay.hide()
         self.busyChanged.emit(False)
+        if stale:
+            return
+        self._ripple_cache[self._ripple_pending_log_freq] = (spec, n_used)
         if spec is None:
             self._clear()
             return
