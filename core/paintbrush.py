@@ -31,9 +31,13 @@ class Paintbrush:
         self.layer_index = {}
         self.label_volume = {}
         self.seg_volume = {}
-        for idx in range(len(self.LoadMRI.vtk_widgets)):
-            self.label_volume[idx] = np.zeros_like(self.LoadMRI.volumes[0].slices[0], dtype=np.uint8)
-            self.seg_volume[idx] = np.zeros_like(self.LoadMRI.volumes[0].slices[0], dtype=np.uint8)
+        # one label/segmentation volume per loaded data set, each on that data
+        # set's own voxel grid — with several 4D views their volumes differ in
+        # shape, and everything here indexes them with that data set's cursor
+        # (see mouse_moves, which is called with the interactor's data index).
+        for idx, volume in self.LoadMRI.volumes.items():
+            self.label_volume[idx] = np.zeros_like(volume.slices[0], dtype=np.uint8)
+            self.seg_volume[idx] = np.zeros_like(volume.slices[0], dtype=np.uint8)
 
 
     def start_paintbrush(self,is_4d=False,histogram_needed=True):
@@ -50,6 +54,12 @@ class Paintbrush:
             if idx in self.layer_index:
                 continue
 
+            # a 4D view added after __init__ ran has no label volume yet
+            if idx not in self.label_volume:
+                shape_like = self.LoadMRI.volumes[idx].slices[0]
+                self.label_volume[idx] = np.zeros_like(shape_like, dtype=np.uint8)
+                self.seg_volume[idx] = np.zeros_like(shape_like, dtype=np.uint8)
+
             # Store Layer
             layer_index = len(self.LoadMRI.MW.Layers[idx])
             lut = self.setup_lut()
@@ -59,9 +69,9 @@ class Paintbrush:
                 vol = {0: self.label_volume[idx]}
             self.LoadMRI.MW.Layers[idx][layer_index] = ImageLayer(
                 volume=vol,  # same array reference — mutations are picked up automatically
-                spacing=self.LoadMRI.volumes[0].spacing,
+                spacing=self.LoadMRI.volumes[idx].spacing,
                 view_names=self.LoadMRI.MW.Layers[idx][0].view_names, #['axial', 'coronal', 'sagittal'],
-                slice_indices=self.LoadMRI.slice_indices[0],
+                slice_indices=self.LoadMRI.slice_indices[idx],
                 is_4d=is_4d,
                 render_fct=self.LoadMRI.render,
                 vtk_dtype=vtk.VTK_UNSIGNED_CHAR,
@@ -74,9 +84,14 @@ class Paintbrush:
             if not self.LoadMRI.volumes[0].is_4d:
                 self.LoadMRI.setup_layer('coronal',idx,layer_index) ##data_view
             else:
-                self.LoadMRI.setup_layer(self.LoadMRI.MW.Layers[0][0].view_names,idx,layer_index)
+                # idx is the data set (4D view), so its own view name, table and
+                # cursor are the ones to use — with a second view loaded, data set
+                # 0's cursor would be read out of data set 1's differently shaped
+                # volume. setup_layer wants a single view name, not the list.
+                data_view = self.LoadMRI.MW.Layers[idx][0].view_names[0]
+                self.LoadMRI.setup_layer(data_view,idx,layer_index)
                 intensity_filename = 'Segmentation Mask'
-                self.LoadMRI.intensity_table[0].update_table(intensity_filename, vol[0],0,layer_index,visibility_enabled=False)
+                self.LoadMRI.intensity_table[idx].update_table(intensity_filename, vol[0],idx,layer_index,visibility_enabled=False)
 
 
     def set_size(self,var:int):
@@ -537,7 +552,9 @@ class Paintbrush:
                 mask = np.zeros_like(self.label_volume[self.label_volume_index], dtype=bool)
                 for i in range(1, self.LoadMRI.mrid_tags.num_regions+1):
                     mask = self.label_volume[self.label_volume_index] == i
-                    intensities = self.LoadMRI.volumes[0].slices[0][mask]
+                    # the volume of the data set the labels belong to — masking
+                    # volumes[0] with another view's label array is a shape mismatch
+                    intensities = self.LoadMRI.volumes[self.label_volume_index].slices[0][mask]
                     # Compute histogram
                     counts, bin_edges = np.histogram(intensities, bins=50)
 
@@ -553,7 +570,7 @@ class Paintbrush:
                 mask = self.label_volume[self.label_volume_index] == histog_label
         else:
             mask = self.label_volume[self.label_volume_index] == histog_label
-        intensities = self.LoadMRI.volumes[0].slices[0][mask] ## FOR ALL IMAGES
+        intensities = self.LoadMRI.volumes[self.label_volume_index].slices[0][mask] ## FOR ALL IMAGES
 
 
         if intensities.size == 0:
