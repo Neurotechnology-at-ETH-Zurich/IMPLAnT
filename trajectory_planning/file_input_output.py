@@ -6,7 +6,13 @@ import sys
 import json as _json
 import json
 import numpy as np
-with open(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'paths_config.json')) as _f:
+import sys
+_base_dir = getattr(sys, '_MEIPASS', os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+_exe_dir = os.path.dirname(sys.executable) if getattr(sys, 'frozen', False) else _base_dir
+_config_path = os.path.join(_exe_dir, 'paths_config.json')
+if not os.path.exists(_config_path):
+    _config_path = os.path.join(_base_dir, 'paths_config.example.json')
+with open(_config_path) as _f:
     _paths = _json.load(_f)
 
 class FileInput(QtWidgets.QDialog):
@@ -142,7 +148,7 @@ class FileOutput(QtWidgets.QDialog):
         self.path_edit = QtWidgets.QLineEdit()
         self.path_edit.setPlaceholderText("Output file path…")
         browse = QtWidgets.QPushButton("Browse")
-        browse.clicked.connect(self._browse)
+        browse.clicked.connect(self.browse)
         path_layout.addWidget(self.path_edit)
         default_path = f"{os.path.dirname(mri_file_path)}/trajectory_planning.json"
         self.path_edit.setText(default_path)
@@ -153,27 +159,27 @@ class FileOutput(QtWidgets.QDialog):
             QtWidgets.QDialogButtonBox.StandardButton.Ok |
             QtWidgets.QDialogButtonBox.StandardButton.Cancel
         )
-        buttons.accepted.connect(self._save_and_accept)
+        buttons.accepted.connect(self.save_and_accept)
         buttons.rejected.connect(self.reject)
         layout.addWidget(buttons)
 
 
-    def _browse(self):
+    def browse(self):
         path, _ = QFileDialog.getSaveFileName(self, "Save Trajectory Data", "", "JSON files (*.json)")
         if path:
             self.path_edit.setText(path)
 
-    def _save_and_accept(self):
+    def save_and_accept(self):
         path = self.path_edit.text().strip()
         if not path:
             return
         tp = self.MW.LoadMRI.TrajPlanning
-        data = self._compute(tp)
+        data = self.compute(tp)
         with open(path, 'w') as f:
             json.dump(data, f, indent=2)
         self.accept()
 
-    def _compute(self, tp):
+    def compute(self, tp):
         mri_spacing = np.array(tp.movingImg_resampled.GetSpacing())  # XYZ mm/voxel
 
         # Bregma and lambda in physical mm
@@ -190,8 +196,8 @@ class FileOutput(QtWidgets.QDialog):
         plane_normal = z_approx - np.dot(z_approx, bl_axis) * bl_axis
         plane_normal /= np.linalg.norm(plane_normal)
         # Second in-plane axis: perpendicular to bl_axis, in the horizontal plane
-        y_axis = np.cross(plane_normal, bl_axis)
-        y_axis /= np.linalg.norm(y_axis)
+        x_axis = np.cross(plane_normal, bl_axis)
+        x_axis /= np.linalg.norm(x_axis)
 
         shanks = {}
         for shank_num in sorted(tp.coords_insert_point):
@@ -206,7 +212,7 @@ class FileOutput(QtWidgets.QDialog):
             # Insertion point in bregma-lambda plane coordinate system (origin = bregma)
             v = insert_mm - bregma_mm
             coord_along_bl  = float(np.dot(v, bl_axis))   # X: along bregma → lambda
-            coord_perp_bl   = float(np.dot(v, y_axis))    # Y: lateral, perpendicular to bl
+            coord_perp_bl   = float(np.dot(v, x_axis))    # Y: lateral, perpendicular to bl
 
             # Shank angle with the bregma-lambda plane
             shank_vec  = insert_mm - deep_mm
@@ -216,7 +222,7 @@ class FileOutput(QtWidgets.QDialog):
             angle_deg  = float(np.degrees(np.arcsin(np.clip(abs(np.dot(shank_dir, plane_normal)), 0.0, 1.0))))
 
             ap_str = f"{abs(coord_along_bl):.3f}{'P' if coord_along_bl >= 0 else 'A'}"
-            rl_str = f"{abs(coord_perp_bl):.3f}{'R' if coord_perp_bl >= 0 else 'L'}"
+            rl_str = f"{abs(coord_perp_bl):.3f}{'R' if coord_perp_bl <= 0 else 'L'}"
 
             shanks[f"shank_{shank_num + 1}"] = {
                 "AP_mm":                    ap_str,

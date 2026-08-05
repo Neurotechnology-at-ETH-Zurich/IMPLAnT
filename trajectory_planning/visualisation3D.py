@@ -1,5 +1,6 @@
 # This Python file uses the following encoding: utf-8
 import os
+import sys
 import json as _json
 import SimpleITK as sitk
 import pyvista as pv
@@ -8,11 +9,17 @@ from pathlib import Path
 import pandas as pd
 from matplotlib.colors import ListedColormap
 import numpy as np
-from PySide6.QtWidgets import QVBoxLayout
+from PySide6.QtWidgets import QVBoxLayout, QApplication
+from PySide6.QtCore import Qt
 import nibabel as nib
 import vtk
 from concurrent.futures import ThreadPoolExecutor
-with open(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'paths_config.json')) as _f:
+_base_dir = getattr(sys, '_MEIPASS', os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+_exe_dir = os.path.dirname(sys.executable) if getattr(sys, 'frozen', False) else _base_dir
+_config_path = os.path.join(_exe_dir, 'paths_config.json')
+if not os.path.exists(_config_path):
+    _config_path = os.path.join(_base_dir, 'paths_config.example.json')
+with open(_config_path) as _f:
     _paths = _json.load(_f)
 
 
@@ -25,7 +32,7 @@ class Visualisation3D:
         self.parallel_projection = True
         self.poly_otherMrids = {}
         self.clipped_meshes = False
-        self._camera_params = {}
+        self.camera_params = {}
 
         #set up layout
         #coronal
@@ -40,6 +47,7 @@ class Visualisation3D:
         self.hover_label_co.GetTextProperty().SetFontSize(14)
         self.hover_label_co.GetTextProperty().SetColor(1, 1, 1)  # white
         self.plotter_co.iren.add_observer('MouseMoveEvent', self.on_hover_co)
+        self.plotter_co.iren.add_observer('LeftButtonPressEvent', self.on_click_co)
         self.plotter_co.renderer.AddActor2D(self.hover_label_co)
         #sagittal
         widget = self.ui.vtkWidget_trajPlan_2
@@ -53,6 +61,7 @@ class Visualisation3D:
         self.hover_label_sa.GetTextProperty().SetFontSize(14)
         self.hover_label_sa.GetTextProperty().SetColor(1, 1, 1)  # white
         self.plotter_sa.iren.add_observer('MouseMoveEvent', self.on_hover_sa)
+        self.plotter_sa.iren.add_observer('LeftButtonPressEvent', self.on_click_sa)
         self.plotter_sa.renderer.AddActor2D(self.hover_label_sa)
         #axial
         widget = self.ui.vtkWidget_trajPlan_3
@@ -66,7 +75,13 @@ class Visualisation3D:
         self.hover_label_ax.GetTextProperty().SetFontSize(14)
         self.hover_label_ax.GetTextProperty().SetColor(1, 1, 1)  # white
         self.plotter_ax.iren.add_observer('MouseMoveEvent', self.on_hover_ax)
+        self.plotter_ax.iren.add_observer('LeftButtonPressEvent', self.on_click_ax)
         self.plotter_ax.renderer.AddActor2D(self.hover_label_ax)
+
+        for plotter in (self.plotter_co, self.plotter_sa, self.plotter_ax):
+            plotter.render_window.SetMultiSamples(0)
+            plotter.renderer.SetUseDepthPeeling(False)
+            plotter.render_window.GetInteractor().SetDesiredUpdateRate(30)
 
         self.load_atlas()
         img = sitk.ReadImage(self.MW.LoadMRI.volumes[0].file_path)
@@ -75,24 +90,6 @@ class Visualisation3D:
         self.MW.ui.pushButton_resetSagittal.clicked.connect(self.reset_sa)
         self.MW.ui.pushButton_resetCoronal.clicked.connect(self.reset_co)
         self.MW.ui.pushButton_resetAxial.clicked.connect(self.reset_ax)
-
-
-
-        self.plotter_co.add_key_event('c', lambda: self._print_camera(self.plotter_co))
-        self.plotter_sa.add_key_event('c', lambda: self._print_camera(self.plotter_sa))
-        self.plotter_ax.add_key_event('c', lambda: self._print_camera(self.plotter_ax))
-
-
-
-    def _print_camera(self, plotter):
-        print("position:   ", plotter.camera.position, flush=True)
-        print("focal_point:", plotter.camera.focal_point, flush=True)
-        print("up:         ", plotter.camera.up, flush=True)
-        print("azimuth:    ", plotter.camera.azimuth, flush=True)
-        print("elevation:  ", plotter.camera.elevation, flush=True)
-        print("roll:       ", plotter.camera.roll, flush=True)
-
-
 
 
     def on_hover_co(self, obj, event):
@@ -104,8 +101,111 @@ class Visualisation3D:
     def on_hover_ax(self, obj, event):
         self.pick_label(self.plotter_ax,self.hover_label_ax)
 
+    def on_click_co(self, obj, event):
+        self.pick_shank(self.plotter_co)
+
+    def on_click_sa(self, obj, event):
+        self.pick_shank(self.plotter_sa)
+
+    def on_click_ax(self, obj, event):
+        self.pick_shank(self.plotter_ax)
+
+    def pick_shank(self, plotter):
+        x, y = plotter.iren.get_event_position()
+        electrode_actors = {name: actor for name, actor in plotter.actors.items()
+                            if name.startswith('electrode_line_')}
+        if not electrode_actors:
+            return
+
+        # tolerant cell pick for lines
+        picker = vtk.vtkCellPicker()
+        picker.SetTolerance(0.01)
+        picker.InitializePickList()
+        for actor in electrode_actors.values():
+            picker.AddPickList(actor)
+        picker.SetPickFromList(True)
+        picker.Pick(x, y, 0, plotter.renderer)
+        hit = picker.GetActor()
+
+        shank_idx = None
+        if hit is not None:
+            for name, actor in electrode_actors.items():
+                if actor == hit:
+                    try:
+                        shank_idx = int(name.split('_')[-1])
+                    except ValueError:
+                        pass
+                    break
+
+        # fall back: check proximity to label tip in screen space
+        if shank_idx is None:
+            tp = self.MW.LoadMRI.TrajPlanning
+            LABEL_RADIUS_PX = 60
+            closest = LABEL_RADIUS_PX
+            for s_idx in sorted(tp.coords_deepest_point):
+                deep = tp.coords_deepest_point[s_idx]
+                insert = tp.coords_insert_point[s_idx]
+                if deep is None or insert is None:
+                    continue
+                deep_mm = np.array(deep, dtype=float) * self.spacing
+                insert_mm = np.array(insert, dtype=float) * self.spacing
+                direction = insert_mm - deep_mm
+                length = np.linalg.norm(direction)
+                if length < 1e-6:
+                    continue
+                direction /= length
+                tip_mm = insert_mm + direction * 4.0
+                coord = vtk.vtkCoordinate()
+                coord.SetCoordinateSystemToWorld()
+                coord.SetValue(*tip_mm.tolist())
+                sx, sy = coord.GetComputedDisplayValue(plotter.renderer)
+                dist = np.hypot(x - sx, y - sy)
+                if dist < closest:
+                    closest = dist
+                    shank_idx = s_idx
+
+        if shank_idx is None:
+            return
+
+        self.MW.LoadMRI.TrajPlanning.ui.comboBox_Shanks.setCurrentIndex(shank_idx)
+        self.refresh_clipped_views(shank_idx)
+
+    def refresh_clipped_views(self, shank_idx):
+        tp = self.MW.LoadMRI.TrajPlanning
+        direction = tp.direction_atlas.get(shank_idx)
+        if direction is None:
+            return
+
+        if 'coronal' in self.camera_params:
+            axis_y = np.array([0.0, 1.0, 0.0])
+            n = axis_y - np.dot(axis_y, direction) * direction
+            nl = np.linalg.norm(n)
+            if nl > 1e-6:
+                n /= nl
+                if n[1] < 0:
+                    n *= -1
+                self.render_clipped(n, 'coronal', shank_idx)
+
+        if 'sagittal' in self.camera_params:
+            axis_x = np.array([1.0, 0.0, 0.0])
+            n = axis_x - np.dot(axis_x, direction) * direction
+            nl = np.linalg.norm(n)
+            if nl > 1e-6:
+                n /= nl
+                if n[0] > 0:
+                    n *= -1
+                self.render_clipped(n, 'sagittal', shank_idx)
+
+        if 'axial' in self.camera_params:
+            n = np.array([0.0, 0.0, 1.0])
+            depth = (tp.ui.horizontalSlider_axial3D.value()
+                     if hasattr(tp, 'axial_slider_connect') else 0)
+            self.render_clipped(n, 'axial', shank_idx, depth=depth)
+
     def pick_label(self,plotter,hover_label):
         if 'background' not in plotter.actors:
+            return
+        if QApplication.mouseButtons() != Qt.NoButton:
             return
         x, y = plotter.iren.get_event_position()
         picker = vtk.vtkPropPicker()
@@ -131,18 +231,17 @@ class Visualisation3D:
         plotter.render()
 
     def load_atlas(self):
-        def load_background_mesh():
+        def load_background_mesh(scale):
             background_path = self.MW.LoadMRI.volumes[0].file_path
             img = nib.load(background_path)
-            scale_background = 1 #3
-            data = img.get_fdata().astype(int)[::scale_background, ::scale_background, ::scale_background]
+            data = img.get_fdata().astype(int)[::scale, ::scale, ::scale]
             zooms = img.header.get_zooms()[:3]
-            mesh_small = pv.ImageData()
-            mesh_small.dimensions = np.array(data.shape) + 1
-            mesh_small.spacing = tuple(s * scale_background for s in zooms)
-            mesh_small.origin = tuple(-s for s in zooms)  # shift so cell centers land on NIfTI voxel positions
-            mesh_small.cell_data['NIFTI'] = data.flatten(order='F')
-            return mesh_small
+            mesh = pv.ImageData()
+            mesh.dimensions = np.array(data.shape) + 1
+            mesh.spacing = tuple(s * scale for s in zooms)
+            mesh.origin = tuple(-s for s in zooms)
+            mesh.cell_data['NIFTI'] = data.flatten(order='F')
+            return mesh
 
         def load_labels():
             labels_path = os.path.join(_paths['atlas_folder'], _paths['atlas_labels'])
@@ -151,14 +250,21 @@ class Visualisation3D:
                                    names=['IDX', 'R', 'G', 'B', 'A', 'VIS', 'MSH', 'LABEL'])
             return None
 
-        # Run all three file reads in parallel
+        def load_background_full_numpy():
+            background_path = self.MW.LoadMRI.volumes[0].file_path
+            img = nib.load(background_path)
+            return np.array(img.header.get_zooms()[:3])
+
         with ThreadPoolExecutor(max_workers=3) as executor:
-            future_background = executor.submit(load_background_mesh)
+            future_small  = executor.submit(load_background_mesh, 3) #2
+            future_full   = executor.submit(load_background_full_numpy)
             future_labels = executor.submit(load_labels)
 
-            self.atlaslabelsdf = future_labels.result()
-            background_mesh = future_background.result()
-            self.background_small = background_mesh.threshold(value=0.5)
+            self.atlaslabelsdf       = future_labels.result()
+            self.background_small    = future_small.result().threshold(value=0.5)
+            self.brain_surface_small = self.background_small.extract_surface(algorithm='dataset_surface')
+            self.brain_surface_small = self.brain_surface_small.smooth_taubin(n_iter=50, pass_band=0.1)
+            self.background_full_zooms = future_full.result()
 
         max_idx = int(self.atlaslabelsdf['IDX'].max())
         self.rgba = np.zeros((max_idx + 1, 4))
@@ -171,7 +277,7 @@ class Visualisation3D:
         self.cmap = ListedColormap(self.rgba)
         self.cmap_background = ListedColormap(rgba_background)
         # pre-built numpy arrays for fast vectorised colour lookup
-        self._cmap_bg_colors = (np.array(self.cmap_background.colors)[:, :3] * 255).astype(np.uint8)
+        self.cmap_bg_colors = (np.array(self.cmap_background.colors)[:, :3] * 255).astype(np.uint8)
 
         self.plotter_co.add_axes()
         self.plotter_sa.add_axes()
@@ -179,18 +285,18 @@ class Visualisation3D:
 
 
     def render_clipped(self,normal,view,shank_number,depth=0):
+        print(normal,flush=True)
         p = self.MW.LoadMRI.TrajPlanning.coords_insert_point[shank_number]
         self.insertion_point = np.array(p)
         p = self.MW.LoadMRI.TrajPlanning.coords_deepest_point[shank_number]
         self.deepest_point = np.array(p)
-
         self.coords_list = [np.array(p) for p in self.MW.LoadMRI.TrajPlanning.channel_points[shank_number]]
 
         x0 = (self.coords_list[0][0])*self.spacing[0]
         y0 = (self.coords_list[0][1])*self.spacing[1]
         z0 = depth * self.spacing[2] if view == 'axial' else (self.coords_list[0][2])*self.spacing[2]
 
-        up_vectors = {'sagittal': (1, 0, 0), 'coronal': (0, 0, 1), 'axial': (0, 1, 0)}
+        up_vectors = {'sagittal': (0, 0, 1), 'coronal': (0, 0, 1), 'axial': (0, 1, 0)}
         if view == 'sagittal':
             plotter = self.plotter_sa
         elif view == 'coronal':
@@ -203,7 +309,7 @@ class Visualisation3D:
         distance = 60
         position = tuple(np.array(focal_point) + np.array(normal) * distance)
 
-        self._camera_params[view] = {
+        self.camera_params[view] = {
             'up': up,
             'focal': focal_point,
             'position': position,
@@ -218,29 +324,63 @@ class Visualisation3D:
         if self.parallel_projection:
             plotter.enable_parallel_projection()
 
-        clipped_background = self.background_small.clip(normal=normal, origin=(x0, y0, z0))
-        clipped_background = clipped_background.extract_surface(algorithm='dataset_surface')
-        if clipped_background.n_cells == 0 or 'NIFTI' not in clipped_background.cell_data:
-            return
-        clipped_background = clipped_background.smooth_taubin(n_iter=50, pass_band=0.1)
-        clipped_background = clipped_background.triangulate().decimate(0.6)  # keep 40% of triangles
+        # --- Front slab: clip from both sides to get a 1-voxel-thick strip ---
+        # clip(normal) keeps the NEGATIVE side, so clip(normal) gives brain at origin,
+        # then clip(-normal) at back_origin trims to 1 voxel on the brain side
+        thickness = float(np.dot(np.abs(normal), 3 * self.background_full_zooms))
+        back_origin = (x0 - normal[0]*thickness, y0 - normal[1]*thickness, z0 - normal[2]*thickness)
 
-        nifti_vals = np.round(clipped_background.cell_data['NIFTI']).astype(int)
-        clipped_background.cell_data['colors'] = self._cmap_bg_colors[nifti_vals]
+        slab = self.background_small.clip(normal=normal, origin=(x0, y0, z0))
+        slab = slab.clip(normal=tuple(-n for n in normal), origin=back_origin)
+
+        if slab.n_cells == 0:
+            return
+        nifti_vals = np.clip(np.round(slab.cell_data['NIFTI']).astype(int), 0, len(self.cmap_bg_colors) - 1)
+        slab.cell_data['colors'] = self.cmap_bg_colors[nifti_vals]
 
         plotter.add_mesh(
-            clipped_background,
+            slab,
             scalars='colors',
             rgb=True,
             show_scalar_bar=False,
             opacity=1,
             style='surface',
-            line_width=0.5,
             pickable=True,
             name='background',
             reset_camera=False,
             render=False,
         )
+
+        # --- Hollow outer shell (scale 2): clipped brain boundary ---
+        shell = self.brain_surface_small.clip(normal=normal, origin=(x0, y0, z0))
+
+
+        if shell.n_cells > 0:
+            if 'NIFTI' in shell.cell_data:
+                nifti_sh = np.clip(np.round(shell.cell_data['NIFTI']).astype(int), 0, len(self.cmap_bg_colors) - 1)
+                shell.cell_data['colors'] = self.cmap_bg_colors[nifti_sh]
+                plotter.add_mesh(
+                    shell,
+                    scalars='colors',
+                    rgb=True,
+                    opacity=1,
+                    show_scalar_bar=False,
+                    pickable=False,
+                    name='brain_shell',
+                    reset_camera=False,
+                    render=False,
+                )
+            else:
+                plotter.add_mesh(
+                    shell,
+                    color=[0.25, 0.25, 0.25],
+                    opacity=1,
+                    show_scalar_bar=False,
+                    pickable=False,
+                    name='brain_shell',
+                    reset_camera=False,
+                    render=False,
+                )
 
 
         insertion_poly = pv.PolyData(np.array(self.insertion_point, dtype=np.float32)*self.spacing)
@@ -279,14 +419,13 @@ class Visualisation3D:
             reset_camera=False,
         )
 
-        self._draw_electrode_lines(plotter, shank_number)
+        self.draw_electrode_lines(plotter, shank_number)
         plotter.render()
 
         self.clipped_meshes = True
 
-    def _draw_electrode_lines(self, plotter, active_shank):
+    def draw_electrode_lines(self, plotter, active_shank):
         tp = self.MW.LoadMRI.TrajPlanning
-        neon_green = (0.0, 1.0, 28/255)
         dark_grey  = (0.3, 0.3, 0.3)
 
         for shank_idx in sorted(tp.coords_deepest_point):
@@ -305,12 +444,13 @@ class Visualisation3D:
             end_mm = insert_mm + direction * 4.0
 
             is_active = (shank_idx == active_shank)
+            shank_color = tp.get_shank_vtk_color(shank_idx) if hasattr(tp, 'get_shank_vtk_color') else (0.0, 1.0, 28/255)
 
             # shank line
             line = pv.Line(deep_mm, end_mm)
             plotter.add_mesh(
                 line,
-                color=neon_green,
+                color=shank_color,
                 opacity=1.0,
                 line_width=4 if is_active else 2,
                 name=f"electrode_line_{shank_idx}",
@@ -351,11 +491,11 @@ class Visualisation3D:
                         reset_camera=False,
                     )
 
-    def _reset_view(self, plotter, view):
-        if view not in self._camera_params:
+    def reset_view(self, plotter, view):
+        if view not in self.camera_params:
             plotter.reset_camera()
             return
-        p = self._camera_params[view]
+        p = self.camera_params[view]
         plotter.camera.up = p['up']
         plotter.camera.focal_point = p['focal']
         plotter.set_position(p['position'])
@@ -364,10 +504,10 @@ class Visualisation3D:
         plotter.render()
 
     def reset_sa(self):
-        self._reset_view(self.plotter_sa, 'sagittal')
+        self.reset_view(self.plotter_sa, 'sagittal')
 
     def reset_co(self):
-        self._reset_view(self.plotter_co, 'coronal')
+        self.reset_view(self.plotter_co, 'coronal')
 
     def reset_ax(self):
-        self._reset_view(self.plotter_ax, 'axial')
+        self.reset_view(self.plotter_ax, 'axial')
