@@ -26,9 +26,9 @@ class IntensityTable(QObject):
         super().__init__(parent)
         self.initialize_class(MW,data_index,table,vol)
         self.data_index = data_index
-        #self.table.viewport().installEventFilter(self)
-        #self._event_filter_table_viewport = self.table.viewport()
-        #self._event_filter_table_viewport.installEventFilter(self)
+        # app-wide, not just the table viewport: the slider should close on a
+        # click anywhere else in the GUI, or on a resize, not just inside the table
+        QtWidgets.QApplication.instance().installEventFilter(self)
 
 
     def initialize_class(self, MW,data_index,table,vol):
@@ -354,7 +354,7 @@ class IntensityTable(QObject):
             for vn in 'axial','coronal','sagittal':
                 renderer = self.MW.LoadMRI.renderers[data_index][vn]
                 self.MW.LoadMRI.vtk_widgets[0][vn].GetRenderWindow().Render()
-                self.MW.LoadMRI.update_slices(0,0,data_view=vn)
+                self.MW.LoadMRI.update_slices(0,data_view=vn)
         else:
             for vn in 'axial','coronal','sagittal':
                 if vn=='axial':
@@ -379,7 +379,7 @@ class IntensityTable(QObject):
                     if np.allclose(vtk_array, slice):
                         renderer.RemoveActor(actor)
                         self.MW.LoadMRI.vtk_widgets[0][vn].GetRenderWindow().Render()
-                        self.MW.LoadMRI.update_slices(0,0,data_view=vn)
+                        self.MW.LoadMRI.update_slices(0,data_view=vn)
                         break
 
         #update table
@@ -515,8 +515,14 @@ class IntensityTable(QObject):
             ))
 
     def eventFilter(self, obj, event):
-        if obj is getattr(self, "_event_filter_table_viewport", None):
-            if event.type() == QEvent.MouseButtonPress:
-                if hasattr(self, "overlay_slider") and self.overlay_slider.isVisible():
-                    self.overlay_slider.hide()
+        if not hasattr(self, "overlay_slider") or not self.overlay_slider.isVisible():
+            return False
+
+        if event.type() == QEvent.Resize and obj is self.MW:
+            self.overlay_slider.hide()
+        elif event.type() == QEvent.MouseButtonPress:
+            viewport = self.table.viewport()
+            if obj is not self.overlay_slider and obj is not viewport and not viewport.isAncestorOf(obj):
+                self.overlay_slider.hide()
+
         return False
