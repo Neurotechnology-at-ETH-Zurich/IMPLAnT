@@ -21,6 +21,8 @@ from PySide6 import QtWidgets
 import sys
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from core.paintbrush import Paintbrush
+from file_handling.mri_volume import MRIVolume
+from utils.zoom import Zoom
 
 
 def process_in_parallel(args):
@@ -210,59 +212,91 @@ class ElectrodeLoc:
         """
         Add point of found electrode Gaussian center to 4D MRI slice.
         """
-        #for data_index in range(len(self.LoadMRI.vtk_widgets[0])):
-        data_index = 0
-        data_view = list(self.LoadMRI.vtk_widgets[0].keys())[data_index]
-        renderer = self.LoadMRI.renderers[0][data_view]
-        for actor in self.electrode_actors:
-            renderer.RemoveActor(actor)
+        for data_index in range(len(self.LoadMRI.vtk_widgets[0])):
+            self.show_warped_volume(data_index,fitted_points)
 
+        self.update_electrode_markers(fitted_points)
+
+    # fitted centers are sub-voxel Gaussian fits, not exact voxel hits, so a
+    # point stays visible for slices within this many voxels of its own z
+    Z_VISIBILITY_TOLERANCE = 1
+
+    def update_electrode_markers(self,fitted_points):
+        """
+        Draw a sphere at every fitted electrode point on top of the warped
+        volume. Unlike show_warped_volume (a one-time swap, guarded by
+        warped_swapped), this redraws on every call so switching tags
+        replaces the markers instead of only ever showing the first tag's.
+        """
+        lm = self.LoadMRI
+        views = list(lm.vtk_widgets[0].keys())
+        warped_swapped = getattr(self,'warped_swapped', set())
+
+        for actor, image_index, data_view, idx, point_z in self.electrode_actors:
+            renderer = lm.renderers.get(image_index, {}).get(data_view)
+            if renderer is not None:
+                renderer.RemoveActor(actor)
         self.electrode_actors.clear()
-        #
-        filename = self.LoadMRI.volumes[data_index].file_path[0:self.LoadMRI.volumes[data_index].file_path.find('.')]
-        filename_4d_warped = ".".join((filename + "-resampled-warped", "nii", "gz"))
-        filename_4d_warped_path = os.path.join(self.savepath, filename_4d_warped)
-        img_4d= sitk.ReadImage(filename_4d_warped_path)
-        vol = sitk.GetArrayFromImage(img_4d)
-        #if data_view=='sagittal':
-        #    img_slice = np.fliplr(vol[:,:,round(fitted_points[0][0])])
-        #else:
-        img_slice = np.fliplr(vol[int(fitted_points[0][2]),:,:])
-        spacing_4d = img_4d.GetSpacing() #xyz # #
-        spacing = self.LoadMRI.volumes[data_index].spacing
 
-        self.visualize_4Dwarpedslice(img_slice,spacing_4d,data_index,data_view)
+        touched_widgets = set()
+        for idx, data_view in enumerate(views):
+            # only views actually holding the warped volume have fitted_points'
+            # index space; a view whose warped file was missing still holds
+            # the original (unwarped) volume and would place markers wrongly
+            if idx not in warped_swapped or idx >= len(lm.volumes):
+                continue
 
-        for idx in range(len(fitted_points)):
-            #if data_view=='sagittal':
-            #    x = self.LoadMRI.volumes[data_index].slices[0].shape[0]-1-fitted_points[idx][2]
-            #    y = fitted_points[idx][1]
-            #    spacing = np.array(spacing)
-            #    spacing[2] = spacing[0]
-            #else:
-            x = fitted_points[idx][0]
-            y = fitted_points[idx][1]
+            volume = lm.volumes[idx]
+            nz, ny, nx = volume.slices[0].shape
+            spacing = volume.spacing  # zyx
 
-            x=(x)*spacing_4d[2]
-            y=(y)*spacing_4d[1]
-            radius = 0.2
+            for image_index in volume.slices:
+                renderer = lm.renderers.get(image_index, {}).get(data_view)
+                if renderer is None:
+                    continue
 
-            sphere = vtk.vtkSphereSource()
+                for point in fitted_points:
+                    x, y, z = point[0], point[1], point[2]
+                    # world position accounts for fliplr: x axis is flipped in
+                    # the axial-style layout every is_4d view uses (same
+                    # convention as cursor.py/paintbrush.py)
+                    world_x = (nx - 1 - x) * spacing[2]
+                    world_y = y * spacing[1]
 
-            sphere.SetCenter(x,y,0.2) #0.2
-            sphere.SetRadius(radius)
+                    sphere = vtk.vtkSphereSource()
+                    sphere.SetCenter(world_x, world_y, 1)
+                    sphere.SetRadius(0.3)
 
-            mapper = vtk.vtkPolyDataMapper()
-            mapper.SetInputConnection(sphere.GetOutputPort())
+                    mapper = vtk.vtkPolyDataMapper()
+                    mapper.SetInputConnection(sphere.GetOutputPort())
 
-            actor = vtk.vtkActor()
-            actor.SetMapper(mapper)
-            actor.GetProperty().SetColor(1, 0, 0)  # red
+                    actor = vtk.vtkActor()
+                    actor.SetMapper(mapper)
+                    actor.GetProperty().SetColor(1, 0, 0)  # red
 
-            renderer.AddActor(actor)
-            self.electrode_actors.append(actor)
+                    renderer.AddActor(actor)
+                    self.electrode_actors.append((actor, image_index, data_view, idx, z))
 
-        renderer.GetRenderWindow().Render()
+                touched_widgets.add((image_index, data_view))
+
+        self.update_electrode_marker_visibility()
+
+        for image_index, data_view in touched_widgets:
+            lm.vtk_widgets[image_index][data_view].GetRenderWindow().Render()
+
+    def update_electrode_marker_visibility(self):
+        """
+        Show a fitted-point marker only when the displayed slice is within
+        Z_VISIBILITY_TOLERANCE voxels of the point's own z index - same
+        show-only-on-your-slice convention as
+        trajectory_planning.rendering.check_points_in_slice, but with a
+        tolerance since fitted centers are sub-voxel, not exact voxel hits.
+        Called from LoadMRI.update_slices whenever the current slice changes.
+        """
+        lm = self.LoadMRI
+        for actor, image_index, data_view, idx, point_z in self.electrode_actors:
+            current_z = lm.slice_indices[idx][0]
+            actor.SetVisibility(abs(current_z - point_z) <= self.Z_VISIBILITY_TOLERANCE)
 
 
     def visualize_4Dwarpedslice(self, img_slice,spacing,data_index,data_view):
@@ -368,6 +402,130 @@ class ElectrodeLoc:
         self.actor_heatmap = actor
 
         vtk_widget.GetRenderWindow().Render()
+
+
+    def show_warped_volume(self,data_index=None,fitted_points=None):
+        """
+        Make the warped volume the main volume of a data view, in place.
+
+        The image on screen after the localisation comes from the warped file
+        (mrid_utils.warper: first timestamp resampled into the anatomical grid),
+        while volumes[data_index] is still the 4D acquisition — that mismatch is
+        why the crosshair, the scrollbar, the spinboxes and the intensity readout
+        do not fit the picture. This swaps the volume of the data view and re-runs
+        only the parts of the load that depend on its geometry, so everything stays
+        on the same page and in the same widget: no restart_gui, no layout change.
+
+        The warped volume is wrapped as a 4D MRIVolume (is_4d=True, one view name,
+        the same 3D volume in all three timestamp slots) so every `is_4d` branch in
+        Cursor, update_slices and CustomInteractorStyle keeps taking the path it
+        takes now. The array is used exactly as the file stores it — no DICOMOrient
+        — because the fitted points are indices of that file.
+
+        data_index : one data view, or None for every loaded one (up to three).
+        fitted_points : optional, only used with a single data_index — puts the
+            cursor on the first electrode so its slice is the one shown.
+        Each view is swapped once; later calls (a tag switch) are no-ops.
+        """
+        lm = self.LoadMRI
+        if not hasattr(self,'warped_swapped'):
+            self.warped_swapped = set()      # data views already swapped
+
+        views = list(lm.vtk_widgets[0].keys())
+        targets = range(len(views)) if data_index is None else [data_index]
+
+        for idx in targets:
+            if idx in self.warped_swapped or idx >= len(views):
+                continue
+            data_view = views[idx]
+            old = lm.volumes[idx]
+
+            filename = old.file_path[0:old.file_path.find('.')]
+            filename_4d_warped = ".".join((filename + "-resampled-warped", "nii", "gz"))
+            path = os.path.join(self.savepath, filename_4d_warped)
+            if not os.path.exists(path):
+                print(f"No warped volume for view {data_view} at {path}", flush=True)
+                continue
+
+            img = sitk.ReadImage(path)
+            vol = sitk.GetArrayFromImage(img)
+            if vol.ndim != 3:
+                print(f"Warped volume for view {data_view} is not 3D", flush=True)
+                continue
+
+            lm.volumes[idx] = MRIVolume(
+                file_path=path,
+                slices={0: vol, 1: vol, 2: vol},
+                DICOMOrient=old.DICOMOrient,
+                raw_DICOMOrient=old.raw_DICOMOrient,
+                view_names=[data_view],
+                spacing=img.GetSpacing()[::-1],
+                oriented_ref_image=img,
+                raw_ref_image=img,
+                is_4d=True,
+                timestamp4D=old.timestamp4D,
+            )
+            self.warped_swapped.add(idx)
+
+            # the warped volume is one static result duplicated into all three
+            # timestamp slots (see docstring) - there is no real 4D time axis
+            # left, so the timestamp controls have nothing to switch between
+            for i in range(3):
+                getattr(self.MW.ui, f"displaytimestamp_data{idx}{i}").setEnabled(False)
+                getattr(self.MW.ui, f"changetimestamp_data{idx}{i}").setEnabled(False)
+
+            # cursor: the first electrode when the points are known, else the middle
+            nz, ny, nx = vol.shape
+            if fitted_points is not None and len(fitted_points) and data_index is not None:
+                p = fitted_points[0]
+                lm.slice_indices[idx] = [
+                    int(np.clip(round(p[2]), 0, nz - 1)),
+                    int(np.clip(round(p[1]), 0, ny - 1)),
+                    int(np.clip(round(p[0]), 0, nx - 1)),
+                ]
+            else:
+                lm.slice_indices[idx] = [nz // 2, ny // 2, nx // 2]
+
+            # the layer's vtkImageData was sized for the old shape, so its pipeline
+            # has to be built again; the actors in the renderers are replaced with
+            # the new ones (same LUTs, so contrast stays wired)
+            layer = self.MW.Layers[idx][0]
+            for image_index, actor in list(layer.actors[data_view].items()):
+                renderer = lm.renderers.get(image_index, {}).get(data_view)
+                if renderer is not None:
+                    renderer.RemoveActor(actor)
+            layer.volume = lm.volumes[idx].slices
+            layer.spacing = lm.volumes[idx].spacing
+            for image_index, v in layer.volume.items():
+                layer.setup_vtk(lm.slice_indices[idx], image_index, v, data_view)
+                renderer = lm.renderers.get(image_index, {}).get(data_view)
+                if renderer is not None:
+                    renderer.AddActor(layer.actors[data_view][image_index])
+
+            # the ranges that were sized from the old volume
+            lm.cursor_ui[f"spin_x{idx}"].setMaximum(nx)
+            lm.cursor_ui[f"spin_y{idx}"].setMaximum(ny)
+            lm.cursor_ui[f"spin_z{idx}"].setMaximum(nz)
+            scroll = lm.cursor_ui.get(f"scroll_{idx}")
+            if scroll is not None:
+                scroll.blockSignals(True)
+                scroll.setRange(0, nz - 1)
+                scroll.setValue(lm.slice_indices[idx][0])
+                scroll.blockSignals(False)
+            if idx in lm.intensity_table and lm.intensity_table[idx].intensity_volumes:
+                lm.intensity_table[idx].intensity_volumes[0] = vol
+
+            # window/level: percentiles and slider maxima come from the volume
+            contrast = lm.contrast.get(idx)
+            if contrast is not None:
+                for image_index in layer.volume:
+                    contrast.recompute_luttable(image_index, idx)
+
+            self.MW.Cursor.update_cursor_display(idx)
+            self.MW.Cursor.update_cursor_lines(idx)
+            lm.update_slices(idx, data_view)
+            Zoom.fit_to_window(lm.vtk_widgets[0][data_view], lm.vtk_widgets.values(),
+                               lm.scale_bar, lm.vtk_widgets, idx)
 
 
     def get_atlas_points(self,roi_names):
