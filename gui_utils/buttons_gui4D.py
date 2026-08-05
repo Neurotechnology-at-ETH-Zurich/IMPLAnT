@@ -9,7 +9,7 @@ from gui_utils.paintbrush_gui import PaintbrushGUI
 from utils.mrid_inputdialog import MRID_InputDialog, ANAT_InputDialog,TRANSFORM_InputDialog
 from PySide6 import QtWidgets
 from core.electrode_localization import ElectrodeLoc
-from PySide6.QtWidgets import QMessageBox, QFileDialog, QDialog, QDockWidget,QVBoxLayout,QTableWidgetItem,QApplication
+from PySide6.QtWidgets import QMessageBox, QDialog, QDockWidget,QVBoxLayout,QTableWidgetItem,QApplication
 from PySide6.QtCore import Qt,QTimer
 import SimpleITK as sITK
 import numpy as np
@@ -17,6 +17,7 @@ from mplwidget import MplWidget
 from ephys.visualisation3D import Visualisation3D
 import time
 from gui_utils.busy_overlay import BusyOverlay
+from PySide6.QtGui import QKeySequence, QShortcut
 
 class PopupDialog(QDialog):
     """
@@ -57,7 +58,7 @@ class ButtonsGUI_4D:
         Set up the UI components, VTK widgets, and basic initialization for 4D mode.
         """
         file_name = self.LoadMRI.volumes[data_index].file_path
-        target = self.ui.file_name_displayed_4d
+        target = self.ui.file_name_displayed
         target.setPlainText("File loaded " + data_view.upper() + ": " + os.path.basename(file_name))
         #target.setPlainText(os.path.basename(file_name))
         target.setReadOnly(True)
@@ -101,83 +102,80 @@ class ButtonsGUI_4D:
 
     def add_other_view(self):
         """
-        Add second view of the same brain as separate data.
+        Add another 4D acquisition of the same brain (different anatomical view)
+        as separate data, i.e. in its own group box.
         """
-
         lm = self.LoadMRI
-        """ Open the initial User Dialog when the application starts. """
-        file_name, _ = QFileDialog.getOpenFileName(
-            None,
-            "Open NIfTI File",
-            "",
-            "NIfTI files (*.nii.gz)"
+        file_loader = self.MW.FileLoader
+
+        file_name = file_loader.choose_file(
+            path=os.path.dirname(lm.volumes[0].file_path),
+            add_another_file=True
         )
-
-        #User cancelled
-        if not file_name:
+        if file_name is None:
             return
 
-        #pop up asking for the view if 4D data used
-        msg_box = QMessageBox()
-        msg_box.setWindowTitle("Open Main File")
-        msg_box.setText(f"Do you want to open the file \n {file_name}?")
-        msg_box.addButton("Yes", QMessageBox.ActionRole)
-        btn_no = msg_box.addButton("No, other File", QMessageBox.ActionRole)
-        btn_cancel = msg_box.addButton("Cancel", QMessageBox.ActionRole)
-        msg_box.exec()
-        if msg_box.clickedButton()==btn_cancel:
+        image = sITK.ReadImage(file_name)
+        if image.GetDimension()!=4:
+            QMessageBox.warning(None, "Not 4D data",
+                                "Only 4D files can be added as another view.\n"
+                                "Use 'Load other image' to add a 3D file as an overlay.")
             return
-        elif msg_box.clickedButton()==btn_no:
-            self.add_other_view()
+
+        #get data_view
+        data_view = file_loader.get_data_view(file_name)
+        if data_view is None:
             return
-        else:
-            #pop up asking for the view if 4D data used
-            image = sITK.ReadImage(file_name)
-            volume = sITK.GetArrayFromImage(image)
-            if volume.ndim!=4:
-                return
-            msg_box = QMessageBox()
-            msg_box.setWindowTitle("Data view")
-            msg_box.setText("Please select the view of your 4D data")
-            btn_axial = msg_box.addButton("Axial", QMessageBox.ActionRole)
-            btn_coronal = msg_box.addButton("Coronal", QMessageBox.ActionRole)
-            btn_sagittal = msg_box.addButton("Sagittal", QMessageBox.ActionRole)
-            btn_cancel = msg_box.addButton("Cancel", QMessageBox.ActionRole)
-            msg_box.exec()
-            if msg_box.clickedButton()==btn_cancel:
-                return
-            data_view = {btn_axial: "axial", btn_coronal: "coronal", btn_sagittal: "sagittal"}.get(msg_box.clickedButton())
-            #add widgets and make them visible
-            data_index = len(lm.vtk_widgets[0])
-            lm.vtk_widgets[0].update({f"{data_view}": getattr(self.ui, f"vtkWidget_data{data_index}0")})
-            lm.vtk_widgets[1].update({f"{data_view}": getattr(self.ui, f"vtkWidget_data{data_index}1")})
-            lm.vtk_widgets[2].update({f"{data_view}": getattr(self.ui, f"vtkWidget_data{data_index}2")})
-            widget = getattr(self.ui, f"groupBox_data{data_index}")
-            widget.setVisible(True)
-            heatmap = getattr(self.ui, f"heatmap_data{data_index}")
-            heatmap.setVisible(False)
-            legend = getattr(self.ui, f"groupbox_legend{data_index}")
-            legend.setVisible(False)
+        if data_view in lm.vtk_widgets[0]:
+            QMessageBox.warning(None, "View already loaded",
+                                f"A {data_view} view is already loaded.")
+            return
 
-            #add filename to title
-            current_text = self.ui.file_name_displayed_4d.toPlainText()
-            new_text = current_text + "\nFile loaded: " + data_view.upper() + ": " + os.path.basename(file_name)
-            self.ui.file_name_displayed_4d.setPlainText(new_text)
+        data_index = len(lm.vtk_widgets[0])
+        if data_index > 2:
+            QMessageBox.warning(None, "No space left",
+                                "At most three views can be displayed at the same time.")
+            return
 
-            #self.MW.save_info_of_mainimage(data_view,data_index,file_name,True)
-            self.MW.Cursor.init_widgets(data_index,data_view)
-            self.initialize_zoom_controls(data_index)
+        #widgets have to exist before contrast/timestamps/vtk are set up
+        self.add_view_widgets(data_index, data_view)
 
-            box = getattr(self.ui, f"groupBox_data{data_index}")
-            layout = box.layout()
-            layout.setColumnStretch(0, 1)
-            layout.setColumnStretch(1, 1)
-            layout.setColumnStretch(2, 1)
-            layout.setColumnStretch(3, 0)
-            box.setTitle(f"View: {data_view.upper()}")
-            self.ui.paintbrush_dataview.addItem(data_view)
+        #load the volume, create the layer and hook it up to vtk
+        file_loader.add_data_view(file_name, data_view, data_index)
 
-            self.MW.resize(1600,1000)
+        #add filename to title
+        current_text = self.ui.file_name_displayed.toPlainText()
+        new_text = current_text + "\nFile loaded: " + data_view.upper() + ": " + os.path.basename(file_name)
+        self.ui.file_name_displayed.setPlainText(new_text)
+
+        self.ui.paintbrush_dataview.addItem(data_view)
+
+
+    def add_view_widgets(self, data_index, data_view):
+        """
+        Register the VTK widgets of a new data view and make its group box visible.
+        """
+        lm = self.LoadMRI
+        for image_index in range(len(lm.vtk_widgets)):
+            lm.vtk_widgets[image_index][data_view] = getattr(self.ui, f"vtkWidget_data{data_index}{image_index}")
+
+        box = getattr(self.ui, f"groupBox_data{data_index}")
+        box.setVisible(True)
+        box.setTitle(f"View: {data_view.upper()}")
+        getattr(self.ui, f"heatmap_data{data_index}").setVisible(False)
+        getattr(self.ui, f"groupbox_legend{data_index}").setVisible(False)
+
+        layout = box.layout()
+        layout.setColumnStretch(0, 1)
+        layout.setColumnStretch(1, 1)
+        layout.setColumnStretch(2, 1)
+        layout.setColumnStretch(3, 0)
+
+        #let Qt lay the new group box out, the renderers/minimaps need its final size
+        self.MW.resize(1600,1000)
+        QApplication.processEvents()
+
+        self.initialize_zoom_controls(data_index)
 
 
     def initialize_contrast(self,data_index,data_view):
@@ -208,7 +206,7 @@ class ButtonsGUI_4D:
         }
 
         # initialize Contrast class (for each data_view once)
-        lm.contrast[data_index] = Contrast(lm, data_index=0)
+        lm.contrast[data_index] = Contrast(lm, data_index=data_index)
 
         self.LoadMRI.contrast_ui_elements[data_index]["brightness0"].valueChanged.connect(
             lambda value: self.LoadMRI.contrast[data_index].changed_sliders(value, image_index=0) # lm.contrastClass.changed_sliders(value,image_index=0)
@@ -249,6 +247,15 @@ class ButtonsGUI_4D:
 
         self.ui.contrast_data.setItemEnabled(data_index, True)
         self.ui.contrast_data.setItemText(data_index, data_view.upper())
+
+        if data_index == 0:
+            ctrl_j = QShortcut(QKeySequence("Ctrl+J"), self.MW)
+            ctrl_j.setContext(Qt.ApplicationShortcut)
+            ctrl_j.activated.connect(lambda: [
+                self.LoadMRI.contrast[di].auto(image_index=i)
+                for di in self.LoadMRI.contrast
+                for i in range(3)
+            ])
 
     def initialize_cursor(self,data_index):
         """
@@ -390,7 +397,7 @@ class ButtonsGUI_4D:
         camera.SetFocalPoint(fp[data_view])
         camera.SetPosition(pos[data_view])
 
-        self.LoadMRI.update_slices(image_index,data_index,data_view)
+        self.LoadMRI.update_slices(data_index,data_view)
 
         groupBox = getattr(self.ui, f"groupBox_time{data_index}{image_index}")
         title = f"Timestamp t={value}"
@@ -406,7 +413,6 @@ class ButtonsGUI_4D:
         Continue MRID-tag workflow by saving data and updating GUI navigation.
         """
         if self.ui.stackedWidget_4D.currentIndex() == 0:
-
             self.LoadMRI.vtk_widgets_legend = {}
             for idx in range(len(self.LoadMRI.vtk_widgets[0])):
                 data_view = list(self.LoadMRI.vtk_widgets[0].keys())[idx]
@@ -451,13 +457,16 @@ class ButtonsGUI_4D:
                         roi_indices = np.unique(self.MW.Paintbrush.label_volume[i])
                         self.LoadMRI.mrid_tags.update_heatmap(data_view,idx,roi_indices)
 
-        if self.ui.stackedWidget_4D.currentIndex() == 0:
-            self.LoadMRI.PaintbrushGUI.brush_4D(True,label=False)
+            self.LoadMRI.PaintbrushGUI.brush_4D(self.MW.ui.checkBox_Brush_MRID.isChecked(),label=False)
 
-        if self.ui.stackedWidget_4D.currentIndex() == 1:
+        else:
             self.LoadMRI.PaintbrushGUI.brush_4D(False,label=False) #cursor on
             #close all paintbrush tings
             self.dock.close()
+            # heavy work for this step is done; drop the busy overlay before the
+            # decision popups so they aren't shown over a dimmed screen and so a
+            # Cancel can't strand the overlay (the gaussian step shows its own overlay)
+            self.overlay.close()
             msg_box = QMessageBox()
             msg_box.setWindowTitle("Heatmap Generation Finsihed")
             msg_box.setText('MRID tags and anatomical regions were successfully identified. Segmentation, Anat and heatmap files were saved. \n Press START if you want to start with the Electrode Localization. \n Press Cancel to not directly start it. You can later do this through the Menu 4D Tools/Electrode Localization.')
@@ -467,13 +476,22 @@ class ButtonsGUI_4D:
             if msg_box.clickedButton()==btn_cancel:
                 return
 
-            self.activate_get_gaussian_analysis()
+            dlg_transform = TRANSFORM_InputDialog(self.MW)
+            if dlg_transform.exec() == QtWidgets.QDialog.DialogCode.Accepted:
+                self.transformation_files = dlg_transform.get_values()
+                self.overlay = BusyOverlay(self.MW, message="Gaussian Analysis, please wait…")
+                self.overlay.raise_()
+                self.overlay.show()
+                self.overlay.repaint()
+                QApplication.processEvents()
+                self.activate_get_gaussian_analysis()
 
         self.ui.stackedWidget_4D.setCurrentIndex(self.ui.stackedWidget_4D.currentIndex()+1)
         self.overlay.close()
 
     def start_overlay(self):
-        self.overlay = BusyOverlay(self.MW, message="Processing, please wait…")
+        self.overlay = BusyOverlay(self.MW, message="Creating Heatmap, please wait…")
+        self.overlay.raise_()
         self.overlay.show()
         self.overlay.repaint()
         QApplication.processEvents()
@@ -594,7 +612,8 @@ class ButtonsGUI_4D:
         if dlg_transform.exec() == QtWidgets.QDialog.DialogCode.Accepted:
             self.transformation_files = dlg_transform.get_values()
 
-            self.overlay = BusyOverlay(self.MW, message="Processing, please wait…")
+            self.overlay = BusyOverlay(self.MW, message="Gaussian Analysis, please wait…")
+            self.overlay.raise_()
             self.overlay.show()
             self.overlay.repaint()
             QApplication.processEvents()
@@ -608,13 +627,24 @@ class ButtonsGUI_4D:
         #POPUP
         msg_box = QMessageBox()
         msg_box.setWindowTitle("Electrode Localization")
-        msg_box.setText("All Files warped and Gaussian Centers Warped. \n Press CONTINUE to receive final Electrode Localization.")
-        msg_box.addButton("CONTINUE", QMessageBox.ActionRole)
+        msg_box.setText("All Files warped and Gaussian Centers Warped. \n Press CONTINUE to recieve final Electrode Localization.")
+        btn_cont = msg_box.addButton("CONTINUE", QMessageBox.ActionRole)
         btn_cancel = msg_box.addButton("Cancel", QMessageBox.ActionRole)
         msg_box.exec()
         if msg_box.clickedButton()==btn_cancel:
+            self.overlay.close()
             return
-        self.activate_electrode_localisation()
+        if msg_box.clickedButton()==btn_cont:
+            # this reuses the still-open Gaussian Analysis overlay instead of
+            # going through electrode_localisation() (which would create a
+            # fresh one) - the modal msg_box above can leave it stacked behind
+            # other widgets, so it needs both a message update and a re-raise
+            self.overlay.set_message("Localising Electrodes, please wait…")
+            self.overlay.raise_()
+            self.overlay.show()
+            self.overlay.repaint()
+            QApplication.processEvents()
+            self.activate_electrode_localisation()
 
 
     def electrode_localisation(self):
@@ -622,7 +652,8 @@ class ButtonsGUI_4D:
             Final localisation
             Takes the Coordinates and finds the best-fit to the real-life tag geometry.
         """
-        self.overlay = BusyOverlay(self.MW, message="Processing, please wait…")
+        self.overlay = BusyOverlay(self.MW, message="Localising Electrodes, please wait…")
+        self.overlay.raise_()
         self.overlay.show()
         self.overlay.repaint()
         QApplication.processEvents()
@@ -638,15 +669,13 @@ class ButtonsGUI_4D:
             data_view = list(self.LoadMRI.vtk_widgets[0].keys())[idx]
             self.LoadMRI.vtk_widgets[3][data_view]= getattr(self.ui,f"vtkWidget_data{idx}3")
 
-        start = time.time()
         result = self.LoadMRI.ElectrodeLoc.getCoordinates()
-        end = time.time()
-        print(f"Elapsed: {end - start:.4f} seconds",flush=True)
 
         if result is None:
             return
         else:
             roi_names,self.totaldf,self.totalbarcode_r,self.totalbarcode_d,self.totalmrid, self.totalCA1,self.totaldwi1Dsignal,self.totalregionNames,self.totalpyrChIdx,self.fitted_points,self.chMap,self.totalatlasCoordinates_pkl = result
+
 
         for idx in range(len(self.LoadMRI.vtk_widgets[0])):
             getattr(self.ui, f"groupBox_time{idx}1").setVisible(False)
@@ -656,6 +685,7 @@ class ButtonsGUI_4D:
             getattr(self.ui, f"tabWidget_time{idx}").setCurrentIndex(0)
             getattr(self.ui, f"tabWidget_time{idx}").tabBar().setVisible(False)
             getattr(self.ui, f"gridLayout_data{idx}").addWidget(getattr(self.ui, f"groupBox_time{idx}0"), 0, 0, 1, 3)
+
 
         self.ui.stackedWidget_4D.setCurrentIndex(self.ui.stackedWidget_4D.currentIndex()+1)
 
@@ -716,15 +746,35 @@ class ButtonsGUI_4D:
         self.ca1_popup = None
         self.fill_table_and_plots(0)
 
-        self.ui.comboBox_mridBarcodes.currentIndexChanged.connect(lambda index: self.fill_table_and_plots(index))
+        self.ui.comboBox_mridBarcodes.currentIndexChanged.connect(lambda index: self.activate_fill_table_and_plots(index))
 
         self.overlay.close()
 
 
 
-    def fill_table_and_plots(self,index):
-        #fill table and plot barcodes
+    def activate_fill_table_and_plots(self,index):
+        self.overlay = BusyOverlay(self.MW, message="Changing Shank, please wait…")
+        self.overlay.raise_()
+        self.overlay.show()
+        self.overlay.repaint()
+        QApplication.processEvents()
+        QTimer.singleShot(50, lambda: self.fill_table_and_plots(index))
 
+    def fill_table_and_plots(self,index):
+        # the switch can come from the barcode combobox, from the tag combobox in
+        # the 3D view or from clicking another shank there, so put both on this
+        # shank. Both are filled from totalmrid in order, so the index carries
+        # over directly; signals are blocked because either would re-enter here.
+        combos = [self.ui.comboBox_mridBarcodes]
+        if hasattr(self.LoadMRI,'Visualisation3D'):
+            combos.append(self.LoadMRI.Visualisation3D.comboBox_mrid)
+        for combo in combos:
+            if combo.currentIndex() != index:
+                combo.blockSignals(True)
+                combo.setCurrentIndex(index)
+                combo.blockSignals(False)
+
+        #fill table and plot barcodes
         df = self.totaldf[index]
         barcode_r = self.totalbarcode_r[index]
         barcode_d = self.totalbarcode_d[index]
@@ -743,8 +793,11 @@ class ButtonsGUI_4D:
             intensity_item.setFlags(intensity_item.flags() & ~Qt.ItemIsEditable)
             table.setItem(1,i, intensity_item)
 
+        # rows and columns divide the widget instead of hugging their text, so the
+        # grid fills the table height rather than leaving empty space below it
+        table.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.Stretch)
+        #table.verticalHeader().setSectionResizeMode(QtWidgets.QHeaderView.Stretch)
         table.resizeColumnsToContents()
-        table.resizeRowsToContents()
 
         # detected barcode
         [barcode_design, ticks2, tickLabels2] = barcode_d
@@ -833,18 +886,22 @@ class ButtonsGUI_4D:
             self.ui.ca1_signal_widget.canvas.draw()
 
         if hasattr(self.LoadMRI,'Visualisation3D'):
-            self.LoadMRI.Visualisation3D.index = index
             self.session_path = self.LoadMRI.session_path
-            #table and combobox
-            index = self.LoadMRI.Visualisation3D.comboBox_mrid.findText(self.totalmrid[index])
-            if index != -1:
-                self.LoadMRI.Visualisation3D.comboBox_mrid.setCurrentIndex(index)
-            del self.LoadMRI.Visualisation3D.chMap
-            #self.LoadMRI.Visualisation3D.delete_volumes(self.totalmrid[index],0, 0) #new_label_idx?
+            # `index` indexes totalmrid/chMap and must stay that way — the tag
+            # combobox is synced by initialize_mridTag itself (signals blocked),
+            # so nothing here reassigns it to a combobox position
+            self.mrid_index = index
             self.LoadMRI.Visualisation3D.index = index
-            self.LoadMRI.Visualisation3D.spinbox.blockSignals(True)
+            del self.LoadMRI.Visualisation3D.chMap
+            # the channel spinbox only exists in the ephys view; it is None in the
+            # electrode-localisation one (Visualisation3D.__init__), same as in
+            # InitEphys.open_dat_newly
+            spinbox = self.LoadMRI.Visualisation3D.spinbox
+            if spinbox is not None:
+                spinbox.blockSignals(True)
             self.LoadMRI.Visualisation3D.initialize_mridTag(self.totalmrid[index],chMap=self.chMap[index])
-            self.LoadMRI.Visualisation3D.spinbox.blockSignals(False)
+            if spinbox is not None:
+                spinbox.blockSignals(False)
 
             self.LoadMRI.Visualisation3D.manually_pick_point(point=[],idx=self.chMap[index][0])
             self.LoadMRI.Visualisation3D.plotter.enable_parallel_projection()
@@ -855,6 +912,8 @@ class ButtonsGUI_4D:
             self.LoadMRI.Visualisation3D.initialize_mridTag(self.totalmrid[index],chMap=self.chMap[index])
 
         self.LoadMRI.ElectrodeLoc.add_point(self.fitted_points[index])
+
+        self.overlay.close()
 
 
     def contrast_adjustments(self):
