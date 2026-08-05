@@ -145,7 +145,7 @@ class LoadMRI(QObject):
 
 
 
-    def update_slices(self,image_index:int,data_index,data_view):
+    def update_slices(self,data_index,data_view):
         """
         Refresh all slice views (axial, coronal, sagittal) based on current slice indices.
         Handles threshold overlays and distance measurement visibility.
@@ -156,9 +156,12 @@ class LoadMRI(QObject):
             layer = self.Layers[0][self.SegmentationGUI.layer_index]
             layer.update_vtk([z,y,x])
         else:
-            for data_index, layers in self.Layers.items():
-                for layer_index, layer in layers.items():
-                    layer.update_vtk([z,y,x])
+            # only the data set that moved: [z,y,x] is slice_indices[data_index],
+            # so applying it to every data set's layers would drag the other 4D
+            # views along when one of them is scrolled. Each layer updates all of
+            # its own image panels (timestamps) itself, see ImageLayer.update_vtk.
+            for layer in self.Layers[data_index].values():
+                layer.update_vtk([z,y,x])
 
         #measurement
         if hasattr(self.MW,'Measurement'):
@@ -168,6 +171,10 @@ class LoadMRI(QObject):
         if hasattr(self,'TrajPlanning'):
             self.TrajPlanning.check_points_in_slice()
 
+        #Electrode Localization
+        if hasattr(self,'ElectrodeLoc'):
+            self.ElectrodeLoc.update_electrode_marker_visibility()
+
         #Segmentation
         if hasattr(self,'segmentation_mask'):
             self.SegEvolution.update_evolution_initializtion()
@@ -175,7 +182,12 @@ class LoadMRI(QObject):
             self.SegInitialization.update_bubbles_visible()
 
         #Heatmap
-        if hasattr(self,'mrid_tags') and hasattr(self.mrid_tags,'actor_heatmap'):
+        # actor_heatmap is filled per data set as each heatmap is built, so the
+        # attribute existing says nothing about THIS data set having one — a data
+        # view without a heatmap simply has nothing to refresh here.
+        mrid_tags = getattr(self, 'mrid_tags', None)
+        heatmap_actor = getattr(mrid_tags, 'actor_heatmap', {}).get(data_index)
+        if heatmap_actor is not None and data_index in self.mrid_tags.heatmap_nii:
             raw = self.mrid_tags.heatmap_nii[data_index][z, :, :]
             slice_img = np.fliplr(raw) if self.Layers[data_index][0].flip else raw
             # Always flatten in Fortran order for VTK
@@ -187,8 +199,8 @@ class LoadMRI(QObject):
             img_vtk.SetSpacing(spacing)
             img_vtk.GetPointData().SetScalars(vtk_data)
 
-            self.mrid_tags.actor_heatmap[data_index].SetInputData(img_vtk)
-            self.mrid_tags.actor_heatmap[data_index].Modified()
+            heatmap_actor.SetInputData(img_vtk)
+            heatmap_actor.Modified()
             #self.vtk_widgets_heatmap['axial'].GetRenderWindow().Render()
             self.mrid_tags.add_legend(slice_img,False,data_index)
 

@@ -375,10 +375,10 @@ class Cursor:
 
         # Refresh all
         if not lm.volumes[0].is_4d:
-            lm.update_slices(0,data_index,view_name)
+            lm.update_slices(data_index,view_name)
         else:
-            for i in 0,1,2:
-                lm.update_slices(i,data_index,view_name)
+            #for i in 0,1,2:
+            lm.update_slices(data_index,view_name)
 
         self.update_cursor_display(data_index)
         if view_name not in self.cursor_lines:
@@ -413,10 +413,9 @@ class Cursor:
                 lm.slice_indices[data_index][2] = np.clip(lm.slice_indices[data_index][2] + delta, 0, lm.volumes[data_index].slices[0].shape[2]-1)
         # Refresh all
         if not lm.volumes[0].is_4d:
-            lm.update_slices(0,data_index,view_name)
+            lm.update_slices(data_index,view_name)
         else:
-            for i in 0,1,2:
-                lm.update_slices(i,data_index,view_name)
+            lm.update_slices(data_index,view_name)
 
         self.update_cursor_display(data_index)
         self.update_cursor_lines(data_index)
@@ -434,10 +433,9 @@ class Cursor:
 
         # Refresh all
         if not self.LoadMRI.volumes[0].is_4d:
-            self.LoadMRI.update_slices(0,data_index,view_name)
+            self.LoadMRI.update_slices(data_index,view_name)
         else:
-            for i in 0,1,2:
-                self.LoadMRI.update_slices(i,data_index,view_name)
+            self.LoadMRI.update_slices(data_index,view_name)
         self.update_cursor_display(data_index)
         self.update_cursor_lines(data_index)
 
