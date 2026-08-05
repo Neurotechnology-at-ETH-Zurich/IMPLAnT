@@ -35,6 +35,8 @@ class MRID_tags(QObject):
         self.heatmap_sim_raw = {}
         self.heatmap_per_roi = {}
         self.heatmap_nii = {}
+        # per data set, filled as each heatmap is built (see visualize_heatmap)
+        self.actor_heatmap = {}
         #self.heatmap_slice = {}
         for idx in range(len(self.LoadMRI.vtk_widgets[0])):
             self.heatmap_sim_raw[idx] = np.zeros((self.LoadMRI.volumes[0].slices[0].shape[2], self.LoadMRI.volumes[0].slices[0].shape[1],self.LoadMRI.volumes[0].slices[0].shape[0]))
@@ -174,8 +176,8 @@ class MRID_tags(QObject):
                 label_volume[label_volume <= self.num_regions] = 0
                 img = sitk.GetImageFromArray(label_volume)
 
-            img.CopyInformation(self.LoadMRI.volumes[0].oriented_ref_image)
-            label_image = sitk.DICOMOrient(img, "".join(self.LoadMRI.volumes[0].raw_DICOMOrient))
+            img.CopyInformation(self.LoadMRI.volumes[data_index].oriented_ref_image)
+            label_image = sitk.DICOMOrient(img, "".join(self.LoadMRI.volumes[data_index].raw_DICOMOrient))
 
 
             # Suggest a default name (for example, based on the original file name)
@@ -347,7 +349,10 @@ class MRID_tags(QObject):
             reset_camera = True
 
         if reset_camera:
-            self.actor_heatmap = {}
+            # only this data set's actor is rebuilt below — clearing the whole
+            # dict would drop the actors of the other data views, which
+            # update_slices then cannot refresh any more
+            self.actor_heatmap.pop(data_index, None)
             self.LoadMRI.renderers[3]={}
             renderer,img_vtk = self.open_mainimage(vtk_widget,vtk_data, spacing,w,h,view_name,data_index)
 
