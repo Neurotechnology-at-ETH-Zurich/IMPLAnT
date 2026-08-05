@@ -83,6 +83,7 @@ class SpikeRuster(QWidget):
         ids = self._unit_ids if self._unit_ids is not None else []
         unit_channel = getattr(self, '_unit_channel', {})
         rows = [i for i, uid in enumerate(ids) if unit_channel.get(uid) == channel]
+        self._highlighted_rows = rows
         if channel is not None and rows:
             self._highlight_band.setRegion((min(rows) - 0.5, max(rows) + 0.5))
             self._highlight_band.setVisible(True)
