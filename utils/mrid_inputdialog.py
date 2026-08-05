@@ -446,12 +446,8 @@ class TRANSFORM_InputDialog(QDialog):
             "",
             "Text files (*.txt)"
         )
-        if len(files)==1:
-            transformation_files = [os.path.splitext(f)[0] for f in files]
-            #self.transformation_files[data_index] = transformation_files[0]
-            self.transformation_files[data_index].append(transformation_files[0])
-        elif files:
-            self.transformation_files[data_index].append([os.path.splitext(f)[0] for f in files])
+        if files:
+            self.transformation_files[data_index].extend(os.path.splitext(f)[0] for f in files)
         text = "The following files were selected:\n" + "\n".join(files)
         self.file_line_txt[data_index].setPlainText(text)
         self._update_ok()

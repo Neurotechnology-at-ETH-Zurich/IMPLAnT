@@ -331,6 +331,10 @@ class Minimap:
         Panning images when GUI arrows are used.
         """
         renderer = self.LoadMRI.renderers[0][view_name].GetRenderWindow().GetRenderers().GetFirstRenderer()
+        if renderer is None:
+            # nothing drawn into the reference (image 0) renderer yet — same
+            # race as the per-widget guard below, just hit before the loop.
+            return
         camera = renderer.GetActiveCamera()
         scale = camera.GetParallelScale()
         fp = camera.GetFocalPoint()
@@ -351,6 +355,8 @@ class Minimap:
                 for idx, (vn, widget) in enumerate(vtk_widget_image.items()):
                     if idx==data_index:
                         renderer = widget.GetRenderWindow().GetRenderers().GetFirstRenderer()
+                        if renderer is None:
+                            continue   # widget registered, nothing drawn into it yet
                         camera = renderer.GetActiveCamera()
                         camera.ParallelProjectionOn()
                         camera.SetParallelScale(scale)

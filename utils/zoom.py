@@ -67,8 +67,8 @@ class Zoom:
         # Apply relative factor to the other views
         for image_index,vtk_widget_image in vtk_widgets_dict.items():
             for idx, (vn, widget) in enumerate(vtk_widget_image.items()):
-                #if image_index!=data_index and not data_3d:
-                #    continue
+                if idx!=data_index and not data_3d:
+                    continue
 
                 if widget == vtk_widget:
                     if image_index==0:
@@ -124,6 +124,11 @@ class Zoom:
                     continue
                 widget = vtk_widgets_dict[image_index][vn]
                 renderer = widget.GetRenderWindow().GetRenderers().GetFirstRenderer()
+                if renderer is None:
+                    # a registered widget can have no renderer yet — the 4th
+                    # localisation panel is put into vtk_widgets before anything is
+                    # drawn into it. Same guard as fit_to_window above.
+                    continue
                 camera = renderer.GetActiveCamera()
                 camera.ParallelProjectionOn()
 
