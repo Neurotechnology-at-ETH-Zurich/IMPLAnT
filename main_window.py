@@ -3,6 +3,13 @@
 import os
 os.environ.setdefault('QT_QPA_PLATFORM', 'xcb')
 import sys
+import warnings
+# pandas 1.5.x calls np.find_common_type internally, which numpy 1.25+ deprecated.
+# It's cosmetic (nothing breaks); silence just that one message, not all warnings.
+warnings.filterwarnings(
+    'ignore', message='np.find_common_type is deprecated',
+    category=DeprecationWarning,
+)
 import json as _json
 _base_dir = getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__)))
 _exe_dir = os.path.dirname(sys.executable) if getattr(sys, 'frozen', False) else _base_dir
@@ -22,6 +29,7 @@ from gui_utils.busy_overlay import BusyOverlay
 from PySide6 import QtWidgets
 from ephys.init_ephys import InitEphys
 from PySide6.QtCore import Qt, QCoreApplication, QResource
+from PySide6.QtWidgets import QLayout
 import qdarkstyle
 from utils.zoom import Zoom
 import shutil
@@ -36,7 +44,8 @@ import pandas as pd
 from file_handling.loader import FileLoader
 from file_handling.resample_data import ResampleData
 from PySide6.QtGui import QIcon
-
+import subprocess
+from PySide6.QtCore import QTimer
 
 class MainWindow(QMainWindow):
     """
@@ -51,8 +60,9 @@ class MainWindow(QMainWindow):
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
         self.setWindowTitle("IMPLAnT")
-        self.setWindowIcon(QIcon(os.path.join(_base_dir, "Icons/Github/IMPLAnT_logo.png")))
+        self.setWindowIcon(QIcon(os.path.join(_base_dir, "Icons/Github/IMPLAnT_quad.png")))
         self.add_actions()
+        self.ui.tabWidget.setCurrentIndex(0)
 
     def add_actions(self):
         """
@@ -61,6 +71,7 @@ class MainWindow(QMainWindow):
         #hide tab bars
         self.ui.tabWidget.tabBar().setVisible(False)
         self.ui.tabWidget_visualisation.tabBar().setVisible(False)
+        self.ui.tabWidget_visualisation.setCurrentIndex(0)
 
         #only show one row of views and center the three visible widgets
         box = self.ui.page_3D
@@ -95,6 +106,7 @@ class MainWindow(QMainWindow):
         self.ui.actionOpen.triggered.connect(self.initialize_mri_session)
         self.ui.actionOpen_ephys_Data.triggered.connect(self.open_ephys_data)
         self.ui.actionQuit.triggered.connect(self.quit)
+        self.ui.actionNew_Window.triggered.connect(self.open_new_window)
         self.ui.actionStart_SAMRI_process.triggered.connect(self.initialize_samri)
         self.ui.actionTrajectory_Planning.triggered.connect(self.initialize_trajectory_planning)
 
@@ -128,16 +140,29 @@ class MainWindow(QMainWindow):
             self.open_ephys_data()
             return
 
+        # the recording's .xml (same name as the .dat) is required to load ephys data
+        xml_path = file_name.replace('.dat', '.xml')
+        if not os.path.exists(xml_path):
+            QMessageBox.critical(
+                self, "XML file not found",
+                f"No matching XML file was found:\n{xml_path}\n\n"
+                "The recording's .xml file (same name as the .dat) is required to "
+                "load the ephys data. Please make sure it is in the same folder."
+            )
+            return
+
         self.ui.dockWidget_ephys.setVisible(True)
         self.ui.stackedWidget_video.setCurrentIndex(1)
         self.ui.textEdit_ephys.setText(f"File loaded: {file_name}")
         self.ui.tabWidget.setCurrentIndex(3)
-        self.overlay = BusyOverlay(self, message="Processing, please wait…")
+        self.overlay = BusyOverlay(self, message="Loading ephys data, please wait…")
         self.overlay.run(self.do_ephys_heavy, file_name)
 
     def do_ephys_heavy(self, file_name):
         self.Ephys = InitEphys(self, file_name)
         self.Ephys.open_dat(file_name)
+        #ask about the spike cluster plot once the busy overlay is gone
+        QTimer.singleShot(0, self.Ephys.prompt_spike_sorting)
 
 
     def resizeEvent(self, event):
@@ -199,7 +224,6 @@ class MainWindow(QMainWindow):
         #barcode sachen
         self.ui.vtkWidget_ephys.GetRenderWindow().Render()
 
-
         if hasattr(self, 'LoadMRI'):
             if hasattr(self.LoadMRI,'minimap') and not self.LoadMRI.volumes[0].is_4d:
                 for data_index, layers in self.Layers.items():
@@ -211,25 +235,26 @@ class MainWindow(QMainWindow):
                     img_vtk = layers[0].img_vtks["sagittal"][0]
                     self.LoadMRI.minimap.add_minimap('sagittal',img_vtk,0,self.LoadMRI.vtk_widgets[0]["sagittal"],0,data_3d=True)
             else:
-                if hasattr(self.LoadMRI, 'vtk_widgets'):
-                    for data_index in range(len(self.LoadMRI.vtk_widgets[0])):
+                if hasattr(self.LoadMRI, 'vtk_widgets') and hasattr(self.LoadMRI, 'minimap'):
+                    #each data_index has exactly one view, in the order the views were loaded
+                    for data_index, view_name in enumerate(self.LoadMRI.vtk_widgets[0].keys()):
+                        #a view being added is registered before its layer exists
+                        if data_index not in self.Layers or 0 not in self.Layers[data_index]:
+                            continue
                         for image_index,vtk_widget_image in self.LoadMRI.vtk_widgets.items():
-                            if "CORONAL" in self.ui.groupBox_data0.title():
-                                view_name = "coronal"
-                            elif "AXIAL" in self.ui.groupBox_data0.title():
-                                view_name = "axial"
-                            elif "SAGITTAL" in self.ui.groupBox_data0.title():
-                                view_name = "sagittal"
+                            if image_index not in self.LoadMRI.minimap.minimap_renderers or view_name not in vtk_widget_image:
+                                continue
                             img_vtk = self.Layers[data_index][0].img_vtks[view_name][image_index]
                             self.LoadMRI.minimap.add_minimap(view_name,img_vtk,image_index,vtk_widget_image[view_name],data_index)
 
 
-    def add_another_file(self):
+    def add_another_file(self,path=None):
         """
         Triggered if another file is uploaded by the user, saves it as highest layer.
         """
         self.FileLoader.layer_index += 1
-        file_name, data_view = self.FileLoader.open_user_dialog(layer_index=self.FileLoader.layer_index,add_another_file=True)
+        print("path",path,flush=True)
+        file_name, data_view = self.FileLoader.open_user_dialog(layer_index=self.FileLoader.layer_index,add_another_file=True,path=path)
         if file_name is None:
             return
 
@@ -271,16 +296,25 @@ class MainWindow(QMainWindow):
         self.log_adapter = LogAdapter(self.ui.plainTextEdit_SAMRI)
         self.log_adapter.install(level=logging.INFO)
 
+        overlay = BusyOverlay(self, "Fetching data from server…")
+        overlay.setGeometry(self.rect())
+        overlay.raise_()
+        overlay.show()
+        QApplication.processEvents()
+
         self.worker = SamriWorker(work_init, self)
         self.worker.done.connect(lambda: logging.info("Ready for Biascorrection or Registration"))
         self.worker.done.connect(self.on_bruker2bids_done)
+        self.worker.done.connect(overlay.close)
         self.worker.failed.connect(lambda tb: logging.error(tb))
+        self.worker.failed.connect(overlay.close)
         self.worker.start()
 
     def on_bruker2bids_done(self):
         #Pop up for registration
         self.ui.frame_samri.setEnabled(True)
         self.Samri_input = SAMRI_InputDock(self)
+        self.Samri.output_filepath = ""
 
 
     def start_registration(self,samri_input):
@@ -330,43 +364,120 @@ class MainWindow(QMainWindow):
                     if msg_box.clickedButton() == btn_retry:
                         samri_input['num_threads'] = new_threads
                         self.start_registration(samri_input)
+                else:
+                    msg_box = QMessageBox(self)
+                    msg_box.setWindowTitle("Registration failed")
+                    msg_box.setText("Registration encountered an error.")
+                    msg_box.setDetailedText(tb)
+                    msg_box.addButton("OK", QMessageBox.ActionRole)
+                    msg_box.setWindowFlags(msg_box.windowFlags() & ~Qt.MSWindowsFixedSizeDialogHint)
+                    msg_box.setSizeGripEnabled(True)
+                    msg_box.layout().setSizeConstraint(QLayout.SetNoConstraint)
+                    msg_box.exec()
 
             self.worker = SamriWorker(work_registration, self)
-            #visualize end data
+            overlay = BusyOverlay(self, message="Registering, please wait…")
+            overlay.setGeometry(self.rect())
+            overlay.raise_()
+            overlay.show()
+            self.worker.done.connect(overlay.close)
             self.worker.done.connect(
-                lambda: self.Samri.visualize_results(self,logging)
+                lambda: self.Samri.visualize_results(self, logging)
             )
+            self.worker.done.connect(self._on_registration_done)
+            self.worker.failed.connect(overlay.close)
             self.worker.failed.connect(
                 lambda tb: on_registration_failed(tb, samri_input['num_threads'])
             )
             self.worker.start()
         elif samri_input["biascorrection"]:
-            self.ui.dockWidget_ephys.setEnabled(False)
-            self.Samri.biascorrection(samri_input)
+            def work_bias():
+                self.ui.dockWidget_ephys.setEnabled(False)
+                self.Samri.biascorrection(samri_input)
 
-        #ask to start trajectory planning
-        #debugging purpose
-        #self.Samri.visualize_results(self)
+            if hasattr(self, 'worker') and self.worker is not None:
+                try:
+                    self.worker.done.disconnect()
+                    self.worker.failed.disconnect()
+                except Exception:
+                    pass
+                self.worker = None
+
+            overlay = BusyOverlay(self, message="Bias correction, please wait…")
+            overlay.setGeometry(self.rect())
+            overlay.raise_()
+            overlay.show()
+            def _on_biascorrection_failed(tb):
+                logging.error(tb)
+                msg_box = QMessageBox(self)
+                msg_box.setWindowTitle("Bias correction failed")
+                msg_box.setText("Bias correction encountered an error.")
+                msg_box.setDetailedText(tb)
+                msg_box.addButton("OK", QMessageBox.ActionRole)
+                msg_box.setWindowFlags(msg_box.windowFlags() & ~Qt.MSWindowsFixedSizeDialogHint)
+                msg_box.setSizeGripEnabled(True)
+                msg_box.layout().setSizeConstraint(QLayout.SetNoConstraint)
+                msg_box.exec()
+
+            self.worker = SamriWorker(work_bias, self)
+            self.worker.done.connect(overlay.close)
+            self.worker.done.connect(self._on_biascorrection_done)
+            self.worker.failed.connect(overlay.close)
+            self.worker.failed.connect(_on_biascorrection_failed)
+            self.worker.start()
+
+    def _copy_sub_to_data(self):
+        """Copy DATA/Samri Registration/animal_id/bids/sub-animal_id → DATA/sub-animal_id."""
+        try:
+            src = os.path.join(self.Samri.bids_base, 'bids', f'sub-{self.Samri.animal_id}')
+            dst = os.path.join(self.Samri.data_base, f'sub-{self.Samri.animal_id}')
+            if os.path.exists(src):
+                if os.path.exists(dst):
+                    shutil.rmtree(dst)
+                shutil.copytree(src, dst)
+        except Exception as e:
+            logging.error(f"Failed to copy sub folder to DATA: {e}")
+
+    def _on_registration_done(self):
+        self._copy_sub_to_data()
+        msg = QMessageBox(self)
+        msg.setWindowTitle("Registration complete")
+        msg.setText("Done with Registration")
+        btn_ok = msg.addButton("OK", QMessageBox.ActionRole)
+        btn_ok.setMinimumWidth(200)
+        msg.exec()
+
+
+    def _on_biascorrection_done(self):
+        self._copy_sub_to_data()
+        msg = QMessageBox(self)
+        msg.setWindowTitle("Bias correction complete")
+        msg.setText("Done with Biascorrection")
+        msg.addButton("OK", QMessageBox.ActionRole)
+        msg.exec()
 
     def initialize_trajectory_planning(self):
         dlg = FileInput(self)
         if dlg.exec() == QtWidgets.QDialog.DialogCode.Accepted:
             data = dlg.get_values()
 
-            folder = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(data[0])))))
-            csv_path = f"{folder}/results/generic_work/data_selection.csv"
+            folder = os.path.dirname(os.path.dirname(os.path.dirname(data[0])))
+            csv_path = f"{folder}/data_selection.csv"
             df = pd.read_csv(csv_path, index_col=0)
             matches = df.loc[df['path'] == data[0]]
-            if matches.empty:
-                msg_box = QMessageBox()
-                msg_box.setWindowTitle("No Transformation File found")
-                msg_box.setText("No Transformation File found, please first do SAMRI Registration.")
-                msg_box.addButton("OK", QMessageBox.ActionRole)
-                msg_box.exec()
-                self.initialize_samri()
-                return
-            idx = matches.index[0]
-            transformPath = f"{folder}/results/generic_work/_ind_type_{idx}/s_register/output_Composite.h5"
+            print(df['path'], data[0],matches,flush=True)
+            #if matches.empty:
+            #    msg_box = QMessageBox()
+            #    msg_box.setWindowTitle("No Transformation File found")
+            #    msg_box.setText("No Transformation File found, please first do SAMRI Registration.")
+            #    msg_box.addButton("OK", QMessageBox.ActionRole)
+            #    msg_box.exec()
+            #    self.initialize_samri()
+            #    return
+            #idx = matches.index[0]
+            folder = os.path.dirname(os.path.dirname(data[0]))
+            transformPath = f"{folder}/registration/output_Composite.h5"
+            print(transformPath,transformPath,flush=True)
             if not os.path.exists(transformPath):
                 msg_box = QMessageBox()
                 msg_box.setWindowTitle("No Transformation File found")
@@ -376,7 +487,7 @@ class MainWindow(QMainWindow):
                 self.initialize_samri()
                 return
 
-            self.overlay = BusyOverlay(self, message="Processing, please wait…")
+            self.overlay = BusyOverlay(self, message="Initializing trajectory planning, please wait…")
             self.overlay.run(self.finish_trajectory_work,data, transformPath)
 
 
@@ -414,7 +525,11 @@ class MainWindow(QMainWindow):
 
         #self.overlay.close()
 
-    def restart_gui(self, file_name, full_restart=True,label_file=False,data_view='coronal'):
+    def open_new_window(self):
+        subprocess.Popen([sys.executable] + sys.argv)
+
+
+    def restart_gui(self, file_name, full_restart=True, label_file=False, data_view='coronal'):
         """
         Restart GUI if new main image is loaded.
         """
@@ -463,15 +578,27 @@ class MainWindow(QMainWindow):
                     getattr(self.ui, f"go_right_data3d{idx}").clicked.disconnect()
                     getattr(self.ui, f"go_left_data3d{idx}").clicked.disconnect()
             else:    #4d
+                # The widgets of all three data views exist in the .ui, but only
+                # the loaded ones ever got connected (Cursor.init_widgets and
+                # initialize_zoom_controls run per data view), and disconnect()
+                # raises RuntimeError on a signal with no connections — same
+                # reason the scroll bars above are wrapped.
+                def _disconnect(signal):
+                    try:
+                        signal.disconnect()
+                    except RuntimeError:
+                        pass
+
                 for image_index in 0,1,2:
-                    self.LoadMRI.cursor_ui[f"spin_{image_index}"].valueChanged.disconnect()
+                    for axis in ('x','y','z'):
+                        _disconnect(self.LoadMRI.cursor_ui[f"spin_{axis}{image_index}"].valueChanged)
                     #self.LoadMRI.cursor_ui[f"spin_y_data{image_index}"].valueChanged.disconnect()
                     #self.LoadMRI.cursor_ui[f"spin_z_data{image_index}"].valueChanged.disconnect()
                     for idx in 0,1,2:
-                        getattr(self.ui, f"go_down_data{idx}{image_index}").clicked.disconnect()
-                        getattr(self.ui, f"go_up_data{idx}{image_index}").clicked.disconnect()
-                        getattr(self.ui, f"go_right_data{idx}{image_index}").clicked.disconnect()
-                        getattr(self.ui, f"go_left_data{idx}{image_index}").clicked.disconnect()
+                        _disconnect(getattr(self.ui, f"go_down_data{idx}{image_index}").clicked)
+                        _disconnect(getattr(self.ui, f"go_up_data{idx}{image_index}").clicked)
+                        _disconnect(getattr(self.ui, f"go_right_data{idx}{image_index}").clicked)
+                        _disconnect(getattr(self.ui, f"go_left_data{idx}{image_index}").clicked)
 
             #remove old renderers
             for image_index,vtk_widget_image in self.LoadMRI.vtk_widgets.items():
@@ -492,7 +619,7 @@ class MainWindow(QMainWindow):
                 except RuntimeError:
                     pass
 
-        for dock_name in "dock_paintbrush4d","dock_segmentation":
+        for dock_name in "dock_paintbrush4d","dock_segmentation","dockWidget_ephys":
             dock = self.findChild(QDockWidget, dock_name)
             if dock:
                 dock.close()
@@ -528,9 +655,13 @@ class MainWindow(QMainWindow):
         else:
             self.FileLoader.is_4d = False #3d file
         self.FileLoader.initialize_file(file_name,0,data_view,0,full_restart=full_restart,label_file=label_file)
+        self.ui.data_4d_3d.setCurrentIndex(0 if self.FileLoader.is_4d else 1)
 
         zoom_notifier.factorChanged.connect(self.LoadMRI.minimap.create_small_rectangle)
         Zoom.fit_to_window(self.LoadMRI.vtk_widgets[0][data_view], self.LoadMRI.vtk_widgets.values(), self.LoadMRI.scale_bar, self.LoadMRI.vtk_widgets,0,data_3d=True)
+        #the widgets have a size only after the rebuilt UI has been laid out, so build the minimaps now
+        QApplication.processEvents()
+        self.on_gui_resize()
         return
 
 
@@ -552,7 +683,7 @@ if __name__ == "__main__":
     #dark mode
     app.setStyleSheet(qdarkstyle.load_stylesheet_pyside6())
     app.setApplicationName("IMPLAnT")
-    app.setWindowIcon(QIcon(os.path.join(_base_dir, "Icons/Github/IMPLAnT_logo.png")))
+    app.setWindowIcon(QIcon(os.path.join(_base_dir, "Icons/Github/IMPLAnT_quad.png")))
     widget = MainWindow()
     widget.show()
     sys.exit(app.exec())

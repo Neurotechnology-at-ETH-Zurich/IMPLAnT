@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>2184</width>
-    <height>2156</height>
+    <height>2216</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -151,7 +151,7 @@
                  <property name="minimumSize">
                   <size>
                    <width>300</width>
-                   <height>76</height>
+                   <height>100</height>
                   </size>
                  </property>
                  <property name="maximumSize">
@@ -252,7 +252,7 @@
               <property name="title">
                <string>View</string>
               </property>
-              <layout class="QGridLayout" name="gridLayout_89" columnstretch="1,0,0,0">
+              <layout class="QGridLayout" name="gridLayout_89" columnstretch="1,1,1,0">
                <item row="1" column="3">
                 <widget class="QGroupBox" name="groupbox_legend1">
                  <property name="maximumSize">
@@ -1415,7 +1415,7 @@ background-color: rgb(0, 153, 255);</string>
              </widget>
             </item>
             <item row="0" column="1">
-             <widget class="QTextEdit" name="file_name_displayed_4d">
+             <widget class="QTextEdit" name="file_name_displayed">
               <property name="minimumSize">
                <size>
                 <width>56</width>
@@ -1460,7 +1460,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
               <property name="title">
                <string>View AXIAL</string>
               </property>
-              <layout class="QGridLayout" name="gridLayout_99" columnstretch="1,1,1,1">
+              <layout class="QGridLayout" name="gridLayout_99" columnstretch="1,1,1,0">
                <item row="1" column="0">
                 <widget class="QGroupBox" name="groupBox_32">
                  <property name="title">
@@ -2678,7 +2678,7 @@ background-color: rgb(131, 131, 131);
                   <enum>QFrame::NoFrame</enum>
                  </property>
                  <property name="currentIndex">
-                  <number>1</number>
+                  <number>0</number>
                  </property>
                  <widget class="QWidget" name="page_4Ddata0">
                   <layout class="QGridLayout" name="gridLayout_data0" rowstretch="1,0,0" columnstretch="1,1,1,0" rowminimumheight="1,0,0" columnminimumwidth="1,1,1,0">
@@ -4326,10 +4326,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                             </widget>
                             <widget class="QWidget" name="page_6">
                              <layout class="QGridLayout" name="gridLayout_187">
-                              <item row="0" column="1" rowspan="2">
-                               <widget class="QComboBox" name="comboBox_Shanks"/>
-                              </item>
-                              <item row="10" column="0" colspan="2">
+                              <item row="13" column="0" colspan="2">
                                <widget class="QPushButton" name="pushButton_PyLdetection">
                                 <property name="enabled">
                                  <bool>false</bool>
@@ -4342,7 +4339,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                                 </property>
                                </widget>
                               </item>
-                              <item row="3" column="0">
+                              <item row="6" column="0">
                                <widget class="QPushButton" name="pushButton_edgemask">
                                 <property name="text">
                                  <string>Highlight Points 
@@ -4361,14 +4358,14 @@ li.checked::marker { content: &quot;\2612&quot;; }
                                 </property>
                                </widget>
                               </item>
-                              <item row="11" column="0" colspan="2">
+                              <item row="14" column="0" colspan="2">
                                <widget class="QPushButton" name="pushButton_SaveTraj">
                                 <property name="text">
                                  <string>Save Trajectory</string>
                                 </property>
                                </widget>
                               </item>
-                              <item row="6" column="1">
+                              <item row="9" column="1">
                                <widget class="QDoubleSpinBox" name="doubleSpinBox_distance_shank">
                                 <property name="enabled">
                                  <bool>false</bool>
@@ -4384,7 +4381,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                                 </property>
                                </widget>
                               </item>
-                              <item row="5" column="1">
+                              <item row="8" column="1">
                                <widget class="QGroupBox" name="groupBox_75">
                                 <property name="title">
                                  <string>Coordinates xyz</string>
@@ -4414,7 +4411,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                                 </layout>
                                </widget>
                               </item>
-                              <item row="4" column="1">
+                              <item row="7" column="1">
                                <widget class="QGroupBox" name="groupBox_74">
                                 <property name="title">
                                  <string>Coordinates xyz</string>
@@ -4462,7 +4459,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                                 </layout>
                                </widget>
                               </item>
-                              <item row="5" column="0">
+                              <item row="8" column="0">
                                <widget class="QPushButton" name="pushButton_tp_deep">
                                 <property name="maximumSize">
                                  <size>
@@ -4476,7 +4473,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                                 </property>
                                </widget>
                               </item>
-                              <item row="3" column="1">
+                              <item row="6" column="1">
                                <widget class="QCheckBox" name="checkBox_brain_region">
                                 <property name="text">
                                  <string>Show Brain Region 
@@ -4487,7 +4484,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                                 </property>
                                </widget>
                               </item>
-                              <item row="2" column="0" colspan="2">
+                              <item row="5" column="0" colspan="2">
                                <widget class="QTextEdit" name="textEdit">
                                 <property name="maximumSize">
                                  <size>
@@ -4511,7 +4508,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                                 </property>
                                </widget>
                               </item>
-                              <item row="6" column="0">
+                              <item row="9" column="0">
                                <widget class="QTextEdit" name="textEdit_distance_shank">
                                 <property name="enabled">
                                  <bool>false</bool>
@@ -4519,7 +4516,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                                 <property name="maximumSize">
                                  <size>
                                   <width>200</width>
-                                  <height>50</height>
+                                  <height>100</height>
                                  </size>
                                 </property>
                                 <property name="readOnly">
@@ -4540,7 +4537,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                                 </property>
                                </widget>
                               </item>
-                              <item row="4" column="0">
+                              <item row="7" column="0">
                                <widget class="QPushButton" name="pushButton_tp_insert">
                                 <property name="maximumSize">
                                  <size>
@@ -4555,7 +4552,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                                 </property>
                                </widget>
                               </item>
-                              <item row="9" column="0" colspan="2">
+                              <item row="12" column="0" colspan="2">
                                <widget class="QFrame" name="frame">
                                 <property name="frameShape">
                                  <enum>QFrame::StyledPanel</enum>
@@ -4618,7 +4615,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                                 </layout>
                                </widget>
                               </item>
-                              <item row="7" column="0" colspan="2">
+                              <item row="10" column="0" colspan="2">
                                <widget class="QGroupBox" name="groupBox_shank">
                                 <property name="enabled">
                                  <bool>false</bool>
@@ -4694,6 +4691,12 @@ li.checked::marker { content: &quot;\2612&quot;; }
  Shank</string>
                                 </property>
                                </widget>
+                              </item>
+                              <item row="0" column="1">
+                               <widget class="QComboBox" name="comboBox_Shanks"/>
+                              </item>
+                              <item row="1" column="1">
+                               <widget class="QComboBox" name="comboBox_tpColor"/>
                               </item>
                              </layout>
                             </widget>
@@ -5360,7 +5363,7 @@ background-color: rgb(0, 153, 255);</string>
                               </property>
                               <property name="icon">
                                <iconset>
-                                <normaloff>../../Downloads/leftArrow.png</normaloff>../../Downloads/leftArrow.png</iconset>
+                                <normaloff>Icons/mri/leftArrow.png</normaloff>Icons/mri/leftArrow.png</iconset>
                               </property>
                              </widget>
                             </item>
@@ -5371,7 +5374,7 @@ background-color: rgb(0, 153, 255);</string>
                               </property>
                               <property name="icon">
                                <iconset>
-                                <normaloff>../../Downloads/rightArrow.png</normaloff>../../Downloads/rightArrow.png</iconset>
+                                <normaloff>Icons/mri/rightArrow.png</normaloff>Icons/mri/rightArrow.png</iconset>
                               </property>
                              </widget>
                             </item>
@@ -6049,7 +6052,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                     </property>
                     <property name="maximumSize">
                      <size>
-                      <width>280</width>
+                      <width>16777215</width>
                       <height>16777215</height>
                      </size>
                     </property>
@@ -7582,6 +7585,16 @@ li.checked::marker { content: &quot;\2612&quot;; }
                   <string>Moving Image</string>
                  </property>
                  <layout class="QGridLayout" name="gridLayout_2">
+                  <item row="2" column="1">
+                   <widget class="QComboBox" name="comboBox_movingimg">
+                    <property name="enabled">
+                     <bool>true</bool>
+                    </property>
+                    <property name="currentIndex">
+                     <number>-1</number>
+                    </property>
+                   </widget>
+                  </item>
                   <item row="0" column="1">
                    <widget class="QTextEdit" name="textEdit_6">
                     <property name="maximumSize">
@@ -7598,21 +7611,11 @@ hr { height: 1px; border-width: 0; }
 li.unchecked::marker { content: &quot;\2610&quot;; }
 li.checked::marker { content: &quot;\2612&quot;; }
 &lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'Ubuntu Sans'; font-size:11pt; font-weight:400; font-style:normal;&quot;&gt;
-&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'Segoe UI'; font-size:9pt;&quot;&gt;If none is selectable, please load Another Image (3D)!&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'Segoe UI'; font-size:9pt;&quot;&gt;If none is selectable, please load Another Image!&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                     </property>
                    </widget>
                   </item>
-                  <item row="1" column="1">
-                   <widget class="QComboBox" name="comboBox_movingimg">
-                    <property name="enabled">
-                     <bool>true</bool>
-                    </property>
-                    <property name="currentIndex">
-                     <number>-1</number>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="2" column="1">
+                  <item row="3" column="1">
                    <widget class="QTextEdit" name="textEdit_pixels">
                     <property name="maximumSize">
                      <size>
@@ -7632,6 +7635,13 @@ li.unchecked::marker { content: &quot;\2610&quot;; }
 li.checked::marker { content: &quot;\2612&quot;; }
 &lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'Ubuntu Sans'; font-size:11pt; font-weight:400; font-style:normal;&quot;&gt;
 &lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'Segoe UI'; font-size:9pt; font-weight:700;&quot;&gt;Please select other file. The MRI Scan needs at least 4pixels in each direction.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="1" column="1">
+                   <widget class="QPushButton" name="pushButton_loadOtherImage">
+                    <property name="text">
+                     <string>Load Another Image</string>
                     </property>
                    </widget>
                   </item>
@@ -7713,7 +7723,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                  </property>
                  <property name="maximumSize">
                   <size>
-                   <width>215</width>
+                   <width>300</width>
                    <height>16777215</height>
                   </size>
                  </property>
@@ -10075,259 +10085,16 @@ li.checked::marker { content: &quot;\2612&quot;; }
             <string>ephys</string>
            </attribute>
            <layout class="QGridLayout" name="gridLayout_22" rowstretch="0,0,0" columnstretch="0,0,0,0,0">
-            <item row="2" column="4">
-             <widget class="QPushButton" name="pushButton_anatRegion">
-              <property name="minimumSize">
-               <size>
-                <width>0</width>
-                <height>72</height>
-               </size>
-              </property>
-              <property name="font">
-               <font>
-                <pointsize>12</pointsize>
-                <bold>false</bold>
-               </font>
-              </property>
-              <property name="styleSheet">
-               <string notr="true">color: rgb(224, 27, 36);</string>
-              </property>
-              <property name="text">
-               <string>CHANGE ANAT REGION</string>
-              </property>
-             </widget>
-            </item>
-            <item row="0" column="3">
-             <widget class="QGroupBox" name="groupBox_5">
-              <property name="title">
-               <string/>
-              </property>
-              <layout class="QGridLayout" name="gridLayout_165">
-               <item row="1" column="0">
-                <widget class="QComboBox" name="comboBox_mridTag">
-                 <property name="enabled">
-                  <bool>false</bool>
-                 </property>
-                 <property name="minimumSize">
-                  <size>
-                   <width>0</width>
-                   <height>0</height>
-                  </size>
-                 </property>
-                 <property name="styleSheet">
-                  <string notr="true">color: rgb(224, 27, 36);</string>
-                 </property>
-                 <property name="editable">
-                  <bool>false</bool>
-                 </property>
-                 <property name="currentText">
-                  <string/>
-                 </property>
-                 <property name="insertPolicy">
-                  <enum>QComboBox::InsertAtBottom</enum>
-                 </property>
-                 <property name="sizeAdjustPolicy">
-                  <enum>QComboBox::AdjustToContents</enum>
-                 </property>
-                </widget>
-               </item>
-               <item row="0" column="0">
-                <widget class="QLineEdit" name="lineEdit_60">
-                 <property name="text">
-                  <string>Selected Shank</string>
-                 </property>
-                 <property name="readOnly">
-                  <bool>true</bool>
-                 </property>
-                </widget>
-               </item>
-              </layout>
-             </widget>
-            </item>
-            <item row="0" column="4" rowspan="2">
-             <widget class="QFrame" name="frame_2">
-              <property name="frameShape">
-               <enum>QFrame::StyledPanel</enum>
-              </property>
-              <property name="frameShadow">
-               <enum>QFrame::Raised</enum>
-              </property>
-              <layout class="QGridLayout" name="gridLayout_168">
-               <item row="1" column="0">
-                <widget class="QPushButton" name="pushButton_selectAll">
-                 <property name="text">
-                  <string>Select All</string>
-                 </property>
-                </widget>
-               </item>
-               <item row="0" column="0" colspan="2">
-                <widget class="QTableWidget" name="tableWidget_ephys">
-                 <property name="font">
-                  <font>
-                   <pointsize>9</pointsize>
-                   <bold>false</bold>
-                  </font>
-                 </property>
-                 <property name="sizeAdjustPolicy">
-                  <enum>QAbstractScrollArea::AdjustToContents</enum>
-                 </property>
-                 <property name="editTriggers">
-                  <set>QAbstractItemView::NoEditTriggers</set>
-                 </property>
-                 <property name="selectionMode">
-                  <enum>QAbstractItemView::ContiguousSelection</enum>
-                 </property>
-                 <property name="selectionBehavior">
-                  <enum>QAbstractItemView::SelectRows</enum>
-                 </property>
-                 <attribute name="horizontalHeaderCascadingSectionResizes">
-                  <bool>false</bool>
-                 </attribute>
-                </widget>
-               </item>
-               <item row="1" column="1">
-                <widget class="QPushButton" name="pushButton_deselectAll">
-                 <property name="text">
-                  <string>Deselect All</string>
-                 </property>
-                </widget>
-               </item>
-               <item row="2" column="0" colspan="2">
-                <widget class="QPushButton" name="pushButton_showChannels">
-                 <property name="text">
-                  <string>Show only selected Channels</string>
-                 </property>
-                 <property name="checkable">
-                  <bool>true</bool>
-                 </property>
-                 <property name="checked">
-                  <bool>true</bool>
-                 </property>
-                </widget>
-               </item>
-              </layout>
-             </widget>
-            </item>
-            <item row="0" column="0" colspan="3">
-             <widget class="QTextEdit" name="textEdit_ephys">
-              <property name="maximumSize">
-               <size>
-                <width>16777215</width>
-                <height>50</height>
-               </size>
-              </property>
-              <property name="verticalScrollBarPolicy">
-               <enum>Qt::ScrollBarAlwaysOff</enum>
-              </property>
-              <property name="horizontalScrollBarPolicy">
-               <enum>Qt::ScrollBarAlwaysOff</enum>
-              </property>
-              <property name="readOnly">
-               <bool>true</bool>
-              </property>
-              <property name="html">
-               <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
-&lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;meta charset=&quot;utf-8&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
-p, li { white-space: pre-wrap; }
-hr { height: 1px; border-width: 0; }
-li.unchecked::marker { content: &quot;\2610&quot;; }
-li.checked::marker { content: &quot;\2612&quot;; }
-&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'Ubuntu Sans'; font-size:11pt; font-weight:400; font-style:normal;&quot;&gt;
-&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'Segoe UI'; font-size:20pt; color:#ffffff;&quot;&gt;Atlas 3D Visualisation&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-              </property>
-             </widget>
-            </item>
-            <item row="1" column="0" rowspan="2" colspan="4">
-             <widget class="QTabWidget" name="tabWidget_2">
+            <item row="0" column="4" rowspan="3">
+             <widget class="QTabWidget" name="tabWidget_ephys">
               <property name="currentIndex">
-               <number>0</number>
+               <number>2</number>
               </property>
               <widget class="QWidget" name="tab_4">
                <attribute name="title">
                 <string>Anatomy</string>
                </attribute>
                <layout class="QGridLayout" name="gridLayout_46">
-                <item row="1" column="0">
-                 <widget class="QGroupBox" name="groupBox_37">
-                  <property name="maximumSize">
-                   <size>
-                    <width>16777215</width>
-                    <height>200</height>
-                   </size>
-                  </property>
-                  <property name="title">
-                   <string>Coordinates of selected Channel</string>
-                  </property>
-                  <layout class="QGridLayout" name="gridLayout_74">
-                   <item row="0" column="2">
-                    <widget class="QSpinBox" name="spinBox_y_ephys">
-                     <property name="maximumSize">
-                      <size>
-                       <width>16777215</width>
-                       <height>30</height>
-                      </size>
-                     </property>
-                     <property name="readOnly">
-                      <bool>true</bool>
-                     </property>
-                     <property name="buttonSymbols">
-                      <enum>QAbstractSpinBox::NoButtons</enum>
-                     </property>
-                     <property name="minimum">
-                      <number>1</number>
-                     </property>
-                     <property name="maximum">
-                      <number>1000</number>
-                     </property>
-                    </widget>
-                   </item>
-                   <item row="0" column="3">
-                    <widget class="QSpinBox" name="spinBox_z_ephys">
-                     <property name="maximumSize">
-                      <size>
-                       <width>16777215</width>
-                       <height>30</height>
-                      </size>
-                     </property>
-                     <property name="readOnly">
-                      <bool>true</bool>
-                     </property>
-                     <property name="buttonSymbols">
-                      <enum>QAbstractSpinBox::NoButtons</enum>
-                     </property>
-                     <property name="minimum">
-                      <number>1</number>
-                     </property>
-                     <property name="maximum">
-                      <number>1000</number>
-                     </property>
-                    </widget>
-                   </item>
-                   <item row="0" column="1">
-                    <widget class="QSpinBox" name="spinBox_x_ephys">
-                     <property name="maximumSize">
-                      <size>
-                       <width>16777215</width>
-                       <height>30</height>
-                      </size>
-                     </property>
-                     <property name="readOnly">
-                      <bool>true</bool>
-                     </property>
-                     <property name="buttonSymbols">
-                      <enum>QAbstractSpinBox::NoButtons</enum>
-                     </property>
-                     <property name="minimum">
-                      <number>1</number>
-                     </property>
-                     <property name="maximum">
-                      <number>1000</number>
-                     </property>
-                    </widget>
-                   </item>
-                  </layout>
-                 </widget>
-                </item>
                 <item row="0" column="0">
                  <widget class="QFrame" name="frame_32">
                   <property name="enabled">
@@ -10347,7 +10114,7 @@ background-color: rgb(131, 131, 131);
                   <property name="frameShape">
                    <enum>QFrame::NoFrame</enum>
                   </property>
-                  <layout class="QGridLayout" name="gridLayout_68" rowstretch="0,0,0,0" columnstretch="1,1,1,1,1,1" rowminimumheight="0,0,0,0">
+                  <layout class="QGridLayout" name="gridLayout_68" rowstretch="0,0,0,0" columnstretch="0,0,0,0,0,0" rowminimumheight="0,0,0,0">
                    <property name="leftMargin">
                     <number>4</number>
                    </property>
@@ -10363,48 +10130,26 @@ background-color: rgb(131, 131, 131);
                    <property name="spacing">
                     <number>0</number>
                    </property>
-                   <item row="2" column="0" rowspan="2">
-                    <widget class="QPushButton" name="resetCamera_ephys">
+                   <item row="0" column="0" colspan="6">
+                    <widget class="QVTKRenderWindowInteractor" name="vtkWidget_ephys">
                      <property name="enabled">
                       <bool>true</bool>
                      </property>
-                     <property name="toolTip">
-                      <string>Reset Camera View</string>
-                     </property>
-                     <property name="styleSheet">
-                      <string notr="true">
-            QPushButton:hover {
-                background-color: rgba(255, 255, 255, 30);
-                border-radius: 4px;
-            }</string>
-                     </property>
-                     <property name="text">
-                      <string/>
-                     </property>
-                     <property name="icon">
-                      <iconset theme="go-home"/>
-                     </property>
-                     <property name="iconSize">
+                     <property name="minimumSize">
                       <size>
-                       <width>60</width>
-                       <height>40</height>
+                       <width>0</width>
+                       <height>0</height>
                       </size>
                      </property>
-                     <property name="autoDefault">
-                      <bool>false</bool>
-                     </property>
-                     <property name="default">
-                      <bool>false</bool>
-                     </property>
-                     <property name="flat">
-                      <bool>false</bool>
+                     <property name="styleSheet">
+                      <string notr="true">background-color: rgb(200, 177, 176);</string>
                      </property>
                     </widget>
                    </item>
-                   <item row="3" column="1">
-                    <widget class="QPushButton" name="change_perspective_ephys">
+                   <item row="3" column="3">
+                    <widget class="QPushButton" name="pushButton_slicex">
                      <property name="toolTip">
-                      <string>Change Perspective</string>
+                      <string>Sagittal Slicing</string>
                      </property>
                      <property name="styleSheet">
                       <string notr="true">
@@ -10418,34 +10163,7 @@ background-color: rgb(131, 131, 131);
                      </property>
                      <property name="icon">
                       <iconset>
-                       <normaloff>Icons/ephys/projection_parallel.png</normaloff>Icons/ephys/projection_parallel.png</iconset>
-                     </property>
-                     <property name="iconSize">
-                      <size>
-                       <width>60</width>
-                       <height>40</height>
-                      </size>
-                     </property>
-                    </widget>
-                   </item>
-                   <item row="3" column="4">
-                    <widget class="QPushButton" name="pushButton_slicey">
-                     <property name="toolTip">
-                      <string>Coronal Slicing</string>
-                     </property>
-                     <property name="styleSheet">
-                      <string notr="true">
-            QPushButton:hover {
-                background-color: rgba(255, 255, 255, 30);
-                border-radius: 4px;
-            }</string>
-                     </property>
-                     <property name="text">
-                      <string/>
-                     </property>
-                     <property name="icon">
-                      <iconset>
-                       <normaloff>Icons/ephys/slicing_coronal_front.png</normaloff>Icons/ephys/slicing_coronal_front.png</iconset>
+                       <normaloff>Icons/ephys/slicing_sagittal_right.png</normaloff>Icons/ephys/slicing_sagittal_right.png</iconset>
                      </property>
                      <property name="iconSize">
                       <size>
@@ -10485,36 +10203,6 @@ background-color: rgb(131, 131, 131);
                      </property>
                     </widget>
                    </item>
-                   <item row="3" column="3">
-                    <widget class="QPushButton" name="pushButton_slicex">
-                     <property name="toolTip">
-                      <string>Sagittal Slicing</string>
-                     </property>
-                     <property name="styleSheet">
-                      <string notr="true">
-            QPushButton:hover {
-                background-color: rgba(255, 255, 255, 30);
-                border-radius: 4px;
-            }</string>
-                     </property>
-                     <property name="text">
-                      <string/>
-                     </property>
-                     <property name="icon">
-                      <iconset>
-                       <normaloff>Icons/ephys/slicing_sagittal_right.png</normaloff>Icons/ephys/slicing_sagittal_right.png</iconset>
-                     </property>
-                     <property name="iconSize">
-                      <size>
-                       <width>60</width>
-                       <height>40</height>
-                      </size>
-                     </property>
-                     <property name="checkable">
-                      <bool>true</bool>
-                     </property>
-                    </widget>
-                   </item>
                    <item row="3" column="5">
                     <widget class="QPushButton" name="pushButton_slicez">
                      <property name="toolTip">
@@ -10533,6 +10221,36 @@ background-color: rgb(131, 131, 131);
                      <property name="icon">
                       <iconset>
                        <normaloff>Icons/ephys/slicing_axial_top.png</normaloff>Icons/ephys/slicing_axial_top.png</iconset>
+                     </property>
+                     <property name="iconSize">
+                      <size>
+                       <width>60</width>
+                       <height>40</height>
+                      </size>
+                     </property>
+                     <property name="checkable">
+                      <bool>true</bool>
+                     </property>
+                    </widget>
+                   </item>
+                   <item row="3" column="4">
+                    <widget class="QPushButton" name="pushButton_slicey">
+                     <property name="toolTip">
+                      <string>Coronal Slicing</string>
+                     </property>
+                     <property name="styleSheet">
+                      <string notr="true">
+            QPushButton:hover {
+                background-color: rgba(255, 255, 255, 30);
+                border-radius: 4px;
+            }</string>
+                     </property>
+                     <property name="text">
+                      <string/>
+                     </property>
+                     <property name="icon">
+                      <iconset>
+                       <normaloff>Icons/ephys/slicing_coronal_front.png</normaloff>Icons/ephys/slicing_coronal_front.png</iconset>
                      </property>
                      <property name="iconSize">
                       <size>
@@ -10617,19 +10335,149 @@ background-color: rgb(131, 131, 131);
                      </layout>
                     </widget>
                    </item>
-                   <item row="0" column="0" colspan="6">
-                    <widget class="QVTKRenderWindowInteractor" name="vtkWidget_ephys">
+                   <item row="2" column="0" rowspan="2">
+                    <widget class="QPushButton" name="resetCamera_ephys">
                      <property name="enabled">
                       <bool>true</bool>
                      </property>
-                     <property name="minimumSize">
-                      <size>
-                       <width>0</width>
-                       <height>0</height>
-                      </size>
+                     <property name="toolTip">
+                      <string>Reset Camera View</string>
                      </property>
                      <property name="styleSheet">
-                      <string notr="true">background-color: rgb(200, 177, 176);</string>
+                      <string notr="true">
+            QPushButton:hover {
+                background-color: rgba(255, 255, 255, 30);
+                border-radius: 4px;
+            }</string>
+                     </property>
+                     <property name="text">
+                      <string/>
+                     </property>
+                     <property name="icon">
+                      <iconset theme="go-home"/>
+                     </property>
+                     <property name="iconSize">
+                      <size>
+                       <width>60</width>
+                       <height>40</height>
+                      </size>
+                     </property>
+                     <property name="autoDefault">
+                      <bool>false</bool>
+                     </property>
+                     <property name="default">
+                      <bool>false</bool>
+                     </property>
+                     <property name="flat">
+                      <bool>false</bool>
+                     </property>
+                    </widget>
+                   </item>
+                   <item row="3" column="1">
+                    <widget class="QPushButton" name="change_perspective_ephys">
+                     <property name="toolTip">
+                      <string>Change Perspective</string>
+                     </property>
+                     <property name="styleSheet">
+                      <string notr="true">
+            QPushButton:hover {
+                background-color: rgba(255, 255, 255, 30);
+                border-radius: 4px;
+            }</string>
+                     </property>
+                     <property name="text">
+                      <string/>
+                     </property>
+                     <property name="icon">
+                      <iconset>
+                       <normaloff>Icons/ephys/projection_parallel.png</normaloff>Icons/ephys/projection_parallel.png</iconset>
+                     </property>
+                     <property name="iconSize">
+                      <size>
+                       <width>60</width>
+                       <height>40</height>
+                      </size>
+                     </property>
+                    </widget>
+                   </item>
+                  </layout>
+                 </widget>
+                </item>
+                <item row="1" column="0">
+                 <widget class="QGroupBox" name="groupBox_37">
+                  <property name="maximumSize">
+                   <size>
+                    <width>16777215</width>
+                    <height>200</height>
+                   </size>
+                  </property>
+                  <property name="title">
+                   <string>Coordinates of selected Channel</string>
+                  </property>
+                  <layout class="QGridLayout" name="gridLayout_74">
+                   <item row="0" column="2">
+                    <widget class="QSpinBox" name="spinBox_y_ephys">
+                     <property name="maximumSize">
+                      <size>
+                       <width>16777215</width>
+                       <height>30</height>
+                      </size>
+                     </property>
+                     <property name="readOnly">
+                      <bool>true</bool>
+                     </property>
+                     <property name="buttonSymbols">
+                      <enum>QAbstractSpinBox::NoButtons</enum>
+                     </property>
+                     <property name="minimum">
+                      <number>1</number>
+                     </property>
+                     <property name="maximum">
+                      <number>1000</number>
+                     </property>
+                    </widget>
+                   </item>
+                   <item row="0" column="1">
+                    <widget class="QSpinBox" name="spinBox_x_ephys">
+                     <property name="maximumSize">
+                      <size>
+                       <width>16777215</width>
+                       <height>30</height>
+                      </size>
+                     </property>
+                     <property name="readOnly">
+                      <bool>true</bool>
+                     </property>
+                     <property name="buttonSymbols">
+                      <enum>QAbstractSpinBox::NoButtons</enum>
+                     </property>
+                     <property name="minimum">
+                      <number>1</number>
+                     </property>
+                     <property name="maximum">
+                      <number>1000</number>
+                     </property>
+                    </widget>
+                   </item>
+                   <item row="0" column="3">
+                    <widget class="QSpinBox" name="spinBox_z_ephys">
+                     <property name="maximumSize">
+                      <size>
+                       <width>16777215</width>
+                       <height>30</height>
+                      </size>
+                     </property>
+                     <property name="readOnly">
+                      <bool>true</bool>
+                     </property>
+                     <property name="buttonSymbols">
+                      <enum>QAbstractSpinBox::NoButtons</enum>
+                     </property>
+                     <property name="minimum">
+                      <number>1</number>
+                     </property>
+                     <property name="maximum">
+                      <number>1000</number>
                      </property>
                     </widget>
                    </item>
@@ -10710,10 +10558,35 @@ background-color: rgb(131, 131, 131);
                 <string>Analysis</string>
                </attribute>
                <layout class="QGridLayout" name="gridLayout_185">
-                <item row="1" column="0">
+                <property name="leftMargin">
+                 <number>0</number>
+                </property>
+                <property name="topMargin">
+                 <number>0</number>
+                </property>
+                <property name="rightMargin">
+                 <number>0</number>
+                </property>
+                <property name="bottomMargin">
+                 <number>0</number>
+                </property>
+                <property name="spacing">
+                 <number>0</number>
+                </property>
+                <item row="0" column="0">
                  <widget class="QStackedWidget" name="stackedWidget">
+                  <property name="currentIndex">
+                   <number>1</number>
+                  </property>
                   <widget class="QWidget" name="page_17">
                    <layout class="QGridLayout" name="gridLayout_186">
+                    <item row="0" column="0" colspan="2">
+                     <widget class="QPushButton" name="pushButton_filterpopup">
+                      <property name="text">
+                       <string>Filter Channels</string>
+                      </property>
+                     </widget>
+                    </item>
                     <item row="1" column="0" colspan="2">
                      <widget class="QWidget" name="widget_cutoff_freq" native="true">
                       <property name="minimumSize">
@@ -10722,92 +10595,364 @@ background-color: rgb(131, 131, 131);
                         <height>100</height>
                        </size>
                       </property>
-                      <widget class="QGroupBox" name="groupBox_anatRegion">
-                       <property name="geometry">
-                        <rect>
-                         <x>20</x>
-                         <y>160</y>
-                         <width>1142</width>
-                         <height>85</height>
-                        </rect>
-                       </property>
-                       <property name="title">
-                        <string>Selected Channel ID and Anat Region Label</string>
-                       </property>
-                       <layout class="QGridLayout" name="gridLayout_24">
-                        <item row="0" column="2">
-                         <widget class="QComboBox" name="comboBox_anatRegion">
-                          <property name="enabled">
-                           <bool>false</bool>
+                     </widget>
+                    </item>
+                   </layout>
+                  </widget>
+                  <widget class="QWidget" name="page_18">
+                   <layout class="QGridLayout" name="gridLayout_199">
+                    <item row="0" column="0">
+                     <widget class="QLineEdit" name="lineEdit_13">
+                      <property name="text">
+                       <string>Spike Ruster Plot Unit/Neurons over Time [min:sec:msec] - Skipped Channels are not shown</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="0" column="1" rowspan="2">
+                     <widget class="QTabWidget" name="tabWidget_LFP">
+                      <property name="currentIndex">
+                       <number>3</number>
+                      </property>
+                      <widget class="QWidget" name="tab_13">
+                       <attribute name="title">
+                        <string>Hierarchical Correlation</string>
+                       </attribute>
+                       <layout class="QGridLayout" name="gridLayout_201">
+                        <item row="0" column="0">
+                         <widget class="QLineEdit" name="lineEdit_61">
+                          <property name="text">
+                           <string>Pairwise Neuronal Spike-Count Correlation</string>
                           </property>
-                          <property name="minimumSize">
-                           <size>
-                            <width>0</width>
-                            <height>40</height>
-                           </size>
-                          </property>
-                          <property name="styleSheet">
-                           <string notr="true"/>
+                          <property name="readOnly">
+                           <bool>true</bool>
                           </property>
                          </widget>
                         </item>
                         <item row="0" column="1">
-                         <widget class="QSpinBox" name="spinBox_channelID">
-                          <property name="minimumSize">
-                           <size>
-                            <width>0</width>
-                            <height>40</height>
-                           </size>
+                         <widget class="QLineEdit" name="lineEdit_62">
+                          <property name="text">
+                           <string>Colour-axis Limits</string>
                           </property>
                           <property name="readOnly">
-                           <bool>false</bool>
+                           <bool>true</bool>
                           </property>
-                          <property name="buttonSymbols">
-                           <enum>QAbstractSpinBox::NoButtons</enum>
+                         </widget>
+                        </item>
+                        <item row="0" column="2">
+                         <widget class="QDoubleSpinBox" name="doubleSpinBox_ClusterLimits">
+                          <property name="maximumSize">
+                           <size>
+                            <width>16777215</width>
+                            <height>16777215</height>
+                           </size>
+                          </property>
+                          <property name="minimum">
+                           <double>0.010000000000000</double>
+                          </property>
+                          <property name="maximum">
+                           <double>2.000000000000000</double>
+                          </property>
+                          <property name="singleStep">
+                           <double>0.050000000000000</double>
+                          </property>
+                          <property name="value">
+                           <double>0.300000000000000</double>
+                          </property>
+                         </widget>
+                        </item>
+                        <item row="1" column="0" colspan="3">
+                         <widget class="QWidget" name="widget_hierClustering" native="true"/>
+                        </item>
+                       </layout>
+                      </widget>
+                      <widget class="QWidget" name="tab_14">
+                       <attribute name="title">
+                        <string>Spectogram</string>
+                       </attribute>
+                       <layout class="QGridLayout" name="gridLayout_202">
+                        <item row="1" column="0" colspan="4">
+                         <widget class="QWidget" name="widget_Spectogram_ripple" native="true"/>
+                        </item>
+                        <item row="0" column="0">
+                         <widget class="QLineEdit" name="lineEdit_64">
+                          <property name="text">
+                           <string>Spectogram of selected Channel in same time window as ephys data displayed</string>
+                          </property>
+                          <property name="readOnly">
+                           <bool>true</bool>
+                          </property>
+                         </widget>
+                        </item>
+                        <item row="0" column="3">
+                         <widget class="QPushButton" name="pushButton_axisLog">
+                          <property name="text">
+                           <string>Change Axis</string>
+                          </property>
+                         </widget>
+                        </item>
+                        <item row="0" column="2">
+                         <widget class="QPushButton" name="pushButton_colorMap">
+                          <property name="text">
+                           <string>ColorMap</string>
                           </property>
                          </widget>
                         </item>
                        </layout>
                       </widget>
-                      <widget class="QPushButton" name="pushButton_changeTAG">
-                       <property name="geometry">
-                        <rect>
-                         <x>540</x>
-                         <y>80</y>
-                         <width>266</width>
-                         <height>26</height>
-                        </rect>
-                       </property>
-                       <property name="styleSheet">
-                        <string notr="true">color: rgb(224, 27, 36);</string>
-                       </property>
-                       <property name="text">
-                        <string>CHANGE TAG</string>
-                       </property>
+                      <widget class="QWidget" name="tab_8">
+                       <attribute name="title">
+                        <string>CSD</string>
+                       </attribute>
+                       <layout class="QGridLayout" name="gridLayout_24">
+                        <item row="0" column="0">
+                         <widget class="QLineEdit" name="lineEdit_65">
+                          <property name="text">
+                           <string>Current source density estimation </string>
+                          </property>
+                          <property name="readOnly">
+                           <bool>true</bool>
+                          </property>
+                         </widget>
+                        </item>
+                        <item row="0" column="1">
+                         <widget class="QPushButton" name="pushButton_exportCSD">
+                          <property name="text">
+                           <string>Export as Binary</string>
+                          </property>
+                         </widget>
+                        </item>
+                        <item row="1" column="0" colspan="2">
+                         <widget class="QWidget" name="widget_CSD" native="true"/>
+                        </item>
+                       </layout>
+                      </widget>
+                      <widget class="QWidget" name="tab_9">
+                       <attribute name="title">
+                        <string>Spectogram all Channels</string>
+                       </attribute>
+                       <layout class="QGridLayout" name="gridLayout_207">
+                        <item row="0" column="1">
+                         <widget class="QPushButton" name="pushButton_allChannels_axis">
+                          <property name="text">
+                           <string>Change Axis</string>
+                          </property>
+                         </widget>
+                        </item>
+                        <item row="1" column="0" colspan="2">
+                         <widget class="QPushButton" name="pushButton_Timeframe_spectogram">
+                          <property name="text">
+                           <string>Entire Frame / Around Ripple</string>
+                          </property>
+                         </widget>
+                        </item>
+                        <item row="0" column="0">
+                         <widget class="QLineEdit" name="lineEdit_66">
+                          <property name="text">
+                           <string>Spectogram at selected time over all channels</string>
+                          </property>
+                          <property name="readOnly">
+                           <bool>true</bool>
+                          </property>
+                         </widget>
+                        </item>
+                        <item row="2" column="0" colspan="2">
+                         <widget class="QWidget" name="widget_Spectogram_allChannels" native="true"/>
+                        </item>
+                       </layout>
                       </widget>
                      </widget>
                     </item>
-                    <item row="0" column="0" colspan="2">
-                     <widget class="QPushButton" name="pushButton_filterpopup">
-                      <property name="text">
-                       <string>Filter Channels</string>
-                      </property>
+                    <item row="1" column="0">
+                     <widget class="QWidget" name="widget_spike_ruster" native="true">
+                      <layout class="QGridLayout" name="gridLayout_203"/>
                      </widget>
                     </item>
                    </layout>
                   </widget>
-                  <widget class="QWidget" name="page_18"/>
-                 </widget>
-                </item>
-                <item row="0" column="0">
-                 <widget class="QLineEdit" name="lineEdit_13">
-                  <property name="text">
-                   <string>Please select something</string>
-                  </property>
                  </widget>
                 </item>
                </layout>
               </widget>
+             </widget>
+            </item>
+            <item row="2" column="3">
+             <widget class="QFrame" name="frame_2">
+              <property name="maximumSize">
+               <size>
+                <width>300</width>
+                <height>16777215</height>
+               </size>
+              </property>
+              <property name="frameShape">
+               <enum>QFrame::StyledPanel</enum>
+              </property>
+              <property name="frameShadow">
+               <enum>QFrame::Raised</enum>
+              </property>
+              <layout class="QGridLayout" name="gridLayout_168">
+               <item row="2" column="2">
+                <widget class="QPushButton" name="pushButton_deselectAll">
+                 <property name="text">
+                  <string>Deselect All</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="1" column="1" colspan="2">
+                <widget class="QTableWidget" name="tableWidget_ephys">
+                 <property name="maximumSize">
+                  <size>
+                   <width>300</width>
+                   <height>16777215</height>
+                  </size>
+                 </property>
+                 <property name="font">
+                  <font>
+                   <pointsize>9</pointsize>
+                   <bold>false</bold>
+                  </font>
+                 </property>
+                 <property name="sizeAdjustPolicy">
+                  <enum>QAbstractScrollArea::AdjustToContents</enum>
+                 </property>
+                 <property name="editTriggers">
+                  <set>QAbstractItemView::NoEditTriggers</set>
+                 </property>
+                 <property name="selectionMode">
+                  <enum>QAbstractItemView::ContiguousSelection</enum>
+                 </property>
+                 <property name="selectionBehavior">
+                  <enum>QAbstractItemView::SelectRows</enum>
+                 </property>
+                 <attribute name="horizontalHeaderCascadingSectionResizes">
+                  <bool>false</bool>
+                 </attribute>
+                </widget>
+               </item>
+               <item row="2" column="1">
+                <widget class="QPushButton" name="pushButton_selectAll">
+                 <property name="text">
+                  <string>Select All</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="3" column="1" colspan="2">
+                <widget class="QPushButton" name="pushButton_showChannels">
+                 <property name="text">
+                  <string>Show only selected Channels</string>
+                 </property>
+                 <property name="checkable">
+                  <bool>true</bool>
+                 </property>
+                 <property name="checked">
+                  <bool>true</bool>
+                 </property>
+                </widget>
+               </item>
+               <item row="4" column="1" colspan="2">
+                <widget class="QPushButton" name="pushButton_anatRegion">
+                 <property name="minimumSize">
+                  <size>
+                   <width>0</width>
+                   <height>72</height>
+                  </size>
+                 </property>
+                 <property name="font">
+                  <font>
+                   <pointsize>12</pointsize>
+                   <bold>false</bold>
+                  </font>
+                 </property>
+                 <property name="styleSheet">
+                  <string notr="true">color: rgb(224, 27, 36);</string>
+                 </property>
+                 <property name="text">
+                  <string>CHANGE ANAT REGION</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="0" column="1" colspan="2">
+                <widget class="QGroupBox" name="groupBox_5">
+                 <property name="maximumSize">
+                  <size>
+                   <width>16777215</width>
+                   <height>300</height>
+                  </size>
+                 </property>
+                 <property name="title">
+                  <string/>
+                 </property>
+                 <layout class="QGridLayout" name="gridLayout_165">
+                  <item row="1" column="0">
+                   <widget class="QComboBox" name="comboBox_mridTag">
+                    <property name="enabled">
+                     <bool>true</bool>
+                    </property>
+                    <property name="minimumSize">
+                     <size>
+                      <width>0</width>
+                      <height>0</height>
+                     </size>
+                    </property>
+                    <property name="styleSheet">
+                     <string notr="true">color: rgb(224, 27, 36);</string>
+                    </property>
+                    <property name="editable">
+                     <bool>false</bool>
+                    </property>
+                    <property name="currentText">
+                     <string/>
+                    </property>
+                    <property name="insertPolicy">
+                     <enum>QComboBox::InsertAtBottom</enum>
+                    </property>
+                    <property name="sizeAdjustPolicy">
+                     <enum>QComboBox::AdjustToContents</enum>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="0" column="0">
+                   <widget class="QLineEdit" name="lineEdit_60">
+                    <property name="text">
+                     <string>Selected Shank</string>
+                    </property>
+                    <property name="readOnly">
+                     <bool>true</bool>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
+                </widget>
+               </item>
+              </layout>
+             </widget>
+            </item>
+            <item row="0" column="3">
+             <widget class="QTextEdit" name="textEdit_ephys">
+              <property name="maximumSize">
+               <size>
+                <width>300</width>
+                <height>100</height>
+               </size>
+              </property>
+              <property name="verticalScrollBarPolicy">
+               <enum>Qt::ScrollBarAlwaysOff</enum>
+              </property>
+              <property name="horizontalScrollBarPolicy">
+               <enum>Qt::ScrollBarAlwaysOff</enum>
+              </property>
+              <property name="readOnly">
+               <bool>true</bool>
+              </property>
+              <property name="html">
+               <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
+&lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;meta charset=&quot;utf-8&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
+p, li { white-space: pre-wrap; }
+hr { height: 1px; border-width: 0; }
+li.unchecked::marker { content: &quot;\2610&quot;; }
+li.checked::marker { content: &quot;\2612&quot;; }
+&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'Ubuntu Sans'; font-size:11pt; font-weight:400; font-style:normal;&quot;&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'Segoe UI'; font-size:20pt; color:#ffffff;&quot;&gt;Atlas 3D Visualisation&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+              </property>
              </widget>
             </item>
            </layout>
@@ -10817,176 +10962,6 @@ background-color: rgb(131, 131, 131);
             <string>Popups for ephys</string>
            </attribute>
            <layout class="QGridLayout" name="gridLayout_21">
-            <item row="0" column="0">
-             <widget class="QFrame" name="frame_filterchannels">
-              <property name="frameShape">
-               <enum>QFrame::StyledPanel</enum>
-              </property>
-              <property name="frameShadow">
-               <enum>QFrame::Raised</enum>
-              </property>
-              <layout class="QGridLayout" name="gridLayout_192">
-               <item row="9" column="0">
-                <widget class="QPushButton" name="pushButton_FrequencyResponse">
-                 <property name="text">
-                  <string>Show Frequency Response</string>
-                 </property>
-                </widget>
-               </item>
-               <item row="2" column="1">
-                <widget class="QComboBox" name="comboBox_FilterType">
-                 <item>
-                  <property name="text">
-                   <string>IIR - Butterworth</string>
-                  </property>
-                 </item>
-                 <item>
-                  <property name="text">
-                   <string>IIR - Chebyshev I</string>
-                  </property>
-                 </item>
-                 <item>
-                  <property name="text">
-                   <string>IIR - Chebyshev II</string>
-                  </property>
-                 </item>
-                 <item>
-                  <property name="text">
-                   <string>IIR - Elliptic</string>
-                  </property>
-                 </item>
-                 <item>
-                  <property name="text">
-                   <string>FIR - Hamming</string>
-                  </property>
-                 </item>
-                 <item>
-                  <property name="text">
-                   <string>FIR - Hann</string>
-                  </property>
-                 </item>
-                 <item>
-                  <property name="text">
-                   <string>FIR - Blackman</string>
-                  </property>
-                 </item>
-                </widget>
-               </item>
-               <item row="0" column="1">
-                <widget class="QLineEdit" name="lineEdit_selectedChannels"/>
-               </item>
-               <item row="2" column="0">
-                <widget class="QRadioButton" name="radioButton_bandPass">
-                 <property name="text">
-                  <string>Band Pass Filter</string>
-                 </property>
-                 <property name="checked">
-                  <bool>true</bool>
-                 </property>
-                </widget>
-               </item>
-               <item row="0" column="0">
-                <widget class="QLineEdit" name="lineEdit_18">
-                 <property name="text">
-                  <string>Selected Channels IDs to be filtered (Please seperate with comma)</string>
-                 </property>
-                 <property name="readOnly">
-                  <bool>true</bool>
-                 </property>
-                </widget>
-               </item>
-               <item row="4" column="0">
-                <widget class="QRadioButton" name="radioButton_lowPass">
-                 <property name="text">
-                  <string>Low Pass Filter</string>
-                 </property>
-                </widget>
-               </item>
-               <item row="9" column="1">
-                <widget class="QPushButton" name="pushButton_Filter">
-                 <property name="text">
-                  <string>Filter Selected Channels</string>
-                 </property>
-                </widget>
-               </item>
-               <item row="7" column="0">
-                <widget class="QGroupBox" name="groupBox_upperFreq">
-                 <property name="maximumSize">
-                  <size>
-                   <width>16777215</width>
-                   <height>80</height>
-                  </size>
-                 </property>
-                 <property name="title">
-                  <string>Upper Frequency</string>
-                 </property>
-                 <layout class="QGridLayout" name="gridLayout_191">
-                  <item row="0" column="0">
-                   <widget class="QDoubleSpinBox" name="doubleSpinBox_upperFreq">
-                    <property name="maximumSize">
-                     <size>
-                      <width>16777215</width>
-                      <height>30</height>
-                     </size>
-                    </property>
-                    <property name="minimum">
-                     <double>0.010000000000000</double>
-                    </property>
-                    <property name="maximum">
-                     <double>100000000000000000.000000000000000</double>
-                    </property>
-                    <property name="singleStep">
-                     <double>1.000000000000000</double>
-                    </property>
-                   </widget>
-                  </item>
-                 </layout>
-                </widget>
-               </item>
-               <item row="6" column="0">
-                <widget class="QGroupBox" name="groupBox_52">
-                 <property name="maximumSize">
-                  <size>
-                   <width>16777215</width>
-                   <height>80</height>
-                  </size>
-                 </property>
-                 <property name="title">
-                  <string>Lower Frequency</string>
-                 </property>
-                 <layout class="QGridLayout" name="gridLayout_190">
-                  <item row="0" column="0">
-                   <widget class="QDoubleSpinBox" name="doubleSpinBox_lowerFreq">
-                    <property name="maximumSize">
-                     <size>
-                      <width>16777215</width>
-                      <height>30</height>
-                     </size>
-                    </property>
-                    <property name="minimum">
-                     <double>0.010000000000000</double>
-                    </property>
-                    <property name="maximum">
-                     <double>100000000000000000.000000000000000</double>
-                    </property>
-                    <property name="singleStep">
-                     <double>1.000000000000000</double>
-                    </property>
-                   </widget>
-                  </item>
-                 </layout>
-                </widget>
-               </item>
-               <item row="6" column="1">
-                <widget class="QPushButton" name="pushButton_detectFreq">
-                 <property name="text">
-                  <string>Auto detect Frequency cut-off</string>
-                 </property>
-                </widget>
-               </item>
-              </layout>
-             </widget>
-            </item>
             <item row="1" column="0">
              <widget class="QGroupBox" name="groupBox_ChangeanatRegion">
               <property name="title">
@@ -11032,6 +11007,180 @@ background-color: rgb(131, 131, 131);
                    </widget>
                   </item>
                  </layout>
+                </widget>
+               </item>
+              </layout>
+             </widget>
+            </item>
+            <item row="0" column="0">
+             <widget class="QFrame" name="frame_filterchannels">
+              <property name="frameShape">
+               <enum>QFrame::StyledPanel</enum>
+              </property>
+              <property name="frameShadow">
+               <enum>QFrame::Raised</enum>
+              </property>
+              <layout class="QGridLayout" name="gridLayout_192">
+               <item row="8" column="0">
+                <widget class="QGroupBox" name="groupBox_52">
+                 <property name="maximumSize">
+                  <size>
+                   <width>16777215</width>
+                   <height>80</height>
+                  </size>
+                 </property>
+                 <property name="title">
+                  <string>Lower Frequency</string>
+                 </property>
+                 <layout class="QGridLayout" name="gridLayout_190">
+                  <item row="0" column="0">
+                   <widget class="QDoubleSpinBox" name="doubleSpinBox_lowerFreq">
+                    <property name="maximumSize">
+                     <size>
+                      <width>16777215</width>
+                      <height>30</height>
+                     </size>
+                    </property>
+                    <property name="minimum">
+                     <double>0.010000000000000</double>
+                    </property>
+                    <property name="maximum">
+                     <double>100000000000000000.000000000000000</double>
+                    </property>
+                    <property name="singleStep">
+                     <double>1.000000000000000</double>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
+                </widget>
+               </item>
+               <item row="6" column="0">
+                <widget class="QRadioButton" name="radioButton_lowPass">
+                 <property name="text">
+                  <string>Low Pass Filter</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="4" column="0">
+                <widget class="QRadioButton" name="radioButton_bandPass">
+                 <property name="text">
+                  <string>Band Pass Filter</string>
+                 </property>
+                 <property name="checked">
+                  <bool>true</bool>
+                 </property>
+                </widget>
+               </item>
+               <item row="0" column="1">
+                <widget class="QLineEdit" name="lineEdit_selectedChannels"/>
+               </item>
+               <item row="4" column="1">
+                <widget class="QComboBox" name="comboBox_FilterType">
+                 <item>
+                  <property name="text">
+                   <string>IIR - Butterworth</string>
+                  </property>
+                 </item>
+                 <item>
+                  <property name="text">
+                   <string>IIR - Chebyshev I</string>
+                  </property>
+                 </item>
+                 <item>
+                  <property name="text">
+                   <string>IIR - Chebyshev II</string>
+                  </property>
+                 </item>
+                 <item>
+                  <property name="text">
+                   <string>IIR - Elliptic</string>
+                  </property>
+                 </item>
+                 <item>
+                  <property name="text">
+                   <string>FIR - Hamming</string>
+                  </property>
+                 </item>
+                 <item>
+                  <property name="text">
+                   <string>FIR - Hann</string>
+                  </property>
+                 </item>
+                 <item>
+                  <property name="text">
+                   <string>FIR - Blackman</string>
+                  </property>
+                 </item>
+                </widget>
+               </item>
+               <item row="11" column="1">
+                <widget class="QPushButton" name="pushButton_Filter">
+                 <property name="text">
+                  <string>Filter Selected Channels</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="11" column="0">
+                <widget class="QPushButton" name="pushButton_FrequencyResponse">
+                 <property name="text">
+                  <string>Show Frequency Response</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="8" column="1">
+                <widget class="QPushButton" name="pushButton_detectFreq">
+                 <property name="text">
+                  <string>Auto detect Frequency cut-off</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="9" column="0">
+                <widget class="QGroupBox" name="groupBox_upperFreq">
+                 <property name="maximumSize">
+                  <size>
+                   <width>16777215</width>
+                   <height>80</height>
+                  </size>
+                 </property>
+                 <property name="title">
+                  <string>Upper Frequency</string>
+                 </property>
+                 <layout class="QGridLayout" name="gridLayout_191">
+                  <item row="0" column="0">
+                   <widget class="QDoubleSpinBox" name="doubleSpinBox_upperFreq">
+                    <property name="maximumSize">
+                     <size>
+                      <width>16777215</width>
+                      <height>30</height>
+                     </size>
+                    </property>
+                    <property name="minimum">
+                     <double>0.010000000000000</double>
+                    </property>
+                    <property name="maximum">
+                     <double>100000000000000000.000000000000000</double>
+                    </property>
+                    <property name="singleStep">
+                     <double>1.000000000000000</double>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
+                </widget>
+               </item>
+               <item row="0" column="0">
+                <widget class="QTextEdit" name="textEdit_3">
+                 <property name="html">
+                  <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
+&lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;meta charset=&quot;utf-8&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
+p, li { white-space: pre-wrap; }
+hr { height: 1px; border-width: 0; }
+li.unchecked::marker { content: &quot;\2610&quot;; }
+li.checked::marker { content: &quot;\2612&quot;; }
+&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'Ubuntu Sans'; font-size:11pt; font-weight:400; font-style:normal;&quot;&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;Selected Channels IDs to be filtered (Please seperate with comma)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                 </property>
                 </widget>
                </item>
               </layout>
@@ -11136,16 +11285,6 @@ background-color: rgb(131, 131, 131);
                  </property>
                 </widget>
                </item>
-               <item row="6" column="0">
-                <widget class="QPushButton" name="pushButton_re_fetch">
-                 <property name="enabled">
-                  <bool>false</bool>
-                 </property>
-                 <property name="text">
-                  <string>Re-Fetch All Data</string>
-                 </property>
-                </widget>
-               </item>
                <item row="5" column="1" rowspan="2" colspan="2">
                 <widget class="QPushButton" name="pushButton_continue">
                  <property name="enabled">
@@ -11153,6 +11292,16 @@ background-color: rgb(131, 131, 131);
                  </property>
                  <property name="text">
                   <string>Continue without Data-Fetch</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="6" column="0">
+                <widget class="QPushButton" name="pushButton_re_fetch">
+                 <property name="enabled">
+                  <bool>false</bool>
+                 </property>
+                 <property name="text">
+                  <string>Re-Fetch All Sessions</string>
                  </property>
                 </widget>
                </item>
@@ -11171,86 +11320,23 @@ background-color: rgb(131, 131, 131);
                <enum>QFrame::Raised</enum>
               </property>
               <layout class="QGridLayout" name="gridLayout_139" columnstretch="0,0,0,0">
-               <item row="12" column="1">
-                <widget class="QLineEdit" name="lineEdit_11">
+               <item row="7" column="1">
+                <widget class="QLineEdit" name="lineEdit_16">
                  <property name="text">
-                  <string>Moving Mask</string>
+                  <string>Register Key</string>
                  </property>
                  <property name="readOnly">
                   <bool>true</bool>
                  </property>
                 </widget>
                </item>
-               <item row="4" column="1">
-                <widget class="QCheckBox" name="checkBox_atlasmask">
-                 <property name="text">
-                  <string>Use Atlas Mask</string>
-                 </property>
-                 <property name="checked">
-                  <bool>true</bool>
-                 </property>
-                </widget>
-               </item>
-               <item row="3" column="3">
-                <widget class="QPushButton" name="pushButton_browseAtlas">
-                 <property name="text">
-                  <string>Browse</string>
-                 </property>
-                </widget>
-               </item>
-               <item row="3" column="1">
-                <widget class="QLineEdit" name="lineEdit_10">
-                 <property name="text">
-                  <string>Atlas Files</string>
-                 </property>
-                 <property name="readOnly">
-                  <bool>true</bool>
-                 </property>
-                </widget>
-               </item>
-               <item row="7" column="2" colspan="2">
-                <widget class="QComboBox" name="comboBox_register_key"/>
-               </item>
-               <item row="8" column="2" colspan="2">
-                <widget class="QSpinBox" name="spinBox_num_threads"/>
-               </item>
-               <item row="6" column="2" colspan="2">
-                <widget class="QComboBox" name="comboBox_tasks"/>
-               </item>
-               <item row="5" column="1">
-                <widget class="QLineEdit" name="lineEdit_15">
-                 <property name="text">
-                  <string>Working Session</string>
-                 </property>
-                 <property name="readOnly">
-                  <bool>true</bool>
-                 </property>
-                </widget>
-               </item>
-               <item row="3" column="2">
-                <widget class="QTextEdit" name="lineEdit_atlas_path">
+               <item row="2" column="2">
+                <widget class="QTextEdit" name="lineEdit_base_path">
                  <property name="maximumSize">
                   <size>
                    <width>16777215</width>
                    <height>70</height>
                   </size>
-                 </property>
-                </widget>
-               </item>
-               <item row="2" column="3">
-                <widget class="QPushButton" name="pushButton_browseBase">
-                 <property name="text">
-                  <string>Browse</string>
-                 </property>
-                </widget>
-               </item>
-               <item row="16" column="1">
-                <widget class="QCheckBox" name="checkBox_elastic">
-                 <property name="text">
-                  <string>Elastic</string>
-                 </property>
-                 <property name="checked">
-                  <bool>true</bool>
                  </property>
                 </widget>
                </item>
@@ -11281,23 +11367,30 @@ background-color: rgb(131, 131, 131);
                  </layout>
                 </widget>
                </item>
-               <item row="12" column="2">
-                <widget class="QTextEdit" name="lineEdit_movMask">
-                 <property name="maximumSize">
-                  <size>
-                   <width>16777215</width>
-                   <height>100</height>
-                  </size>
+               <item row="1" column="3">
+                <widget class="QPushButton" name="pushButton_browseBru2">
+                 <property name="text">
+                  <string>Browse</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="2" column="1">
+                <widget class="QLineEdit" name="lineEdit_7">
+                 <property name="text">
+                  <string>Base path</string>
                  </property>
                  <property name="readOnly">
                   <bool>true</bool>
                  </property>
                 </widget>
                </item>
-               <item row="1" column="3">
-                <widget class="QPushButton" name="pushButton_browseBru2">
+               <item row="15" column="1">
+                <widget class="QCheckBox" name="checkBox_elastic">
                  <property name="text">
-                  <string>Browse</string>
+                  <string>Elastic</string>
+                 </property>
+                 <property name="checked">
+                  <bool>true</bool>
                  </property>
                 </widget>
                </item>
@@ -11314,6 +11407,99 @@ background-color: rgb(131, 131, 131);
                  </property>
                 </widget>
                </item>
+               <item row="12" column="1">
+                <widget class="QLineEdit" name="lineEdit_11">
+                 <property name="text">
+                  <string>Moving Mask</string>
+                 </property>
+                 <property name="readOnly">
+                  <bool>true</bool>
+                 </property>
+                </widget>
+               </item>
+               <item row="2" column="3">
+                <widget class="QPushButton" name="pushButton_browseBase">
+                 <property name="text">
+                  <string>Browse</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="12" column="2">
+                <widget class="QTextEdit" name="lineEdit_movMask">
+                 <property name="maximumSize">
+                  <size>
+                   <width>16777215</width>
+                   <height>100</height>
+                  </size>
+                 </property>
+                 <property name="readOnly">
+                  <bool>true</bool>
+                 </property>
+                </widget>
+               </item>
+               <item row="6" column="2" colspan="2">
+                <widget class="QComboBox" name="comboBox_tasks"/>
+               </item>
+               <item row="3" column="2">
+                <widget class="QTextEdit" name="lineEdit_atlas_path">
+                 <property name="maximumSize">
+                  <size>
+                   <width>16777215</width>
+                   <height>70</height>
+                  </size>
+                 </property>
+                </widget>
+               </item>
+               <item row="5" column="2" colspan="2">
+                <widget class="QComboBox" name="comboBox_working_session"/>
+               </item>
+               <item row="8" column="1">
+                <widget class="QLineEdit" name="lineEdit_14">
+                 <property name="text">
+                  <string>Num Threads</string>
+                 </property>
+                 <property name="readOnly">
+                  <bool>true</bool>
+                 </property>
+                </widget>
+               </item>
+               <item row="8" column="2" colspan="2">
+                <widget class="QSpinBox" name="spinBox_num_threads"/>
+               </item>
+               <item row="6" column="1">
+                <widget class="QLineEdit" name="lineEdit_17">
+                 <property name="text">
+                  <string>Tasks</string>
+                 </property>
+                 <property name="readOnly">
+                  <bool>true</bool>
+                 </property>
+                </widget>
+               </item>
+               <item row="3" column="3">
+                <widget class="QPushButton" name="pushButton_browseAtlas">
+                 <property name="text">
+                  <string>Browse</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="5" column="1">
+                <widget class="QLineEdit" name="lineEdit_15">
+                 <property name="text">
+                  <string>Working Session</string>
+                 </property>
+                 <property name="readOnly">
+                  <bool>true</bool>
+                 </property>
+                </widget>
+               </item>
+               <item row="14" column="1">
+                <widget class="QCheckBox" name="checkBox_presurgery">
+                 <property name="text">
+                  <string>Presurgery</string>
+                 </property>
+                </widget>
+               </item>
                <item row="1" column="1">
                 <widget class="QLineEdit" name="lineEdit_5">
                  <property name="text">
@@ -11324,12 +11510,35 @@ background-color: rgb(131, 131, 131);
                  </property>
                 </widget>
                </item>
-               <item row="2" column="1">
-                <widget class="QLineEdit" name="lineEdit_7">
+               <item row="7" column="2" colspan="2">
+                <widget class="QComboBox" name="comboBox_register_key"/>
+               </item>
+               <item row="1" column="2">
+                <widget class="QTextEdit" name="lineEdit_bru2_path">
+                 <property name="maximumSize">
+                  <size>
+                   <width>16777215</width>
+                   <height>70</height>
+                  </size>
+                 </property>
+                </widget>
+               </item>
+               <item row="3" column="1">
+                <widget class="QLineEdit" name="lineEdit_10">
                  <property name="text">
-                  <string>Base path</string>
+                  <string>Atlas Files</string>
                  </property>
                  <property name="readOnly">
+                  <bool>true</bool>
+                 </property>
+                </widget>
+               </item>
+               <item row="4" column="1">
+                <widget class="QCheckBox" name="checkBox_atlasmask">
+                 <property name="text">
+                  <string>Use Atlas Mask</string>
+                 </property>
+                 <property name="checked">
                   <bool>true</bool>
                  </property>
                 </widget>
@@ -11344,84 +11553,17 @@ background-color: rgb(131, 131, 131);
                  </property>
                 </widget>
                </item>
-               <item row="7" column="1">
-                <widget class="QLineEdit" name="lineEdit_16">
-                 <property name="text">
-                  <string>Register Key</string>
-                 </property>
-                 <property name="readOnly">
-                  <bool>true</bool>
-                 </property>
-                </widget>
-               </item>
-               <item row="2" column="2">
-                <widget class="QTextEdit" name="lineEdit_base_path">
-                 <property name="maximumSize">
-                  <size>
-                   <width>16777215</width>
-                   <height>70</height>
-                  </size>
-                 </property>
-                </widget>
-               </item>
-               <item row="6" column="1">
-                <widget class="QLineEdit" name="lineEdit_17">
-                 <property name="text">
-                  <string>Tasks</string>
-                 </property>
-                 <property name="readOnly">
-                  <bool>true</bool>
-                 </property>
-                </widget>
-               </item>
-               <item row="17" column="3">
-                <widget class="QDialogButtonBox" name="buttonBox">
-                 <property name="standardButtons">
-                  <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
-                 </property>
-                </widget>
-               </item>
-               <item row="1" column="2">
-                <widget class="QTextEdit" name="lineEdit_bru2_path">
-                 <property name="maximumSize">
-                  <size>
-                   <width>16777215</width>
-                   <height>70</height>
-                  </size>
-                 </property>
-                </widget>
-               </item>
-               <item row="15" column="1">
-                <widget class="QCheckBox" name="checkBox_presurgery">
-                 <property name="text">
-                  <string>Presurgery</string>
-                 </property>
-                </widget>
-               </item>
-               <item row="8" column="1">
-                <widget class="QLineEdit" name="lineEdit_14">
-                 <property name="text">
-                  <string>Num Threads</string>
-                 </property>
-                 <property name="readOnly">
-                  <bool>true</bool>
-                 </property>
-                </widget>
-               </item>
-               <item row="5" column="2" colspan="2">
-                <widget class="QComboBox" name="comboBox_working_session"/>
-               </item>
-               <item row="14" column="1">
-                <widget class="QCheckBox" name="checkBox_registration">
-                 <property name="text">
-                  <string>Register</string>
-                 </property>
-                </widget>
-               </item>
-               <item row="14" column="2">
-                <widget class="QCheckBox" name="checkBox_biascorrection">
+               <item row="16" column="1">
+                <widget class="QPushButton" name="pushButton_biascorrection">
                  <property name="text">
                   <string>Biascorrection ONLY</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="16" column="2" colspan="2">
+                <widget class="QPushButton" name="pushButton_register">
+                 <property name="text">
+                  <string>Register</string>
                  </property>
                 </widget>
                </item>
@@ -11441,37 +11583,8 @@ background-color: rgb(131, 131, 131);
        <attribute name="title">
         <string>3D Visualisation</string>
        </attribute>
-       <layout class="QGridLayout" name="gridLayout_150" columnstretch="2,1,2">
-        <item row="0" column="0">
-         <widget class="QTextEdit" name="textEdit_vis3D">
-          <property name="maximumSize">
-           <size>
-            <width>16777215</width>
-            <height>50</height>
-           </size>
-          </property>
-          <property name="verticalScrollBarPolicy">
-           <enum>Qt::ScrollBarAlwaysOff</enum>
-          </property>
-          <property name="horizontalScrollBarPolicy">
-           <enum>Qt::ScrollBarAlwaysOff</enum>
-          </property>
-          <property name="readOnly">
-           <bool>true</bool>
-          </property>
-          <property name="html">
-           <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
-&lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;meta charset=&quot;utf-8&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
-p, li { white-space: pre-wrap; }
-hr { height: 1px; border-width: 0; }
-li.unchecked::marker { content: &quot;\2610&quot;; }
-li.checked::marker { content: &quot;\2612&quot;; }
-&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'Ubuntu Sans'; font-size:11pt; font-weight:400; font-style:normal;&quot;&gt;
-&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'Segoe UI'; font-size:20pt; color:#ffffff;&quot;&gt;Atlas 3D Visualisation&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-          </property>
-         </widget>
-        </item>
-        <item row="0" column="1">
+       <layout class="QGridLayout" name="gridLayout_150" rowstretch="0,0,0,0" columnstretch="2,0,0">
+        <item row="0" column="0" colspan="2">
          <widget class="QComboBox" name="comboBox_mridTag_vis3D">
           <property name="minimumSize">
            <size>
@@ -11672,129 +11785,7 @@ background-color: rgb(131, 131, 131);
           </layout>
          </widget>
         </item>
-        <item row="2" column="0" colspan="2">
-         <widget class="QGroupBox" name="groupBox_anatRegion_3">
-          <property name="title">
-           <string>Selected Channel ID and Anat Region Label</string>
-          </property>
-          <layout class="QGridLayout" name="gridLayout_149">
-           <item row="0" column="2">
-            <widget class="QComboBox" name="comboBox_anatRegion_vis3D">
-             <property name="enabled">
-              <bool>false</bool>
-             </property>
-             <property name="minimumSize">
-              <size>
-               <width>0</width>
-               <height>40</height>
-              </size>
-             </property>
-             <property name="styleSheet">
-              <string notr="true"/>
-             </property>
-            </widget>
-           </item>
-           <item row="0" column="1">
-            <widget class="QSpinBox" name="spinBox_channelID_vis3D">
-             <property name="minimumSize">
-              <size>
-               <width>0</width>
-               <height>40</height>
-              </size>
-             </property>
-             <property name="readOnly">
-              <bool>false</bool>
-             </property>
-             <property name="buttonSymbols">
-              <enum>QAbstractSpinBox::NoButtons</enum>
-             </property>
-            </widget>
-           </item>
-          </layout>
-         </widget>
-        </item>
-        <item row="4" column="0" colspan="2">
-         <widget class="QGroupBox" name="groupBox_69">
-          <property name="maximumSize">
-           <size>
-            <width>16777215</width>
-            <height>200</height>
-           </size>
-          </property>
-          <property name="title">
-           <string>Coordinates of selected Channel</string>
-          </property>
-          <layout class="QGridLayout" name="gridLayout_143">
-           <item row="0" column="2">
-            <widget class="QSpinBox" name="spinBox_y_vis3D">
-             <property name="maximumSize">
-              <size>
-               <width>16777215</width>
-               <height>30</height>
-              </size>
-             </property>
-             <property name="readOnly">
-              <bool>true</bool>
-             </property>
-             <property name="buttonSymbols">
-              <enum>QAbstractSpinBox::NoButtons</enum>
-             </property>
-             <property name="minimum">
-              <number>1</number>
-             </property>
-             <property name="maximum">
-              <number>1000</number>
-             </property>
-            </widget>
-           </item>
-           <item row="0" column="3">
-            <widget class="QSpinBox" name="spinBox_z_vis3D">
-             <property name="maximumSize">
-              <size>
-               <width>16777215</width>
-               <height>30</height>
-              </size>
-             </property>
-             <property name="readOnly">
-              <bool>true</bool>
-             </property>
-             <property name="buttonSymbols">
-              <enum>QAbstractSpinBox::NoButtons</enum>
-             </property>
-             <property name="minimum">
-              <number>1</number>
-             </property>
-             <property name="maximum">
-              <number>1000</number>
-             </property>
-            </widget>
-           </item>
-           <item row="0" column="1">
-            <widget class="QSpinBox" name="spinBox_x_vis3D">
-             <property name="maximumSize">
-              <size>
-               <width>16777215</width>
-               <height>30</height>
-              </size>
-             </property>
-             <property name="readOnly">
-              <bool>true</bool>
-             </property>
-             <property name="buttonSymbols">
-              <enum>QAbstractSpinBox::NoButtons</enum>
-             </property>
-             <property name="minimum">
-              <number>1</number>
-             </property>
-             <property name="maximum">
-              <number>1000</number>
-             </property>
-            </widget>
-           </item>
-          </layout>
-         </widget>
-        </item>
-        <item row="0" column="2" rowspan="5">
+        <item row="0" column="2" rowspan="4">
          <widget class="QTableWidget" name="tableWidget_vis3D">
           <property name="sizeAdjustPolicy">
            <enum>QAbstractScrollArea::AdjustToContents</enum>
@@ -11837,6 +11828,7 @@ background-color: rgb(131, 131, 131);
     <addaction name="actionAddViewImage"/>
     <addaction name="separator"/>
     <addaction name="actionQuit"/>
+    <addaction name="actionNew_Window"/>
    </widget>
    <widget class="QMenu" name="menuTools">
     <property name="title">
@@ -11867,17 +11859,36 @@ background-color: rgb(131, 131, 131);
     <addaction name="actionContrast_Adjustments"/>
     <addaction name="separator"/>
    </widget>
+   <widget class="QMenu" name="menuEphys_Analysis">
+    <property name="title">
+     <string>Ephys Analysis</string>
+    </property>
+    <addaction name="actionRippl_AI"/>
+    <addaction name="actionTheta_Detection"/>
+    <addaction name="actionLoad_Spike_Sorting"/>
+   </widget>
    <addaction name="menuGUI"/>
    <addaction name="menuTools"/>
    <addaction name="menu4D_Tools"/>
+   <addaction name="menuEphys_Analysis"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
   <widget class="QDockWidget" name="dockWidget_ephys">
    <property name="minimumSize">
     <size>
      <width>663</width>
-     <height>750</height>
+     <height>1041</height>
     </size>
+   </property>
+   <property name="styleSheet">
+    <string notr="true">QPushButton:checked {
+                background-color: palette(highlight);
+                color: palette(highlighted-text);
+            }
+            QPushButton:hover {
+                background-color: rgba(255, 255, 255, 30);
+                border-radius: 4px;
+            }</string>
    </property>
    <attribute name="dockWidgetArea">
     <number>2</number>
@@ -11889,44 +11900,11 @@ background-color: rgb(131, 131, 131);
       <height>0</height>
      </size>
     </property>
-    <layout class="QGridLayout" name="gridLayout_69">
-     <item row="1" column="4">
-      <widget class="QPushButton" name="pushButton_zoomOut">
-       <property name="enabled">
-        <bool>true</bool>
-       </property>
+    <layout class="QGridLayout" name="gridLayout_69" rowstretch="0,0,1,0,0,0" columnstretch="0,0,0,0,0,0,0,0">
+     <item row="1" column="4" colspan="4">
+      <widget class="QPushButton" name="pushButton_lfp">
        <property name="toolTip">
-        <string>Zoom Out</string>
-       </property>
-       <property name="styleSheet">
-        <string notr="true">
-            QPushButton:hover {
-                background-color: rgba(255, 255, 255, 30);
-                border-radius: 4px;
-            }</string>
-       </property>
-       <property name="text">
-        <string/>
-       </property>
-       <property name="icon">
-        <iconset>
-         <normaloff>Icons/ephys/zoom-out.png</normaloff>Icons/ephys/zoom-out.png</iconset>
-       </property>
-       <property name="iconSize">
-        <size>
-         <width>40</width>
-         <height>40</height>
-        </size>
-       </property>
-       <property name="checkable">
-        <bool>true</bool>
-       </property>
-      </widget>
-     </item>
-     <item row="1" column="5">
-      <widget class="QPushButton" name="pushButton_selectTime">
-       <property name="toolTip">
-        <string>Select Time</string>
+        <string>Jump half duration forward</string>
        </property>
        <property name="styleSheet">
         <string notr="true">QPushButton:checked {
@@ -11939,202 +11917,14 @@ background-color: rgb(131, 131, 131);
             }</string>
        </property>
        <property name="text">
-        <string/>
-       </property>
-       <property name="icon">
-        <iconset>
-         <normaloff>Icons/ephys/select_time.png</normaloff>Icons/ephys/select_time.png</iconset>
-       </property>
-       <property name="iconSize">
-        <size>
-         <width>40</width>
-         <height>40</height>
-        </size>
+        <string>Display LFP-filtered Data</string>
        </property>
        <property name="checkable">
         <bool>true</bool>
        </property>
       </widget>
      </item>
-     <item row="1" column="0">
-      <widget class="QPushButton" name="pushButton_zoomReset">
-       <property name="enabled">
-        <bool>true</bool>
-       </property>
-       <property name="toolTip">
-        <string>Reset Zoom</string>
-       </property>
-       <property name="styleSheet">
-        <string notr="true">
-            QPushButton:hover {
-                background-color: rgba(255, 255, 255, 30);
-                border-radius: 4px;
-            }</string>
-       </property>
-       <property name="text">
-        <string/>
-       </property>
-       <property name="icon">
-        <iconset>
-         <normaloff>Icons/ephys/zoom-in (1).png</normaloff>Icons/ephys/zoom-in (1).png</iconset>
-       </property>
-       <property name="iconSize">
-        <size>
-         <width>40</width>
-         <height>40</height>
-        </size>
-       </property>
-       <property name="checkable">
-        <bool>true</bool>
-       </property>
-      </widget>
-     </item>
-     <item row="2" column="0" colspan="7">
-      <widget class="QSlider" name="horizontalSlider_ephys">
-       <property name="singleStep">
-        <number>100</number>
-       </property>
-       <property name="pageStep">
-        <number>1000</number>
-       </property>
-       <property name="orientation">
-        <enum>Qt::Horizontal</enum>
-       </property>
-      </widget>
-     </item>
-     <item row="1" column="3">
-      <widget class="QPushButton" name="pushButtonAmp_minus">
-       <property name="toolTip">
-        <string>Decrease Amplitude</string>
-       </property>
-       <property name="styleSheet">
-        <string notr="true">
-            QPushButton:hover {
-                background-color: rgba(255, 255, 255, 30);
-                border-radius: 4px;
-            }</string>
-       </property>
-       <property name="text">
-        <string/>
-       </property>
-       <property name="icon">
-        <iconset>
-         <normaloff>Icons/ephys/amplitude_minus.png</normaloff>Icons/ephys/amplitude_minus.png</iconset>
-       </property>
-       <property name="iconSize">
-        <size>
-         <width>40</width>
-         <height>40</height>
-        </size>
-       </property>
-       <property name="checkable">
-        <bool>true</bool>
-       </property>
-      </widget>
-     </item>
-     <item row="1" column="2">
-      <widget class="QPushButton" name="pushButton_timeline">
-       <property name="enabled">
-        <bool>true</bool>
-       </property>
-       <property name="toolTip">
-        <string>Draw Timeline</string>
-       </property>
-       <property name="styleSheet">
-        <string notr="true">QPushButton:checked {
-                background-color: palette(highlight);
-                color: palette(highlighted-text);
-            }
-            QPushButton:hover {
-                background-color: rgba(255, 255, 255, 30);
-                border-radius: 4px;
-            }</string>
-       </property>
-       <property name="text">
-        <string/>
-       </property>
-       <property name="icon">
-        <iconset>
-         <normaloff>Icons/ephys/select_timeline.png</normaloff>Icons/ephys/select_timeline.png</iconset>
-       </property>
-       <property name="iconSize">
-        <size>
-         <width>40</width>
-         <height>40</height>
-        </size>
-       </property>
-       <property name="checkable">
-        <bool>true</bool>
-       </property>
-      </widget>
-     </item>
-     <item row="1" column="1">
-      <widget class="QPushButton" name="pushButtonAmp_plus">
-       <property name="toolTip">
-        <string>Increase Amplitude</string>
-       </property>
-       <property name="styleSheet">
-        <string notr="true">
-            QPushButton:hover {
-                background-color: rgba(255, 255, 255, 30);
-                border-radius: 4px;
-            }</string>
-       </property>
-       <property name="text">
-        <string/>
-       </property>
-       <property name="icon">
-        <iconset>
-         <normaloff>Icons/ephys/amplitude_plus.png</normaloff>Icons/ephys/amplitude_plus.png</iconset>
-       </property>
-       <property name="iconSize">
-        <size>
-         <width>40</width>
-         <height>40</height>
-        </size>
-       </property>
-       <property name="checkable">
-        <bool>true</bool>
-       </property>
-      </widget>
-     </item>
-     <item row="1" column="6">
-      <widget class="QPushButton" name="pushButton_measurement">
-       <property name="enabled">
-        <bool>true</bool>
-       </property>
-       <property name="toolTip">
-        <string>Measure</string>
-       </property>
-       <property name="styleSheet">
-        <string notr="true">QPushButton:checked {
-                background-color: palette(highlight);
-                color: palette(highlighted-text);
-            }
-            QPushButton:hover {
-                background-color: rgba(255, 255, 255, 30);
-                border-radius: 4px;
-            }</string>
-       </property>
-       <property name="text">
-        <string/>
-       </property>
-       <property name="icon">
-        <iconset>
-         <normaloff>Icons/mri/measure.png</normaloff>Icons/mri/measure.png</iconset>
-       </property>
-       <property name="iconSize">
-        <size>
-         <width>40</width>
-         <height>40</height>
-        </size>
-       </property>
-       <property name="checkable">
-        <bool>true</bool>
-       </property>
-      </widget>
-     </item>
-     <item row="3" column="0" colspan="7">
+     <item row="5" column="0" colspan="8">
       <widget class="QGroupBox" name="groupBox_3">
        <property name="minimumSize">
         <size>
@@ -12200,8 +11990,471 @@ background-color: rgb(131, 131, 131);
        </layout>
       </widget>
      </item>
-     <item row="0" column="0" colspan="7">
+     <item row="3" column="6">
+      <widget class="QPushButton" name="pushButton_selectTime">
+       <property name="toolTip">
+        <string>Select Time</string>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">QPushButton:checked {
+                background-color: palette(highlight);
+                color: palette(highlighted-text);
+            }
+            QPushButton:hover {
+                background-color: rgba(255, 255, 255, 30);
+                border-radius: 4px;
+            }</string>
+       </property>
+       <property name="text">
+        <string/>
+       </property>
+       <property name="icon">
+        <iconset>
+         <normaloff>Icons/ephys/select_time.png</normaloff>Icons/ephys/select_time.png</iconset>
+       </property>
+       <property name="iconSize">
+        <size>
+         <width>40</width>
+         <height>40</height>
+        </size>
+       </property>
+       <property name="checkable">
+        <bool>true</bool>
+       </property>
+      </widget>
+     </item>
+     <item row="3" column="1">
+      <widget class="QPushButton" name="pushButton_zoomReset">
+       <property name="enabled">
+        <bool>true</bool>
+       </property>
+       <property name="toolTip">
+        <string>Reset Zoom</string>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">
+            QPushButton:hover {
+                background-color: rgba(255, 255, 255, 30);
+                border-radius: 4px;
+            }</string>
+       </property>
+       <property name="text">
+        <string/>
+       </property>
+       <property name="icon">
+        <iconset>
+         <normaloff>Icons/ephys/zoom-in (1).png</normaloff>Icons/ephys/zoom-in (1).png</iconset>
+       </property>
+       <property name="iconSize">
+        <size>
+         <width>40</width>
+         <height>40</height>
+        </size>
+       </property>
+       <property name="checkable">
+        <bool>false</bool>
+       </property>
+      </widget>
+     </item>
+     <item row="2" column="0" colspan="8">
       <widget class="PgWidget" name="widget_pgEphys" native="true"/>
+     </item>
+     <item row="3" column="4">
+      <widget class="QPushButton" name="pushButton_timeline">
+       <property name="enabled">
+        <bool>true</bool>
+       </property>
+       <property name="toolTip">
+        <string>Draw Timeline</string>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">QPushButton:checked {
+                background-color: palette(highlight);
+                color: palette(highlighted-text);
+            }
+            QPushButton:hover {
+                background-color: rgba(255, 255, 255, 30);
+                border-radius: 4px;
+            }</string>
+       </property>
+       <property name="text">
+        <string/>
+       </property>
+       <property name="icon">
+        <iconset>
+         <normaloff>Icons/ephys/select_timeline.png</normaloff>Icons/ephys/select_timeline.png</iconset>
+       </property>
+       <property name="iconSize">
+        <size>
+         <width>40</width>
+         <height>40</height>
+        </size>
+       </property>
+       <property name="checkable">
+        <bool>true</bool>
+       </property>
+       <property name="checked">
+        <bool>true</bool>
+       </property>
+      </widget>
+     </item>
+     <item row="3" column="7">
+      <widget class="QPushButton" name="pushButton_measurement">
+       <property name="enabled">
+        <bool>true</bool>
+       </property>
+       <property name="toolTip">
+        <string>Measure</string>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">QPushButton:checked {
+                background-color: palette(highlight);
+                color: palette(highlighted-text);
+            }
+            QPushButton:hover {
+                background-color: rgba(255, 255, 255, 30);
+                border-radius: 4px;
+            }</string>
+       </property>
+       <property name="text">
+        <string/>
+       </property>
+       <property name="icon">
+        <iconset>
+         <normaloff>Icons/mri/measure.png</normaloff>Icons/mri/measure.png</iconset>
+       </property>
+       <property name="iconSize">
+        <size>
+         <width>40</width>
+         <height>40</height>
+        </size>
+       </property>
+       <property name="checkable">
+        <bool>true</bool>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="4" colspan="4">
+      <widget class="QGroupBox" name="groupBox_1">
+       <property name="title">
+        <string>Theta Detection</string>
+       </property>
+       <layout class="QGridLayout" name="gridLayout_205">
+        <item row="0" column="0">
+         <widget class="QStackedWidget" name="stackedWidget_theta">
+          <property name="currentIndex">
+           <number>0</number>
+          </property>
+          <widget class="QWidget" name="page_27">
+           <layout class="QGridLayout" name="gridLayout_200">
+            <item row="2" column="2">
+             <widget class="QPushButton" name="pushButton_next_theta">
+              <property name="text">
+               <string>Next Theta</string>
+              </property>
+             </widget>
+            </item>
+            <item row="3" column="0">
+             <widget class="QCheckBox" name="checkBox_thetaCycles">
+              <property name="text">
+               <string>Visible Phase Cycles</string>
+              </property>
+              <property name="checked">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="2">
+             <widget class="QPushButton" name="pushButton_add_theta">
+              <property name="text">
+               <string>Add</string>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="0">
+             <widget class="QCheckBox" name="checkBox_theta">
+              <property name="text">
+               <string>Visible</string>
+              </property>
+              <property name="checked">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+            <item row="2" column="0">
+             <widget class="QPushButton" name="pushButton_prev_theta">
+              <property name="text">
+               <string>Previous Theta</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </widget>
+          <widget class="QWidget" name="page_28">
+           <layout class="QGridLayout" name="gridLayout_204">
+            <item row="0" column="0">
+             <widget class="QLineEdit" name="lineEdit_63">
+              <property name="text">
+               <string>No File found. Please first do Ephys Analysis -&gt; Theta Detection</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </widget>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </item>
+     <item row="0" column="0" colspan="4">
+      <widget class="QGroupBox" name="groupBox_67">
+       <property name="title">
+        <string>Rippl-AI</string>
+       </property>
+       <layout class="QGridLayout" name="gridLayout_206">
+        <item row="0" column="0">
+         <widget class="QStackedWidget" name="stackedWidget_ripplAI">
+          <property name="currentIndex">
+           <number>0</number>
+          </property>
+          <widget class="QWidget" name="page_21">
+           <layout class="QGridLayout" name="gridLayout_197">
+            <item row="0" column="1">
+             <widget class="QPushButton" name="pushButton_addRipple">
+              <property name="text">
+               <string>Add</string>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="1">
+             <widget class="QPushButton" name="pushButton_next_rippl">
+              <property name="text">
+               <string>Next SWR</string>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="0">
+             <widget class="QCheckBox" name="checkBox_ripplAI">
+              <property name="text">
+               <string>Visible</string>
+              </property>
+              <property name="checked">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="0">
+             <widget class="QPushButton" name="pushButton_prev_rippl">
+              <property name="text">
+               <string>Previous SWR</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </widget>
+          <widget class="QWidget" name="page_22">
+           <layout class="QGridLayout" name="gridLayout_198">
+            <item row="0" column="0">
+             <widget class="QLineEdit" name="lineEdit_18">
+              <property name="text">
+               <string>No File found. Please first do Ephys Analysis -&gt; Rippl AI</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </widget>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </item>
+     <item row="3" column="2">
+      <widget class="QPushButton" name="pushButtonAmp_plus">
+       <property name="toolTip">
+        <string>Increase Amplitude</string>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">
+            QPushButton:hover {
+                background-color: rgba(255, 255, 255, 30);
+                border-radius: 4px;
+            }</string>
+       </property>
+       <property name="text">
+        <string/>
+       </property>
+       <property name="icon">
+        <iconset>
+         <normaloff>Icons/ephys/amplitude_plus.png</normaloff>Icons/ephys/amplitude_plus.png</iconset>
+       </property>
+       <property name="iconSize">
+        <size>
+         <width>40</width>
+         <height>40</height>
+        </size>
+       </property>
+       <property name="checkable">
+        <bool>false</bool>
+       </property>
+      </widget>
+     </item>
+     <item row="3" column="3">
+      <widget class="QPushButton" name="pushButtonAmp_minus">
+       <property name="toolTip">
+        <string>Decrease Amplitude</string>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">
+            QPushButton:hover {
+                background-color: rgba(255, 255, 255, 30);
+                border-radius: 4px;
+            }</string>
+       </property>
+       <property name="text">
+        <string/>
+       </property>
+       <property name="icon">
+        <iconset>
+         <normaloff>Icons/ephys/amplitude_minus.png</normaloff>Icons/ephys/amplitude_minus.png</iconset>
+       </property>
+       <property name="iconSize">
+        <size>
+         <width>40</width>
+         <height>40</height>
+        </size>
+       </property>
+       <property name="checkable">
+        <bool>false</bool>
+       </property>
+      </widget>
+     </item>
+     <item row="3" column="0">
+      <widget class="QPushButton" name="pushButton_zoomIn">
+       <property name="styleSheet">
+        <string notr="true">QPushButton:checked {
+                background-color: palette(highlight);
+                color: palette(highlighted-text);
+            }
+            QPushButton:hover {
+                background-color: rgba(255, 255, 255, 30);
+                border-radius: 4px;
+            }</string>
+       </property>
+       <property name="text">
+        <string/>
+       </property>
+       <property name="icon">
+        <iconset>
+         <normaloff>Icons/ephys/zoom_in.png</normaloff>Icons/ephys/zoom_in.png</iconset>
+       </property>
+       <property name="iconSize">
+        <size>
+         <width>40</width>
+         <height>40</height>
+        </size>
+       </property>
+       <property name="checkable">
+        <bool>true</bool>
+       </property>
+       <property name="checked">
+        <bool>false</bool>
+       </property>
+      </widget>
+     </item>
+     <item row="3" column="5">
+      <widget class="QPushButton" name="pushButton_zoomOut">
+       <property name="enabled">
+        <bool>true</bool>
+       </property>
+       <property name="toolTip">
+        <string>Zoom Out</string>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">
+            QPushButton:hover {
+                background-color: rgba(255, 255, 255, 30);
+                border-radius: 4px;
+            }</string>
+       </property>
+       <property name="text">
+        <string/>
+       </property>
+       <property name="icon">
+        <iconset>
+         <normaloff>Icons/ephys/zoom-out.png</normaloff>Icons/ephys/zoom-out.png</iconset>
+       </property>
+       <property name="iconSize">
+        <size>
+         <width>40</width>
+         <height>40</height>
+        </size>
+       </property>
+       <property name="checkable">
+        <bool>false</bool>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="0" colspan="4">
+      <widget class="QPushButton" name="pushButton_broadband">
+       <property name="styleSheet">
+        <string notr="true">QPushButton:checked {
+                background-color: palette(highlight);
+                color: palette(highlighted-text);
+            }
+            QPushButton:hover {
+                background-color: rgba(255, 255, 255, 30);
+                border-radius: 4px;
+            }</string>
+       </property>
+       <property name="text">
+        <string>Display raw Data</string>
+       </property>
+       <property name="checkable">
+        <bool>true</bool>
+       </property>
+       <property name="checked">
+        <bool>true</bool>
+       </property>
+      </widget>
+     </item>
+     <item row="4" column="1" colspan="6">
+      <widget class="QSlider" name="horizontalSlider_ephys">
+       <property name="singleStep">
+        <number>100</number>
+       </property>
+       <property name="pageStep">
+        <number>1000</number>
+       </property>
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+      </widget>
+     </item>
+     <item row="4" column="0">
+      <widget class="QPushButton" name="pushButton_Timeprev">
+       <property name="toolTip">
+        <string>Jump half duration backwards</string>
+       </property>
+       <property name="text">
+        <string/>
+       </property>
+       <property name="icon">
+        <iconset theme="QIcon::ThemeIcon::MediaSeekBackward"/>
+       </property>
+      </widget>
+     </item>
+     <item row="4" column="7">
+      <widget class="QPushButton" name="pushButton_Timenext">
+       <property name="toolTip">
+        <string>Jump half duration forward</string>
+       </property>
+       <property name="text">
+        <string/>
+       </property>
+       <property name="icon">
+        <iconset theme="QIcon::ThemeIcon::MediaSeekForward"/>
+       </property>
+      </widget>
      </item>
     </layout>
    </widget>
@@ -12321,6 +12574,26 @@ background-color: rgb(131, 131, 131);
     <string>Trajectory Planning</string>
    </property>
   </action>
+  <action name="actionNew_Window">
+   <property name="text">
+    <string>New Window</string>
+   </property>
+  </action>
+  <action name="actionRippl_AI">
+   <property name="text">
+    <string>Rippl AI</string>
+   </property>
+  </action>
+  <action name="actionTheta_Detection">
+   <property name="text">
+    <string>Theta Detection</string>
+   </property>
+  </action>
+  <action name="actionLoad_Spike_Sorting">
+   <property name="text">
+    <string>Show Spiking Raster Plot</string>
+   </property>
+  </action>
  </widget>
  <customwidgets>
   <customwidget>
@@ -12408,7 +12681,7 @@ background-color: rgb(131, 131, 131);
   <tabstop>pushButton_auto_data12</tabstop>
   <tabstop>tableintensity_data1</tabstop>
   <tabstop>vtkWidget_legend1</tabstop>
-  <tabstop>file_name_displayed_4d</tabstop>
+  <tabstop>file_name_displayed</tabstop>
   <tabstop>go_left_data12</tabstop>
   <tabstop>go_right_data12</tabstop>
   <tabstop>zoom_in_data12</tabstop>
@@ -12786,14 +13059,10 @@ background-color: rgb(131, 131, 131);
   <tabstop>lineEdit_34</tabstop>
   <tabstop>pushButton_reorient</tabstop>
   <tabstop>lineEdit_DicomOrient</tabstop>
-  <tabstop>pushButton_anatRegion</tabstop>
   <tabstop>comboBox_mridTag</tabstop>
   <tabstop>pushButton_selectAll</tabstop>
   <tabstop>tableWidget_ephys</tabstop>
   <tabstop>pushButton_deselectAll</tabstop>
-  <tabstop>pushButton_showChannels</tabstop>
-  <tabstop>textEdit_ephys</tabstop>
-  <tabstop>tabWidget_2</tabstop>
   <tabstop>resetCamera_ephys</tabstop>
   <tabstop>change_perspective_ephys</tabstop>
   <tabstop>pushButton_slicey</tabstop>
@@ -12812,12 +13081,10 @@ background-color: rgb(131, 131, 131);
   <tabstop>spinBox_frame</tabstop>
   <tabstop>pushButton_AddVideo</tabstop>
   <tabstop>pushButton_filterpopup</tabstop>
-  <tabstop>lineEdit_13</tabstop>
   <tabstop>pushButton_FrequencyResponse</tabstop>
   <tabstop>comboBox_FilterType</tabstop>
   <tabstop>lineEdit_selectedChannels</tabstop>
   <tabstop>radioButton_bandPass</tabstop>
-  <tabstop>lineEdit_18</tabstop>
   <tabstop>radioButton_lowPass</tabstop>
   <tabstop>pushButton_Filter</tabstop>
   <tabstop>doubleSpinBox_upperFreq</tabstop>
@@ -12865,10 +13132,7 @@ background-color: rgb(131, 131, 131);
   <tabstop>checkBox_presurgery</tabstop>
   <tabstop>lineEdit_14</tabstop>
   <tabstop>comboBox_working_session</tabstop>
-  <tabstop>checkBox_registration</tabstop>
-  <tabstop>checkBox_biascorrection</tabstop>
   <tabstop>plainTextEdit_SAMRI</tabstop>
-  <tabstop>textEdit_vis3D</tabstop>
   <tabstop>comboBox_mridTag_vis3D</tabstop>
   <tabstop>pushButton_slicey_vis3D</tabstop>
   <tabstop>resetCamera_vis3D</tabstop>
@@ -12877,16 +13141,7 @@ background-color: rgb(131, 131, 131);
   <tabstop>pushButton_slicez_vis3D</tabstop>
   <tabstop>vtkWidget_vis3D</tabstop>
   <tabstop>pushButton_Noslicing_vis3D</tabstop>
-  <tabstop>comboBox_anatRegion_vis3D</tabstop>
-  <tabstop>spinBox_channelID_vis3D</tabstop>
-  <tabstop>spinBox_y_vis3D</tabstop>
-  <tabstop>spinBox_z_vis3D</tabstop>
-  <tabstop>spinBox_x_vis3D</tabstop>
   <tabstop>tableWidget_vis3D</tabstop>
-  <tabstop>pushButton_zoomReset</tabstop>
-  <tabstop>pushButtonAmp_plus</tabstop>
-  <tabstop>pushButton_timeline</tabstop>
-  <tabstop>pushButtonAmp_minus</tabstop>
   <tabstop>pushButton_zoomOut</tabstop>
   <tabstop>pushButton_selectTime</tabstop>
   <tabstop>pushButton_measurement</tabstop>
