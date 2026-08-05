@@ -218,6 +218,11 @@ class CustomInteractorStyle(vtk.vtkInteractorStyleImage):
             for image_index,vtk_widget_image in self.LoadMRI.vtk_widgets.items():
                 for vn, widget in vtk_widget_image.items():
                     renderer = widget.GetRenderWindow().GetRenderers().GetFirstRenderer()
+                    if renderer is None:
+                        # a registered widget can have no renderer yet — the 4th
+                        # localisation panel is put into vtk_widgets before anything is
+                        # drawn into it. Same guard as fit_to_window above.
+                        continue
                     camera = renderer.GetActiveCamera()
                     if vn == self.interactor_view_name and not image_index == self.image_index:
                         camera.SetFocalPoint(fp[0],fp[1],fp[2])
@@ -252,6 +257,11 @@ class CustomInteractorStyle(vtk.vtkInteractorStyleImage):
             for image_index,vtk_widget_image in self.LoadMRI.vtk_widgets.items():
                 for vn, widget in vtk_widget_image.items():
                     renderer = widget.GetRenderWindow().GetRenderers().GetFirstRenderer()
+                    if renderer is None:
+                        # a registered widget can have no renderer yet — the 4th
+                        # localisation panel is put into vtk_widgets before anything is
+                        # drawn into it. Same guard as fit_to_window above.
+                        continue
                     camera = renderer.GetActiveCamera()
 
                     if vn == self.interactor_view_name and image_index != self.image_index:
@@ -415,7 +425,20 @@ class CustomInteractorStyle(vtk.vtkInteractorStyleImage):
 
         for image_index,vtk_widget_image in self.LoadMRI.vtk_widgets.items():
             for vn, widget in vtk_widget_image.items():
+                # 4D: the view-name key identifies the data set, so a different
+                # key is a different acquisition with its own geometry — its zoom
+                # is not ours to change. Everything belonging to this data set (its
+                # other timestamp panels) still follows.
+                # 3D: all three orthogonal views are this one data set, so they
+                # stay in sync exactly as before.
+                if self.LoadMRI.volumes[0].is_4d and vn != self.interactor_view_name:
+                    continue
                 renderer = widget.GetRenderWindow().GetRenderers().GetFirstRenderer()
+                if renderer is None:
+                    # a registered widget can have no renderer yet — the 4th
+                    # localisation panel is put into vtk_widgets before anything is
+                    # drawn into it. Same guard as fit_to_window above.
+                    continue
                 camera = renderer.GetActiveCamera()
                 if not (vn == self.interactor_view_name and image_index == self.image_index):
                     pos_xy = camera.GetPosition()
@@ -500,6 +523,11 @@ class CustomInteractorStyle(vtk.vtkInteractorStyleImage):
         for image_index,vtk_widget_image in self.LoadMRI.vtk_widgets.items():
             for vn, widget in vtk_widget_image.items():
                 renderer = widget.GetRenderWindow().GetRenderers().GetFirstRenderer()
+                if renderer is None:
+                    # a registered widget can have no renderer yet — the 4th
+                    # localisation panel is put into vtk_widgets before anything is
+                    # drawn into it. Same guard as fit_to_window above.
+                    continue
                 camera = renderer.GetActiveCamera()
                 if vn == self.interactor_view_name and not image_index == self.image_index:
                     camera.SetFocalPoint(fp[0],fp[1],fp[2])
