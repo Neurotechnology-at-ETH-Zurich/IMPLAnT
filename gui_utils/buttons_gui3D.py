@@ -459,11 +459,16 @@ class ButtonsGUI_3D:
                     sitk.Cast(moving_for_apply, sitk.sitkFloat32), moving_tmp
                 )
                 moving_ants = ants.image_read(moving_tmp)
+                # linear, not lanczosWindowedSinc: sinc kernels have negative
+                # side-lobes and ring at sharp edges (skull/background etc.),
+                # producing large negative overshoot that doesn't exist in the
+                # source data; linear is a convex combination of neighbours so
+                # it can't overshoot the input's value range
                 img_aligned = ants.apply_transforms(
                     fixed=fixed_ants,
                     moving=moving_ants,
                     transformlist=transform_path,
-                    interpolator="lanczosWindowedSinc",
+                    interpolator="linear",
                 )
 
             base = reg.moving_filepath
