@@ -105,7 +105,6 @@ class SegmentationInitialization:
             break
 
     def draw_bubble(self,push_btn):
-        print('start',self.radius,flush=True)
         for view_name in 'axial','sagittal','coronal':
             #Get cursor position
             self.get_bubble_center(view_name)
@@ -158,7 +157,6 @@ class SegmentationInitialization:
         if not push_btn.isEnabled():
             push_btn.setEnabled(True)
 
-        print('end',self.radius,flush=True)
 
     def create_table(self,table):
         self.table = table

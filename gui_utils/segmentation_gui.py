@@ -288,7 +288,6 @@ class SegmentationGUI:
         for ix in selected.indexes():
             row_index = ix.row()
             radius = self.LoadMRI.SegInitialization.actor_bubble[row_index * 3][3]
-            print('row_selected',row_index,radius,self.LoadMRI.SegInitialization.actor_bubble,flush=True)
             self.ui.doubleSpinBox_Bubradius.blockSignals(True)
             self.ui.horizontalSlider_Bubradius.blockSignals(True)
             self.ui.doubleSpinBox_Bubradius.setValue(radius)

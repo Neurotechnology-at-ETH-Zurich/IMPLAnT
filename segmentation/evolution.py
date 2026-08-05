@@ -183,7 +183,6 @@ class SegmentationEvolution(QObject):
         self.thread.started.connect(self.worker.run)
         self.worker.progress.connect(self.on_progress)
         self.worker.finished.connect(self.on_finished)
-        self.worker.error.connect(lambda msg: print("Evolution error:", msg))
 
         # proper cleanup: wait until the thread actually exits before nulling refs
         self.worker.finished.connect(self.thread.quit)
@@ -483,7 +482,7 @@ class SegmentationEvolution(QObject):
             del self.LoadMRI.segmentation_mask
 
         #update to show bubbles again
-        self.LoadMRI.update_slices(0,0,'coronal')
+        self.LoadMRI.update_slices(0,'coronal')
 
 
 class EvolutionWorker(QObject):
