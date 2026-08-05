@@ -25,8 +25,32 @@ import numpy as np
 from PySide6 import QtWidgets
 import pandas as pd
 import SimpleITK as sitk
-from file_handling.loader import FileLoader
 from PySide6.QtWidgets import QMessageBox
+
+def _warn_incomplete_scans(raw_base):
+    count = 0
+    for session in os.listdir(raw_base):
+        session_path = os.path.join(raw_base, session)
+        if not os.path.isdir(session_path):
+            continue
+        for scan in sorted(os.listdir(session_path)):
+            if not scan.isdigit():
+                continue
+            twodseq = os.path.join(session_path, scan, 'pdata', '1', '2dseq')
+            if not os.path.exists(twodseq):
+                protocol = '(empty)'
+                acqp = os.path.join(session_path, scan, 'acqp')
+                if os.path.exists(acqp):
+                    lines = open(acqp).readlines()
+                    for i, line in enumerate(lines):
+                        if line.startswith('##$ACQ_protocol_name=') and i + 1 < len(lines):
+                            protocol = lines[i + 1].strip().strip('<>') or '(empty)'
+                            break
+                print(f"[SAMRI] No 2dseq in session {session}, scan {scan}"
+                      f" (protocol: {protocol}) — scan will be skipped")
+                count += 1
+    return count
+
 
 _base_dir = getattr(sys, '_MEIPASS', os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 _exe_dir = os.path.dirname(sys.executable) if getattr(sys, 'frozen', False) else _base_dir
@@ -65,14 +89,17 @@ class InitSAMRI:
         bids_flag = samri_input['bids_flag'] #True
 
         # Raw data to bids conversion
+        self.data_base = samri_input['raw_base']   # DATA/ root, used for the final copy
         raw_base = samri_input['raw_base'] + self.animal_id
+        samri_reg_dir = os.path.join(samri_input['raw_base'], 'Samri_Registration', self.animal_id)
         if not samri_input['fetch']:
-            self.bids_base = samri_input['raw_base'] + self.animal_id
+            self.bids_base = samri_reg_dir
             return self.bids_base
         if not os.path.exists(raw_base):
             os.makedirs(raw_base)
+        os.makedirs(samri_reg_dir, exist_ok=True)
 
-        self.bids_base = samri_input['raw_base'] + self.animal_id
+        self.bids_base = samri_reg_dir
         call(['rm','-rf',raw_base+'/.DS_Store'])
         #call(['chmod', '-R', 'u+rwX', raw_base]) # every new file is writeable
 
@@ -89,6 +116,13 @@ class InitSAMRI:
                     filename = os.fsdecode(file)
                     if filename.startswith("ses-"):
                         exclude_sessions.append(filename.split("ses-")[-1])
+
+        _warn_incomplete_scans(raw_base)
+
+        bids_work_dir = os.path.join(self.bids_base, 'bids_work')
+        if os.path.exists(bids_work_dir):
+            print(f'[SAMRI] Clearing nipype cache at {bids_work_dir}')
+            shutil.rmtree(bids_work_dir)
 
         bru2bids(raw_base,
                 #functional_match={"acquisition": ["geEPI"]},
@@ -153,8 +187,6 @@ class InitSAMRI:
 
 
     def start_registration(self,samri_input):
-        ##
-
 
         # Enables registering
         register = samri_input['register'] #False
@@ -209,9 +241,9 @@ class InitSAMRI:
             movingImg = sitk.ReadImage(filepath)
             csv_path = f"{self.bids_base}/results/generic_work/data_selection.csv"
             df = pd.read_csv(csv_path, index_col=0)
-            original_path = f"{'_'.join(filepath.split('_')[:-1])}.nii.gz"
-            print(df['path'],flush=True)
-            print('op',filepath,original_path,flush=True)
+            #original_path = f"{'_'.join(filepath.split('_')[:-1])}.nii.gz"
+            #print(df['path'],flush=True)
+            #print('op',filepath,original_path,flush=True)
             idx = df.loc[df['path'] == filepath].index[0] #original_path?
             transformPath = f"{self.bids_base}/results/generic_work/_ind_type_{idx}/s_register/output_Composite.h5"
             transform_moving2fixed = sitk.ReadTransform(transformPath)
@@ -246,6 +278,13 @@ class InitSAMRI:
         MW.restart_gui(path_main, full_restart=False,label_file=True,data_view='coronal')
         MW.ui.dockWidget_ephys.setVisible(False)
         MW.ui.textEdit_SAMRI_reg.setVisible(True)
+        MW.ui.tabWidget.setCurrentIndex(0)
+        box = MW.ui.page_3D
+        layout = box.layout()
+        layout.setColumnStretch(0, 1)
+        layout.setColumnStretch(1, 1)
+        layout.setColumnStretch(2, 1)
+        layout.setColumnStretch(3, 0)
 
         #add image
         csv_path = f"{self.bids_base}/results/generic_work/data_selection.csv"
@@ -253,12 +292,12 @@ class InitSAMRI:
         idx = df.loc[df['path'] == self.output_filepath].index[0]
         img_path = f"{self.bids_base}/results/generic_work/_ind_type_{idx}/s_warp/{os.path.basename(self.output_filepath)}"
 
-        if MW.ui.comboBox_movingimg.findText(os.path.basename(img_path)) == -1:
-            MW.FileLoader = FileLoader(MW)
-            MW.FileLoader.is_4d = False #3d file
-        else:
-            MW.FileLoader.layer_index += 1
+        ## img_path = self.output_filepath  technically this also fine?
+
+        MW.FileLoader.layer_index += 1
         MW.FileLoader.initialize_file(img_path,MW.FileLoader.layer_index,'coronal',0)
+        current_text = MW.ui.file_name_displayed.toPlainText()
+        MW.ui.file_name_displayed.setPlainText(current_text + "\nFile loaded: " + os.path.basename(img_path))
         MW.ui.comboBox_movingimg.addItem(os.path.basename(img_path))
         MW.LoadMRI.movingimg_filename.append(img_path)
         MW.LoadMRI.combo_Regimgname = MW.ui.comboBox_movingimg
@@ -303,7 +342,7 @@ class SAMRI_InputDialog:
             self.raw_base.setText(path)
 
     def check_rawbase(self):
-        if os.path.exists(self.raw_base.text() + self.animal_id.text()):
+        if os.path.exists(self.raw_base.text() + 'sub-' + self.animal_id.text()):
             self.MW.ui.pushButton_continue.setEnabled(True)
             self.MW.ui.pushButton_re_fetch.setEnabled(True)
         else:
@@ -348,6 +387,7 @@ class SAMRI_InputDock:
         self.ui.pushButton_browseMov.clicked.connect(lambda: self.browse_path(self.ui.lineEdit_movMask,file=True))
 
         # fill comboboxes
+        print(self.MW.Samri.bids_base+"/bids/sub-"+self.MW.Samri.animal_id,flush=True)
         if not os.path.exists(self.MW.Samri.bids_base+"/bids/sub-"+self.MW.Samri.animal_id):
             #pop up asking for the view if 4D data used
             msg_box = QMessageBox()
@@ -375,8 +415,8 @@ class SAMRI_InputDock:
         self.update_mov_mask_path()
 
         self.ui.pushButton_createMovMask.clicked.connect(self.create_mov_mask)
-        self.ui.buttonBox.accepted.connect(self.get_values)
-        self.ui.buttonBox.rejected.connect(self.reject)
+        self.ui.pushButton_register.clicked.connect(lambda: self.get_values(register=True))
+        self.ui.pushButton_biascorrection.clicked.connect(lambda: self.get_values(biascorrection=True))
 
         self.ui.checkBox_mov_mask.toggled.connect(self.ui.pushButton_createMovMask.setEnabled)
         self.ui.checkBox_mov_mask.toggled.connect(self.ui.pushButton_browseMov.setEnabled)
@@ -386,27 +426,27 @@ class SAMRI_InputDock:
         self.ui.comboBox_working_session.currentIndexChanged.connect(self.update_mov_mask_path)
         self.ui.comboBox_register_key.currentIndexChanged.connect(self.update_mov_mask_path)
 
-        self.ui.checkBox_biascorrection.toggled.connect(
-            lambda checked: self.ui.checkBox_registration.setChecked(False) if checked else None
-        )
-
-        self.ui.checkBox_registration.toggled.connect(
-            lambda checked: self.ui.checkBox_biascorrection.setChecked(False) if checked else None
-        )
-
 
     def create_mov_mask(self):
         path = self.matches[0]
+        print('hier 2',self.matches,self.matches[0],flush=True)
         self.MW.restart_gui(path, full_restart=False,label_file=False,data_view='coronal')
+        print('hier 3',flush=True)
         self.ui.dockWidget_ephys.setVisible(False)
+        print('hier 4',flush=True)
         self.ui.textEdit_SAMRI_reg.setVisible(True)
+        print('hier 5',flush=True)
         self.MW.ButtonsGUI_3D.initialize_segmentation(samri=True)
+        print('hier 6',flush=True)
 
     def update_mov_mask_path(self):
         folder = (self.MW.Samri.bids_base + "/bids/sub-" + self.MW.Samri.animal_id
                   + "/ses-" + self.ui.comboBox_working_session.currentText() + "/anat")
         key = self.ui.comboBox_register_key.currentText()
         self.matches = [p for p in glob.glob(os.path.join(folder, f"*-{key}_*.nii.gz")) if '-mask' not in os.path.basename(p)]
+        if not self.matches:
+            self.ui.lineEdit_movMask.setText('No mask found: Browse or Create Mask')
+            return
         mov_mask_path = self.matches[0][:-7] + "-mask.nii.gz"
         if os.path.exists(mov_mask_path):
             self.ui.lineEdit_movMask.setText(mov_mask_path)
@@ -423,8 +463,26 @@ class SAMRI_InputDock:
         if path:
             text_edit.setText(path)
 
-    def get_values(self):
-        """Call after exec() to retrieve all values."""
+    def get_values(self, register=False, biascorrection=False):
+        use_moving_mask = self.ui.checkBox_mov_mask.isChecked()
+
+        if register and use_moving_mask:
+            mask_path = self.ui.lineEdit_movMask.toPlainText()
+            if not os.path.exists(mask_path):
+                msg = QMessageBox()
+                msg.setWindowTitle("Moving mask File not found")
+                msg.setText("No moving mask File found")
+                btn_create  = msg.addButton("Create\n moving mask", QMessageBox.ActionRole)
+                btn_no_mask = msg.addButton("Registration\n without moving mask", QMessageBox.ActionRole)
+                btn_no_mask.setMinimumWidth(200)
+                btn_create.setMinimumWidth(150)
+                msg.exec()
+                if msg.clickedButton() == btn_create:
+                    self.create_mov_mask()
+                    return
+                else:
+                    use_moving_mask = False
+
         samri_input = {}
         samri_input["bru2_path"] =          self.ui.lineEdit_bru2_path.toPlainText()
         samri_input["base_path"] =          self.ui.lineEdit_base_path.toPlainText()
@@ -433,13 +491,13 @@ class SAMRI_InputDock:
         samri_input["tasks"]=               [self.ui.comboBox_tasks.currentText()]
         samri_input["num_threads"]=         self.ui.spinBox_num_threads.value()
         samri_input["moving_img_mask_name"]=self.ui.lineEdit_movMask.toPlainText()
-        samri_input["register"]=            self.ui.checkBox_registration.isChecked()
+        samri_input["register"]=            register
         samri_input["presurgery"]=          self.ui.checkBox_presurgery.isChecked()
         samri_input["elastic"]=             self.ui.checkBox_elastic.isChecked()
         samri_input["atlas_folder"]=        self.ui.lineEdit_atlas_path.toPlainText()
-        samri_input["moving_mask"]=         self.ui.checkBox_mov_mask.isChecked()
+        samri_input["moving_mask"]=         use_moving_mask
         samri_input["atlas_mask"]=          self.ui.checkBox_atlasmask.isChecked()
-        samri_input["biascorrection"]=      self.ui.checkBox_biascorrection.isChecked()
+        samri_input["biascorrection"]=      biascorrection
 
         self.MW.start_registration(samri_input)
 
