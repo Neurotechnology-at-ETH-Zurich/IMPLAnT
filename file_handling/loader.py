@@ -332,24 +332,58 @@ class FileLoader:
         return img3d
 
 
+    def label_array_on_grid(self, filename, data_index):
+        """
+        A label/mask file as an array on data set `data_index`'s voxel grid, or
+        None if it cannot be put there.
+
+        label_volume is indexed with that data set's cursor by the paintbrush and
+        the intensity table, so a mask arriving in a different orientation or
+        resolution is not merely misaligned — it raises IndexError. Note the
+        reference is volumes[data_index], not volumes[0]: each 4D view has its
+        own orientation code (RSA for coronal/axial, ASR for sagittal), so
+        orienting another view's mask like the first one permutes its axes.
+
+        Vector and 4D inputs are reduced to a single 3D scalar component first,
+        and the resampling is nearest neighbour so label values survive it.
+        """
+        volume = self.MW.LoadMRI.volumes[data_index]
+        img = sitk.ReadImage(filename)
+        if img.GetNumberOfComponentsPerPixel() > 1:
+            img = sitk.VectorIndexSelectionCast(img, 0)
+        if len(img.GetSize()) == 4:
+            img = self.get3Dimage(img)
+        if len(img.GetSize()) != 3:
+            QMessageBox.warning(
+                None, "Cannot load mask",
+                f"{os.path.basename(filename)} is {len(img.GetSize())}D; a label "
+                "mask has to be a 3D (or 4D) image to be placed on the data grid.")
+            return None
+
+        img = sitk.DICOMOrient(img, volume.DICOMOrient)
+        ref = volume.oriented_ref_image
+        if (img.GetSize() != ref.GetSize() or img.GetSpacing() != ref.GetSpacing()
+                or img.GetDirection() != ref.GetDirection()
+                or img.GetOrigin() != ref.GetOrigin()):
+            resampler = sitk.ResampleImageFilter()
+            resampler.SetReferenceImage(ref)
+            resampler.SetInterpolator(sitk.sitkNearestNeighbor)
+            resampler.SetDefaultPixelValue(0)
+            img = resampler.Execute(img)
+        return sitk.GetArrayFromImage(img)
+
     def load_anat(self,filename,data_view,idx):
         """
         Loads files including "-anat" in filename as anatomical region label mask.
         """
         # Create the actor
-        img_raw = sitk.ReadImage(filename)
-        img = sitk.DICOMOrient(img_raw, self.MW.LoadMRI.volumes[0].DICOMOrient)
-        vol = sitk.GetArrayFromImage(img)
+        vol = self.label_array_on_grid(filename, idx)
+        if vol is None:
+            return
 
         self.MW.Paintbrush.label_volume[idx] = vol
 
-        #directly visualizing it
-        # Refresh all
-        #if not self.MW.LoadMRI.volumes[0].is_4d:
-        #    self.MW.LoadMRI.update_slices(0,idx,data_view)
-        #else:
-        for i in 0,1,2:
-            self.MW.LoadMRI.update_slices(i,idx,data_view)
+        self.MW.LoadMRI.update_slices(idx,data_view)
         self.MW.Paintbrush.histogram()
 
 
@@ -357,9 +391,9 @@ class FileLoader:
         """
         Loads files including "-segmentation" in filename as segmentation label mask.
         """
-        img = sitk.ReadImage(filename)
-        img = sitk.DICOMOrient(img, self.MW.LoadMRI.volumes[0].DICOMOrient)
-        vol = sitk.GetArrayFromImage(img)
+        vol = self.label_array_on_grid(filename, idx)
+        if vol is None:
+            return
 
         self.MW.Paintbrush.label_volume[idx] = np.maximum(self.MW.Paintbrush.label_volume[idx], vol)
         self.MW.Layers[idx][self.MW.Paintbrush.layer_index[idx]].volume[0] = self.MW.Paintbrush.label_volume[idx]
@@ -369,8 +403,7 @@ class FileLoader:
         self.MW.LoadMRI.intensity_table[idx].intensity_volumes[self.MW.Paintbrush.layer_index[idx]] = self.MW.Paintbrush.label_volume[idx]
 
         # Refresh all
-        for i in 0,1,2:
-            self.MW.LoadMRI.update_slices(i,idx,data_view)
+        self.MW.LoadMRI.update_slices(idx,data_view)
 
         # Recompute heatmap for any custom ROIs in the loaded segmentation
         if hasattr(self.MW.LoadMRI, 'mrid_tags'):

@@ -8,18 +8,31 @@ class Metadata:
         self.MW = MW
         self.ui = MW.ui
         self.LoadMRI = MW.LoadMRI
-        self.ui.pushButton_metadata.clicked.connect(self.show_metadata)
-        self.ui.pushButton_changeSpacing.clicked.connect(self.change_spacing)
-        self.ui.pushButton_SaveSpacing.clicked.connect(self.save_new_spacing)
-        self.ui.pushButton_SaveMetadata.clicked.connect(self.set_metadata)
-        self.ui.pushButton_reorient.clicked.connect(self.reorient_volume)
+        # a new Metadata is built every time a base layer (layer_index==0) is
+        # loaded, but pushButton_metadata etc. are single shared widgets - without
+        # disconnecting the previous instance's slot first, connections pile up
+        # and one click fires show_metadata on every still-connected instance,
+        # each stealing frame_metadata into its own popup (see show_metadata)
+        self._reconnect(self.ui.pushButton_metadata.clicked, self.show_metadata)
+        self._reconnect(self.ui.pushButton_changeSpacing.clicked, self.change_spacing)
+        self._reconnect(self.ui.pushButton_SaveSpacing.clicked, self.save_new_spacing)
+        self._reconnect(self.ui.pushButton_SaveMetadata.clicked, self.set_metadata)
+        self._reconnect(self.ui.pushButton_reorient.clicked, self.reorient_volume)
 
-        self.ui.doubleSpinBox_spax.valueChanged.connect(lambda val: self.changed_parameters_spacing(val,'x'))
-        self.ui.doubleSpinBox_spay.valueChanged.connect(lambda val: self.changed_parameters_spacing(val,'y'))
-        self.ui.doubleSpinBox_spaz.valueChanged.connect(lambda val: self.changed_parameters_spacing(val,'z'))
-        self.ui.doubleSpinBox_fovx.valueChanged.connect(lambda val: self.changed_parameters_fov(val,'x'))
-        self.ui.doubleSpinBox_fovy.valueChanged.connect(lambda val: self.changed_parameters_fov(val,'y'))
-        self.ui.doubleSpinBox_fovz.valueChanged.connect(lambda val: self.changed_parameters_fov(val,'z'))
+        self._reconnect(self.ui.doubleSpinBox_spax.valueChanged, lambda val: self.changed_parameters_spacing(val,'x'))
+        self._reconnect(self.ui.doubleSpinBox_spay.valueChanged, lambda val: self.changed_parameters_spacing(val,'y'))
+        self._reconnect(self.ui.doubleSpinBox_spaz.valueChanged, lambda val: self.changed_parameters_spacing(val,'z'))
+        self._reconnect(self.ui.doubleSpinBox_fovx.valueChanged, lambda val: self.changed_parameters_fov(val,'x'))
+        self._reconnect(self.ui.doubleSpinBox_fovy.valueChanged, lambda val: self.changed_parameters_fov(val,'y'))
+        self._reconnect(self.ui.doubleSpinBox_fovz.valueChanged, lambda val: self.changed_parameters_fov(val,'z'))
+
+    @staticmethod
+    def _reconnect(signal,slot):
+        try:
+            signal.disconnect()
+        except RuntimeError:
+            pass  # not connected to anything yet
+        signal.connect(slot)
 
 
     def show_metadata(self):
@@ -176,7 +189,7 @@ class Metadata:
 
         #3D
         for vn in 'axial','coronal','sagittal':
-            self.LoadMRI.update_slices(0,0,vn)
+            self.LoadMRI.update_slices(0,vn)
 
 
 class PopupDialog(QDialog):
