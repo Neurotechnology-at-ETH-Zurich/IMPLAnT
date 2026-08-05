@@ -8,7 +8,13 @@ from PySide6 import QtWidgets
 import numpy as np
 import os
 import json as _json
-with open(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'paths_config.json')) as _f:
+import sys
+_base_dir = getattr(sys, '_MEIPASS', os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+_exe_dir = os.path.dirname(sys.executable) if getattr(sys, 'frozen', False) else _base_dir
+_config_path = os.path.join(_exe_dir, 'paths_config.json')
+if not os.path.exists(_config_path):
+    _config_path = os.path.join(_base_dir, 'paths_config.example.json')
+with open(_config_path) as _f:
     _paths = _json.load(_f)
 
 class Change_AnatRegion(QDialog):
@@ -28,8 +34,12 @@ class Change_AnatRegion(QDialog):
         self.group_box = self.MW.ui.groupBox_ChangeanatRegion
         self.original_parent = self.group_box.parent()
         main_layout.addWidget(self.group_box)
-        self.MW.Ephys.old_index_anatregion = self.MW.ui.comboBox_anatRegion.currentIndex()
-        self.MW.ui.spinBox_ChangechannelID.setValue(self.MW.ui.spinBox_channelID.value())
+        vis = self.MW.Ephys.Visualisation3D
+        row = vis.table_excel.currentRow()
+        current_label = vis.points_data.iloc[row]['Channel Label']
+        self.MW.Ephys.old_index_anatregion = vis._label_to_atlas_index(current_label)
+        channel_value = int(vis.table_excel.item(row, 1).text())
+        self.MW.ui.spinBox_ChangechannelID.setValue(channel_value)
 
         # Buttons
         button_layout = QHBoxLayout()

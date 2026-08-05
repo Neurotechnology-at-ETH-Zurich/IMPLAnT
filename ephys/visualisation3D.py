@@ -1,8 +1,14 @@
 # This Python file uses the following encoding: utf-8
 import os
+import sys
 import json as _json
 import SimpleITK as sitk
-with open(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'paths_config.json')) as _f:
+_base_dir = getattr(sys, '_MEIPASS', os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+_exe_dir = os.path.dirname(sys.executable) if getattr(sys, 'frozen', False) else _base_dir
+_config_path = os.path.join(_exe_dir, 'paths_config.json')
+if not os.path.exists(_config_path):
+    _config_path = os.path.join(_base_dir, 'paths_config.example.json')
+with open(_config_path) as _f:
     _paths = _json.load(_f)
 import pyvista as pv
 from pyvistaqt import QtInteractor
@@ -15,7 +21,7 @@ from sklearn.decomposition import PCA
 import matplotlib.colors as mcolors
 import nibabel as nib
 from PySide6.QtGui import QIcon
-
+from scipy.signal import welch
 from PySide6.QtWidgets import QTableWidgetItem,QMenu
 from PySide6.QtGui import QColor
 from PySide6.QtCore import Qt
@@ -26,6 +32,10 @@ import colorsys
 class Visualisation3D:
     def __init__(self,session_path,MW,electrode_localisation=False,chMap=None,Ephys=None):
         self.electrode_localisation=electrode_localisation
+        self.Ephys = Ephys          # None in the electrode-localisation view
+        # set per branch below: called with a tag index to switch the shown shank,
+        # so the picker in on_click works the same in both views
+        self.switch_tag = None
         self.MW = MW
         self.ui = MW.ui
         self.enable_picking = False
@@ -55,13 +65,13 @@ class Visualisation3D:
 
             self.ui.resetCamera_vis3D.clicked.connect(self.plotter.reset_camera)
             self.ui.change_perspective_vis3D.clicked.connect(self.change_perspective)
-            self.combobox = self.ui.comboBox_anatRegion_vis3D
-            self.spinbox = self.ui.spinBox_channelID_vis3D
-            self.coord_x = self.ui.spinBox_x_vis3D
-            self.coord_y = self.ui.spinBox_y_vis3D
-            self.coord_z = self.ui.spinBox_z_vis3D
+            self.combobox = None #self.ui.comboBox_anatRegion_vis3D
+            self.spinbox = None #self.ui.spinBox_channelID_vis3D
+            self.coord_x = None #self.ui.spinBox_x_vis3D
+            self.coord_y = None #self.ui.spinBox_y_vis3D
+            self.coord_z = None #self.ui.spinBox_z_vis3D
             self.comboBox_mrid = self.ui.comboBox_mridTag_vis3D
-            self.comboBox_mrid.setEnabled(False)
+
 
             self.btn_change_perspective = self.ui.change_perspective_vis3D
             self.btn_slicex = self.ui.pushButton_slicex_vis3D
@@ -76,16 +86,21 @@ class Visualisation3D:
             self.totalatlasCoordinates_pkl = self.MW.ButtonsGUI_4D.totalatlasCoordinates_pkl
             self.mrid_tags = self.MW.ButtonsGUI_4D.totalmrid
             self.index = self.MW.ButtonsGUI_4D.mrid_index
+            # the 4D buttons own totalmrid and rebuild the barcode view with it,
+            # so switching the tag from here goes back through them
+            self.switch_tag = self.MW.ButtonsGUI_4D.activate_fill_table_and_plots
+            self.comboBox_mrid.currentIndexChanged.connect(self.switch_tag)
         else:
-            self.Ephys = Ephys
             layout = QVBoxLayout(self.ui.vtkWidget_ephys)
             layout.setContentsMargins(0, 0, 0, 0)
             self.plotter = QtInteractor(self.ui.vtkWidget_ephys)
 
             self.ui.resetCamera_ephys.clicked.connect(self.plotter.reset_camera)
             self.ui.change_perspective_ephys.clicked.connect(self.change_perspective)
-            self.combobox = self.ui.comboBox_anatRegion
-            self.spinbox = self.ui.spinBox_channelID
+            # spinBox_channelID / comboBox_anatRegion removed for the ephys view:
+            # channel selection and region label are driven by tableWidget_ephys instead.
+            self.combobox = None
+            self.spinbox = None
             self.coord_x = self.ui.spinBox_x_ephys
             self.coord_y = self.ui.spinBox_y_ephys
             self.coord_z = self.ui.spinBox_z_ephys
@@ -114,6 +129,9 @@ class Visualisation3D:
             self.mrid_tags = self.Ephys.mrid_info.mrid_tags
             self.index = self.Ephys.mrid_info.xml_group_idx
             self.totalatlasCoordinates_pkl = self.Ephys.mrid_info.totalatlasCoordinates_pkl
+            self.table_excel = self.MW.ui.tableWidget_ephys
+            self.switch_tag = self.Ephys.change_mridTAG
+            self.comboBox_mrid.currentIndexChanged.connect(self.switch_tag)
 
         self.create_atlas_region_file(self.mrid_tags[self.index])
 
@@ -140,22 +158,29 @@ class Visualisation3D:
             self.chMap = chMap
 
         self.old_target_idx = 0 #Clear Label
-        self.spinbox.setMinimum(min(self.chMap))
-        self.spinbox.setMaximum(max(self.chMap))
+        if self.spinbox is not None:
+            self.spinbox.setMinimum(min(self.chMap))
+            self.spinbox.setMaximum(max(self.chMap))
         self.update_electrode_points(self.filepath_atlas,mrid)
+        self.create_atlas_region_file(mrid)
+        self._reload_mesh_atlas()
+        self._rebuild_colormap()
 
         if self.electrode_localisation:
             self.fill_table(channels=[],dead_channels=[])
 
         index = self.comboBox_mrid.findText(mrid, Qt.MatchContains)
         if index != -1:
+            self.comboBox_mrid.blockSignals(True)
             self.comboBox_mrid.setCurrentIndex(index)
+            self.comboBox_mrid.blockSignals(False)
 
         self.add_other_mrids()
 
 
     def channel_changed(self,index):
         point_index = self.chMap.index(index)
+        #if not self.electrode_localisation:
         point = self.coords_list[point_index]
         self.show_coords(point)
 
@@ -192,18 +217,35 @@ class Visualisation3D:
         self.hover_label.SetInput(f"{label}")
         self.plotter.render()
 
+    def _is_double_click(self):
+        """True when the click being handled is the second of a double click.
+
+        Qt sends its MouseButtonDblClick through mousePressEvent, and pyvistaqt
+        forwards it as a normal left press with the interactor's repeat count set
+        (pyvistaqt/rwi.py). Picking runs on LeftButtonPressEvent, so the flag is
+        still set while this callback runs; the release resets it."""
+        try:
+            return bool(self.plotter.iren.interactor.GetRepeatCount())
+        except AttributeError:
+            return False
+
     def on_click(self,point):
         idx = np.where(np.all(np.isclose(self.coords_list, point, atol=0.025), axis=1))[0]
         if len(idx)==0:
+            # picking a channel stays a single click, but switching to another
+            # shank takes a double click so it can't happen by accident
+            if not self._is_double_click():
+                return
             for i, tag in enumerate(self.mrid_tags):
-                if i == self.index:
+                if i == self.index or self.poly_otherMrids.get(i) is None:
                     continue
                 closest_idx = self.poly_otherMrids[i].find_closest_point(point)
                 closest_pt = self.poly_otherMrids[i].points[closest_idx]
                 if np.allclose(closest_pt, point, atol=1.0):  # tune tolerance
-                    self.Ephys.change_mridTAG(i)
+                    self.switch_tag(i)
                     return
         else:
+            #if not self.electrode_localisation:
             self.show_coords(point)
 
 
@@ -218,17 +260,19 @@ class Visualisation3D:
                 return
 
         if len(idx):
-            row = self.points_data.iloc[idx[0]]
-            self.coord_x.setValue(point[0]/self.spacing+1)
-            self.coord_y.setValue(point[1]/self.spacing+1)
-            self.coord_z.setValue(point[2]/self.spacing+1)
-            self.spinbox.blockSignals(True)
-            self.spinbox.setValue(self.chMap[idx[0]])
+            if not self.electrode_localisation:
+                row = self.points_data.iloc[idx[0]]
+                self.coord_x.setValue(point[0]/self.spacing+1)
+                self.coord_y.setValue(point[1]/self.spacing+1)
+                self.coord_z.setValue(point[2]/self.spacing+1)
 
-            self.spinbox.blockSignals(False)
-            index = self.combobox.findText(row['Channel Label'])
-            if index != -1:
-                self.combobox.setCurrentIndex(index)
+            self.table_excel.blockSignals(True)
+            self.table_excel.selectRow(idx[0])
+            self.table_excel.blockSignals(False)
+            if self.combobox is not None:
+                index = self.combobox.findText(row['Channel Label'])
+                if index != -1:
+                    self.combobox.setCurrentIndex(index)
 
             if self.clipped_meshes:
                 self.render_clipped(self.render_normal)
@@ -263,6 +307,7 @@ class Visualisation3D:
         vol_small.cell_data['colors'] = (colors[:, :3] * 255).astype(np.uint8)
         self.mesh_atlas = vol_small
         self.mesh_atlas = self.mesh_atlas.threshold(value=[1, 502], scalars='NIFTI')
+        self.mesh_atlas.set_active_scalars('NIFTI')
         ## load excel new
         self.update_electrode_points(os.path.join(self.filepath_atlas),mrid)
 
@@ -295,19 +340,137 @@ class Visualisation3D:
             self.parallel_projection=True
 
 
+    def _label_to_atlas_index(self, label):
+        """Row index of a region label in atlaslabelsdf (replaces combobox.findText)."""
+        matches = np.where(self.atlaslabelsdf['LABEL'].values == label)[0]
+        return int(matches[0]) if len(matches) else -1
+
+    def get_last_ca1_channels(self, n=2, region="Cornu ammonis 1"):
+        """
+        Channel numbers of the last n channels labelled as CA1.
+
+        points_data rows are in probe order and aligned with chMap, so the last
+        matching rows are the deepest CA1 channels. Returns [] if unavailable.
+        """
+        if getattr(self, 'points_data', None) is None or not hasattr(self, 'chMap'):
+            return []
+        labels = self.points_data['Channel Label'].astype(str).str.strip().str.lower()
+        ca1_rows = np.where(labels.values == region.strip().lower())[0]
+        if len(ca1_rows) == 0:
+            return []
+        return [self.chMap[r] for r in ca1_rows[-n:]]
+
+    @staticmethod
+    def _load_channel_excel(path):
+        """Read channel_atlas_coordinates.xlsx with the trailing pyramidal-layer
+        marker row (Channel ID == -1) removed, so callers see only real channels."""
+        df = pd.read_excel(path, header=0)
+        if 'Channel ID' in df.columns:
+            df = df[df['Channel ID'] != -1].reset_index(drop=True)
+        return df
+
+    def _compute_pyl_from_lfp(self, ca1_channels):
+        """Fallback pyramidal-layer channel: the CA1 channel with the greatest
+        ripple-band (100-250 Hz) power in the LFP. Returns a channel number or
+        None if no LFP is available."""
+        try:
+            lfp = self.Ephys.ephys_data.lfp_memmap
+            sr = self.Ephys.ephys_data.lfp_sample_rate
+        except AttributeError:
+            return None
+        if lfp is None or not ca1_channels:
+            return None
+        try:
+            n_samples = lfp.shape[1]
+            chunk = min(n_samples, int(60 * sr))      # a central chunk is enough
+            s0 = (n_samples - chunk) // 2
+            best_ch, best_power = None, -np.inf
+            for ch in ca1_channels:
+                sig = lfp[ch, s0:s0 + chunk].astype(np.float32)
+                f, pxx = welch(sig, fs=sr, nperseg=min(len(sig), int(sr)))
+                power = pxx[(f >= 100) & (f <= 250)].sum()
+                if power > best_power:
+                    best_power, best_ch = power, ch
+            return best_ch
+        except Exception as e:
+            print("pyl LFP fallback failed:", e, flush=True)
+            return None
+
+    def _ca1_channel_ids(self, region="Cornu ammonis 1"):
+        """CA1 channel numbers from the 'Channel ID' column — the same space the
+        DWI marker, the LFP memmap and the ripple dialog use. [] if unavailable.
+
+        (Note: rows in points_data are in reversed order, so the 'Channel ID'
+        column — not the row position — is the correct channel identity.)"""
+        pd_ = getattr(self, 'points_data', None)
+        if pd_ is None or 'Channel ID' not in pd_.columns:
+            return []
+        labels = pd_['Channel Label'].astype(str).str.strip().str.lower()
+        mask = labels.values == region.strip().lower()
+        return [int(c) for c in pd_['Channel ID'].values[mask]]
+
+    def _idx_to_channel(self, idx):
+        """Excel 'Channel ID' (probe index) → physical recording channel.
+
+        The Excel was written with an identity chMap (the XML wasn't readable at
+        that point) and in reversed row order, so the physical channel is
+        chMap[n-1-idx], where chMap comes from the XML. Returns None if out of
+        range."""
+        chmap = list(self.chMap)
+        n = len(chmap)
+        j = n - 1 - int(idx)
+        return int(chmap[j]) if 0 <= j < n else None
+
+    def get_pyl_channel(self, region="Cornu ammonis 1"):
+        """The single pyramidal-layer *recording* channel: Excel marker row (DWI
+        dark band) → LFP ripple-band fallback → middle of CA1. None if there are
+        no CA1 channels."""
+        if not hasattr(self, 'chMap'):
+            return None
+        ca1_idxs = self._ca1_channel_ids(region)
+        if not ca1_idxs:
+            return None
+        ca1_phys = [c for c in (self._idx_to_channel(i) for i in ca1_idxs) if c is not None]
+        pyr_idx = getattr(self, '_pyr_channel_excel', None)
+        if pyr_idx is not None and pyr_idx in ca1_idxs:
+            return self._idx_to_channel(pyr_idx)
+        pyr = self._compute_pyl_from_lfp(ca1_phys)          # LFP fallback
+        if pyr is not None and pyr in ca1_phys:
+            return int(pyr)
+        return int(sorted(ca1_phys)[len(ca1_phys) // 2]) if ca1_phys else None
+
+    def get_pyl_centered_channels(self, n=8, region="Cornu ammonis 1"):
+        """n CA1 *recording* channels centred on the pyramidal layer. [] if none."""
+        if not hasattr(self, 'chMap'):
+            return []
+        ca1_phys = sorted(c for c in (self._idx_to_channel(i)
+                                      for i in self._ca1_channel_ids(region)) if c is not None)
+        if not ca1_phys:
+            return []
+        pyr = self.get_pyl_channel(region)
+        if pyr is None or pyr not in ca1_phys or len(ca1_phys) <= n:
+            return ca1_phys[:n]
+        pos = ca1_phys.index(pyr)
+        start = max(0, min(pos - n // 2, len(ca1_phys) - n))
+        return ca1_phys[start:start + n]
+
     def manually_pick_point(self,point,idx=None,resetTo3D=False):
+        index = self._label_to_atlas_index(self.points_data.iloc[idx]['Channel Label'])
         if len(point)==0:
-            self.spinbox.setValue(self.chMap[idx])
-            index = self.combobox.findText(self.points_data.iloc[idx]['Channel Label'])
-            if index != -1:
-                self.combobox.setCurrentIndex(index)
+            # the channel's own coordinate, in both views — this is what gets
+            # drawn and focused on below, so it must be set before either guard
             point = self.coords_list[idx]
-            self.coord_x.setValue(point[0]/self.spacing+1)
-            self.coord_y.setValue(point[1]/self.spacing+1)
-            self.coord_z.setValue(point[2]/self.spacing+1)
+            self.table_excel.blockSignals(True)
+            self.table_excel.selectRow(idx)
+            self.table_excel.blockSignals(False)
+            if not self.electrode_localisation:
+                self.coord_x.setValue(point[0]/self.spacing+1)
+                self.coord_y.setValue(point[1]/self.spacing+1)
+                self.coord_z.setValue(point[2]/self.spacing+1)
+            if self.combobox is not None and index != -1:
+                self.combobox.setCurrentIndex(index)
         else:
             point = np.array(point) #*self.spacing
-            index = self.combobox.findText(self.points_data.iloc[idx]['Channel Label'])
 
         target_idx = self.atlaslabelsdf['IDX'].values[index]
         if self.old_target_idx != target_idx or resetTo3D:
@@ -316,7 +479,7 @@ class Visualisation3D:
                 self.plotter.remove_actor('atlas')
                 self.plotter.remove_actor('atlas_region')
             else:
-                volomue_thresholded = self.mesh_atlas.threshold([target_idx - 0.5, target_idx + 0.5], invert=True)
+                volomue_thresholded = self.mesh_atlas.threshold([target_idx - 0.5, target_idx + 0.5], scalars='NIFTI', invert=True)
                 nifti_vals = np.round(volomue_thresholded.cell_data['NIFTI']).astype(int)
                 colors = np.array([self.cmap.colors[int(v)] for v in nifti_vals])
                 volomue_thresholded.cell_data['colors']= (colors[:, :3]*255).astype(np.uint8)
@@ -338,7 +501,7 @@ class Visualisation3D:
                 )
 
                 ##REGION MESH
-                region_mesh = self.mesh_atlas.threshold([target_idx - 0.5, target_idx + 0.5], invert=False)
+                region_mesh = self.mesh_atlas.threshold([target_idx - 0.5, target_idx + 0.5], scalars='NIFTI', invert=False)
                 surface = region_mesh.extract_surface(algorithm='dataset_surface')
                 if surface.n_points > 0:
                     smoothed_region = surface.smooth_taubin(n_iter=50, pass_band=0.1)
@@ -378,6 +541,8 @@ class Visualisation3D:
         # Define the two independent loading tasks
         def load_atlas_mesh():
             img = nib.load(filepath)
+            # No downsampling — atlas-regions.nii.gz only has electrode regions,
+            # so small regions (e.g. CA2) survive and region_mesh is non-empty.
             data = img.get_fdata().astype(int)[::3, ::3, ::3]
             vol_small = pv.ImageData()
             vol_small.dimensions = np.array(data.shape) + 1
@@ -428,27 +593,10 @@ class Visualisation3D:
 
         if 'background' not in self.plotter.actors:
             self.add_background(background_mesh)  # pass mesh directly
-        max_idx = int(self.atlaslabelsdf['IDX'].max())
-        self.rgba = np.zeros((max_idx + 1, 4))
-        rgba_background = np.zeros((max_idx + 1, 4))
-        #rgba_background[:] = [0.9, 0.9, 0.9, 1]
-        idx_colors = 0
-        for _, row in self.atlaslabelsdf.iterrows():
-            if row['IDX'] in self.unique_vals:
-                self.rgba[int(row['IDX']), :3] = self.list_of_good_colors[idx_colors]
-                self.rgba[int(row['IDX']), 3] = 1
-                idx_colors += 1
-            else:
-                r, g, b = row['R']/255, row['G']/255, row['B']/255
-                r, g, b = self.desaturate((r, g, b), 0.25)  # 0=grey, 1=full color
-                rgba_background[int(row['IDX'])] = [r, g, b, 1]
-                #rgba_background[int(row['IDX']), :] = [row['R']/255, row['G']/255, row['B']/255, 0.1]
+        self._rebuild_colormap()
 
-        self.cmap = ListedColormap(self.rgba)
-        self.cmap_background = ListedColormap(rgba_background)
-        self._cmap_bg_colors = (np.array(self.cmap_background.colors)[:, :3] * 255).astype(np.uint8)
-
-        self.combobox.addItems(self.atlaslabelsdf['LABEL'].values)
+        if self.combobox is not None:
+            self.combobox.addItems(self.atlaslabelsdf['LABEL'].values)
         self.opacity = np.full(len(self.atlaslabelsdf), 0.5)
         self.opacity[0]=0
 
@@ -459,12 +607,63 @@ class Visualisation3D:
         vol_small.cell_data['colors'] = (colors[:, :3] * 255).astype(np.uint8)
         self.mesh_atlas = vol_small
         self.mesh_atlas = self.mesh_atlas.threshold(value=[1, 502], scalars='NIFTI')
+        self.mesh_atlas.set_active_scalars('NIFTI')
+
+    def _reload_mesh_atlas(self):
+        """Reload self.mesh_atlas from the current atlas-regions.nii.gz (called after tag switch)."""
+        img = nib.load(self.filepath_atlas)
+        data = img.get_fdata().astype(int)[::3, ::3, ::3]
+        vol_small = pv.ImageData()
+        vol_small.dimensions = np.array(data.shape) + 1
+        vol_small.spacing = tuple(s * 3 for s in img.header.get_zooms()[:3])
+        vol_small.origin = (0.0, 0.0, 0.0)
+        vol_small.cell_data['NIFTI'] = data.flatten(order='F')
+        self.unique_vals = np.unique(vol_small.active_scalars)
+        vol_small.cell_data['colors'] = np.zeros((vol_small.n_cells, 3), dtype=np.uint8)
+        self.mesh_atlas = vol_small
+        self.mesh_atlas = self.mesh_atlas.threshold(value=[1, 502], scalars='NIFTI')
+        self.mesh_atlas.set_active_scalars('NIFTI')
 
     def desaturate(self,rgb, factor):
         r, g, b = rgb
         h, s, v = colorsys.rgb_to_hsv(r, g, b)
         s *= factor  # reduce saturation
         return colorsys.hsv_to_rgb(h, s, v)
+
+    def _rebuild_colormap(self):
+        """Build self.rgba / self.cmap including any electrode IDXs not in unique_vals."""
+        max_idx = int(self.atlaslabelsdf['IDX'].max())
+        self.rgba = np.zeros((max_idx + 1, 4))
+        rgba_background = np.zeros((max_idx + 1, 4))
+
+        electrode_idxs = set()
+        if getattr(self, 'points_data', None) is not None:
+            electrode_idxs = set(self.points_data['Channel'].dropna().astype(int).tolist())
+        active_vals = set(self.unique_vals.tolist()) | electrode_idxs
+
+        idx_colors = 0
+        for _, row in self.atlaslabelsdf.iterrows():
+            if row['IDX'] in active_vals:
+                self.rgba[int(row['IDX']), :3] = self.list_of_good_colors[idx_colors % len(self.list_of_good_colors)]
+                self.rgba[int(row['IDX']), 3] = 1
+                idx_colors += 1
+            else:
+                r, g, b = row['R']/255, row['G']/255, row['B']/255
+                r, g, b = self.desaturate((r, g, b), 0.25)
+                rgba_background[int(row['IDX'])] = [r, g, b, 1]
+
+        self.cmap = ListedColormap(self.rgba)
+        self.cmap_background = ListedColormap(rgba_background)
+        self._cmap_bg_colors = (np.array(self.cmap_background.colors)[:, :3] * 255).astype(np.uint8)
+
+        # Re-bake mesh colors so the sliced view also picks up the new colormap.
+        # Must restore active scalar to 'NIFTI' afterwards — threshold calls in
+        # manually_pick_point rely on it.
+        if hasattr(self, 'mesh_atlas'):
+            nifti_vals = np.round(self.mesh_atlas.cell_data['NIFTI']).astype(int)
+            colors = np.array([self.cmap.colors[int(v)] for v in nifti_vals])
+            self.mesh_atlas.cell_data['colors'] = (colors[:, :3] * 255).astype(np.uint8)
+            self.mesh_atlas = self.mesh_atlas.threshold(value=[1, 502], scalars='NIFTI')
 
 
     def update_electrode_points(self,filepath,mrid):
@@ -473,7 +672,16 @@ class Visualisation3D:
             self.spacing = img.GetSpacing()[0]
 
         points_electrodes_path = os.path.join(os.path.join(os.path.join(self.session_path,"analysed")),mrid,'channel_atlas_coordinates.xlsx')
-        self.points_data = pd.read_excel(points_electrodes_path,header=0)
+        self._points_mrid = mrid
+        # capture the pyramidal-layer marker row (Channel ID == -1), then use the
+        # cleaned table (marker removed) for coords/labels/the channel table
+        raw = pd.read_excel(points_electrodes_path, header=0)
+        self._pyr_channel_excel = None
+        if 'Channel ID' in raw.columns:
+            marker = raw['Channel ID'] == -1
+            if marker.any():
+                self._pyr_channel_excel = int(raw.loc[marker, 'Channel'].iloc[0])
+        self.points_data = self._load_channel_excel(points_electrodes_path)
         self.coords_list = self.points_data.iloc[:, -3:].values*self.spacing
 
         point_colors = []
@@ -655,8 +863,7 @@ class Visualisation3D:
 
         if not self.electrode_localisation:
             self.Ephys.VisEphys.highlight_channel(index)
-        else:
-            self.table_excel.selectRow(index)
+        self.table_excel.selectRow(index)
 
 
     def find_best_fit_plane(self):
@@ -757,7 +964,6 @@ class Visualisation3D:
         if normal.startswith('-'):
             mask = self.points_poly.points[:, col] >= coord
             roll_angle = 0
-            print(col,flush=True)
             if col==0:
                 vector = [-1,0,0]
                 self.plotter.camera.up = (0, 1,0)
@@ -957,6 +1163,11 @@ class Visualisation3D:
         self.table_excel.resizeColumnsToContents()
         self.table_excel.resizeRowsToContents()
 
+        w = self.table_excel.frameWidth() * 2
+        for i in range(self.table_excel.columnCount()):
+            w += self.table_excel.columnWidth(i)
+        self.table_excel.setMaximumWidth(w)
+
         self.table_excel.setContextMenuPolicy(Qt.CustomContextMenu)
         self.table_excel.customContextMenuRequested.connect(self.on_table_right_click)
         self.table_excel.itemChanged.connect(self.on_channel_toggled)
@@ -1047,7 +1258,8 @@ class Visualisation3D:
             self.Ephys.ephys_data.dead_channels.remove(channel_number)
             self.Ephys.change_xml_file(channel_number,0)
 
-
+        # reflect the skip/unskip in the spike raster
+        self.Ephys.refresh_spike_raster()
 
     def on_table_click(self,row,column):
         item = self.table_excel.item(row, column)
@@ -1056,15 +1268,14 @@ class Visualisation3D:
 
         # if unclicked -> click
         item_clicked = self.table_excel.item(row, 0)
-        if item_clicked.checkState() != Qt.Checked and row!=0:
+        if item_clicked.checkState() != Qt.Checked and column!=0:
             item_clicked.setCheckState(Qt.Checked)
-
-        point = self.coords_list[row]
-        self.show_coords(point)
 
         if self.electrode_localisation:
             self.table_excel.selectRow(row)
         else:
+            point = self.coords_list[row]
+            self.show_coords(point)
             self.Ephys.VisEphys.highlight_channel(row)
 
 
@@ -1100,9 +1311,11 @@ class Visualisation3D:
         self.opacityBackground = val/100
 
     def change_opacityRegionOfInterest(self,val):
+        self.opacityRoI = val/100
+        if 'atlas_region' not in self.plotter.actors:
+            return
         actor = self.plotter.actors['atlas_region']
         actor.GetProperty().SetOpacity(val/100)
-        self.opacityRoI = val/100
 
     def change_opacityOtherRegions(self,val):
         actor = self.plotter.actors['atlas']
@@ -1114,17 +1327,16 @@ class Visualisation3D:
         self.filepath_atlas = os.path.join(self.session_path,"analysed",'atlas-regions.nii.gz')
         points_electrodes_path = os.path.join(os.path.join(self.session_path,"analysed"),mrid,'channel_atlas_coordinates.xlsx')
 
+        channel_labels = np.unique(self._load_channel_excel(points_electrodes_path).iloc[:, 1].values)
         if os.path.exists(self.filepath_atlas):
             mesh = pv.read(self.filepath_atlas)
             old_labels = np.unique(mesh.point_data['NIFTI'])
-            new_labels = np.unique(pd.read_excel(points_electrodes_path,header=0).iloc[:, 1].values)
-            if np.array_equal(old_labels[old_labels != 0], new_labels[new_labels != 0]):
-                print(old_labels,new_labels,flush=True)
+            if np.array_equal(old_labels[old_labels != 0], channel_labels[channel_labels != 0]):
                 return
 
         atlas_image = sitk.ReadImage(os.path.join(_paths['atlas_folder'], _paths['atlas_volume']))
         volume = sitk.GetArrayFromImage(atlas_image)
-        volume[~np.isin(volume,np.unique(pd.read_excel(points_electrodes_path,header=0).iloc[:, 1].values))]=0
+        volume[~np.isin(volume,channel_labels)]=0
         label_image = sitk.GetImageFromArray(volume)
         label_image.CopyInformation(atlas_image)
         save_path = os.path.join(self.session_path,'analysed','atlas-regions.nii.gz')

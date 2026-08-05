@@ -14,9 +14,10 @@ class MRIDInfo:
 
 
     @classmethod
-    def from_file(cls, file_path: str,group_idx=0) -> "MRIDInfo":
-        session_path = os.path.dirname(os.path.dirname(file_path))
+    def from_file(cls, file_path: str,session_path:str,group_idx=0) -> "MRIDInfo":
         xml_group_idx=group_idx
+        #session_path = os.path.dirname(os.path.dirname(file_path))
+
         mrid_tags,totalatlasCoordinates_pkl,mrid,mrid_coordinates = cls.get_mrid_tag(session_path,xml_group_idx)
 
         return cls(
