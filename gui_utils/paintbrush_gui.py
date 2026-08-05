@@ -255,9 +255,11 @@ class PaintbrushGUI:
             if not self.LoadMRI.paint:
                 self.LoadMRI.paint = True
                 for idx in range(len(self.LoadMRI.vtk_widgets[0])):
-                    table = self.LoadMRI.intensity_table[0]
+                    # each 4D view has its own table, layer and label volume
+                    table = self.LoadMRI.intensity_table[idx]
                     if label:
-                        table.update_table("Label",self.MW.Paintbrush.label_volume[idx],idx,visibility_enabled=False)
+                        table.update_table("Label",self.MW.Paintbrush.label_volume[idx],idx,
+                                           self.MW.Paintbrush.layer_index[idx],visibility_enabled=False)
         else:
             self.ui.checkBox_Brush_MRID.setText("Brush OFF")
             if self.LoadMRI.heatmap:
