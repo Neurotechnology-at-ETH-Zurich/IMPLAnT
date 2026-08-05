@@ -1,7 +1,8 @@
 # This Python file uses the following encoding: utf-8
-from PySide6.QtWidgets import QWidget, QVBoxLayout
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QMenu
 import pyqtgraph as pg
 import numpy as np
+from ephys.visualisationEphys import EVENT_STYLES
 from PySide6.QtCore import Qt
 from PySide6.QtCore import QRectF
 from PySide6.QtGui import QKeySequence,QShortcut
@@ -11,6 +12,7 @@ class ClickablePlotWidget(pg.PlotWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.PgWidget = parent  # reference to your PgEphysWidget
+        self.setFocusPolicy(Qt.StrongFocus)  # needed for Enter/Escape while editing
         self.scroll_time = False
         self.zooming = False
         self.measurement = False
@@ -18,9 +20,27 @@ class ClickablePlotWidget(pg.PlotWidget):
         self.rect_item = None
         self.timeline_item = None
         self.measurement_text = {}
+        self.edit_time_text = None  # follows the cursor while editing an event
 
+
+    def eventFilter(self, obj, event):
+        if hasattr(event, 'button') and event.button() == Qt.MiddleButton:
+            return True  # block middle button entirely
+        return super().eventFilter(obj, event)
 
     def mouseDoubleClickEvent(self, event):
+        ve = getattr(self.PgWidget, 'VisEphys', None)
+        if ve is not None and ve.is_editing_event():
+            super().mouseDoubleClickEvent(event)
+            return
+
+        # double right click zooms out one step (same as the zoom out button)
+        if event.button() == Qt.RightButton:
+            self.scroll_time = False  # the first click of the pair started time scrolling
+            self.PgWidget.zoomReset()
+            event.accept()
+            return
+
         vb = self.getViewBox()
         pos = vb.mapSceneToView(event.position())
         x = pos.x()
@@ -35,9 +55,50 @@ class ClickablePlotWidget(pg.PlotWidget):
         super().mouseDoubleClickEvent(event)
 
     def mousePressEvent(self, event):
+        if event.button() == Qt.MiddleButton:
+            event.accept()
+            return
+
+        # while editing an event, the plot's own pan/zoom/measure logic is
+        # frozen — events go straight to the scene so the region can be dragged
+        ve = getattr(self.PgWidget, 'VisEphys', None)
+        if ve is not None and ve.is_editing_event():
+            if event.button() == Qt.RightButton:
+                menu = QMenu(self.PgWidget.MW)
+                finish_action = menu.addAction("Finish editing")
+                cancel_action = menu.addAction("Cancel editing")
+                action = menu.exec(event.globalPosition().toPoint())
+                if action == finish_action:
+                    ve.finish_edit_event(commit=True)
+                    self._hide_edit_time()
+                elif action == cancel_action:
+                    ve.finish_edit_event(commit=False)
+                    self._hide_edit_time()
+                return
+            super().mousePressEvent(event)  # let the region boundaries drag
+            return
+
         if event.button() == Qt.RightButton:
+            # check if clicking inside a ripple / theta region → context menu
+            if ve is not None:
+                pos_view = self.plotItem.vb.mapSceneToView(event.pos())
+                x = pos_view.x()
+                hit = ve.event_at(x)
+                if hit is not None:
+                    kind, _ = hit
+                    label = EVENT_STYLES[kind]['label']
+                    menu = QMenu(self.PgWidget.MW)
+                    edit_action = menu.addAction("Edit start/end time")
+                    delete_action = menu.addAction(f"Delete {label}")
+                    action = menu.exec(event.globalPosition().toPoint())
+                    if action == delete_action:
+                        ve.delete_event_at(kind, x)
+                    elif action == edit_action:
+                        ve.start_edit_event(kind, x)
+                    return  # don't start time-scrolling
             self.scroll_time = True
             self.pos_original = event.globalPos()
+
         elif event.button() == Qt.LeftButton:
             if self.PgWidget.MW.ui.pushButton_measurement.isChecked():
                 self.measurement = True
@@ -48,6 +109,10 @@ class ClickablePlotWidget(pg.PlotWidget):
             self.pos_original = self.plotItem.vb.mapSceneToView(event.pos())
 
     def mouseReleaseEvent(self, event):
+        ve = getattr(self.PgWidget, 'VisEphys', None)
+        if ve is not None and ve.is_editing_event():
+            super().mouseReleaseEvent(event)  # finish the region drag
+            return
         if event.button() == Qt.RightButton:
             self.scroll_time = False
         elif event.button() == Qt.LeftButton:
@@ -79,7 +144,6 @@ class ClickablePlotWidget(pg.PlotWidget):
                 self.PgWidget.plot.setXRange(self.PgWidget.xMin,self.PgWidget.xMax)
                 self.PgWidget.plot.setYRange(self.PgWidget.yMin,self.PgWidget.yMax)
 
-
                 self.zooming = False
                 self.rect_item = None
             elif self.measurement:
@@ -97,17 +161,49 @@ class ClickablePlotWidget(pg.PlotWidget):
                     self.removeItem(self.timeline_text)
                 self.timeline =False
                 self.timeline_item = None
+                # also hide the mirrored cursor on the spike raster / spectrogram
+                ve = getattr(self.PgWidget, 'VisEphys', None)
+                ruster = getattr(ve, 'spike_ruster', None)
+                if ruster is not None:
+                    ruster.clear_timeline()
+                for spec in getattr(ve, 'spectrograms', []):
+                    spec.clear_timeline()
+                csd = getattr(ve, 'csd_widget', None)
+                if csd is not None:
+                    csd.clear_timeline()
 
 
     def mouseMoveEvent(self, event):
+        ve = getattr(self.PgWidget, 'VisEphys', None)
+        if ve is not None and ve.is_editing_event():
+            pos = self.plotItem.vb.mapSceneToView(event.pos())
+            self._show_edit_time(pos)
+            super().mouseMoveEvent(event)  # drag the region boundary
+            return
         if self.scroll_time:
             pos = event.globalPos()  # position on screen
             delta = pos-self.pos_original
+            self.pos_original = pos  # per-frame delta, not cumulative
             if delta.x() != 0:  # horizontal scroll
-                self.PgWidget.VisEphys.time_start = max(0,self.PgWidget.VisEphys.time_start+delta.x()/1000)
-                self.PgWidget.VisEphys.time_end += delta.x()/1000
+                ve = self.PgWidget.VisEphys
+                # move the window as a fixed-width block, clamped to the recording
+                # bounds so it can't invert / go negative (mmap needs length > 0)
+                duration = ve.time_end - ve.time_start
+                t_min = float(ve.Ephys.ephys_data.t_start.magnitude)
+                t_max = float(ve.Ephys.ephys_data.t_stop.magnitude)
+                new_start = ve.time_start + delta.x() / 1000
+                new_start = max(t_min, min(new_start, t_max - duration))
+                if new_start == ve.time_start:
+                    super().mouseMoveEvent(event)
+                    return  # already at an edge — nothing to redraw
+                ve.time_start = new_start
+                ve.time_end = new_start + duration
+                self.PgWidget.xMin = ve.time_start
+                self.PgWidget.xMax = ve.time_end
                 signal = self.PgWidget.VisEphys.Ephys.ephys_data.read_data.analogsignals[0].load(time_slice=(self.PgWidget.VisEphys.time_start,self.PgWidget.VisEphys.time_end),channel_indexes=self.PgWidget.displayed_channels)
                 self.PgWidget.VisEphys.displayed_channels,self.PgWidget.VisEphys.ephys_lines = self.PgWidget.plot_ephys(signal.times, signal.magnitude, self.PgWidget.displayed_channels)
+                if self.PgWidget.VisEphys.Vis3D.table_excel.currentRow() != -1:
+                    self.PgWidget.VisEphys.highlight_channel(ch_idx=self.PgWidget.VisEphys.Vis3D.table_excel.currentRow())
 
                 #change slots
                 self.PgWidget.MW.ui.spinBox_startMin.blockSignals(True)
@@ -125,6 +221,11 @@ class ClickablePlotWidget(pg.PlotWidget):
                 self.PgWidget.MW.ui.spinBox_startMin.blockSignals(False)
                 self.PgWidget.MW.ui.spinBox_startS.blockSignals(False)
                 self.PgWidget.MW.ui.spinBox_startMs.blockSignals(False)
+
+                ruster = getattr(ve, 'spike_ruster', None)
+                if ruster is not None:
+                    ruster.update_view(ve.time_start, ve.time_end)
+                ve.update_spectrogram()
         elif self.zooming:
             pos = self.plotItem.vb.mapSceneToView(event.pos())
             #pos_scene = self.plotItem.vb.mapViewToScene(pos)
@@ -170,6 +271,18 @@ class ClickablePlotWidget(pg.PlotWidget):
             self.timeline_text.setText(f"Time: {mins}:{secs:02d}.{ms:03d}, {(pos.x()):.3f} sec")
             self.timeline_text.setPos(self.PgWidget.xMin, self.PgWidget.yMin)
 
+            # mirror the timeline cursor onto the spike raster and spectrogram
+            # (shared time axis)
+            ve = getattr(self.PgWidget, 'VisEphys', None)
+            ruster = getattr(ve, 'spike_ruster', None)
+            if ruster is not None:
+                ruster.set_timeline(pos.x())
+            for spec in getattr(ve, 'spectrograms', []):
+                spec.set_timeline(pos.x())
+            csd = getattr(ve, 'csd_widget', None)
+            if csd is not None:
+                csd.set_timeline(pos.x())
+
 
 
         elif self.measurement:
@@ -193,21 +306,42 @@ class ClickablePlotWidget(pg.PlotWidget):
 
         super().mouseMoveEvent(event)
 
+    def _show_edit_time(self, pos):
+        """Draw a small label at the cursor showing the time under it, so the
+        user can read the event's new start/end while dragging."""
+        if self.edit_time_text is None:
+            self.edit_time_text = pg.TextItem(
+                color='w', anchor=(0, 1), fill=pg.mkBrush(0, 0, 0, 150),
+                border=pg.mkPen(0, 200, 255, width=1),
+            )
+            self.edit_time_text.setFont(QtGui.QFont("Arial", 12, QtGui.QFont.Bold))
+            self.addItem(self.edit_time_text)
+        mins = int(pos.x() // 60)
+        secs = int(pos.x() % 60)
+        ms = int((pos.x() % 1) * 1000)
+        self.edit_time_text.setText(f"{mins}:{secs:02d}.{ms:03d}, {pos.x():.3f} sec")
+        self.edit_time_text.setPos(pos.x(), pos.y())
 
-    def activate_measurement(self,val):
-        # Then style the checked state
-        self.PgWidget.MW.ui.pushButton_selectTime.setChecked(False)
-        self.PgWidget.MW.ui.pushButton_timeline.setChecked(False)
+    def _hide_edit_time(self):
+        if self.edit_time_text is not None:
+            self.removeItem(self.edit_time_text)
+            self.edit_time_text = None
 
+    def keyPressEvent(self, event):
+        ve = getattr(self.PgWidget, 'VisEphys', None)
+        if ve is not None and ve.is_editing_event():
+            if event.key() in (Qt.Key_Return, Qt.Key_Enter):
+                ve.finish_edit_event(commit=True)
+                self._hide_edit_time()
+                event.accept()
+                return
+            if event.key() == Qt.Key_Escape:
+                ve.finish_edit_event(commit=False)
+                self._hide_edit_time()
+                event.accept()
+                return
+        super().keyPressEvent(event)
 
-    def select_timeframe(self,val):
-        self.PgWidget.MW.ui.pushButton_measurement.setChecked(False)
-        self.PgWidget.MW.ui.pushButton_timeline.setChecked(False)
-
-
-    def draw_timeline(self,val):
-        self.PgWidget.MW.ui.pushButton_selectTime.setChecked(False)
-        self.PgWidget.MW.ui.pushButton_measurement.setChecked(False)
 
     def measure_from_pos(self,pos):
         # get the times
@@ -241,11 +375,15 @@ class ClickablePlotWidget(pg.PlotWidget):
             signal_data = signal.magnitude[:, idx]
             ch_max = np.max(signal_data)
             ch_min = np.min(signal_data)
-            t_max = signal.times[np.argwhere(signal_data==ch_max)[0][0]]
-            t_min = signal.times[np.argwhere(signal_data==ch_min)[0][0]]
+            # signal.times are quantities in seconds, but the stored signal_times
+            # are plain floats; strip units here so the subtraction below doesn't
+            # raise a dimensionless-vs-seconds conversion error
+            t_max = float(signal.times[np.argwhere(signal_data==ch_max)[0][0]])
+            t_min = float(signal.times[np.argwhere(signal_data==ch_min)[0][0]])
             diff_y_uV = (ch_max-ch_min)*0.195
             signal_times, ch_norm, offset = self.PgWidget.lines_values[line_indices[idx]]
             values = ch_norm + offset
+            signal_times = np.asarray(signal_times, dtype=float)
             y_max=values[np.argmin(np.abs(signal_times - t_max))]
             y_min=values[np.argmin(np.abs(signal_times - t_min))]
             points_x.append(t_max)
@@ -297,6 +435,7 @@ class PgWidget(QWidget):
         self.plot.showGrid(x=True, y=True, alpha=0.3)
         self.layout.addWidget(self.plot)
         self.plot.getViewBox().setMenuEnabled(False)
+        self.plot.getViewBox().setMouseEnabled(x=False, y=False)
         self.plot.hideButtons()
 
         # Store plotted lines
@@ -304,7 +443,7 @@ class PgWidget(QWidget):
         self.displayed_channels = []
 
         self.slot_height = 1.0
-        self.amplitude = 1.0
+        self.amplitude = 1.5
 
 
     def init_PgWidget_class(self, VisEphys,MW):
@@ -317,9 +456,11 @@ class PgWidget(QWidget):
         self.MW.ui.dockWidget_ephys.topLevelChanged.connect(self.on_dock_floating_changed)
 
         #ctrl D ctrl I
-        ctrl_d = QShortcut(QKeySequence("Ctrl+D"), self.MW.ui.Dock_ephys)
+        ctrl_d = QShortcut(QKeySequence("Ctrl+D"), self.MW.ui.dockWidget_ephys)
+        ctrl_d.setContext(Qt.ApplicationShortcut)
         ctrl_d.activated.connect(self.MW.ui.pushButtonAmp_minus.click)
-        ctrl_i = QShortcut(QKeySequence("Ctrl+I"), self.MW.ui.Dock_ephys)
+        ctrl_i = QShortcut(QKeySequence("Ctrl+I"), self.MW.ui.dockWidget_ephys)
+        ctrl_i.setContext(Qt.ApplicationShortcut)
         ctrl_i.activated.connect(self.MW.ui.pushButtonAmp_plus.click)
 
         self.xMin = self.VisEphys.time_start
@@ -394,7 +535,7 @@ class PgWidget(QWidget):
             rgba = self.VisEphys.Vis3D.cmap(channel_id / max_idx)
             r, g, b,a = rgba
 
-            pen = pg.mkPen(color=(int(r*255), int(g*255), int(b*255),int(a*255)), width=0.5)
+            pen = pg.mkPen(color=(int(r*255), int(g*255), int(b*255),int(a*255)), width=1.0) #0.5)
             line = self.plot.plot(signal_times, ch_norm * self.amplitude + offset, pen=pen)
 
             self.displayed_channels.append(ch_idx)
@@ -428,9 +569,10 @@ class PgWidget(QWidget):
             y = y1+y2
             if len(x) == 0:
                 continue
-            # find nearest time index
-            idx = np.searchsorted(x.magnitude, x_click)
-            idx = np.clip(idx, 0, len(x.magnitude) - 1)
+            # find nearest time index (x may be a neo quantity or plain ndarray)
+            x_arr = x.magnitude if hasattr(x, 'magnitude') else np.asarray(x)
+            idx = np.searchsorted(x_arr, x_click)
+            idx = np.clip(idx, 0, len(x_arr) - 1)
 
             y_at_x = y[idx]
 
