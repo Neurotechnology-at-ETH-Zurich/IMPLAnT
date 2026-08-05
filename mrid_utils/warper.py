@@ -10,6 +10,11 @@ def heatmap_warp(filename, mrid, savepath, sessionpath, fixed_ind, tx):
 
     fixed_filename = handlers.find_resampled_img(fixed_ind, os.path.join(sessionpath, "anat"))
     fixed_path = os.path.join(sessionpath, "anat", fixed_filename)
+    if not os.path.exists(fixed_path):
+        raise FileNotFoundError(
+            f"Resampled fixed image for {fixed_ind} not found:\n{fixed_path}\n\n"
+            "Run resampling for this data set before Gaussian analysis, then try again."
+        )
 
     filename = os.path.basename(filename)
     heatmap_filename = ".".join((filename + "-" + mrid + "-heatmap", "nii", "gz"))

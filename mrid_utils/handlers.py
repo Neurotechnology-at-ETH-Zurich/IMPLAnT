@@ -102,6 +102,8 @@ def find_resampled_img(ind, path):
     Finds the 25um isovoxel resampled whole-volume image
     """
     filename = find_ind_data(ind, path)
+    if not filename:
+        raise FileNotFoundError(f"No file matching '{ind}.nii.gz' found in {path}")
     filename = ".".join(((filename[0].split(".")[0]+"_resampled", "nii", "gz")))
     return filename
 
