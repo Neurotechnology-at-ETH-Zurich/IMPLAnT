@@ -104,16 +104,25 @@ class ElectrodeLoc:
             else:
                 print("No valid transformation!")
 
-            for roi_name in roi_names:
-                heatmap_filename = ".".join((self.filename + "-" + roi_name + "-heatmap", "nii", "gz"))
-                heatmap_path = os.path.join(self.sessionpath, "analysed", roi_name,data_view,heatmap_filename)
-                if os.path.exists(heatmap_path):
-                    #warps and resamples heatmaps
-                    savepath = os.path.join(self.LoadMRI.session_path, 'analysed',roi_name,data_view)
-                    fixed_path = warper.heatmap_warp(self.filename, roi_name, savepath, self.sessionpath, fixed_ind, tx)
-                    #save gaussian centers
-                    volume3d_resampled = np.asanyarray(nib.load(fixed_path).dataobj)
-                    gauss_aux.run_gaussian_analysis(self.filename, savepath, roi_name, data_view, volume3d_resampled, self.labelsdf)
+            try:
+                for roi_name in roi_names:
+                    heatmap_filename = ".".join((self.filename + "-" + roi_name + "-heatmap", "nii", "gz"))
+                    heatmap_path = os.path.join(self.sessionpath, "analysed", roi_name,data_view,heatmap_filename)
+                    if os.path.exists(heatmap_path):
+                        #warps and resamples heatmaps
+                        savepath = os.path.join(self.LoadMRI.session_path, 'analysed',roi_name,data_view)
+                        fixed_path = warper.heatmap_warp(self.filename, roi_name, savepath, self.sessionpath, fixed_ind, tx)
+                        #save gaussian centers
+                        volume3d_resampled = np.asanyarray(nib.load(fixed_path).dataobj)
+                        gauss_aux.run_gaussian_analysis(self.filename, savepath, roi_name, data_view, volume3d_resampled, self.labelsdf)
+            except FileNotFoundError as e:
+                msg = QtWidgets.QMessageBox(self.MW)
+                msg.setIcon(QtWidgets.QMessageBox.Warning)
+                msg.setWindowTitle("Missing resampled image")
+                msg.setText(f"Gaussian analysis for the {data_view} view was skipped:\n\n{e}")
+                msg.addButton("OK", QtWidgets.QMessageBox.ActionRole)
+                msg.exec()
+                continue
 
 
     def getCoordinates(self):
@@ -214,8 +223,30 @@ class ElectrodeLoc:
         """
         for data_index in range(len(self.LoadMRI.vtk_widgets[0])):
             self.show_warped_volume(data_index,fitted_points)
+            # redraw after every view's swap, not just once at the end: each
+            # step (layer cleanup, zoom fit, etc.) touches renderers/actors,
+            # so re-running this after each one is what actually keeps the
+            # markers on screen instead of only ever drawing them once
+            self.update_electrode_markers(fitted_points)
 
         self.update_electrode_markers(fitted_points)
+
+    @staticmethod
+    def _map_fitted_point(point, source_img, target_img):
+        """
+        fitted_points are (x,y,z) indices into source_img (the warped file as
+        SimpleITK stores it - sitk index order, not array order). When a
+        view's display image has been re-oriented (sagittal -> ASR, see
+        show_warped_volume) target_img's array axes are permuted/flipped
+        relative to source_img, so map through physical space to keep the
+        point on the same anatomical location instead of the same indices.
+        """
+        if target_img is source_img:
+            return point
+        phys = source_img.TransformContinuousIndexToPhysicalPoint(
+            (float(point[0]), float(point[1]), float(point[2]))
+        )
+        return target_img.TransformPhysicalPointToContinuousIndex(phys)
 
     # fitted centers are sub-voxel Gaussian fits, not exact voxel hits, so a
     # point stays visible for slices within this many voxels of its own z
@@ -256,7 +287,11 @@ class ElectrodeLoc:
                     continue
 
                 for point in fitted_points:
-                    x, y, z = point[0], point[1], point[2]
+                    # fitted_points are indices into volume.raw_ref_image; the
+                    # sagittal panel's array has been re-oriented to ASR (see
+                    # show_warped_volume), so map through physical space to
+                    # land on the same anatomical location in either case
+                    x, y, z = self._map_fitted_point(point, volume.raw_ref_image, volume.oriented_ref_image)
                     # world position accounts for fliplr: x axis is flipped in
                     # the axial-style layout every is_4d view uses (same
                     # convention as cursor.py/paintbrush.py)
@@ -286,17 +321,15 @@ class ElectrodeLoc:
 
     def update_electrode_marker_visibility(self):
         """
-        Show a fitted-point marker only when the displayed slice is within
-        Z_VISIBILITY_TOLERANCE voxels of the point's own z index - same
-        show-only-on-your-slice convention as
-        trajectory_planning.rendering.check_points_in_slice, but with a
-        tolerance since fitted centers are sub-voxel, not exact voxel hits.
-        Called from LoadMRI.update_slices whenever the current slice changes.
+        Always-visible: electrode contacts along a shank are typically spread
+        across a wide z range (tens to hundreds of voxels), and the cursor
+        only centers on the first point, so gating on "is this the current
+        slice" (as trajectory_planning.rendering.check_points_in_slice does)
+        left nearly every other marker hidden. Kept as a hook: still called
+        from LoadMRI.update_slices whenever the slice changes.
         """
-        lm = self.LoadMRI
         for actor, image_index, data_view, idx, point_z in self.electrode_actors:
-            current_z = lm.slice_indices[idx][0]
-            actor.SetVisibility(abs(current_z - point_z) <= self.Z_VISIBILITY_TOLERANCE)
+            actor.SetVisibility(True)
 
 
     def visualize_4Dwarpedslice(self, img_slice,spacing,data_index,data_view):
@@ -419,8 +452,13 @@ class ElectrodeLoc:
         The warped volume is wrapped as a 4D MRIVolume (is_4d=True, one view name,
         the same 3D volume in all three timestamp slots) so every `is_4d` branch in
         Cursor, update_slices and CustomInteractorStyle keeps taking the path it
-        takes now. The array is used exactly as the file stores it — no DICOMOrient
-        — because the fitted points are indices of that file.
+        takes now - which always slices along the array's first axis, so every
+        panel would show an axial-style plane. The array is used exactly as the
+        file stores it, except for the sagittal panel, which is re-oriented to
+        ASR first (same trick as MRIVolume.from_file for real 4D data) so that
+        same first-axis slice lands on the sagittal plane instead. Because the
+        fitted points are indices into the un-reoriented file, _map_fitted_point
+        carries them into the re-oriented index space through physical space.
 
         data_index : one data view, or None for every loaded one (up to three).
         fitted_points : optional, only used with a single data_index — puts the
@@ -448,7 +486,13 @@ class ElectrodeLoc:
                 continue
 
             img = sitk.ReadImage(path)
-            vol = sitk.GetArrayFromImage(img)
+            # is_4d forces every panel through the same z-fixed (axial-style)
+            # slicing (image_layer.py setup_vtk/update_vtk), so the "sagittal"
+            # panel would otherwise show an axial slice too. Re-orienting to
+            # ASR first (same trick as MRIVolume.from_file for real 4D data)
+            # makes that same z-fixed slice land on the sagittal plane instead.
+            img_display = sitk.DICOMOrient(img, 'ASR') if data_view == 'sagittal' else img
+            vol = sitk.GetArrayFromImage(img_display)
             if vol.ndim != 3:
                 print(f"Warped volume for view {data_view} is not 3D", flush=True)
                 continue
@@ -459,8 +503,8 @@ class ElectrodeLoc:
                 DICOMOrient=old.DICOMOrient,
                 raw_DICOMOrient=old.raw_DICOMOrient,
                 view_names=[data_view],
-                spacing=img.GetSpacing()[::-1],
-                oriented_ref_image=img,
+                spacing=img_display.GetSpacing()[::-1],
+                oriented_ref_image=img_display,
                 raw_ref_image=img,
                 is_4d=True,
                 timestamp4D=old.timestamp4D,
@@ -477,7 +521,7 @@ class ElectrodeLoc:
             # cursor: the first electrode when the points are known, else the middle
             nz, ny, nx = vol.shape
             if fitted_points is not None and len(fitted_points) and data_index is not None:
-                p = fitted_points[0]
+                p = self._map_fitted_point(fitted_points[0], img, img_display)
                 lm.slice_indices[idx] = [
                     int(np.clip(round(p[2]), 0, nz - 1)),
                     int(np.clip(round(p[1]), 0, ny - 1)),
@@ -501,6 +545,35 @@ class ElectrodeLoc:
                 renderer = lm.renderers.get(image_index, {}).get(data_view)
                 if renderer is not None:
                     renderer.AddActor(layer.actors[data_view][image_index])
+
+            # the warped result is the only thing meant to be shown from here -
+            # the anat/segmentation paint layer (Paintbrush.start_paintbrush)
+            # and any other overlay for this view are done their job earlier in
+            # the pipeline and were never deleted; left in place they are still
+            # sized to the pre-warp volume and update_slices drives them with
+            # the same (now much larger) z, going out of bounds
+            for other_index, other_layer in list(self.MW.Layers[idx].items()):
+                if other_index == 0:
+                    continue
+                for view_name, actors_by_image in list(other_layer.actors.items()):
+                    for image_index, actor in list(actors_by_image.items()):
+                        renderer = lm.renderers.get(image_index, {}).get(view_name)
+                        if renderer is not None:
+                            renderer.RemoveActor(actor)
+                del self.MW.Layers[idx][other_index]
+
+            # same reason: the heatmap actor (mrid_tags.start_heatmap) is a
+            # bare vtkImageActor outside the Layers system with its own
+            # z range, still refreshed by update_slices - delete it outright
+            # instead of leaving it to go out of bounds against the new volume
+            mrid_tags = getattr(lm, 'mrid_tags', None)
+            if mrid_tags is not None:
+                heatmap_actor = mrid_tags.actor_heatmap.pop(idx, None)
+                if heatmap_actor is not None:
+                    renderer = lm.renderers.get(3, {}).get(data_view)
+                    if renderer is not None:
+                        renderer.RemoveActor(heatmap_actor)
+                mrid_tags.heatmap_nii.pop(idx, None)
 
             # the ranges that were sized from the old volume
             lm.cursor_ui[f"spin_x{idx}"].setMaximum(nx)
