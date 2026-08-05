@@ -108,7 +108,18 @@ def find_resampled_img(ind, path):
     return filename
 
 def find_ind_data(ind,path):
-    filename=[f for f in os.listdir(path) if os.path.isfile(os.path.join(path,f)) and ind+".nii.gz" in f]
+    """
+    Matches only the base acquisition file for `ind` (e.g. "...-ind_2.nii.gz"),
+    anchored at the end on the dash "-ind_N" prefix that convention gives base
+    files. A plain substring check also matches derived/aligned outputs like
+    "..._to_ind_2.nii.gz" (underscore, not dash, before "ind_"), which
+    reference ind_2 as a target, not their own index - os.listdir() order is
+    arbitrary, so picking filename[0] from an unanchored match can silently
+    grab a leftover aligned-to file from an earlier run instead of the real
+    base file.
+    """
+    suffix = f"-{ind}.nii.gz"
+    filename=[f for f in os.listdir(path) if os.path.isfile(os.path.join(path,f)) and f.endswith(suffix)]
     return filename
 
 def get_gaussian_centers(sessionpath, mrid):
