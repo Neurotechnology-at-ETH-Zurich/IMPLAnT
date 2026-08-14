@@ -1,0 +1,6 @@
+[submodule "electrode2geometry"]
+	path = electrode2geometry
+	url = git@github.com:gombpeti/electrode2geometry.git
+[submodule "rippl-AI"]
+	path = rippl-AI
+	url = git@github.com:PridaLab/rippl-AI.git
