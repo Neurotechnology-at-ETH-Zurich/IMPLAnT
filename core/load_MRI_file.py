@@ -155,6 +155,14 @@ class LoadMRI(QObject):
         if self.threshold_on == True:
             layer = self.Layers[0][self.SegmentationGUI.layer_index]
             layer.update_vtk([z,y,x])
+            if getattr(self.SegmentationGUI, 'mode', None) == 'skull':
+                # skull segmentation's paint-seed initialization
+                # (Paintbrush.start_paintbrush) adds its own layer to
+                # self.Layers[0] -- without this it keeps showing whichever
+                # slice it was last painted on instead of following scroll.
+                for layer_index, other_layer in self.Layers[0].items():
+                    if layer_index != self.SegmentationGUI.layer_index:
+                        other_layer.update_vtk([z,y,x])
         else:
             # only the data set that moved: [z,y,x] is slice_indices[data_index],
             # so applying it to every data set's layers would drag the other 4D
@@ -170,6 +178,7 @@ class LoadMRI(QObject):
         #Trajectory Planning
         if hasattr(self,'TrajPlanning'):
             self.TrajPlanning.check_points_in_slice()
+            self.TrajPlanning.update_coronal_plane_line()
 
         #Electrode Localization
         if hasattr(self,'ElectrodeLoc'):

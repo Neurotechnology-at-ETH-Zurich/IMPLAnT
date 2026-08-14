@@ -99,7 +99,45 @@ class FileLoader:
         if not hasattr(self.MW,'LoadMRI') or add_another_file:
             self.initialize_file(file_name,layer_index,data_view,0)
         else:
+            if not self.MW._confirm_replace_session('mri'):
+                return None, None
+            self.MW.snapshot_view_state()
             self.MW.restart_gui(file_name,data_view=data_view)
+            self.MW.reapply_view_state(file_name)
+
+        return file_name,data_view
+
+    def restore_file(self,file_name):
+        """
+        Load a previously-used file directly (no picker/confirmation dialog),
+        for restoring a saved session. Returns (file_name, data_view), or
+        (None, None) if the file can't be read or the user cancels the
+        4D-view prompt.
+        """
+        image = sitk.ReadImage(file_name)
+        volume = sitk.GetArrayFromImage(image)
+        if volume.ndim==4:
+            self.is_4d = True
+            data_view = self.get_data_view(file_name)
+            if data_view is None:
+                return None, None
+        else:
+            self.is_4d = False
+            data_view = 'coronal'
+
+        if not hasattr(self.MW,'LoadMRI'):
+            self.initialize_file(file_name,0,data_view,0)
+        else:
+            # a LoadMRI/Cursor already exists from an earlier file this session --
+            # go through the same teardown-and-rebuild restart_gui() uses for a
+            # second file, instead of layering a second set of scrollbar/spinbox
+            # signal connections on top of the first (which ping-pongs into
+            # infinite recursion the next time a scrollbar is moved).
+            if not self.MW._confirm_replace_session('mri'):
+                return None, None
+            self.MW.snapshot_view_state()
+            self.MW.restart_gui(file_name,data_view=data_view)
+            self.MW.reapply_view_state(file_name)
 
         return file_name,data_view
 
@@ -157,7 +195,7 @@ class FileLoader:
 
         self.MW.Cursor.start_cursor(True,data_index,data_view)
 
-    def initialize_file(self,file_name,layer_index,data_view,data_index,full_restart=True,label_file=False):
+    def initialize_file(self,file_name,layer_index,data_view,data_index,full_restart=True,label_file=False,binary_color=None,layer_label=None,visibility_enabled=None):
         if layer_index==0: #not hasattr(self.MW,'LoadMRI'):
             # Create loader
             self.MW.LoadMRI = LoadMRI(self.MW)
@@ -203,7 +241,9 @@ class FileLoader:
                     lut.SetNumberOfTableValues(2)
                     lut.SetTableRange(0, 1)
                     lut.SetTableValue(0, 0,0,0, 0.0)
-                    if hasattr(self.MW.LoadMRI,'TrajPlanning') and hasattr(self.MW.LoadMRI.TrajPlanning,'region_to_avoid_img'):
+                    if binary_color is not None:
+                        lut.SetTableValue(1, *binary_color, 1.0)
+                    elif hasattr(self.MW.LoadMRI,'TrajPlanning') and hasattr(self.MW.LoadMRI.TrajPlanning,'region_to_avoid_img'):
                         lut.SetTableValue(1, 0.6,0.6,0.6, 1.0) #dark-grey
                     else:
                         lut.SetTableValue(1, 1,0,0, 1.0) #red
@@ -217,9 +257,18 @@ class FileLoader:
                     lut.SetSaturationRange(0.0, 0.0)
                     lut.Build()
                 is_forbidden = isinstance(file_name, sitk.Image)
-                intensity_filename = 'Forbidden Regions' if is_forbidden else os.path.basename(file_name)
+                if layer_label is not None:
+                    intensity_filename = layer_label
+                else:
+                    # every sitk.Image passed in here used to be assumed to be
+                    # the forbidden-regions overlay -- callers with their own
+                    # sitk.Image overlay (e.g. the skull mask) now pass an
+                    # explicit layer_label instead of being mislabeled by this.
+                    intensity_filename = 'Forbidden Regions' if is_forbidden else os.path.basename(file_name)
+                if visibility_enabled is None:
+                    visibility_enabled = not is_forbidden
                 self.MW.Layers[data_index][layer_index] = ImageLayer({0: vol},self.MW.Layers[data_index][0].spacing,self.MW.Layers[data_index][0].view_names,self.MW.LoadMRI.slice_indices[data_index],False,self.MW.LoadMRI.render,lut=lut,opacity=0.6)
-                self.MW.Layers[data_index][layer_index].visibility_btn = self.MW.LoadMRI.intensity_table[0].update_table(intensity_filename, vol,0,layer_index,visibility_enabled=not is_forbidden)
+                self.MW.Layers[data_index][layer_index].visibility_btn = self.MW.LoadMRI.intensity_table[0].update_table(intensity_filename, vol,0,layer_index,visibility_enabled=visibility_enabled)
                 self.init_vtk(data_view, data_index,layer_index)
 
             else:
