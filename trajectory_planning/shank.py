@@ -1,9 +1,7 @@
 # This Python file uses the following encoding: utf-8
 import numpy as np
 from itertools import groupby
-from PySide6 import QtWidgets
 from PySide6.QtGui import QPixmap, QIcon, QColor
-from PySide6.QtWidgets import QTableWidgetItem
 
 NEON_COLORS = [
     ("Neon Green",  (0,   255,  28), (0.0,        1.0,  28/255)),
@@ -24,14 +22,19 @@ class ShankRendering:
     def add_shank(self):
         n = self.ui.comboBox_Shanks.count()
         self.shank_number = n
-        self.shank_colors[n] = 0  # default neon green
+        # Cycle through the 5 available colours as shanks are added, so
+        # e.g. shanks 1, 6, 11, ... share colour 0, shanks 2, 7, 12, ...
+        # share colour 1, etc.
+        color_idx = n % len(NEON_COLORS)
+        self.shank_colors[n] = color_idx
         self.line_actor[n] = {}
         self.label_actor[n] = {}
         self.channel_points[n] = []
-        self.ui.comboBox_Shanks.addItem(f"Shank {n+1}")
-        self.ui.comboBox_Shanks.setItemData(n, n)
-        self.ui.comboBox_Shanks.setItemIcon(n, _make_color_icon(0))
-        self.ui.comboBox_Shanks.setCurrentIndex(n)  # triggers select_shank
+        for combo in (self.ui.comboBox_Shanks, self.ui.comboBox_geometry_shanks):
+            combo.addItem(f"Shank {n+1}")
+            combo.setItemData(n, n)
+            combo.setItemIcon(n, _make_color_icon(color_idx))
+        self.ui.comboBox_Shanks.setCurrentIndex(n)  # triggers select_shank, which syncs comboBox_geometry_shanks
         self.point_actor_deep[n] = {}
         self.point_actor_insert[n] = {}
         self.mri_deep[n] = None
@@ -41,6 +44,16 @@ class ShankRendering:
         self.direction_atlas[n] = None
         self.atlas_shank_end[n] = None
         self.reset_shank_gui()
+
+        # Re-arm the one-time popups so they're available again for this new
+        # shank instead of staying permanently "used up" -- but don't pop
+        # one open immediately, that's an unwanted interruption on every
+        # "+ Add Shank" click. The '?' button (show_current_step_popup) and
+        # the DXF panel's own entry point still show the right thing on
+        # demand once this is reset.
+        if self.ui.stackedWidget_trajectoryplanning.currentIndex() == 1:
+            self._geometry_popup_shown = False
+            self._insertion_popup_shown = False
 
     def remove_shank(self):
         if self.ui.comboBox_Shanks.count() <= 1:
@@ -55,10 +68,13 @@ class ShankRendering:
         del self.line_actor[shank_idx]
         del self.label_actor[shank_idx]
         del self.channel_points[shank_idx]
-        # block signal to avoid select_shank firing mid-cleanup
-        self.ui.comboBox_Shanks.blockSignals(True)
-        self.ui.comboBox_Shanks.removeItem(self.ui.comboBox_Shanks.currentIndex())
-        self.ui.comboBox_Shanks.blockSignals(False)
+        self.dfx_shank_data.pop(shank_idx, None)
+        # block signals to avoid select_shank firing mid-cleanup
+        current_pos = self.ui.comboBox_Shanks.currentIndex()
+        for combo in (self.ui.comboBox_Shanks, self.ui.comboBox_geometry_shanks):
+            combo.blockSignals(True)
+            combo.removeItem(current_pos)
+            combo.blockSignals(False)
         self.shank_number = self.ui.comboBox_Shanks.currentIndex()
         self.select_shank(self.shank_number)
 
@@ -66,6 +82,14 @@ class ShankRendering:
 
     def select_shank(self, index):
         self.shank_number = index
+        # comboBox_Shanks and comboBox_geometry_shanks always show the same
+        # shank; whichever one the user just changed drives, the other
+        # follows (blocked so it doesn't re-enter this method).
+        for combo in (self.ui.comboBox_Shanks, self.ui.comboBox_geometry_shanks):
+            if combo.currentIndex() != index:
+                combo.blockSignals(True)
+                combo.setCurrentIndex(index)
+                combo.blockSignals(False)
         self.ui.comboBox_tpColor.blockSignals(True)
         self.ui.comboBox_tpColor.setCurrentIndex(self.shank_colors.get(index, 0))
         self.ui.comboBox_tpColor.blockSignals(False)
@@ -102,29 +126,169 @@ class ShankRendering:
                    self.ui.spinBox_tp_deep_x,   self.ui.spinBox_tp_deep_y,   self.ui.spinBox_tp_deep_z):
             sb.blockSignals(False)
 
-        # update distance spinbox
+        # update distance spinbox -- MUST match calculate_distance's (and
+        # the PDF report's compute()) convention: MRI-space mri_insert/
+        # mri_deep with the MRI-resampled spacing, not the raw atlas
+        # coords_insert_point/coords_deepest_point with atlas spacing.
+        # The atlas->MRI registration transform isn't distance-preserving,
+        # so those two conventions disagree, and whichever one last wrote
+        # to this spinbox is not necessarily the one the PDF report uses --
+        # showing a different depth for the same shank in the GUI vs. the
+        # exported PDF.
+        mri_insert = self.mri_insert.get(index)
+        mri_deep = self.mri_deep.get(index)
         dist = 0.0
-        if insert is not None and deep is not None:
-            spacing = np.array(self.fixedImg.GetSpacing())
-            dist = float(np.linalg.norm((np.array(insert) - np.array(deep)) * spacing))
+        if mri_insert is not None and mri_deep is not None:
+            spacing = np.array(self.movingImg_resampled.GetSpacing())
+            dist = float(np.linalg.norm((np.array(mri_insert) - np.array(mri_deep)) * spacing))
         self.ui.doubleSpinBox_distance_shank.setValue(dist)
 
-        # repopulate table from stored channel_points
-        table = self.ui.tableWidget_shank_info
-        pts = self.channel_points.get(index)
-        if pts is not None and len(pts) > 0:
-            atlas_values = [self.atlas_vol[tuple(np.round(p[::-1]).astype(int))] for p in pts]
-            atlas_values_sorted = [(val, sum(1 for _ in group)) for val, group in groupby(atlas_values)]
-            region_name = [self.LoadMRI.tp_labels[val][4] for val, _ in atlas_values_sorted]
-            table.setRowCount(len(atlas_values_sorted))
-            header = table.horizontalHeader()
-            header.setSectionResizeMode(0, QtWidgets.QHeaderView.ResizeToContents)
-            header.setSectionResizeMode(1, QtWidgets.QHeaderView.Stretch)
-            for i, (val, count) in enumerate(atlas_values_sorted):
-                table.setItem(len(atlas_values_sorted) - 1 - i, 0, QTableWidgetItem(f"{count}"))
-                table.setItem(len(atlas_values_sorted) - 1 - i, 1, QTableWidgetItem(f"{region_name[i]}"))
-        else:
-            table.setRowCount(0)
+        self.refresh_dfx_channel_display()
+        if hasattr(self, 'shank_sidebar'):
+            self.shank_sidebar.refresh()
+        if hasattr(self, 'atlas_bregma_coords'):
+            self.update_shank_angle_display()
+        if hasattr(self, 'Vis3D'):
+            if insert is None or deep is None:
+                # this shank has no insert/deepest points yet -- there's no
+                # trajectory to clip a 3D view around, so switch any panel
+                # currently in 3D mode back to its plain 2D slice view --
+                # the real toggle each pushButton_*View/change_view_*
+                # already uses (stackedWidget_coronal/sagittal/axial index
+                # 0 = 2D, 1 = 3D), not just a layout/column-width change.
+                for stacked, btn in (
+                    (self.ui.stackedWidget_coronal, self.ui.pushButton_coronalView),
+                    (self.ui.stackedWidget_sagittal, self.ui.pushButton_sagittalView),
+                    (self.ui.stackedWidget_axial, self.ui.pushButton_axialView),
+                ):
+                    stacked.setCurrentIndex(0)
+                    btn.setChecked(True)
+            else:
+                self.Vis3D.refresh_clipped_views(index)
+
+    def compute_shank_regions(self, shank_idx, points):
+        """List of dicts, one per brain region the shank physically passes
+        through, ordered shallow/insertion-end first to deep/tip-end last:
+        {'val', 'name', 'count', 'span_mm', 'd_start', 'd_end'}.
+
+        The region boundaries come from sampling the ENTIRE physical line
+        between the insertion and deepest points at ~1-voxel resolution
+        (same approach as check_region_to_avoid) -- using only the sparse
+        electrode contacts would size regions off of whichever contacts
+        happen to land in them, and silently drop a thin region with no
+        contact inside it at all. 'count' is still the number of actual
+        electrode contacts that fall within the region's real extent.
+
+        Used by the shank sidebar.
+        """
+        insert = self.coords_insert_point.get(shank_idx)
+        deep = self.coords_deepest_point.get(shank_idx)
+        if points is None or len(points) == 0 or insert is None or deep is None:
+            return []
+
+        spacing = np.array(self.fixedImg.GetSpacing())
+        insert_arr = np.array(insert)
+        deep_arr = np.array(deep)
+
+        # The shank's actual shallow end (based on channel count/spacing) can
+        # sit further out than the marked insertion point -- in that case the
+        # sampled line, and everything measured against it, should reach all
+        # the way to the shank end instead of being cut off at the insertion
+        # point.
+        shank_end = self.atlas_shank_end.get(shank_idx)
+        top_arr = insert_arr
+        if shank_end is not None:
+            shank_end_arr = np.array(shank_end)
+            if np.linalg.norm(shank_end_arr - deep_arr) > np.linalg.norm(insert_arr - deep_arr):
+                top_arr = shank_end_arr
+
+        n_steps = int(np.max(np.abs(top_arr - deep_arr))) + 1
+        line_points = np.linspace(top_arr, deep_arr, n_steps)  # shallow -> deep
+        line_depths = np.linalg.norm((line_points - top_arr) * spacing, axis=1)
+        line_atlas_values = [self.atlas_vol[tuple(np.round(p[::-1]).astype(int))] for p in line_points]
+
+        # actual electrode contact depths, just to count how many fall in
+        # each region -- the region's own extent no longer depends on them
+        contact_depths = np.linalg.norm((np.asarray(points) - top_arr) * spacing, axis=1)
+
+        grouped = [(val, sum(1 for _ in g)) for val, g in groupby(line_atlas_values)]
+
+        segs = []  # (val, d_start, d_end)
+        cursor = 0
+        for val, count in grouped:
+            segs.append((val, line_depths[cursor], line_depths[cursor + count - 1]))
+            cursor += count
+
+        # Partition the WHOLE depth axis with no gaps/overlaps -- adjacent
+        # segments meet at the midpoint between them, same construction the
+        # sidebar already uses for drawing bands -- so every electrode
+        # contact is assigned to exactly one segment. A plain
+        # [d_start, d_end] inclusion test can strand a contact in the crack
+        # between two segments if its depth (measured independently of the
+        # line-sample grid) doesn't land inside either, silently
+        # undercounting the total (e.g. showing 59 instead of 64 channels).
+        cut_points = [-np.inf]
+        for k in range(len(segs) - 1):
+            cut_points.append((segs[k][2] + segs[k + 1][1]) / 2)
+        cut_points.append(np.inf)
+        contact_seg_idx = np.clip(
+            np.searchsorted(cut_points, contact_depths, side='right') - 1,
+            0, len(segs) - 1)
+        counts = np.bincount(contact_seg_idx, minlength=len(segs))
+
+        regions = []
+        for i, (val, d_start, d_end) in enumerate(segs):
+            label = self.LoadMRI.tp_labels.get(val)
+            if val == 0:
+                # atlas index 0 is the conventional "Clear Label"/background
+                # value -- build_label_lut() already force-hides it (alpha 0)
+                # in the real MRI views regardless of what the label file
+                # calls it, so treat it the same way here instead of showing
+                # whatever raw name/colour (often black) the file happens to
+                # have on record for it.
+                name, color = "Clear Label", (60, 60, 60)
+            elif label is not None:
+                name, color = label[4], tuple(int(round(c * 255)) for c in label[:3])
+            else:
+                name, color = "Outside / unlabeled", (90, 90, 90)
+            regions.append({
+                'val': val, 'name': name, 'color': color, 'count': int(counts[i]),
+                'span_mm': float(d_end - d_start),
+                'd_start': float(d_start), 'd_end': float(d_end),
+            })
+
+        # Drop slivers that would display as "0.00" mm anyway -- these come
+        # from single-voxel boundary artefacts in the atlas, not a real
+        # region the shank passes through. Fold any contacts assigned to a
+        # dropped sliver into the next surviving region instead of just
+        # losing them, so the displayed counts still add up to len(points).
+        kept = []
+        carry = 0
+        for r in regions:
+            if r['span_mm'] < 0.005:
+                carry += r['count']
+                continue
+            if carry:
+                r['count'] += carry
+                carry = 0
+            kept.append(r)
+        if carry and kept:
+            kept[-1]['count'] += carry
+
+        # Adjacent regions with the same name (e.g. the same bilateral
+        # structure under two different atlas indices) are one block, not
+        # two -- merge them so the sidebar doesn't draw a pointless border
+        # down the middle of what is visually a single band.
+        merged = []
+        for r in kept:
+            if merged and merged[-1]['name'] == r['name']:
+                prev = merged[-1]
+                prev['count'] += r['count']
+                prev['span_mm'] += r['span_mm']
+                prev['d_end'] = r['d_end']
+            else:
+                merged.append(dict(r))
+        return merged
 
     def get_shank_vtk_color(self, shank_idx):
         return NEON_COLORS[self.shank_colors.get(shank_idx, 0)][2]
@@ -147,6 +311,14 @@ class ShankRendering:
         self.render()
         if hasattr(self, 'Vis3D'):
             self.Vis3D.refresh_clipped_views(self.shank_number)
+        # both colour shanks from self.shank_colors at draw time, not
+        # continuously -- neither repaints on its own just because the dict
+        # changed, so without this they'd keep showing the old colour until
+        # something unrelated happened to trigger a redraw.
+        if self.dfx_shank_data:
+            self.draw_dfx_probe_overview()
+        if hasattr(self, 'shank_sidebar'):
+            self.shank_sidebar.refresh()
 
     def reset_shank_gui(self):
         for sb in (self.ui.spinBox_tp_insert_x, self.ui.spinBox_tp_insert_y, self.ui.spinBox_tp_insert_z,
@@ -155,4 +327,5 @@ class ShankRendering:
             sb.setValue(0)
             sb.blockSignals(False)
         self.ui.doubleSpinBox_distance_shank.setValue(0.0)
-        self.ui.tableWidget_shank_info.setRowCount(0)
+        if hasattr(self, 'shank_sidebar'):
+            self.shank_sidebar.refresh()

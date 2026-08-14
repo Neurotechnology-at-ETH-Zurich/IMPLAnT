@@ -25,7 +25,6 @@ class CoordTransform:
         if self.coords_lambda is not None:
             self.calculate_distance(self.coords_bregma,self.coords_lambda)
             self.ui.pushButton_tp_next0.setEnabled(True)
-            self.ui.pushButton_redAreas.setEnabled(True)
         self.selecting_point = False
 
 
@@ -41,7 +40,6 @@ class CoordTransform:
         if self.coords_bregma is not None:
             self.calculate_distance(self.coords_bregma,self.coords_lambda)
             self.ui.pushButton_tp_next0.setEnabled(True)
-            self.ui.pushButton_redAreas.setEnabled(True)
         self.selecting_point = False
 
 
@@ -87,6 +85,10 @@ class CoordTransform:
         #load transformation dataf
         self.fixedImg = sitk.ReadImage(os.path.join(_paths['atlas_folder'], _paths['atlas_volume']))
         self.atlas_vol = sitk.GetArrayFromImage(self.fixedImg)
+        # kept (not just local args) so the insertion/deepest-point step can
+        # draw the atlas's own fixed bregma/lambda as reference markers
+        self.atlas_bregma_coords = bregma_coords
+        self.atlas_lambda_coords = lamdba_coords
         self.movingImg = sitk.ReadImage(self.MW.data_pre_resampled) #vol.raw_ref_image
         self.movingImg_resampled = self.LoadMRI.volumes[0].oriented_ref_image
         self.transform_moving2fixed = sitk.ReadTransform(transformPath)
@@ -143,8 +145,24 @@ class CoordTransform:
         pts = np.argwhere(mask2d > 0)
         same_x = pts[pts[:, 1] == indices2d[1]]
         if len(same_x) > 0:
-            dists_y = np.abs(same_x[:, 0] - indices2d[0])
-            indices_edge2d = same_x[np.argmin(dists_y)]
+            # the skull mask is a real-thickness shell (its search radius,
+            # e.g. a few mm) rather than a single-voxel boundary, so this
+            # column can cross it more than once (once per side of the
+            # head) and, within each crossing, span several rows (its
+            # inner surface closest to the brain vs. its outer surface
+            # closest to the scalp).
+            rows = np.sort(same_x[:, 0])
+            splits = np.where(np.diff(rows) > 1)[0] + 1
+            crossings = np.split(rows, splits)
+            # pick the crossing (side of the head) nearest the click...
+            crossing = min(crossings, key=lambda c: np.min(np.abs(c - indices2d[0])))
+            # ...then, within that crossing, the row farthest from the
+            # mask's own centroid in this slice -- i.e. the OUTER surface,
+            # not whichever row of the shell happened to be nearest the
+            # exact pixel clicked.
+            centroid_row = pts[:, 0].mean()
+            row = crossing[np.argmax(np.abs(crossing - centroid_row))]
+            indices_edge2d = [row, indices2d[1]]
         else:
             indices_edge2d = indices2d
 
