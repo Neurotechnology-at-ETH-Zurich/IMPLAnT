@@ -88,6 +88,10 @@ class ButtonsGUI_3D:
         self.ui.actionPaintbrush.triggered.connect(self.initialize_paintbrush)
         self.ui.actionSegmentation.triggered.connect(self.initialize_segmentation)
         self.ui.actionMeasurement.triggered.connect(self.initialize_measurement)
+        # only usable once a 3D file is actually loaded (this __init__ is that signal)
+        for action in (self.ui.actionRegister, self.ui.actionResample, self.ui.actionPaintbrush,
+                       self.ui.actionSegmentation, self.ui.actionMeasurement):
+            action.setEnabled(True)
 
 
 
@@ -565,7 +569,7 @@ class ButtonsGUI_3D:
 
 
 
-    def initialize_segmentation(self,samri=False):
+    def initialize_segmentation(self,samri=False,mode=None,on_finish=None):
         """
         Initialize segmenation workflow.
         """
@@ -581,10 +585,10 @@ class ButtonsGUI_3D:
             dock.setObjectName(dock_name)
             dock.setWidget(self.ui.groupBox_segmentation)
             self.MW.addDockWidget(Qt.RightDockWidgetArea, dock)
-            self.LoadMRI.SegmentationGUI = SegmentationGUI(self.MW,samri)
+            self.LoadMRI.SegmentationGUI = SegmentationGUI(self.MW,samri,mode,on_finish)
         else:
-            if samri:
-                self.LoadMRI.SegmentationGUI = SegmentationGUI(self.MW,samri)
+            if samri or mode is not None:
+                self.LoadMRI.SegmentationGUI = SegmentationGUI(self.MW,samri,mode,on_finish)
             dock.show()
             dock.raise_()
 

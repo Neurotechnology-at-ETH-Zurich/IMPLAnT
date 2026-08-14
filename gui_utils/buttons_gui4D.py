@@ -91,6 +91,10 @@ class ButtonsGUI_4D:
         self.ui.actionStart_MRIDlabels.triggered.connect(self.open_input_dialog)
         self.ui.actionContrast_Adjustments.triggered.connect(self.contrast_adjustments)
         self.ui.actionAddViewImage.triggered.connect(self.add_other_view)
+        # only usable once a 4D file is actually loaded (this __init__ is that signal)
+        self.ui.actionStart_MRIDlabels.setEnabled(True)
+        self.ui.actionContrast_Adjustments.setEnabled(True)
+        self.ui.menuElectrode_Localization.menuAction().setEnabled(True)
 
         layout = self.ui.gridLayout_data0
         layout.setColumnStretch(0, 1)

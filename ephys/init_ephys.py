@@ -96,6 +96,10 @@ class InitEphys:
         self.MW.ui.actionRippl_AI.triggered.connect(self.detect_ripples)
         self.MW.ui.actionTheta_Detection.triggered.connect(self.detect_theta)
         self.MW.ui.actionLoad_Spike_Sorting.triggered.connect(lambda: self.load_spike_sorting())
+        # only usable once ephys data is actually loaded (this method is that signal)
+        self.MW.ui.actionRippl_AI.setEnabled(True)
+        self.MW.ui.actionTheta_Detection.setEnabled(True)
+        self.MW.ui.actionLoad_Spike_Sorting.setEnabled(True)
 
         # embed spike raster into widget_spike_ruster (reuse its existing layout)
         self.spike_ruster = SpikeRuster(self.MW.ui.widget_spike_ruster)
