@@ -138,6 +138,7 @@ class SegmentationInitialization:
         self.model.setItem(row,1, QStandardItem(str(self.center_px[1]+1)))
         self.model.setItem(row,2, QStandardItem(str(self.center_px[0]+1)))
         self.model.setItem(row,3, QStandardItem(str(self.radius)))
+        self.table.resizeRowsToContents()
         self.index += 1
         #select row in table
         self.table.selectRow(row)

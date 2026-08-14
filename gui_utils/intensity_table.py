@@ -1,7 +1,7 @@
 # This Python file uses the following encoding: utf-8
 import os
 from PySide6.QtWidgets import (
-    QTableWidgetItem, QToolButton, QDoubleSpinBox, QMessageBox
+    QTableWidgetItem, QToolButton, QDoubleSpinBox, QMessageBox, QWidget
 )
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QMenu
@@ -529,6 +529,14 @@ class IntensityTable(QObject):
             self.overlay_slider.hide()
         elif event.type() == QEvent.MouseButtonPress:
             if not shiboken6.isValid(self.table):
+                return False
+            # obj can be a QWindow (e.g. a native top-level window handle)
+            # rather than a QWidget -- isAncestorOf only accepts QWidget and
+            # raises TypeError otherwise. These fire on essentially any
+            # click anywhere (including on the slider's own native window),
+            # so treating them as "outside" and hiding the slider made it
+            # disappear on almost every interaction; just ignore them.
+            if not isinstance(obj, QWidget):
                 return False
             viewport = self.table.viewport()
             if obj is not self.overlay_slider and obj is not viewport and not viewport.isAncestorOf(obj):

@@ -230,7 +230,9 @@ class PaintbrushGUI:
                 self.LoadMRI.paint = True
                 self.MW.Paintbrush.start_paintbrush(is_4d=False,histogram_needed=histogram_needed)
                 layer_name = "Forbidden Regions" if red_only else "Label"
-                self.LoadMRI.intensity_table[0].update_table(layer_name,self.MW.Paintbrush.label_volume[0],0,self.MW.Paintbrush.layer_index[0],visibility_enabled=False)
+                paint_layer_index = self.MW.Paintbrush.layer_index[0]
+                self.MW.Layers[0][paint_layer_index].visibility_btn = self.LoadMRI.intensity_table[0].update_table(
+                    layer_name,self.MW.Paintbrush.label_volume[0],0,paint_layer_index,visibility_enabled=False)
             #else:
             #self.MW.Paintbrush.start_paintbrush()
         else:

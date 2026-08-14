@@ -9,7 +9,7 @@ import vtk
 from scipy.ndimage import median_filter
 
 class SegmentationEvolution(QObject):
-    def __init__(self,LoadMRI,SegInitialization,Threshold,button,spin_iterations,btn_resetCamera,samri=False):
+    def __init__(self,LoadMRI,SegInitialization,Threshold,button,spin_iterations,btn_resetCamera,samri=False,mask_suffix="-mask.nii.gz",status_lineedit=None):
         super().__init__()
 
         if samri:
@@ -17,6 +17,7 @@ class SegmentationEvolution(QObject):
             self.btn_resetCamera = btn_resetCamera
             return
 
+        self.mask_suffix = mask_suffix
         self.LoadMRI = LoadMRI
         self.volumes = LoadMRI.volumes
         self.SegInit = SegInitialization
@@ -26,6 +27,7 @@ class SegmentationEvolution(QObject):
         self.button  = button
         self.spin_iterations = spin_iterations
         self.btn_resetCamera = btn_resetCamera
+        self.status_lineedit = status_lineedit
 
         self._play_icon  = button.style().standardIcon(QStyle.SP_MediaPlay)
         self._pause_icon = button.style().standardIcon(QStyle.SP_MediaPause)
@@ -61,19 +63,27 @@ class SegmentationEvolution(QObject):
             actor_cirlce[2].SetVisibility(0)
 
 
+    def _set_status(self, text):
+        if self.status_lineedit is not None:
+            self.status_lineedit.setText(f"Currently: {text}")
+
     def on_play_pause(self):
         self.MAX_ITERS    = 10000
+        print('self.running',self.running,flush=True)
         if self.running:
             self.button.setIcon(self._pause_icon)
             self.stop_evolution()
+            self._set_status("Pause")
         else:
             self.button.setIcon(self._play_icon)
             self.start_evolution()
+            self._set_status("Play")
 
     def play_oneStep(self):
         self.MAX_ITERS    = self.total_iterations+self.CHUNK
         self.button.setIcon(self._play_icon)
         self.start_evolution()
+        self._set_status("1 Step Forward")
 
 
     def bubbles_to_initial_levelset(self,shape_zyx, spacing_xyz, bubbles):
@@ -96,16 +106,13 @@ class SegmentationEvolution(QObject):
         unique = {}
         for view_name, _a, _c, radius, c_px, _ in self.SegInit.actor_bubble:
             unique[(c_px[0], c_px[1], c_px[2], radius)] = None
-
         bubbles = list(unique.keys())
+
         if not bubbles:
            return None, None, None, None
 
         shape_zyx   = self.th_vol.shape
         spacing_xyz = tuple(self.LoadMRI.volumes[0].spacing[::-1])
-        sx, sy, sz  = spacing_xyz
-
-        phi0 = self.bubbles_to_initial_levelset(shape_zyx, spacing_xyz, bubbles)
 
         ##only thing that changed
         th_smooth = median_filter(self.th_vol, size=3)
@@ -115,8 +122,9 @@ class SegmentationEvolution(QObject):
         struct_inplane[0] = ndi.generate_binary_structure(2, 1)
         positive = ndi.binary_opening(speed_np > 0,structure=struct_inplane, iterations=8)
         positive = ndi.binary_closing(positive, iterations=1)
-
         lbl, _ = ndi.label(positive)
+
+        phi0 = self.bubbles_to_initial_levelset(shape_zyx, spacing_xyz, bubbles)
         keep = set()
         for cz, cy, cx, r in bubbles:
             l = int(lbl[int(cz), int(cy), int(cx)])
@@ -221,6 +229,7 @@ class SegmentationEvolution(QObject):
         self.spin_iterations.setValue(iterations)
         self.total_iterations = iterations
         self.button.setIcon(self._pause_icon)
+        self._set_status("Pause")
         self.LoadMRI.segmentation_mask = mask
         self.save_mask(mask,visualisation_3d=True)
 
@@ -233,7 +242,7 @@ class SegmentationEvolution(QObject):
         img = sitk.GetImageFromArray(mask.astype(np.uint8))
         img.CopyInformation(self.LoadMRI.volumes[0].oriented_ref_image)
         mask_oriented = sitk.DICOMOrient(img, "".join(self.LoadMRI.volumes[0].raw_DICOMOrient))
-        mask_path = self.LoadMRI.volumes[0].file_path[:-7] + "-mask.nii.gz"
+        mask_path = self.LoadMRI.volumes[0].file_path[:-7] + self.mask_suffix
         sitk.WriteImage(mask_oriented, mask_path)
         z, y, x = self.LoadMRI.slice_indices[0].copy()
         self.visualize(np.fliplr(mask[z, :, :]), self.LoadMRI.vtk_widgets[0]["axial"], "axial")
@@ -278,7 +287,9 @@ class SegmentationEvolution(QObject):
         if getattr(self, "_3d_first", True):
             self._3d_renderer.ResetCamera()
             self._3d_first = False
-            self.btn_resetCamera.clicked.connect(lambda: self._3d_renderer.ResetCamera())
+            self.btn_resetCamera.clicked.connect(
+                lambda: self._3d_renderer.ResetCamera() if hasattr(self, "_3d_renderer") else None
+            )
 
         vtk_widget.GetRenderWindow().Render()
 
@@ -476,6 +487,9 @@ class SegmentationEvolution(QObject):
         self.last_speed = None
         self.total_iterations = 0
         self.spin_iterations.setValue(0)
+        self.running = False
+        self.button.setIcon(self._pause_icon)
+        self._set_status("Pause")
 
         # 5. clear the mask on LoadMRI
         if hasattr(self.LoadMRI, "segmentation_mask"):
