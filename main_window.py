@@ -18,6 +18,7 @@ if not os.path.exists(_config_path):
     _config_path = os.path.join(_base_dir, 'paths_config.example.json')
 with open(_config_path) as _f:
     _paths = _json.load(_f)
+_session_state_path = os.path.join(_exe_dir, 'last_session.json')
 from PySide6.QtWidgets import QApplication, QMainWindow
 from ui_form import Ui_MainWindow
 from utils.zoom import zoom_notifier
@@ -46,6 +47,7 @@ from file_handling.resample_data import ResampleData
 from PySide6.QtGui import QIcon
 import subprocess
 from PySide6.QtCore import QTimer
+import datetime
 
 class MainWindow(QMainWindow):
     """
@@ -57,6 +59,12 @@ class MainWindow(QMainWindow):
         """
         super().__init__(parent)
         self.resize_bool=True
+        # per-file view state (slice position, zoom, ...), so switching back to an
+        # already-visited main file restores its prior view instead of resetting it.
+        # Plain in-memory dict, keyed by absolute file path -- gone on app close/kill.
+        self._session_view_cache = {}
+        # same idea for ephys recordings (time window, zoom, mode, highlighted channel)
+        self._ephys_session_view_cache = {}
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
         self.setWindowTitle("IMPLAnT")
@@ -97,6 +105,8 @@ class MainWindow(QMainWindow):
         self.ui.stackedWidget_axial.setCurrentIndex(0)
         self.ui.stackedWidget_coronal.setCurrentIndex(0)
         self.ui.stackedWidget_sagittal.setCurrentIndex(0)
+        self.ui.stackedWidget_dfx.setCurrentIndex(0)
+        self.ui.stackedWidget_3d_tp.setCurrentIndex(0)
 
         #resize to inital size
         self.resize(1600, 900)
@@ -109,10 +119,206 @@ class MainWindow(QMainWindow):
         self.ui.actionNew_Window.triggered.connect(self.open_new_window)
         self.ui.actionStart_SAMRI_process.triggered.connect(self.initialize_samri)
         self.ui.actionTrajectory_Planning.triggered.connect(self.initialize_trajectory_planning)
+        self.ui.pushButton_questionmark.clicked.connect(self.show_step_instructions)
+        self.ui.pushButton_questionmark_samri.clicked.connect(self.show_step_instructions)
+        self.ui.actionLoad_Prev_Session.triggered.connect(self.load_previous_session)
+        # per-tab "Open Session" placeholders: 3D/4D Tools -> mri (filtered by
+        # dimensionality), Ephys Analysis -> ephys, Surgery -> samri
+        self.ui.actionOpen_Session_2.triggered.connect(lambda: self.load_previous_session(['mri'], is_4d=False))
+        self.ui.actionOpen_Session.triggered.connect(lambda: self.load_previous_session(['mri'], is_4d=True))
+        self.ui.actionOpen_Session_3.triggered.connect(lambda: self.load_previous_session(['ephys']))
+        self.ui.actionOpen_Session_4.triggered.connect(lambda: self.load_previous_session(['samri']))
+
+        # 3D Tools / 4D Tools / Ephys Analysis menu actions (besides "Open
+        # Session") only do anything once ButtonsGUI_3D/4D or InitEphys
+        # connects them, which only happens once a matching file is loaded --
+        # grey them out until then instead of leaving them as silent no-ops.
+        for action_name in ('actionRegister', 'actionResample', 'actionPaintbrush',
+                             'actionSegmentation', 'actionMeasurement',
+                             'actionStart_MRIDlabels', 'actionContrast_Adjustments',
+                             'actionRippl_AI', 'actionTheta_Detection', 'actionLoad_Spike_Sorting'):
+            getattr(self.ui, action_name).setEnabled(False)
+        self.ui.menuElectrode_Localization.menuAction().setEnabled(False)
 
         # Re-render if tab changed
         self.setCursor(QtCore.Qt.CursorShape.ArrowCursor)
 
+
+    def _load_session_state(self):
+        if not os.path.exists(_session_state_path):
+            return {}
+        try:
+            with open(_session_state_path) as f:
+                return _json.load(f)
+        except (OSError, ValueError):
+            return {}
+
+    _SESSION_KIND_LABELS = {'mri': 'MRI', 'ephys': 'Ephys', 'samri': 'SAMRI'}
+    _SESSION_HISTORY_LIMIT = 10
+
+    def _confirm_replace_session(self, kind):
+        """If a <kind> session is already active, ask before replacing it --
+        loading another MRI file/ephys recording/SAMRI animal ID discards
+        whatever's currently loaded. Returns True to proceed, False to cancel.
+        A no-op (returns True) when nothing of that kind is active yet."""
+        active = {
+            'mri':   getattr(self, 'LoadMRI', None) is not None,
+            'ephys': getattr(self, 'Ephys', None) is not None,
+            'samri': getattr(self, 'Samri', None) is not None,
+        }[kind]
+        if not active:
+            return True
+        label = self._SESSION_KIND_LABELS[kind]
+        msg_box = QMessageBox(self)
+        msg_box.setWindowTitle(f"Replace current {label} session?")
+        msg_box.setText(
+            f"A {label} file/session is already loaded. Loading another will replace it.\n\n"
+            "Continue?")
+        btn_yes = msg_box.addButton("Continue", QMessageBox.ActionRole)
+        msg_box.addButton("Cancel", QMessageBox.RejectRole)
+        msg_box.exec()
+        return msg_box.clickedButton() is btn_yes
+
+    def _save_session_state(self, kind, **entry):
+        """Record a recently-loaded MRI/ephys file or SAMRI animal ID in the
+        rolling per-kind history (last _SESSION_HISTORY_LIMIT each) that
+        'Load Prev. File' lets the user pick back from."""
+        state = self._load_session_state()
+        history = state.get(kind, [])
+        dedup_key = entry.get('path') or entry.get('animal_id')
+        history = [e for e in history if (e.get('path') or e.get('animal_id')) != dedup_key]
+        entry['timestamp'] = datetime.datetime.now().isoformat(timespec='seconds')
+        history.append(entry)
+        state[kind] = history[-self._SESSION_HISTORY_LIMIT:]
+        with open(_session_state_path, 'w') as f:
+            _json.dump(state, f, indent=2)
+
+    # kind -> the method that opens a brand-new file/session of that kind
+    # (used by the per-tab pickers' "Load New File..." button)
+    def _open_new_session(self, kind):
+        {'mri': self.initialize_mri_session,
+         'ephys': self.open_ephys_data,
+         'samri': self.initialize_samri}[kind]()
+
+    def load_previous_session(self, kinds=None, is_4d=None):
+        """
+        Show a picker of previously loaded MRI/ephys files or SAMRI animal
+        IDs. `kinds` restricts which type(s) are listed -- None (the File
+        menu's global "Load Prev. File") shows all three; a single-element
+        list (the per-tab "Open Session" actions) shows only that kind and
+        adds a "Load New File..." button. `is_4d` further restricts 'mri'
+        entries to only 3D or only 4D files, for the 3D/4D Tools menus.
+        """
+        single_kind = kinds[0] if kinds and len(kinds) == 1 else None
+        kinds = kinds or list(self._SESSION_KIND_LABELS)
+        state = self._load_session_state()
+        entries = []
+        for kind in kinds:
+            for e in state.get(kind, []):
+                if kind == 'mri' and is_4d is not None and bool(e.get('is_4d')) != is_4d:
+                    continue
+                entries.append((kind, e))
+        entries.sort(key=lambda ke: ke[1].get('timestamp', ''), reverse=True)
+
+        if not entries and single_kind is None:
+            QMessageBox.information(
+                self, "Load Previous Session", "No previous sessions were found.")
+            return
+
+        dlg = QtWidgets.QDialog(self)
+        title = "Load Previous Session" if single_kind is None else \
+            f"Load Previous {self._SESSION_KIND_LABELS[single_kind]} Session"
+        dlg.setWindowTitle(title)
+        dlg.resize(500, 400)
+        layout = QtWidgets.QVBoxLayout(dlg)
+        if not entries:
+            layout.addWidget(QtWidgets.QLabel("No previous sessions found.", dlg))
+        list_widget = QtWidgets.QListWidget(dlg)
+        for kind, entry in entries:
+            label = self._SESSION_KIND_LABELS[kind]
+            if kind == 'samri':
+                text = f"[{label}] Animal {entry.get('animal_id', '?')}"
+            else:
+                text = f"[{label}] {os.path.basename(entry.get('path', '?'))}"
+            text += f"   —   {entry.get('timestamp', '')}"
+            item = QtWidgets.QListWidgetItem(text)
+            item.setData(Qt.UserRole, (kind, entry))
+            list_widget.addItem(item)
+        if entries:
+            list_widget.setCurrentRow(0)
+        list_widget.itemDoubleClicked.connect(lambda _: dlg.accept())
+        layout.addWidget(list_widget)
+
+        buttons = QtWidgets.QDialogButtonBox(parent=dlg)
+        open_btn = buttons.addButton("Open", QtWidgets.QDialogButtonBox.AcceptRole)
+        open_btn.setEnabled(bool(entries))
+        load_new = {'flag': False}
+        if single_kind is not None:
+            new_btn = buttons.addButton("Load New File...", QtWidgets.QDialogButtonBox.ActionRole)
+            def _load_new():
+                load_new['flag'] = True
+                dlg.accept()
+            new_btn.clicked.connect(_load_new)
+        buttons.addButton("Cancel", QtWidgets.QDialogButtonBox.RejectRole)
+        buttons.accepted.connect(dlg.accept)
+        buttons.rejected.connect(dlg.reject)
+        layout.addWidget(buttons)
+
+        if dlg.exec() != QtWidgets.QDialog.DialogCode.Accepted:
+            return
+
+        if load_new['flag']:
+            self._open_new_session(single_kind)
+            return
+
+        item = list_widget.currentItem()
+        if item is None:
+            return
+        kind, entry = item.data(Qt.UserRole)
+        self._restore_session_entry(kind, entry)
+
+    def _restore_session_entry(self, kind, entry):
+        if kind == 'mri':
+            path = entry.get('path')
+            if not path or not os.path.exists(path):
+                QMessageBox.warning(self, "File not found", f"MRI file no longer exists:\n{path}")
+                return
+            self.FileLoader = FileLoader(self)
+            file_name, data_view = self.FileLoader.restore_file(path)
+            if file_name is not None:
+                zoom_notifier.factorChanged.connect(self.LoadMRI.minimap.create_small_rectangle)
+                if not self.FileLoader.is_4d:
+                    Zoom.fit_to_window(self.LoadMRI.vtk_widgets[0]["coronal"], self.LoadMRI.vtk_widgets.values(), self.LoadMRI.scale_bar, self.LoadMRI.vtk_widgets,0,data_3d=True)
+                self.ui.comboBox_resamplefiles.addItem(os.path.basename(file_name))
+                if self.FileLoader.is_4d:
+                    self.ui.groupBox_data0.setTitle(f"View: {data_view.upper()}")
+                tab_idx = 0 if self.FileLoader.is_4d else 1
+                self.ui.tabWidget.setCurrentIndex(0)
+                self.ui.data_4d_3d.setCurrentIndex(tab_idx)
+
+        elif kind == 'ephys':
+            path = entry.get('path')
+            xml_path = path.replace('.dat', '.xml') if path else None
+            if not path or not (os.path.exists(path) and os.path.exists(xml_path)):
+                QMessageBox.warning(
+                    self, "File not found",
+                    f"Ephys file (or its matching .xml) no longer exists:\n{path}")
+                return
+            if not self._confirm_replace_session('ephys'):
+                return
+            self.ui.dockWidget_ephys.setVisible(True)
+            self.ui.stackedWidget_video.setCurrentIndex(1)
+            self.ui.textEdit_ephys.setText(f"File loaded: {path}")
+            self.ui.tabWidget.setCurrentIndex(3)
+            self.overlay = BusyOverlay(self, message="Loading ephys data, please wait…")
+            self.overlay.run(self.do_ephys_heavy, path)
+
+        elif kind == 'samri':
+            if not self.initialize_samri():
+                return
+            if entry.get('raw_base_samri'):
+                self.ui.lineEdit_rawBase.setText(entry['raw_base_samri'])
+            self.ui.lineEdit_animalid.setText(entry.get('animal_id', ''))
 
     def open_ephys_data(self):
         file_name, _ = QFileDialog.getOpenFileName(
@@ -151,6 +357,9 @@ class MainWindow(QMainWindow):
             )
             return
 
+        if not self._confirm_replace_session('ephys'):
+            return
+
         self.ui.dockWidget_ephys.setVisible(True)
         self.ui.stackedWidget_video.setCurrentIndex(1)
         self.ui.textEdit_ephys.setText(f"File loaded: {file_name}")
@@ -159,10 +368,73 @@ class MainWindow(QMainWindow):
         self.overlay.run(self.do_ephys_heavy, file_name)
 
     def do_ephys_heavy(self, file_name):
+        self.snapshot_ephys_view_state()
         self.Ephys = InitEphys(self, file_name)
         self.Ephys.open_dat(file_name)
+        self.reapply_ephys_view_state(file_name)
+        self._save_session_state('ephys', path=file_name)
         #ask about the spike cluster plot once the busy overlay is gone
         QTimer.singleShot(0, self.Ephys.prompt_spike_sorting)
+
+    def snapshot_ephys_view_state(self):
+        """
+        Remember the current ephys recording's view (time window, zoom, mode,
+        highlighted channel) under its path in self._ephys_session_view_cache,
+        so switching back to it later via reapply_ephys_view_state() restores
+        this instead of the freshly-loaded default.
+        """
+        if not hasattr(self, 'Ephys') or self.Ephys is None:
+            return
+        ve = self.Ephys.VisEphys
+        pg_widget = self.ui.widget_pgEphys
+        file_path = self.Ephys.ephys_data.file_path
+        self._ephys_session_view_cache[file_path] = {
+            'time_start': ve.time_start,
+            'time_end': ve.time_end,
+            'mode': ve.current_mode,
+            'x_range': (pg_widget.xMin, pg_widget.xMax),
+            'y_range': (pg_widget.yMin, pg_widget.yMax),
+            'ch_highlight': getattr(ve, 'ch_highlight', None),
+        }
+
+    def reapply_ephys_view_state(self, file_path):
+        """
+        Reapply the ephys view previously stored for file_path by
+        snapshot_ephys_view_state(), if any. No-op the first time a file is
+        opened (nothing cached yet).
+        """
+        state = self._ephys_session_view_cache.get(file_path)
+        if state is None:
+            return
+        ve = self.Ephys.VisEphys
+        pg_widget = self.ui.widget_pgEphys
+
+        # mode first -- show_lfp()/show_broadband() each redraw at whatever
+        # time window is currently set, so get the mode right before touching
+        # time. Default mode after a fresh load is always 'broadband', so
+        # only 'lfp' needs an explicit switch.
+        if state['mode'] == 'lfp':
+            ve.show_lfp()
+
+        # time window
+        duration = state['time_end'] - state['time_start']
+        self.ui.spinBox_duration.blockSignals(True)
+        self.ui.spinBox_duration.setValue(duration * 1000)
+        self.ui.spinBox_duration.blockSignals(False)
+        ve._goto_time(state['time_start'])
+
+        # zoom -- pinned down last so the redraws above don't clobber it
+        pg_widget.xMin, pg_widget.xMax = state['x_range']
+        pg_widget.yMin, pg_widget.yMax = state['y_range']
+        pg_widget.plot.setLimits(yMin=pg_widget.yMin, yMax=pg_widget.yMax,
+                                  xMin=pg_widget.xMin, xMax=pg_widget.xMax)
+        pg_widget.plot.setXRange(pg_widget.xMin, pg_widget.xMax)
+        pg_widget.plot.setYRange(pg_widget.yMin, pg_widget.yMax)
+
+        # highlighted channel
+        ch_idx = state['ch_highlight']
+        if ch_idx is not None and ch_idx in ve.ephys_lines:
+            ve.highlight_channel(ch_idx)
 
 
     def resizeEvent(self, event):
@@ -182,6 +454,7 @@ class MainWindow(QMainWindow):
         file_name, data_view = self.FileLoader.open_user_dialog()
         if file_name is None:
             return
+        self._save_session_state('mri', path=file_name, is_4d=self.FileLoader.is_4d)
         zoom_notifier.factorChanged.connect(self.LoadMRI.minimap.create_small_rectangle)
         if not self.FileLoader.is_4d:
             Zoom.fit_to_window(self.LoadMRI.vtk_widgets[0]["coronal"], self.LoadMRI.vtk_widgets.values(), self.LoadMRI.scale_bar, self.LoadMRI.vtk_widgets,0,data_3d=True)
@@ -225,6 +498,16 @@ class MainWindow(QMainWindow):
         self.ui.vtkWidget_ephys.GetRenderWindow().Render()
 
         if hasattr(self, 'LoadMRI'):
+            # the scale bar's length/position is computed from the render
+            # window's pixel width (utils/scale_bar.py) -- it's only ever
+            # recomputed on zoom (utils/zoom.py), so resizing the window
+            # without zooming left it showing a stale, now-incorrect length.
+            if hasattr(self.LoadMRI, 'scale_bar') and hasattr(self.LoadMRI, 'renderers'):
+                for view_name, bar in self.LoadMRI.scale_bar.items():
+                    renderer = self.LoadMRI.renderers.get(0, {}).get(view_name)
+                    if renderer is not None:
+                        bar.update_bar(renderer, view_name, length_cm=1.0)
+
             if hasattr(self.LoadMRI,'minimap') and not self.LoadMRI.volumes[0].is_4d:
                 for data_index, layers in self.Layers.items():
                     #for layer_index, layer in layers.items():
@@ -277,8 +560,12 @@ class MainWindow(QMainWindow):
 
     def initialize_samri(self):
         #Pop up for bruker2bids
+        if not self._confirm_replace_session('samri'):
+            return False
         self.ui.tabWidget.setCurrentIndex(5)
         SAMRI_InputDialog(self)
+        self.show_samri_step_popup()
+        return True
 
     def fetch_data(self,samri_input):
         def work_init():
@@ -304,17 +591,51 @@ class MainWindow(QMainWindow):
 
         self.worker = SamriWorker(work_init, self)
         self.worker.done.connect(lambda: logging.info("Ready for Biascorrection or Registration"))
-        self.worker.done.connect(self.on_bruker2bids_done)
+        self.worker.done.connect(self._on_bruker2bids_done)
         self.worker.done.connect(overlay.close)
-        self.worker.failed.connect(lambda tb: logging.error(tb))
+        self.worker.failed.connect(self._on_fetch_failed)
         self.worker.failed.connect(overlay.close)
         self.worker.start()
 
-    def on_bruker2bids_done(self):
+    def _on_fetch_failed(self, tb):
+        logging.error(tb)
+        tb_lower = tb.lower()
+        if 'network is unreachable' in tb_lower or 'errno 101' in tb_lower:
+            text = ("<b style='color:#e74c3c;'>Network unreachable.</b><br>"
+                    "Could not connect to the SAMRI server — check your network "
+                    "connection (e.g. VPN) and try again.")
+        elif 'name resolution' in tb_lower or 'gaierror' in tb_lower:
+            text = ("<b style='color:#e74c3c;'>Could not resolve the server address.</b><br>"
+                    "This is not related to the Animal ID — the SAMRI server's hostname "
+                    "could not be looked up. Check the server address in the SAMRI tab "
+                    "and your network/VPN connection.")
+        elif 'no data found on the server' in tb_lower:
+            text = ("<b style='color:#e74c3c;'>Animal ID not found.</b><br>"
+                    "No data matching this Animal ID was found on the server — "
+                    "please check the name and try again.")
+        else:
+            text = "<b style='color:#e74c3c;'>Fetching data from the SAMRI server failed.</b>"
+        # a failed fetch must not leave stale registration/biascorrection controls
+        # enabled from an earlier, unrelated successful fetch
+        self.ui.frame_samri.setEnabled(False)
+        msg_box = QMessageBox(self)
+        msg_box.setIcon(QMessageBox.Critical)
+        msg_box.setWindowTitle("SAMRI Fetch Failed")
+        msg_box.setText(text)
+        msg_box.setDetailedText(tb)
+        msg_box.addButton("OK", QMessageBox.ActionRole)
+        msg_box.setWindowFlags(msg_box.windowFlags() & ~Qt.MSWindowsFixedSizeDialogHint)
+        msg_box.setSizeGripEnabled(True)
+        msg_box.layout().setSizeConstraint(QLayout.SetNoConstraint)
+        msg_box.exec()
+
+    def _on_bruker2bids_done(self):
         #Pop up for registration
         self.ui.frame_samri.setEnabled(True)
         self.Samri_input = SAMRI_InputDock(self)
         self.Samri.output_filepath = ""
+        self._save_session_state('samri', animal_id=self.Samri.animal_id, raw_base_samri=self.Samri.raw_base_samri)
+        self.show_samri_step_popup()
 
 
     def start_registration(self,samri_input):
@@ -431,6 +752,15 @@ class MainWindow(QMainWindow):
         try:
             src = os.path.join(self.Samri.bids_base, 'bids', f'sub-{self.Samri.animal_id}')
             dst = os.path.join(self.Samri.data_base, f'sub-{self.Samri.animal_id}')
+
+            # SAMRI only ever writes data_selection.csv into its nipype work
+            # cache (bids_base/results/generic_work/); copy it alongside the
+            # subject's raw bids data too, so it travels with sub-<id> into
+            # the copytree below instead of being left behind in the cache.
+            csv_src = os.path.join(self.Samri.bids_base, 'results', 'generic_work', 'data_selection.csv')
+            if os.path.exists(csv_src) and os.path.exists(src):
+                shutil.copy(csv_src, os.path.join(src, 'data_selection.csv'))
+
             if os.path.exists(src):
                 if os.path.exists(dst):
                     shutil.rmtree(dst)
@@ -461,23 +791,8 @@ class MainWindow(QMainWindow):
         if dlg.exec() == QtWidgets.QDialog.DialogCode.Accepted:
             data = dlg.get_values()
 
-            folder = os.path.dirname(os.path.dirname(os.path.dirname(data[0])))
-            csv_path = f"{folder}/data_selection.csv"
-            df = pd.read_csv(csv_path, index_col=0)
-            matches = df.loc[df['path'] == data[0]]
-            print(df['path'], data[0],matches,flush=True)
-            #if matches.empty:
-            #    msg_box = QMessageBox()
-            #    msg_box.setWindowTitle("No Transformation File found")
-            #    msg_box.setText("No Transformation File found, please first do SAMRI Registration.")
-            #    msg_box.addButton("OK", QMessageBox.ActionRole)
-            #    msg_box.exec()
-            #    self.initialize_samri()
-            #    return
-            #idx = matches.index[0]
             folder = os.path.dirname(os.path.dirname(data[0]))
             transformPath = f"{folder}/registration/output_Composite.h5"
-            print(transformPath,transformPath,flush=True)
             if not os.path.exists(transformPath):
                 msg_box = QMessageBox()
                 msg_box.setWindowTitle("No Transformation File found")
@@ -490,12 +805,53 @@ class MainWindow(QMainWindow):
             self.overlay = BusyOverlay(self, message="Initializing trajectory planning, please wait…")
             self.overlay.run(self.finish_trajectory_work,data, transformPath)
 
+    def show_step_instructions(self):
+        """
+        pushButton_questionmark: re-show the current workflow's step-by-step
+        instructions. Covers Trajectory Planning (which already pops these up
+        automatically as the user progresses; this just lets them bring the
+        current step back up on demand) and SAMRI (fetch -> select session).
+        """
+        traj = getattr(getattr(self, 'LoadMRI', None), 'TrajPlanning', None)
+        if traj is not None:
+            traj.show_current_step_popup()
+            return
+        if self.ui.tabWidget.currentWidget() is self.ui.tab_samri:
+            self.show_samri_step_popup()
+            return
+        QMessageBox.information(
+            self, "Instructions",
+            "Load an MRI file, then start Trajectory Planning from the Tools menu "
+            "to see step-by-step instructions here.")
+
+    def show_samri_step_popup(self):
+        if self.ui.frame_samri.isEnabled():
+            title = "Step 2: Select Session"
+            steps = [
+                "Pick the session to work with from the 'Working Session' dropdown.",
+                "Set the registration key/sequence and task (coronal/sagittal/axial) as needed.",
+                "Click 'Biascorrection' to bias-correct the selected session, or 'Register' "
+                "to run registration.",
+            ]
+        else:
+            title = "Step 1: Enter Animal ID and Fetch Data"
+            steps = [
+                "Enter the Animal ID, adjusting the raw data path, server and password if needed.",
+                "Click 'Fetch' to download the raw data ('Continue' to use data already fetched "
+                "locally, 'Re-fetch' to redownload it).",
+                "Once fetching finishes, you'll be able to select a session to bias-correct "
+                "or register.",
+            ]
+        msg_box = QMessageBox(self)
+        msg_box.setWindowTitle(title)
+        msg_box.setText("\n".join(f"{i+1}. {s}" for i, s in enumerate(steps)))
+        msg_box.addButton("OK", QMessageBox.ActionRole)
+        msg_box.exec()
 
     def finish_trajectory_work(self, data, transformPath):
         resampled_path = f"{data[0][:-7]}_resampled{data[2]*1000:.10g}um.nii.gz"
         self.data_pre_resampled = data[0]
         if not os.path.exists(resampled_path):
-            #self.LoadMRI.Resample = ResampleData(self.LoadMRI)
             ResampleData.resampling50um_trajectoryPlanning(data[0], new_spacing_mm=data[2])
         if not hasattr(self,'LoadMRI'):
             self.FileLoader = FileLoader(self)
@@ -626,9 +982,13 @@ class MainWindow(QMainWindow):
                 if full_restart:
                     dock.deleteLater()
 
-        existing_layout = QWidget.layout(self.ui.widget_pgEphys)   # call as unbound
-        if existing_layout is not None:
-            QWidget().setLayout(existing_layout)
+        if full_restart:
+            # only tear down widget_pgEphys's plot when self.ui is about to be
+            # rebuilt below -- otherwise this permanently kills its ViewBox
+            # since the same widget_pgEphys is kept around
+            existing_layout = QWidget.layout(self.ui.widget_pgEphys)   # call as unbound
+            if existing_layout is not None:
+                QWidget().setLayout(existing_layout)
 
         # Clear stored references
         self.LoadMRI = None
@@ -664,6 +1024,39 @@ class MainWindow(QMainWindow):
         self.on_gui_resize()
         return
 
+    def snapshot_view_state(self):
+        """
+        Remember the current main file's view (slice position, zoom) under its
+        path in self._session_view_cache, so switching back to it later via
+        reapply_view_state() restores this instead of the freshly-loaded default.
+        """
+        if not hasattr(self, 'LoadMRI') or self.LoadMRI is None:
+            return
+        file_path = self.LoadMRI.volumes[0].file_path
+        self._session_view_cache[file_path] = {
+            'slice_indices': {idx: list(val) for idx, val in self.LoadMRI.slice_indices.items()},
+            'zoom_factor': Zoom.global_zoom_factor,
+        }
+
+    def reapply_view_state(self, file_path):
+        """
+        Reapply the view previously stored for file_path by snapshot_view_state(),
+        if any. No-op the first time a file is opened (nothing cached yet).
+        """
+        state = self._session_view_cache.get(file_path)
+        if state is None:
+            return
+
+        for data_index, (z, y, x) in state['slice_indices'].items():
+            if data_index not in self.LoadMRI.slice_indices:
+                continue
+            self.Cursor.scroll_slice('axial', 0, data_index, val=z)
+            self.Cursor.scroll_slice('coronal', 0, data_index, val=y)
+            self.Cursor.scroll_slice('sagittal', 0, data_index, val=x)
+
+        if Zoom.global_zoom_factor:
+            relative_factor = state['zoom_factor'] / Zoom.global_zoom_factor
+            Zoom.zoom(relative_factor, self.LoadMRI.scale_bar, self.LoadMRI.vtk_widgets, 0, data_3d=True)
 
     def quit(self):
         QtWidgets.QApplication.quit()
@@ -681,7 +1074,17 @@ if __name__ == "__main__":
     QCoreApplication.setAttribute(Qt.AA_ShareOpenGLContexts)
     app = QApplication(sys.argv)
     #dark mode
-    app.setStyleSheet(qdarkstyle.load_stylesheet_pyside6())
+    app.setStyleSheet(qdarkstyle.load_stylesheet_pyside6() + """
+        QLineEdit:!read-only:enabled, QTextEdit[readOnly="false"]:enabled, QPlainTextEdit[readOnly="false"]:enabled,
+        QSpinBox[readOnly="false"]:enabled, QDoubleSpinBox[readOnly="false"]:enabled, QComboBox:enabled {
+            background-color: #204060;
+            border: 1px solid #3d8ec9;
+            color: #ffffff;
+        }
+        QComboBox:enabled::drop-down {
+            border-left: 1px solid #3d8ec9;
+        }
+    """)
     app.setApplicationName("IMPLAnT")
     app.setWindowIcon(QIcon(os.path.join(_base_dir, "Icons/Github/IMPLAnT_quad.png")))
     widget = MainWindow()
