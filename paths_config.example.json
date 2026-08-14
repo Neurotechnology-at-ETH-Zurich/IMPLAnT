@@ -1,6 +1,7 @@
 {
     "ants_bin": "ants/bin",
     "raw_base": "/path/to/raw/data/",
+    "raw_base_samri": "/path/to/raw/data/Samri_Registration/",
     "atlas_folder": "/path/to/atlas/folder",
     "mrid_library": "/path/to/mrid_library.pkl",
     "atlas_volume": "WHS_SD_rat_atlas_v4.nii.gz",
