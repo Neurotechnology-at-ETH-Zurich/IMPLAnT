@@ -246,11 +246,18 @@ class CustomInteractorStyle(vtk.vtkInteractorStyleImage):
 
         # Zooming with right mouse drag
         elif self.zooming:
-            super().OnMouseMove()  # apply VTK dolly to active view first so we read the updated scale
             renderer = interactor.GetRenderWindow().GetRenderers().GetFirstRenderer()
-
             camera_main = renderer.GetActiveCamera()
+            prev_scale = camera_main.GetParallelScale()
+
+            super().OnMouseMove()  # apply VTK dolly to active view first so we read the updated scale
+
             scale = camera_main.GetParallelScale()
+            # relative change this drag step just applied to the active view --
+            # applied to the other views below so they zoom together with it
+            # instead of being left at a stale scale (same relative-factor
+            # approach as the working scroll-wheel zoom in Zoom.zoom()).
+            relative_factor = scale / prev_scale if prev_scale else 1.0
             pos = camera_main.GetPosition()
             fp = camera_main.GetFocalPoint()
             view_name = self.interactor_view_name
@@ -265,6 +272,8 @@ class CustomInteractorStyle(vtk.vtkInteractorStyleImage):
                     camera = renderer.GetActiveCamera()
 
                     if vn == self.interactor_view_name and image_index != self.image_index:
+                        # 4D: same anatomical plane shown again for another
+                        # loaded image -- match it to the exact same scale.
                         camera.ParallelProjectionOn()
                         pos_xy = camera.GetPosition()
                         fp_xy = camera.GetFocalPoint()
@@ -276,6 +285,18 @@ class CustomInteractorStyle(vtk.vtkInteractorStyleImage):
                         camera = self.LoadMRI.renderers[0][vn].GetRenderWindow().GetRenderers().GetFirstRenderer().GetActiveCamera()
                         self.LoadMRI.scale_bar[vn].update_bar(self.LoadMRI.renderers[0][vn],vn,length_cm=1.0)
                         Zoom.update_bounds(vn, camera, self.LoadMRI.renderers[self.image_index][vn])
+                    elif (not self.LoadMRI.volumes[0].is_4d and image_index == self.image_index
+                            and vn != self.interactor_view_name):
+                        # 3D: the other two orthogonal views share this
+                        # view's image_index but not its name, so the branch
+                        # above never reaches them -- without this they were
+                        # never rescaled at all by a right-drag zoom (unlike
+                        # the wheel zoom, which does sync all three), leaving
+                        # them at a stale scale/clipping range.
+                        camera.ParallelProjectionOn()
+                        camera.SetParallelScale(camera.GetParallelScale() * relative_factor)
+                        renderer.ResetCameraClippingRange()
+                        widget.GetRenderWindow().Render()
 
             if len(self.MW.Cursor.cursor_lines)==4:
                 renderer = self.LoadMRI.renderers[3][view_name]
@@ -433,6 +454,7 @@ class CustomInteractorStyle(vtk.vtkInteractorStyleImage):
                 # stay in sync exactly as before.
                 if self.LoadMRI.volumes[0].is_4d and vn != self.interactor_view_name:
                     continue
+
                 renderer = widget.GetRenderWindow().GetRenderers().GetFirstRenderer()
                 if renderer is None:
                     # a registered widget can have no renderer yet — the 4th
@@ -440,14 +462,32 @@ class CustomInteractorStyle(vtk.vtkInteractorStyleImage):
                     # drawn into it. Same guard as fit_to_window above.
                     continue
                 camera = renderer.GetActiveCamera()
-                if not (vn == self.interactor_view_name and image_index == self.image_index):
+                if vn == self.interactor_view_name and image_index == self.image_index:
+                    continue
+
+                camera.SetParallelScale(scale)
+                if self.LoadMRI.volumes[0].is_4d:
+                    # same anatomical plane, a different loaded acquisition/
+                    # timestamp panel -- pin it to the exact same view,
+                    # position/focal point included (mirrors the on_mouse_move
+                    # branch for this same case).
                     pos_xy = camera.GetPosition()
                     fp_xy = camera.GetFocalPoint()
-                    camera.SetParallelScale(scale)
                     camera.SetFocalPoint(fp_xy[0],fp_xy[1],fp[2])
                     camera.SetPosition(pos_xy[0],pos_xy[1],pos[2])
-                    widget.GetRenderWindow().Render()
-                    renderer.ResetCameraClippingRange()
+                # 3D other orthogonal views: do NOT touch position/focal
+                # point -- each keeps its own camera distance from its own
+                # image plane (set once by ResetCamera/fit_to_window).
+                # Copying the interacted view's position/focal-point Z onto
+                # them mismatched their own actor depth against a Z borrowed
+                # from a different view's plane; ResetCameraClippingRange()
+                # then computed a clip range for that wrong geometry, which
+                # could clip the whole slice out of view (black) -- visible
+                # only the first time this ran, since afterwards every
+                # camera is left holding that same borrowed Z and re-copying
+                # an already-equal value is a no-op.
+                widget.GetRenderWindow().Render()
+                renderer.ResetCameraClippingRange()
 
         if len(self.MW.Cursor.cursor_lines)==4:
             renderer = self.LoadMRI.renderers[3][self.interactor_view_name]
