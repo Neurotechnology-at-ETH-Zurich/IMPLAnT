@@ -17,6 +17,9 @@ def main(server, password, local_path, animal_id,local_fodler):
     client = createSSHClient(server, port, user, password)
     print(client)
     files=find_data(client, animal_id)
+    if not files:
+        client.close()
+        raise FileNotFoundError(f"No data found on the server for Animal ID '{animal_id}'")
     scp = scpClient(client)
     # local_path = "./fetcher_test/"
     #Set below the directory where the scan data is originally stored

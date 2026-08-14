@@ -61,7 +61,15 @@ class LogAdapter:
             self._handler = None
 
     def _append(self, text):
-        cursor = self._widget.textCursor()
+        try:
+            cursor = self._widget.textCursor()
+        except RuntimeError:
+            # the widget was destroyed (e.g. a full UI rebuild via
+            # restart_gui, which recreates plainTextEdit_SAMRI from scratch)
+            # while stdout/stderr were still redirected here -- stop
+            # redirecting instead of crashing on every subsequent print/log.
+            self.uninstall()
+            return
         cursor.movePosition(QTextCursor.End)
 
         # normalize Windows line endings

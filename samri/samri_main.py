@@ -89,13 +89,17 @@ class InitSAMRI:
         bids_flag = samri_input['bids_flag'] #True
 
         # Raw data to bids conversion
-        self.data_base = samri_input['raw_base']   # DATA/ root, used for the final copy
-        raw_base = samri_input['raw_base'] + self.animal_id
-        samri_reg_dir = os.path.join(samri_input['raw_base'], 'Samri_Registration', self.animal_id)
+        self.data_base = _paths['raw_base']   # DATA/ root, used for the final copy
+        self.raw_base_samri = samri_input['raw_base_samri']
+        raw_base = samri_input['raw_base_samri'] + self.animal_id
+        samri_reg_dir = os.path.join(samri_input['raw_base_samri'], self.animal_id)
         if not samri_input['fetch']:
             self.bids_base = samri_reg_dir
             return self.bids_base
-        if not os.path.exists(raw_base):
+
+        raw_base_existed = os.path.exists(raw_base)
+        samri_reg_dir_existed = os.path.exists(samri_reg_dir)
+        if not raw_base_existed:
             os.makedirs(raw_base)
         os.makedirs(samri_reg_dir, exist_ok=True)
 
@@ -103,8 +107,19 @@ class InitSAMRI:
         call(['rm','-rf',raw_base+'/.DS_Store'])
         #call(['chmod', '-R', 'u+rwX', raw_base]) # every new file is writeable
 
-        #A = get_data_selection(raw_base)
-        data_fetcher.main(server=server, password=password, local_path=raw_base, animal_id=self.animal_id,local_fodler=samri_input['raw_base'])
+        try:
+            #A = get_data_selection(raw_base)
+            data_fetcher.main(server=server, password=password, local_path=raw_base, animal_id=self.animal_id,local_fodler=samri_input['raw_base_samri'])
+        except Exception:
+            # don't leave empty folders behind for an animal ID/session that
+            # never actually fetched anything (e.g. server unreachable) --
+            # only remove them if fetching didn't get far enough to write
+            # anything into them, and they didn't already exist beforehand
+            if not raw_base_existed and os.path.exists(raw_base) and not os.listdir(raw_base):
+                os.rmdir(raw_base)
+            if not samri_reg_dir_existed and os.path.exists(samri_reg_dir) and not os.listdir(samri_reg_dir):
+                os.rmdir(samri_reg_dir)
+            raise
 
         if bids_flag:
             # for file in bids_base:
@@ -310,7 +325,7 @@ class SAMRI_InputDialog:
     def __init__(self, MW,parent=None):
         self.MW = MW
         self.raw_base = self.MW.ui.lineEdit_rawBase
-        self.raw_base.setText(_paths['raw_base'])
+        self.raw_base.setText(_paths['raw_base_samri'])
         self.raw_base.textChanged.connect(self.check_rawbase)
         self.MW.ui.pushButton_browse.clicked.connect(self.browse_path)
 
@@ -342,7 +357,7 @@ class SAMRI_InputDialog:
             self.raw_base.setText(path)
 
     def check_rawbase(self):
-        if os.path.exists(self.raw_base.text() + 'sub-' + self.animal_id.text()):
+        if os.path.exists(self.raw_base.text() + self.animal_id.text()):
             self.MW.ui.pushButton_continue.setEnabled(True)
             self.MW.ui.pushButton_re_fetch.setEnabled(True)
         else:
@@ -356,7 +371,7 @@ class SAMRI_InputDialog:
             "password":             self.password.text(),
             "animal_id":            self.animal_id.text(),
             "bids_flag":            self.bids_flag.isChecked(),
-            "raw_base":             self.raw_base.text(),
+            "raw_base_samri":       self.raw_base.text(),
             "fetch":                fetch,
             "exclude_existing":     exclude_existing,
         }
@@ -377,8 +392,8 @@ class SAMRI_InputDock:
 
     def connect_buttons(self):
         self.ui.lineEdit_animalID.setText(f"Animal ID: {self.MW.Samri.animal_id}")
-        self.ui.lineEdit_bru2_path.setText(_paths['raw_base'])
-        self.ui.lineEdit_base_path.setText(_paths['raw_base'])
+        self.ui.lineEdit_bru2_path.setText(_paths['raw_base_samri'])
+        self.ui.lineEdit_base_path.setText(_paths['raw_base_samri'])
         self.ui.lineEdit_atlas_path.setText(_paths['atlas_folder'])
 
         self.ui.pushButton_browseBru2.clicked.connect(lambda: self.browse_path(self.ui.lineEdit_bru2_path))
@@ -429,15 +444,10 @@ class SAMRI_InputDock:
 
     def create_mov_mask(self):
         path = self.matches[0]
-        print('hier 2',self.matches,self.matches[0],flush=True)
         self.MW.restart_gui(path, full_restart=False,label_file=False,data_view='coronal')
-        print('hier 3',flush=True)
         self.ui.dockWidget_ephys.setVisible(False)
-        print('hier 4',flush=True)
         self.ui.textEdit_SAMRI_reg.setVisible(True)
-        print('hier 5',flush=True)
         self.MW.ButtonsGUI_3D.initialize_segmentation(samri=True)
-        print('hier 6',flush=True)
 
     def update_mov_mask_path(self):
         folder = (self.MW.Samri.bids_base + "/bids/sub-" + self.MW.Samri.animal_id
