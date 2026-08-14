@@ -77,9 +77,13 @@ IMPLAnT requires **ANTs** (Advanced Normalization Tools) for MRI registration. A
    ```
 
 ### From source
-1. Clone the repository
+1. Clone the repository, including its submodules (`electrode2geometry`, `rippl-AI`)
    ```
-   git clone git@github.com:Neurotechnology-at-ETH-Zurich/IMPLAnT.git
+   git clone --recurse-submodules git@github.com:Neurotechnology-at-ETH-Zurich/IMPLAnT.git
+   ```
+   If you already have a clone without them, fetch the submodules into it with:
+   ```
+   git submodule update --init --recursive
    ```
 2. Install dependencies
    ```
