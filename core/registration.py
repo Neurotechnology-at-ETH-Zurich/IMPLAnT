@@ -1,9 +1,9 @@
 # This Python file uses the following encoding: utf-8
 import SimpleITK as sitk
 import os
-from picsl_greedy import Greedy3D
+import math
 import numpy as np
-import ants
+from file_handling.itksnap_registration import register_rigid
 
 class Registration:
     """
@@ -69,9 +69,13 @@ class Registration:
 
         coarest_options = [8,4,2,1]
         finest_options = [1,2,4]
+        metric_options = ["NMI","NCC","SSD"]
         self.coarsest = coarest_options[self.LoadMRI.coarsest_index] #comboBox_coarsest
         self.finest = finest_options[self.LoadMRI.finest_index] #comboBox_finest
-        dbg(f"[REG] calling rigid_transformation  coarsest={self.coarsest} finest={self.finest}")
+        # trajectory_planning/registration.py calls Registration() directly without
+        # going through initialize_registration(), so metric_index may not be set.
+        self.metric = metric_options[getattr(self.LoadMRI, "metric_index", 0)] #comboBox_regitstration_metric
+        dbg(f"[REG] calling rigid_transformation  coarsest={self.coarsest} finest={self.finest} metric={self.metric}")
         self.rigid_transformation()
 
 
@@ -95,30 +99,10 @@ class Registration:
 
     def rigid_transformation(self):
         """
-            Perform rigid registration of the moving image to the fixed image.
-            1. Rgid trasnformation with NMI
-            2. Rigid trasnformation with MI (takes the 1. matrix as initialisation)
+            Perform rigid registration of the moving image to the fixed image,
+            reproducing exactly what ITK-SNAP's "Registration" panel does
+            (see file_handling/itksnap_registration.py for the full rationale).
         """
-
-        g = Greedy3D()
-
-        base_iters = 100
-        img_size = self.fixed_image.GetSize()
-        min_size = min(img_size)
-        threshold = min_size // 3
-        factors = []
-        f = self.coarsest
-        while f >= self.finest:
-            min_dim = min(s // f for s in img_size)
-            if min_dim >= threshold:
-                factors.append(f)
-            if f == self.finest:
-                break
-            f = f // 2
-        if not factors:
-            factors = [self.finest]  # always keep at least the finest level
-        n_string = "x".join(str(base_iters * factor) for factor in factors)
-        print(n_string,flush=True)
 
         fixed = self.fixed_image
         moving = self.moving_image
@@ -126,74 +110,28 @@ class Registration:
             fixed = sitk.VectorIndexSelectionCast(fixed, 0)
         if moving.GetNumberOfComponentsPerPixel() > 1:
             moving = sitk.VectorIndexSelectionCast(moving, 0)
-        fixed = sitk.Cast(fixed, sitk.sitkFloat32)
-        moving = sitk.Cast(moving, sitk.sitkFloat32)
-        fixed = sitk.RescaleIntensity(fixed, 0.0, 1.0)
-        moving = sitk.RescaleIntensity(moving, 0.0, 1.0)
 
-        #g.execute('-i my_fixed my_moving '
-        #          '-a -dof 6 -m NMI '           ##NMI
-        #           f'-n {n_string} '
-        #           '-ia-identity '
-        #          '-V 0 ' #no verbose
-        #          '-o my_ncc',
-        #          my_fixed = fixed, my_moving = moving,
-        #          my_ncc=None)
-        #g.execute('-i my_fixed my_moving '
-        #    '-a -dof 6 -m NMI '
-        #    f'-n {n_string} '
-        #    #f'-ia {identity_path} '  # initialize from identity, RAS convention
-        #    '-V 0 '
-        #    '-o my_rigid',
-        #    my_fixed=fixed,
-        #    my_moving=moving,
-        #    my_rigid=None
-        #  )
-        #g.execute(
-        #    '-i my_fixed my_moving '
-        #    '-a -dof 6 -m MI '
-        #    f'-n {n_string} '
-        #    '-ia-identity '
-        #    '-V 0 '
-        #    #f'-ia my_ncc '
-        #    '-o my_rigid',
-        #    my_fixed=fixed,
-        #    my_moving=moving,
-        #    my_rigid=None
-        #)
+        # self.coarsest/self.finest are shrink FACTORS (8,4,2,1 / 1,2,4), while
+        # register_rigid expects pyramid LEVELS (level k -> shrink factor 2**k).
+        coarsest_level = int(math.log2(self.coarsest))
+        finest_level = int(math.log2(self.finest))
 
-        import tempfile
-        with tempfile.TemporaryDirectory() as tmpdir:
-            fixed_path  = os.path.join(tmpdir, 'fixed.nii.gz')
-            moving_path = os.path.join(tmpdir, 'moving.nii.gz')
-            nmi_mat     = os.path.join(tmpdir, 'nmi.mat')
-            rigid_mat   = os.path.join(tmpdir, 'rigid.mat')
-
-            sitk.WriteImage(fixed,  fixed_path)
-            sitk.WriteImage(moving, moving_path)
-
-            # NMI pass: single finest-resolution level only — at coarse scales the
-            # misalignment is sub-voxel and the gradient is zero, causing lbfgs to
-            # diverge on restart and corrupt the initialisation for finer levels.
-            g.execute(
-                f'-i {fixed_path} {moving_path} '
-                '-a -dof 6 -m NMI '
-                '-n 100 '
-                '-ia-identity '
-                f'-o {nmi_mat}',
-            )
-            # MI refinement pass: finest level only — coarser levels have near-zero
-            # gradient for nearly-aligned images and trigger lbfgs random restarts
-            # that corrupt the rotation. Only the finest level refines cleanly.
-            g.execute(
-                f'-i {fixed_path} {moving_path} '
-                '-a -dof 6 -m MI '
-                f'-n {n_string} '
-                f'-ia {nmi_mat} '
-                f'-o {rigid_mat}',
-            )
-
-            mat_rigid = np.loadtxt(rigid_mat)
+        result = register_rigid(
+            fixed,
+            moving,
+            metric=self.metric,
+            coarsest_level=coarsest_level,
+            finest_level=finest_level,
+            # search_iterations left at 0 (off): a wide random-restart search
+            # actively found a worse, anatomically-wrong optimum that NMI
+            # nonetheless scored better than the true near-identity alignment
+            # -- confirmed empirically on this data. register_rigid()'s default
+            # identity init now dodges greedy's forced jitter deterministically
+            # instead (see its docstring), avoiding the corruption without
+            # gambling on a broad search.
+            verbose=True,
+        )
+        mat_rigid = result.matrix_ras
 
         transform_filename = f"transformation-ind_{self.moving_ind}-to-ind_{self.fixed_ind}.txt"
         output_path = os.path.join(self.LoadMRI.session_path, "anat", transform_filename)
@@ -214,92 +152,5 @@ class Registration:
             f.write(" ")
             np.savetxt(f, mat_end[:3, 3].reshape(1, 3), fmt="%.12f", newline=" ")
             f.write("\nFixedParameters: 0 0 0\n")
-
-        return
-
-        ## --- ANTs (slow on large images, kept for reference) ---
-        #import logging
-        #logging.info(f"Registration started: {self.moving_filepath} → {self.LoadMRI.volumes[0].file_path}")
-        #logging.info(f"  shrink_factors={shrink_factors}  smoothing_sigmas={smoothing_sigmas}  iterations={aff_iterations}")
-        #fixed_ants = ants.image_read(self.LoadMRI.volumes[0].file_path)
-        #moving_ants = ants.image_read(self.moving_filepath)
-        #reg = ants.registration(
-        #    fixed=fixed_ants,
-        #    moving=moving_ants,
-        #    type_of_transform="Rigid",
-        #    aff_iterations=aff_iterations,
-        #    aff_shrink_factors=shrink_factors,
-        #    aff_smoothing_sigmas=smoothing_sigmas,
-        #    verbose=1,
-        #)
-        #logging.info("Registration finished.")
-        #print('ants ',reg["fwdtransforms"][0])
-        #tx = ants.read_transform(reg["fwdtransforms"][0])
-        #params = tx.parameters
-        #fixed_params = tx.fixed_parameters
-        #with open(output_path, "w") as f:
-        #    f.write("#Insight Transform File V1.0\n")
-        #    f.write("#Transform 0\n")
-        #    f.write("Transform: MatrixOffsetTransformBase_double_3_3\n")
-        #    f.write("Parameters: " + " ".join(f"{p:.12f}" for p in params) + "\n")
-        #    f.write("FixedParameters: " + " ".join(f"{p:.12f}" for p in fixed_params) + "\n")
-        ## --- end ANTs ---
-
-        import sys
-        def dbg(msg):
-            print(msg, file=sys.__stderr__, flush=True)
-
-        #fixed  = sitk.Cast(self.fixed_image,  sitk.sitkFloat32)
-        #moving = sitk.Cast(self.moving_image, sitk.sitkFloat32)
-        fixed_img  = self.fixed_image
-        moving_img = self.moving_image
-        if fixed_img.GetNumberOfComponentsPerPixel() > 1:
-            fixed_img = sitk.VectorIndexSelectionCast(fixed_img, 0)
-        if moving_img.GetNumberOfComponentsPerPixel() > 1:
-            moving_img = sitk.VectorIndexSelectionCast(moving_img, 0)
-        fixed  = sitk.Cast(fixed_img,  sitk.sitkFloat32)
-        moving = sitk.Cast(moving_img, sitk.sitkFloat32)
-
-        initial_transform = sitk.Euler3DTransform()
-
-        reg = sitk.ImageRegistrationMethod()
-        reg.SetMetricAsMattesMutualInformation(numberOfHistogramBins=50)
-        reg.SetOptimizerAsGradientDescent(
-            learningRate=1.0,
-            numberOfIterations=iterations_per_level,
-            convergenceMinimumValue=1e-6,
-            convergenceWindowSize=10,
-        )
-        reg.SetOptimizerScalesFromPhysicalShift()
-        reg.SetShrinkFactorsPerLevel(shrinkFactors=list(shrink_factors))
-        reg.SetSmoothingSigmasPerLevel(smoothingSigmas=list(smoothing_sigmas))
-        reg.SmoothingSigmasAreSpecifiedInPhysicalUnitsOn()
-        reg.SetInitialTransform(initial_transform, inPlace=False)
-        reg.SetInterpolator(sitk.sitkLinear)
-
-        transform = reg.Execute(fixed, moving)
-        dbg(f"[REG] Done — {reg.GetOptimizerStopConditionDescription()}")
-        dbg(f"[REG] Metric={reg.GetMetricValue():.6f}  Iterations={reg.GetOptimizerIteration()}")
-
-        # Convert Euler3DTransform result to MatrixOffsetTransformBase_double_3_3 format
-        # (same format as ANTs output — downstream code expects 9 rotation + 3 translation, center at origin)
-        try:
-            inner = sitk.Euler3DTransform(sitk.CompositeTransform(transform).GetNthTransform(0))
-        except Exception:
-            inner = sitk.Euler3DTransform(transform)
-        R = np.array(inner.GetMatrix()).reshape(3, 3)
-        c = np.array(inner.GetCenter())
-        t = np.array(inner.GetTranslation())
-        offset = (np.eye(3) - R) @ c + t   # re-centre at origin
-        params_str = " ".join(f"{v:.18f}" for v in list(R.flatten()) + list(offset))
-        with open(output_path, "w") as fh:
-            fh.write("#Insight Transform File V1.0\n")
-            fh.write("#Transform 0\n")
-            fh.write("Transform: MatrixOffsetTransformBase_double_3_3\n")
-            fh.write(f"Parameters: {params_str}\n")
-            fh.write("FixedParameters: 0 0 0\n")
-        dbg(f"[REG] Transform saved: {output_path}")
-
-        return
 
 
