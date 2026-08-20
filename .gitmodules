@@ -1,3 +1,6 @@
 [submodule "rippl-AI"]
 	path = rippl-AI
 	url = git@github.com:Neurotechnology-at-ETH-Zurich/rippl-AI.git
+[submodule "electrode2geometry"]
+	path = electrode2geometry
+	url = git@github.com:Neurotechnology-at-ETH-Zurich/electrode2geometry.git
