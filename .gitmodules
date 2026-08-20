@@ -1,0 +1,3 @@
+[submodule "rippl-AI"]
+	path = rippl-AI
+	url = git@github.com:Neurotechnology-at-ETH-Zurich/rippl-AI.git
