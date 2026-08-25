@@ -49,7 +49,20 @@ class ButtonsGUI_3D:
         self.MW = MW
         self.ui = MW.ui
         self.LoadMRI = MW.LoadMRI
+        # moving-image combobox index -> layer_index of its current aligned-
+        # result layer, so re-registering the same pair (e.g. via
+        # _confirm_registration_result's retry) replaces it instead of
+        # piling up stale "-aligned_to_ind_..." layers.
+        self._aligned_layer_indices = {}
         self.buttons_3D(data_index,label_file)
+
+    @staticmethod
+    def _reconnect(signal,slot):
+        try:
+            signal.disconnect()
+        except RuntimeError:
+            pass  # not connected to anything yet
+        signal.connect(slot)
 
 
 
@@ -59,9 +72,7 @@ class ButtonsGUI_3D:
         """
         file_name = self.LoadMRI.volumes[data_index].file_path
         target = self.ui.file_name_displayed
-        target.setPlainText("File loaded: " + os.path.basename(file_name))
-        #target.setPlainText(os.path.basename(file_name))
-        target.setReadOnly(True)
+        target.setText("File loaded: " + os.path.basename(file_name))
         target.setStyleSheet("color: white; font-size: 8pt;")
 
         lm = self.LoadMRI
@@ -411,11 +422,11 @@ class ButtonsGUI_3D:
         self.popup.resize(300, 300)
         self.popup.show()
 
-        self.ui.comboBox_movingimg.currentIndexChanged.connect(lambda index: self.check_dimensions_movingimg(index))
-        self.ui.pushButton_registration.clicked.connect(self._start_registration)
-        self.ui.pushButton_loadOtherImage.clicked.connect(self.add_another_image)
+        self._reconnect(self.ui.comboBox_movingimg.currentIndexChanged, lambda index: self.check_dimensions_movingimg(index))
+        self._reconnect(self.ui.pushButton_registration.clicked, self._start_registration)
+        self._reconnect(self.ui.pushButton_loadOtherImage.clicked, self.add_another_image)
 
-        self.ui.pushButton_regCancel.clicked.connect(self.cancel_reg)
+        self._reconnect(self.ui.pushButton_regCancel.clicked, self.cancel_reg)
 
         if len(self.LoadMRI.movingimg_filename):
             self.check_dimensions_movingimg(0)
@@ -425,11 +436,20 @@ class ButtonsGUI_3D:
         self.LoadMRI.coarsest_index = 1 #comboBox_coarsest
         self.LoadMRI.finest_index = 0 #comboBox_finest
         self.ui.comboBox_coarest.setCurrentIndex(self.LoadMRI.coarsest_index)
-        self.ui.comboBox_coarest.currentIndexChanged.connect(
+        self._reconnect(
+            self.ui.comboBox_coarest.currentIndexChanged,
             lambda idx: setattr(self.LoadMRI, "coarsest_index", idx)
         )
-        self.ui.comboBox_finest.currentIndexChanged.connect(
+        self._reconnect(
+            self.ui.comboBox_finest.currentIndexChanged,
             lambda idx: setattr(self.LoadMRI, "finest_index", idx)
+        )
+
+        self.LoadMRI.metric_index = 0 #comboBox_regitstration_metric: NMI, NCC, SSD
+        self.ui.comboBox_regitstration_metric.setCurrentIndex(self.LoadMRI.metric_index)
+        self._reconnect(
+            self.ui.comboBox_regitstration_metric.currentIndexChanged,
+            lambda idx: setattr(self.LoadMRI, "metric_index", idx)
         )
 
     def _start_registration(self):
@@ -484,18 +504,42 @@ class ButtonsGUI_3D:
             aligned_paths.append(aligned_path)
 
         def on_done():
-            overlay.close()
+            # keep the overlay up through loading the atlas/warped image too --
+            # it used to close here, right as SAMRI itself finishes, leaving
+            # the image-loading work below to run with no indication anything
+            # was still happening until _confirm_registration_result's popup
+            # finally appeared.
+            overlay.set_message("Loading atlas and warped image…")
 
             if aligned_paths:
                 path = aligned_paths[0]
-                moving_layer_idx = index + 1
-                self.MW.FileLoader.layer_index += 1
-                self.MW.FileLoader.initialize_file(
-                    path, self.MW.FileLoader.layer_index, 'coronal', 0
-                )
-                if moving_layer_idx in self.MW.Layers[0]:
-                    layer = self.MW.Layers[0][moving_layer_idx]
-                    layer.toggle_visibility(False, layer.visibility_btn)
+                existing_layer_idx = self._aligned_layer_indices.get(index)
+
+                if existing_layer_idx is not None and existing_layer_idx in self.MW.Layers[0]:
+                    # re-registering the same pair (e.g. via
+                    # _confirm_registration_result's retry) -- update the
+                    # existing aligned-result layer's data in place instead
+                    # of adding another overlapping overlay layer.
+                    vol, spacing, _binary = self.MW.FileLoader.resample_tofit(path)
+                    layer = self.MW.Layers[0][existing_layer_idx]
+                    layer.volume = {0: vol}
+                    layer.spacing = spacing
+                    layer.update_vtk(self.LoadMRI.slice_indices[0])
+                    self.LoadMRI.intensity_table[0].intensity_volumes[existing_layer_idx] = vol
+                    warped_layer_idx = existing_layer_idx
+                else:
+                    new_layer_idx = len(self.MW.Layers[0])
+                    self.MW.FileLoader.layer_index += 1
+                    self.MW.FileLoader.initialize_file(
+                        path, self.MW.FileLoader.layer_index, 'coronal', 0
+                    )
+                    self._aligned_layer_indices[index] = new_layer_idx
+                    warped_layer_idx = new_layer_idx
+
+                self._show_only_reference_and_warped(warped_layer_idx)
+
+            overlay.close()
+            self._confirm_registration_result()
 
         self.popup.close()
         overlay = BusyOverlay(self.MW, message="Registering, please wait…")
@@ -508,6 +552,61 @@ class ButtonsGUI_3D:
         self._reg_worker.failed.connect(overlay.close)
         self._reg_worker.failed.connect(self._on_registration_failed)
         self._reg_worker.start()
+
+    def _show_only_reference_and_warped(self, warped_layer_idx):
+        """Hide every overlay layer except the fixed reference image (layer 0,
+        which has no visibility_btn of its own and is always shown) and the
+        just-(re)warped layer -- otherwise leftover overlays (older
+        registration attempts, forbidden-regions masks, etc.) can stay
+        visible on top of it, and _confirm_registration_result's "does this
+        look correct?" dialog ends up asking about a view that isn't
+        actually showing the new result."""
+        for layer_idx, layer in self.MW.Layers[0].items():
+            btn = getattr(layer, 'visibility_btn', None)
+            if btn is None:
+                continue
+            show = layer_idx == warped_layer_idx
+            btn.setChecked(show)
+            layer.toggle_visibility(show, btn)
+        self.LoadMRI.render()
+
+    def _confirm_registration_result(self):
+        """
+        greedy's coarse pyramid levels can converge to a bad local minimum
+        on already-well-aligned pairs (confirmed empirically -- not fixable
+        by matching ITK-SNAP's own parameters). Stopping the pyramid earlier
+        (a coarser "finest level") sidesteps it in practice, so offer to
+        retry with that bumped up if the result doesn't look right.
+        """
+        from PySide6.QtWidgets import QMessageBox
+        msg = QMessageBox(self.MW)
+        msg.setWindowTitle("Registration finished")
+        msg.setText("Does the registration look correct?")
+        btn_yes = msg.addButton("Yes", QMessageBox.ActionRole)
+        btn_no = msg.addButton("No, retry with a coarser finest level", QMessageBox.ActionRole)
+        msg.exec()
+
+        if msg.clickedButton() is not btn_no:
+            return
+
+        finest_options = [1, 2, 4]
+        coarest_options = [8, 4, 2, 1]
+        new_finest_index = self.LoadMRI.finest_index + 1
+        if (new_finest_index >= len(finest_options)
+                or finest_options[new_finest_index] > coarest_options[self.LoadMRI.coarsest_index]):
+            info = QMessageBox(self.MW)
+            info.setWindowTitle("No coarser level left")
+            info.setText(
+                "Already at the coarsest \"finest level\" setting available for the "
+                "current coarsest-level choice -- no further automatic retry possible."
+            )
+            info.addButton("OK", QMessageBox.ActionRole)
+            info.exec()
+            return
+
+        self.LoadMRI.finest_index = new_finest_index
+        self.ui.comboBox_finest.setCurrentIndex(new_finest_index)
+        self._start_registration()
 
     def _on_registration_failed(self, tb):
         from PySide6.QtWidgets import QMessageBox, QLayout

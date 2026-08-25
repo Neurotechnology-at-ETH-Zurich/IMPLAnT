@@ -9,6 +9,7 @@ from gui_utils.paintbrush_gui import PaintbrushGUI
 from utils.mrid_inputdialog import MRID_InputDialog, ANAT_InputDialog,TRANSFORM_InputDialog
 from PySide6 import QtWidgets
 from core.electrode_localization import ElectrodeLoc
+from mrid_utils.atlas_fetch import ensure_atlas_available
 from PySide6.QtWidgets import QMessageBox, QDialog, QDockWidget,QVBoxLayout,QTableWidgetItem,QApplication
 from PySide6.QtCore import Qt,QTimer
 import SimpleITK as sITK
@@ -59,9 +60,7 @@ class ButtonsGUI_4D:
         """
         file_name = self.LoadMRI.volumes[data_index].file_path
         target = self.ui.file_name_displayed
-        target.setPlainText("File loaded " + data_view.upper() + ": " + os.path.basename(file_name))
-        #target.setPlainText(os.path.basename(file_name))
-        target.setReadOnly(True)
+        target.setText("File loaded " + data_view.upper() + ": " + os.path.basename(file_name))
         target.setStyleSheet("color: white; font-size: 8pt;")
 
         lm = self.LoadMRI
@@ -148,9 +147,9 @@ class ButtonsGUI_4D:
         file_loader.add_data_view(file_name, data_view, data_index)
 
         #add filename to title
-        current_text = self.ui.file_name_displayed.toPlainText()
+        current_text = self.ui.file_name_displayed.text()
         new_text = current_text + "\nFile loaded: " + data_view.upper() + ": " + os.path.basename(file_name)
-        self.ui.file_name_displayed.setPlainText(new_text)
+        self.ui.file_name_displayed.setText(new_text)
 
         self.ui.paintbrush_dataview.addItem(data_view)
 
@@ -494,12 +493,36 @@ class ButtonsGUI_4D:
         self.overlay.close()
 
     def start_overlay(self):
+        if hasattr(self, "_anat_ok_timer"):
+            self._anat_ok_timer.stop()
+
         self.overlay = BusyOverlay(self.MW, message="Creating Heatmap, please wait…")
         self.overlay.raise_()
         self.overlay.show()
         self.overlay.repaint()
         QApplication.processEvents()
         QTimer.singleShot(50,  self.continue_mridtags)
+
+    def _update_anat_ok_enabled(self):
+        """
+        Enable pushButton_anatOK only once every named anatomical region has
+        at least one painted voxel in every 4D panel's label volume -- see
+        get_relaxation_unsupervised (mrid_utils/heatmap.py), which otherwise
+        crashes with IndexError on an unpainted region.
+        """
+        mrid_tags = getattr(self.LoadMRI, "mrid_tags", None)
+        region_names = getattr(mrid_tags, "region_names", None)
+        if not region_names:
+            return
+
+        num_regions = len(region_names)
+        label_volumes = getattr(self.MW.Paintbrush, "label_volume", {})
+        all_painted = all(
+            idx in label_volumes
+            and all(np.any(label_volumes[idx] == region_idx) for region_idx in range(1, num_regions + 1))
+            for idx in range(len(self.LoadMRI.vtk_widgets[0]))
+        )
+        self.ui.pushButton_anatOK.setEnabled(all_painted)
 
     def open_input_dialog(self):
         """Open a dialog to input MRID tags and initialize painting tools."""
@@ -537,6 +560,16 @@ class ButtonsGUI_4D:
                         self.ui.pushButton_anatOK.clicked.connect(self.start_overlay)
                         self.ui.checkBox_Brush_MRID.setEnabled(True)
                         self.ui.stackedWidget_4D.setCurrentIndex(0)
+
+                        # get_relaxation_unsupervised (mrid_utils/heatmap.py)
+                        # crashes with an IndexError if any anatomical region
+                        # was named but never actually painted -- keep the
+                        # button disabled until every region has at least one
+                        # painted voxel in every 4D panel.
+                        self.ui.pushButton_anatOK.setEnabled(False)
+                        self._anat_ok_timer = QTimer(self.MW)
+                        self._anat_ok_timer.timeout.connect(self._update_anat_ok_enabled)
+                        self._anat_ok_timer.start(250)
                 else:
                     dock.show()
                     dock.raise_()
@@ -626,7 +659,19 @@ class ButtonsGUI_4D:
 
     def activate_get_gaussian_analysis(self):
         self.LoadMRI.ElectrodeLoc = ElectrodeLoc(self.LoadMRI,self.MW)
-        self.LoadMRI.ElectrodeLoc.get_gaussian_centers(self.transformation_files)
+        try:
+            self.LoadMRI.ElectrodeLoc.get_gaussian_centers(self.transformation_files)
+        except FileNotFoundError as e:
+            self.overlay.close()
+            msg_box = QMessageBox(self.MW)
+            msg_box.setWindowTitle("Missing file for Gaussian analysis")
+            msg_box.setText(str(e))
+            btn_goto = msg_box.addButton("Go to MRID-tag label creation", QMessageBox.ActionRole)
+            msg_box.addButton("Cancel", QMessageBox.ActionRole)
+            msg_box.exec()
+            if msg_box.clickedButton() == btn_goto:
+                self.open_input_dialog()
+            return
         #dock.close()
         #POPUP
         msg_box = QMessageBox()
@@ -656,6 +701,8 @@ class ButtonsGUI_4D:
             Final localisation
             Takes the Coordinates and finds the best-fit to the real-life tag geometry.
         """
+        if not ensure_atlas_available(self.MW):
+            return
         self.overlay = BusyOverlay(self.MW, message="Localising Electrodes, please wait…")
         self.overlay.raise_()
         self.overlay.show()
