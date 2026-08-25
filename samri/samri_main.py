@@ -52,13 +52,7 @@ def _warn_incomplete_scans(raw_base):
     return count
 
 
-_base_dir = getattr(sys, '_MEIPASS', os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-_exe_dir = os.path.dirname(sys.executable) if getattr(sys, 'frozen', False) else _base_dir
-_config_path = os.path.join(_exe_dir, 'paths_config.json')
-if not os.path.exists(_config_path):
-    _config_path = os.path.join(_base_dir, 'paths_config.example.json')
-with open(_config_path) as _f:
-    _paths = json.load(_f)
+from paths_config import _base_dir, _exe_dir, _paths, save_paths
 
 def _resolve_ants_bin(raw):
     if os.path.isabs(raw):
@@ -74,8 +68,8 @@ def _resolve_ants_bin(raw):
 class InitSAMRI:
     def __init__(self,samri_input):
         _ANTS_BIN = _resolve_ants_bin(_paths['ants_bin'])
-        if os.path.isdir(_ANTS_BIN) and _ANTS_BIN not in os.environ.get("PATH", "").split(":"):
-            os.environ["PATH"] = _ANTS_BIN + ":" + os.environ.get("PATH", "")
+        if os.path.isdir(_ANTS_BIN) and _ANTS_BIN not in os.environ.get("PATH", "").split(os.pathsep):
+            os.environ["PATH"] = _ANTS_BIN + os.pathsep + os.environ.get("PATH", "")
         os.environ["ANTSPATH"] = _ANTS_BIN
 
         self.start_bruker2_bids(samri_input)
@@ -311,8 +305,8 @@ class InitSAMRI:
 
         MW.FileLoader.layer_index += 1
         MW.FileLoader.initialize_file(img_path,MW.FileLoader.layer_index,'coronal',0)
-        current_text = MW.ui.file_name_displayed.toPlainText()
-        MW.ui.file_name_displayed.setPlainText(current_text + "\nFile loaded: " + os.path.basename(img_path))
+        current_text = MW.ui.file_name_displayed.text()
+        MW.ui.file_name_displayed.setText(current_text + "\nFile loaded: " + os.path.basename(img_path))
         MW.ui.comboBox_movingimg.addItem(os.path.basename(img_path))
         MW.LoadMRI.movingimg_filename.append(img_path)
         MW.LoadMRI.combo_Regimgname = MW.ui.comboBox_movingimg
@@ -349,6 +343,7 @@ class SAMRI_InputDialog:
         self.MW.ui.pushButton_fetch.clicked.connect(lambda: self.get_values(fetch=True))
         self.MW.ui.pushButton_continue.clicked.connect(lambda: self.get_values(fetch=False))
         self.MW.ui.pushButton_re_fetch.clicked.connect(lambda: self.get_values(fetch=True,exclude_existing=False))
+        self.MW.ui.pushButton_credentials.clicked.connect(self.save_bruker_info)
 
 
     def browse_path(self):
@@ -363,6 +358,27 @@ class SAMRI_InputDialog:
         else:
             self.MW.ui.pushButton_continue.setEnabled(False)
             self.MW.ui.pushButton_re_fetch.setEnabled(False)
+
+    def save_raw_base(self):
+        """Persist the current raw-data path into paths_config.json, so it's
+        remembered as the default next time -- not written automatically
+        (raw_base_samri already survives the current session via
+        last_session.json, see main_window.py, but that's a narrower per-
+        session cache, not the actual config file). Wire a "Save" button's
+        clicked signal to this once one exists in form.ui."""
+        save_paths(raw_base_samri=self.raw_base.text())
+
+    def save_bruker_info(self):
+        """Persist the current Bruker server/password into samri/bruker_
+        info.json. Deliberately separate from save_raw_base/paths_config.
+        json -- this is a real credential, not a path, so it only ever
+        gets written here, on an explicit save action, never bundled by
+        MRID_GUI.spec (see its samri/ exclusion) and never folded into the
+        generic paths_config.json save. Wire a "Save" button's clicked
+        signal to this once one exists in form.ui."""
+        bruker_info_path = os.path.join(_base_dir, 'samri', 'bruker_info.json')
+        with open(bruker_info_path, 'w') as f:
+            json.dump({"server": self.server.text(), "password": self.password.text()}, f, indent=4)
 
     def get_values(self,fetch=True,exclude_existing=True):
         """Call after exec() to retrieve all values."""
@@ -400,6 +416,7 @@ class SAMRI_InputDock:
         self.ui.pushButton_browseBase.clicked.connect(lambda: self.browse_path(self.ui.lineEdit_base_path))
         self.ui.pushButton_browseAtlas.clicked.connect(lambda: self.browse_path(self.ui.lineEdit_atlas_path))
         self.ui.pushButton_browseMov.clicked.connect(lambda: self.browse_path(self.ui.lineEdit_movMask,file=True))
+        self.ui.pushButton_paths.clicked.connect(self.save_all_paths)
 
         # fill comboboxes
         print(self.MW.Samri.bids_base+"/bids/sub-"+self.MW.Samri.animal_id,flush=True)
@@ -441,6 +458,18 @@ class SAMRI_InputDock:
         self.ui.comboBox_working_session.currentIndexChanged.connect(self.update_mov_mask_path)
         self.ui.comboBox_register_key.currentIndexChanged.connect(self.update_mov_mask_path)
 
+    def save_all_paths(self):
+        """Persist the atlas/raw-data paths shown in this dock into
+        paths_config.json -- "Save all paths" button. Only the two fields
+        that actually correspond to a real paths_config.json key
+        (atlas_folder, raw_base_samri); lineEdit_bru2_path isn't its own
+        config key (it just starts out pre-filled from raw_base_samri, see
+        connect_buttons above), so there's nothing distinct to persist for
+        it here."""
+        save_paths(
+            atlas_folder=self.ui.lineEdit_atlas_path.toPlainText(),
+            raw_base_samri=self.ui.lineEdit_base_path.toPlainText(),
+        )
 
     def create_mov_mask(self):
         path = self.matches[0]
