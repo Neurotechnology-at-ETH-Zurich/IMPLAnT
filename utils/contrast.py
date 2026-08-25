@@ -3,15 +3,8 @@ import vtk
 import numpy as np
 import shlex
 import os
-import json as _json
 import sys
-_base_dir = getattr(sys, '_MEIPASS', os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-_exe_dir = os.path.dirname(sys.executable) if getattr(sys, 'frozen', False) else _base_dir
-_config_path = os.path.join(_exe_dir, 'paths_config.json')
-if not os.path.exists(_config_path):
-    _config_path = os.path.join(_base_dir, 'paths_config.example.json')
-with open(_config_path) as _f:
-    _paths = _json.load(_f)
+from paths_config import _paths
 
 class Contrast:
     """
@@ -163,8 +156,13 @@ class Contrast:
         """
         Sets window and level to automatically computed values and updates the LUT and sliders.
         """
-        self.window[image_index] = self.window_auto[image_index].copy()
-        self.level[image_index] = self.level_auto[image_index].copy()
+        # window_auto/level_auto are immutable scalars (numpy float for a
+        # real MRI image, plain int for a label/atlas overlay -- see
+        # initialise_class's label_file branch) -- no .copy() needed for
+        # either, and plain int has no .copy() method at all, which is what
+        # crashed here for a label-file-backed Contrast instance.
+        self.window[image_index] = self.window_auto[image_index]
+        self.level[image_index] = self.level_auto[image_index]
         # Block signals while updating sliders
         self.block_signals(image_index,True)
 
@@ -181,8 +179,11 @@ class Contrast:
         """
         Resets window and level to their initial values and updates the LUT and sliders.
         """
-        self.window[image_index] = self.initial_window[image_index].copy()
-        self.level[image_index] = self.initial_level[image_index].copy()
+        # Same reasoning as auto() above -- initial_window/initial_level are
+        # immutable scalars, no .copy() needed (and none available at all
+        # for the label/atlas overlay case's plain int).
+        self.window[image_index] = self.initial_window[image_index]
+        self.level[image_index] = self.initial_level[image_index]
         # Block signals while updating sliders
         self.block_signals(image_index,True)
 
