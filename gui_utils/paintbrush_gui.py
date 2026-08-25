@@ -142,6 +142,8 @@ class PaintbrushGUI:
         #if paintbrush is clicked
         self.ui.checkBox_Brush_MRID.stateChanged.connect(self.brush_4D)
         self.ui.checkBox_Brush.stateChanged.connect(self.brush_3D)
+        self.ui.checkBox_Brush.setToolTip(
+            "Toggle the paintbrush tool for manually painting regions on the current view (e.g. forbidden areas)")
 
         # Histogram
         self.MW.Paintbrush.widget_histogram = self.ui.widget_histogram
