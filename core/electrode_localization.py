@@ -4,15 +4,8 @@ import numpy as np
 import nibabel as nib
 import os
 import sys
-import json as _json
 import pickle
-_base_dir = getattr(sys, '_MEIPASS', os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-_exe_dir = os.path.dirname(sys.executable) if getattr(sys, 'frozen', False) else _base_dir
-_config_path = os.path.join(_exe_dir, 'paths_config.json')
-if not os.path.exists(_config_path):
-    _config_path = os.path.join(_base_dir, 'paths_config.example.json')
-with open(_config_path) as _f:
-    _paths = _json.load(_f)
+from paths_config import _paths, save_paths
 from PySide6.QtWidgets import QFileDialog
 import vtk
 import SimpleITK as sitk
@@ -21,12 +14,13 @@ from PySide6 import QtWidgets
 import sys
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from core.paintbrush import Paintbrush
+from core.dfx_geometry_panel import DfxGeometryPanel
 from file_handling.mri_volume import MRIVolume
 from utils.zoom import Zoom
 
 
 def process_in_parallel(args):
-    mrid, mrid_dict, sessionpath, atlas, atlaslabelsdf, dwi_path,t2s_path,mask_path,fixed_coordinates_path, moving_coordinates_path, channel_separation, total_ch,chMap_file = args
+    mrid, mrid_dict, sessionpath, atlas, atlaslabelsdf, dwi_path,t2s_path,mask_path,fixed_coordinates_path, moving_coordinates_path, channel_separation, total_ch,chMap_file,channel_depths_um = args
 
     mrid = mrid.lower()
     savepath = os.path.join(sessionpath, 'analysed',mrid)
@@ -57,7 +51,8 @@ def process_in_parallel(args):
         moving_coordinates,
         channel_separation,
         total_ch,
-        chMap_file
+        chMap_file,
+        channel_depths_um=channel_depths_um
     )
 
     return fitted_points,regionNames,regionNumbers,df,barcode_r,barcode_d, mrid,CA1,dwi1Dsignal,pyrChIdx,chMap,atlasCoordinates_pkl
@@ -137,7 +132,7 @@ class ElectrodeLoc:
         if result is None:
             return None
         else:
-            pklfile_path,atlas,atlaslabelsdf,dwi_path,t2s_path,mask_path,moving_coordinates_path, fixed_coordinates_path,channel_separation, total_ch,chMap_file = result
+            pklfile_path,atlas,atlaslabelsdf,dwi_path,t2s_path,mask_path,moving_coordinates_path, fixed_coordinates_path,channel_separation, total_ch,chMap_file,channel_depths_um = result
 
         with open(pklfile_path, 'rb') as f:
             mrid_dict = pickle.load(f)
@@ -160,7 +155,8 @@ class ElectrodeLoc:
         args_list = [
             (mrid, mrid_dict, self.sessionpath, atlas, atlaslabelsdf,
              dwi_path,t2s_path,mask_path,fixed_coordinates_path, moving_coordinates_path,
-             channel_separation, total_ch[i],chMap_file)
+             channel_separation, total_ch[i],chMap_file,
+             channel_depths_um.get(mrid) if channel_depths_um else None)
             for i, mrid in enumerate(roi_names)
         ]
 
@@ -605,7 +601,7 @@ class ElectrodeLoc:
         #pop up asking for the view if 4D data used
         dlg = ChannelVariablesInput(self.MW,roi_names)
         if dlg.exec() == QtWidgets.QDialog.DialogCode.Accepted:
-            pklfile, channel_separation, total_ch,moving_coordinates_path, fixed_coordinates_path,chMap_file = dlg.get_values()
+            pklfile, channel_separation, total_ch,moving_coordinates_path, fixed_coordinates_path,chMap_file,channel_depths_um = dlg.get_values()
             self.atlas_path=os.path.join(_paths['atlas_folder'], _paths['atlas_volume'])
             nii_atlas=nib.load(self.atlas_path)
             atlas=np.asanyarray(nii_atlas.dataobj)
@@ -617,7 +613,7 @@ class ElectrodeLoc:
             t2s_path=os.path.join(_paths['atlas_folder'], _paths['atlas_template'])
             mask_path=os.path.join(_paths['atlas_folder'], _paths['atlas_mask'])
 
-            return pklfile,atlas,atlaslabelsdf,dwi_path,t2s_path,mask_path,moving_coordinates_path, fixed_coordinates_path,channel_separation, total_ch,chMap_file
+            return pklfile,atlas,atlaslabelsdf,dwi_path,t2s_path,mask_path,moving_coordinates_path, fixed_coordinates_path,channel_separation, total_ch,chMap_file,channel_depths_um
 
         return None
 
@@ -655,15 +651,32 @@ class ChannelVariablesInput(QtWidgets.QDialog):
             self.file_line_pkl.setText("No mrid_library.pkl found. Please browse to select the file.")
         browse_button = QtWidgets.QPushButton("Browse")
         browse_button.clicked.connect(self.browse_file_pkl)
+        save_button = QtWidgets.QPushButton("Save")
+        save_button.setToolTip("Remember this path in paths_config.json, so it's the default next time.")
+        save_button.clicked.connect(self.save_mrid_library_path)
         file_layout.addWidget(self.file_line_pkl)
         file_layout.addWidget(browse_button)
+        file_layout.addWidget(save_button)
         main_layout.addLayout(file_layout)
 
+        main_layout.addWidget(QtWidgets.QLabel("Contact geometry:"))
+        self.radio_uniform = QtWidgets.QRadioButton(
+            "Pre-defined - equal spacing between electrodes")
+        self.radio_custom = QtWidgets.QRadioButton(
+            "User-defined - import each tag's geometry (Shank Geometry / DXF bending)")
+        self.radio_uniform.setChecked(True)
+        main_layout.addWidget(self.radio_uniform)
+        main_layout.addWidget(self.radio_custom)
+
+        self.stack_geometry = QtWidgets.QStackedWidget()
+
+        uniform_page = QtWidgets.QWidget()
+        uniform_layout = QtWidgets.QVBoxLayout(uniform_page)
         self.channel_separation = QtWidgets.QSpinBox()
         self.channel_separation.setRange(1, 200)
         self.channel_separation.setValue(50)
-        main_layout.addWidget(QtWidgets.QLabel("Channel Separation [um]"))
-        main_layout.addWidget(self.channel_separation)
+        uniform_layout.addWidget(QtWidgets.QLabel("Channel Separation [um]"))
+        uniform_layout.addWidget(self.channel_separation)
 
         self.total_channels = {}
         group_box = QtWidgets.QGroupBox("Total Channels [per tag]")
@@ -674,8 +687,19 @@ class ChannelVariablesInput(QtWidgets.QDialog):
             self.total_channels[roi].setValue(64)
             group_layout.addWidget(QtWidgets.QLabel(f"{roi.capitalize()}"))
             group_layout.addWidget(self.total_channels[roi])
+        uniform_layout.addWidget(group_box)
+        self.stack_geometry.addWidget(uniform_page)
 
-        main_layout.addWidget(group_box)
+        self.dfx_panel = DfxGeometryPanel(self.roi_names)
+        self.stack_geometry.addWidget(self.dfx_panel)
+
+        main_layout.addWidget(self.stack_geometry)
+
+        def _on_geometry_mode_changed():
+            self.stack_geometry.setCurrentIndex(1 if self.radio_custom.isChecked() else 0)
+            self.adjustSize()
+        self.radio_uniform.toggled.connect(_on_geometry_mode_changed)
+        self.radio_custom.toggled.connect(_on_geometry_mode_changed)
 
         # upload matrices
         file_layout = QtWidgets.QHBoxLayout()
@@ -725,7 +749,7 @@ class ChannelVariablesInput(QtWidgets.QDialog):
             QtWidgets.QDialogButtonBox.StandardButton.Ok |
             QtWidgets.QDialogButtonBox.StandardButton.Cancel
         )
-        buttons.accepted.connect(self.accept)
+        buttons.accepted.connect(self._try_accept)
         buttons.rejected.connect(self.reject)
         # Add the buttons to the same layout
         button_layout.addWidget(buttons)
@@ -799,6 +823,32 @@ class ChannelVariablesInput(QtWidgets.QDialog):
         self.file_name_pkl = file_name
         self.file_line_pkl.setText(os.path.basename(file_name))
 
+    def save_mrid_library_path(self):
+        """Persist the current mrid_library path into paths_config.json,
+        same as SAMRI's "Save all paths" button (samri_main.py's
+        save_all_paths) does for atlas_folder/raw_base_samri -- so it's
+        remembered as the default next time instead of only living in
+        this dialog's in-memory self.file_name_pkl."""
+        save_paths(mrid_library=self.file_name_pkl)
+
+    def _try_accept(self):
+        """Validates custom-geometry completeness before closing -- mirrors
+        DfxGeometry.add_dfx_shank's "Nothing to add" warning style
+        (trajectory_planning/dfx_geometry.py) -- since a tag left without
+        committed geometry has nothing to hand to channel_mapper.py."""
+        if self.radio_custom.isChecked():
+            depths = self.dfx_panel.get_depths_um()
+            missing = [roi for roi, d in depths.items() if d is None]
+            if missing:
+                QtWidgets.QMessageBox.warning(
+                    self, "Missing geometry",
+                    "Please run the bending model and commit geometry for "
+                    "every tag before continuing. Missing: " + ", ".join(missing))
+                return
+            self._channel_depths_um = depths
+        else:
+            self._channel_depths_um = None
+        self.accept()
 
     def get_values(self):
         """
@@ -813,8 +863,9 @@ class ChannelVariablesInput(QtWidgets.QDialog):
         fixed_coordinates = self.file_name_fixed
         pklfile = self.file_name_pkl
         chMap_file = self.file_chMap
+        channel_depths_um = getattr(self, '_channel_depths_um', None)
 
-        return pklfile, channel_separation, total_channels,moving_coordinates, fixed_coordinates,chMap_file
+        return pklfile, channel_separation, total_channels,moving_coordinates, fixed_coordinates,chMap_file,channel_depths_um
 
 
 if __name__ == "__main__":

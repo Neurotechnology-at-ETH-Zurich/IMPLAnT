@@ -281,7 +281,6 @@ class MRID_tags(QObject):
         basestructs = self.region_names
         if roi_indices is None:
             roi_indices = np.array([self.MW.Paintbrush.color_combobox.index(self.MW.Paintbrush.brush_color)])
-        print(roi_indices,flush=True)
         for roi_index in roi_indices:
             if roi_index <= self.num_regions:
                 continue
