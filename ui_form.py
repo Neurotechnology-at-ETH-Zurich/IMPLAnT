@@ -93,8 +93,6 @@ class Ui_MainWindow(object):
         self.actionStart_SAMRI_process.setObjectName(u"actionStart_SAMRI_process")
         self.actionTd = QAction(MainWindow)
         self.actionTd.setObjectName(u"actionTd")
-        self.actionTrajectory_Planning = QAction(MainWindow)
-        self.actionTrajectory_Planning.setObjectName(u"actionTrajectory_Planning")
         self.actionNew_Window = QAction(MainWindow)
         self.actionNew_Window.setObjectName(u"actionNew_Window")
         self.actionRippl_AI = QAction(MainWindow)
@@ -113,6 +111,10 @@ class Ui_MainWindow(object):
         self.actionOpen_Session_4.setObjectName(u"actionOpen_Session_4")
         self.actionLoad_Prev_Session = QAction(MainWindow)
         self.actionLoad_Prev_Session.setObjectName(u"actionLoad_Prev_Session")
+        self.actionDuring_Surgery = QAction(MainWindow)
+        self.actionDuring_Surgery.setObjectName(u"actionDuring_Surgery")
+        self.actionTrajectory_Planning_2 = QAction(MainWindow)
+        self.actionTrajectory_Planning_2.setObjectName(u"actionTrajectory_Planning_2")
         self.centralwidget = QWidget(MainWindow)
         self.centralwidget.setObjectName(u"centralwidget")
         self.gridLayout_34 = QGridLayout(self.centralwidget)
@@ -137,6 +139,7 @@ class Ui_MainWindow(object):
         self.tabWidget.setFont(font)
         self.tabWidget.setMouseTracking(False)
         self.tabWidget.setContextMenuPolicy(Qt.NoContextMenu)
+        self.tabWidget.setLayoutDirection(Qt.LeftToRight)
         self.tabWidget.setStyleSheet(u"")
         self.tabWidget.setTabBarAutoHide(False)
         self.PostSurgery = QWidget()
@@ -144,34 +147,672 @@ class Ui_MainWindow(object):
         self.gridLayout_70 = QGridLayout(self.PostSurgery)
         self.gridLayout_70.setObjectName(u"gridLayout_70")
         self.gridLayout_70.setSizeConstraint(QLayout.SetDefaultConstraint)
-        self.file_name_displayed = QTextEdit(self.PostSurgery)
-        self.file_name_displayed.setObjectName(u"file_name_displayed")
-        self.file_name_displayed.setMinimumSize(QSize(56, 10))
-        self.file_name_displayed.setMaximumSize(QSize(16777215, 70))
+        self.groupBox_data2 = QGroupBox(self.PostSurgery)
+        self.groupBox_data2.setObjectName(u"groupBox_data2")
+        self.groupBox_data2.setMinimumSize(QSize(0, 177))
+        self.gridLayout_99 = QGridLayout(self.groupBox_data2)
+        self.gridLayout_99.setObjectName(u"gridLayout_99")
+        self.groupBox_32 = QGroupBox(self.groupBox_data2)
+        self.groupBox_32.setObjectName(u"groupBox_32")
+        self.gridLayout_33 = QGridLayout(self.groupBox_32)
+        self.gridLayout_33.setObjectName(u"gridLayout_33")
+        self.spinBox_x_data2 = QSpinBox(self.groupBox_32)
+        self.spinBox_x_data2.setObjectName(u"spinBox_x_data2")
+        self.spinBox_x_data2.setMaximumSize(QSize(16777215, 30))
+        self.spinBox_x_data2.setButtonSymbols(QAbstractSpinBox.UpDownArrows)
+        self.spinBox_x_data2.setMinimum(1)
+        self.spinBox_x_data2.setMaximum(120)
+
+        self.gridLayout_33.addWidget(self.spinBox_x_data2, 1, 0, 1, 1)
+
+        self.spinBox_y_data2 = QSpinBox(self.groupBox_32)
+        self.spinBox_y_data2.setObjectName(u"spinBox_y_data2")
+        self.spinBox_y_data2.setMaximumSize(QSize(16777215, 30))
+        self.spinBox_y_data2.setButtonSymbols(QAbstractSpinBox.UpDownArrows)
+        self.spinBox_y_data2.setMinimum(1)
+        self.spinBox_y_data2.setMaximum(120)
+
+        self.gridLayout_33.addWidget(self.spinBox_y_data2, 1, 1, 1, 1)
+
+        self.spinBox_z_data2 = QSpinBox(self.groupBox_32)
+        self.spinBox_z_data2.setObjectName(u"spinBox_z_data2")
+        self.spinBox_z_data2.setMaximumSize(QSize(16777215, 30))
+        self.spinBox_z_data2.setButtonSymbols(QAbstractSpinBox.UpDownArrows)
+        self.spinBox_z_data2.setMinimum(1)
+        self.spinBox_z_data2.setMaximum(60)
+
+        self.gridLayout_33.addWidget(self.spinBox_z_data2, 1, 2, 1, 1)
+
+        self.lineEdit_98 = QLineEdit(self.groupBox_32)
+        self.lineEdit_98.setObjectName(u"lineEdit_98")
+
+        self.gridLayout_33.addWidget(self.lineEdit_98, 0, 0, 1, 1)
+
+        self.lineEdit_99 = QLineEdit(self.groupBox_32)
+        self.lineEdit_99.setObjectName(u"lineEdit_99")
+
+        self.gridLayout_33.addWidget(self.lineEdit_99, 0, 1, 1, 1)
+
+        self.lineEdit_100 = QLineEdit(self.groupBox_32)
+        self.lineEdit_100.setObjectName(u"lineEdit_100")
+
+        self.gridLayout_33.addWidget(self.lineEdit_100, 0, 2, 1, 1)
+
+
+        self.gridLayout_99.addWidget(self.groupBox_32, 1, 0, 1, 1)
+
+        self.groupBox_time20 = QGroupBox(self.groupBox_data2)
+        self.groupBox_time20.setObjectName(u"groupBox_time20")
+        sizePolicy2 = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+        sizePolicy2.setHorizontalStretch(0)
+        sizePolicy2.setVerticalStretch(0)
+        sizePolicy2.setHeightForWidth(self.groupBox_time20.sizePolicy().hasHeightForWidth())
+        self.groupBox_time20.setSizePolicy(sizePolicy2)
+        self.groupBox_time20.setMaximumSize(QSize(16777215, 16777215))
         font1 = QFont()
         font1.setPointSize(12)
-        font1.setBold(True)
-        self.file_name_displayed.setFont(font1)
-        self.file_name_displayed.setReadOnly(True)
+        font1.setBold(False)
+        self.groupBox_time20.setFont(font1)
+        self.groupBox_time20.setStyleSheet(u"")
+        self.gridLayout_97 = QGridLayout(self.groupBox_time20)
+        self.gridLayout_97.setObjectName(u"gridLayout_97")
+        self.frame_8 = QFrame(self.groupBox_time20)
+        self.frame_8.setObjectName(u"frame_8")
+        self.frame_8.setMinimumSize(QSize(0, 200))
+        self.frame_8.setStyleSheet(u"border-color: rgb(170, 170, 170);\n"
+"background-color: rgb(131, 131, 131);\n"
+"")
+        self.frame_8.setFrameShape(QFrame.NoFrame)
+        self.gridLayout_98 = QGridLayout(self.frame_8)
+        self.gridLayout_98.setSpacing(0)
+        self.gridLayout_98.setObjectName(u"gridLayout_98")
+        self.gridLayout_98.setContentsMargins(4, 4, 4, 4)
+        self.fit_to_zoom_data20 = QPushButton(self.frame_8)
+        self.fit_to_zoom_data20.setObjectName(u"fit_to_zoom_data20")
+        self.fit_to_zoom_data20.setStyleSheet(u"\n"
+"background-color: rgb(0, 153, 255);")
+        self.fit_to_zoom_data20.setAutoDefault(False)
+        self.fit_to_zoom_data20.setFlat(False)
 
-        self.gridLayout_70.addWidget(self.file_name_displayed, 0, 1, 1, 1)
+        self.gridLayout_98.addWidget(self.fit_to_zoom_data20, 1, 0, 2, 1)
 
-        self.pushButton_metadata = QPushButton(self.PostSurgery)
-        self.pushButton_metadata.setObjectName(u"pushButton_metadata")
+        self.vtkWidget_data20 = QVTKRenderWindowInteractor(self.frame_8)
+        self.vtkWidget_data20.setObjectName(u"vtkWidget_data20")
+        self.vtkWidget_data20.setStyleSheet(u"background-color: rgb(200, 177, 176);")
+
+        self.gridLayout_98.addWidget(self.vtkWidget_data20, 0, 0, 1, 9)
+
+        self.Scroll_data2 = QScrollBar(self.frame_8)
+        self.Scroll_data2.setObjectName(u"Scroll_data2")
+        self.Scroll_data2.setPageStep(10)
+
+        self.gridLayout_98.addWidget(self.Scroll_data2, 0, 9, 1, 1)
+
+        self.horizontalLayout_31 = QHBoxLayout()
+        self.horizontalLayout_31.setObjectName(u"horizontalLayout_31")
+        self.go_down_data20 = QToolButton(self.frame_8)
+        self.go_down_data20.setObjectName(u"go_down_data20")
         icon = QIcon()
-        icon.addFile(u"Icons/mri/person14.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
-        self.pushButton_metadata.setIcon(icon)
-        self.pushButton_metadata.setIconSize(QSize(32, 32))
+        icon.addFile(u"Icons/mri/downArrow.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        self.go_down_data20.setIcon(icon)
 
-        self.gridLayout_70.addWidget(self.pushButton_metadata, 0, 3, 1, 1)
+        self.horizontalLayout_31.addWidget(self.go_down_data20)
+
+        self.go_up_data20 = QToolButton(self.frame_8)
+        self.go_up_data20.setObjectName(u"go_up_data20")
+        icon1 = QIcon()
+        icon1.addFile(u"Icons/mri/upArrow.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        self.go_up_data20.setIcon(icon1)
+
+        self.horizontalLayout_31.addWidget(self.go_up_data20)
+
+        self.go_left_data20 = QToolButton(self.frame_8)
+        self.go_left_data20.setObjectName(u"go_left_data20")
+        icon2 = QIcon()
+        icon2.addFile(u"Icons/mri/leftArrow.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        self.go_left_data20.setIcon(icon2)
+
+        self.horizontalLayout_31.addWidget(self.go_left_data20)
+
+        self.go_right_data20 = QToolButton(self.frame_8)
+        self.go_right_data20.setObjectName(u"go_right_data20")
+        icon3 = QIcon()
+        icon3.addFile(u"Icons/mri/rightArrow.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        self.go_right_data20.setIcon(icon3)
+
+        self.horizontalLayout_31.addWidget(self.go_right_data20)
+
+
+        self.gridLayout_98.addLayout(self.horizontalLayout_31, 2, 8, 1, 1)
+
+        self.horizontalLayout_4 = QHBoxLayout()
+        self.horizontalLayout_4.setObjectName(u"horizontalLayout_4")
+        self.zoom_in_data20 = QToolButton(self.frame_8)
+        self.zoom_in_data20.setObjectName(u"zoom_in_data20")
+        icon4 = QIcon()
+        icon4.addFile(u"Icons/mri/plus.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        self.zoom_in_data20.setIcon(icon4)
+
+        self.horizontalLayout_4.addWidget(self.zoom_in_data20)
+
+        self.zoom_out_data20 = QToolButton(self.frame_8)
+        self.zoom_out_data20.setObjectName(u"zoom_out_data20")
+        icon5 = QIcon()
+        icon5.addFile(u"Icons/mri/minus.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        self.zoom_out_data20.setIcon(icon5)
+
+        self.horizontalLayout_4.addWidget(self.zoom_out_data20)
+
+
+        self.gridLayout_98.addLayout(self.horizontalLayout_4, 2, 7, 1, 1)
+
+
+        self.gridLayout_97.addWidget(self.frame_8, 0, 0, 1, 2)
+
+
+        self.gridLayout_99.addWidget(self.groupBox_time20, 0, 0, 1, 1)
+
+        self.tabWidget_time2 = QTabWidget(self.groupBox_data2)
+        self.tabWidget_time2.setObjectName(u"tabWidget_time2")
+        self.tabWidget_time20 = QWidget()
+        self.tabWidget_time20.setObjectName(u"tabWidget_time20")
+        self.gridLayout_116 = QGridLayout(self.tabWidget_time20)
+        self.gridLayout_116.setObjectName(u"gridLayout_116")
+        self.groupBox_57 = QGroupBox(self.tabWidget_time20)
+        self.groupBox_57.setObjectName(u"groupBox_57")
+        font2 = QFont()
+        font2.setPointSize(9)
+        font2.setBold(False)
+        self.groupBox_57.setFont(font2)
+        self.gridLayout_125 = QGridLayout(self.groupBox_57)
+        self.gridLayout_125.setObjectName(u"gridLayout_125")
+        self.changetimestamp_data20 = QSlider(self.groupBox_57)
+        self.changetimestamp_data20.setObjectName(u"changetimestamp_data20")
+        self.changetimestamp_data20.setStyleSheet(u"")
+        self.changetimestamp_data20.setMaximum(99)
+        self.changetimestamp_data20.setSingleStep(1)
+        self.changetimestamp_data20.setPageStep(1)
+        self.changetimestamp_data20.setValue(0)
+        self.changetimestamp_data20.setOrientation(Qt.Horizontal)
+
+        self.gridLayout_125.addWidget(self.changetimestamp_data20, 0, 0, 1, 1)
+
+        self.displaytimestamp_data20 = QSpinBox(self.groupBox_57)
+        self.displaytimestamp_data20.setObjectName(u"displaytimestamp_data20")
+        self.displaytimestamp_data20.setButtonSymbols(QAbstractSpinBox.UpDownArrows)
+        self.displaytimestamp_data20.setMinimum(1)
+        self.displaytimestamp_data20.setMaximum(120)
+
+        self.gridLayout_125.addWidget(self.displaytimestamp_data20, 0, 1, 1, 1)
+
+
+        self.gridLayout_116.addWidget(self.groupBox_57, 1, 0, 1, 1)
+
+        self.groupBox_58 = QGroupBox(self.tabWidget_time20)
+        self.groupBox_58.setObjectName(u"groupBox_58")
+        self.groupBox_58.setFont(font2)
+        self.gridLayout_126 = QGridLayout(self.groupBox_58)
+        self.gridLayout_126.setObjectName(u"gridLayout_126")
+        self.pushButton_reset_data20 = QPushButton(self.groupBox_58)
+        self.pushButton_reset_data20.setObjectName(u"pushButton_reset_data20")
+
+        self.gridLayout_126.addWidget(self.pushButton_reset_data20, 0, 0, 1, 1)
+
+        self.pushButton_auto_data20 = QPushButton(self.groupBox_58)
+        self.pushButton_auto_data20.setObjectName(u"pushButton_auto_data20")
+
+        self.gridLayout_126.addWidget(self.pushButton_auto_data20, 0, 1, 1, 1)
+
+
+        self.gridLayout_116.addWidget(self.groupBox_58, 1, 1, 1, 1)
+
+        self.tabWidget_time2.addTab(self.tabWidget_time20, "")
+        self.tabWidget_time21 = QWidget()
+        self.tabWidget_time21.setObjectName(u"tabWidget_time21")
+        self.gridLayout_127 = QGridLayout(self.tabWidget_time21)
+        self.gridLayout_127.setObjectName(u"gridLayout_127")
+        self.groupBox_59 = QGroupBox(self.tabWidget_time21)
+        self.groupBox_59.setObjectName(u"groupBox_59")
+        self.groupBox_59.setFont(font2)
+        self.gridLayout_128 = QGridLayout(self.groupBox_59)
+        self.gridLayout_128.setObjectName(u"gridLayout_128")
+        self.changetimestamp_data21 = QSlider(self.groupBox_59)
+        self.changetimestamp_data21.setObjectName(u"changetimestamp_data21")
+        self.changetimestamp_data21.setStyleSheet(u"")
+        self.changetimestamp_data21.setMaximum(99)
+        self.changetimestamp_data21.setSingleStep(1)
+        self.changetimestamp_data21.setPageStep(1)
+        self.changetimestamp_data21.setValue(0)
+        self.changetimestamp_data21.setOrientation(Qt.Horizontal)
+
+        self.gridLayout_128.addWidget(self.changetimestamp_data21, 0, 0, 1, 1)
+
+        self.displaytimestamp_data21 = QSpinBox(self.groupBox_59)
+        self.displaytimestamp_data21.setObjectName(u"displaytimestamp_data21")
+        self.displaytimestamp_data21.setButtonSymbols(QAbstractSpinBox.UpDownArrows)
+        self.displaytimestamp_data21.setMinimum(1)
+        self.displaytimestamp_data21.setMaximum(120)
+
+        self.gridLayout_128.addWidget(self.displaytimestamp_data21, 0, 1, 1, 1)
+
+
+        self.gridLayout_127.addWidget(self.groupBox_59, 0, 0, 1, 1)
+
+        self.groupBox_60 = QGroupBox(self.tabWidget_time21)
+        self.groupBox_60.setObjectName(u"groupBox_60")
+        self.groupBox_60.setFont(font2)
+        self.gridLayout_129 = QGridLayout(self.groupBox_60)
+        self.gridLayout_129.setObjectName(u"gridLayout_129")
+        self.pushButton_auto_data21 = QPushButton(self.groupBox_60)
+        self.pushButton_auto_data21.setObjectName(u"pushButton_auto_data21")
+
+        self.gridLayout_129.addWidget(self.pushButton_auto_data21, 0, 1, 1, 1)
+
+        self.pushButton_reset_data21 = QPushButton(self.groupBox_60)
+        self.pushButton_reset_data21.setObjectName(u"pushButton_reset_data21")
+
+        self.gridLayout_129.addWidget(self.pushButton_reset_data21, 0, 0, 1, 1)
+
+
+        self.gridLayout_127.addWidget(self.groupBox_60, 0, 1, 1, 1)
+
+        self.tabWidget_time2.addTab(self.tabWidget_time21, "")
+        self.tabWidget_time22 = QWidget()
+        self.tabWidget_time22.setObjectName(u"tabWidget_time22")
+        self.gridLayout_130 = QGridLayout(self.tabWidget_time22)
+        self.gridLayout_130.setObjectName(u"gridLayout_130")
+        self.groupBox_61 = QGroupBox(self.tabWidget_time22)
+        self.groupBox_61.setObjectName(u"groupBox_61")
+        self.groupBox_61.setFont(font2)
+        self.gridLayout_131 = QGridLayout(self.groupBox_61)
+        self.gridLayout_131.setObjectName(u"gridLayout_131")
+        self.changetimestamp_data22 = QSlider(self.groupBox_61)
+        self.changetimestamp_data22.setObjectName(u"changetimestamp_data22")
+        self.changetimestamp_data22.setStyleSheet(u"")
+        self.changetimestamp_data22.setMaximum(99)
+        self.changetimestamp_data22.setSingleStep(1)
+        self.changetimestamp_data22.setPageStep(1)
+        self.changetimestamp_data22.setValue(0)
+        self.changetimestamp_data22.setOrientation(Qt.Horizontal)
+
+        self.gridLayout_131.addWidget(self.changetimestamp_data22, 0, 0, 1, 1)
+
+        self.displaytimestamp_data22 = QSpinBox(self.groupBox_61)
+        self.displaytimestamp_data22.setObjectName(u"displaytimestamp_data22")
+        self.displaytimestamp_data22.setButtonSymbols(QAbstractSpinBox.UpDownArrows)
+        self.displaytimestamp_data22.setMinimum(1)
+        self.displaytimestamp_data22.setMaximum(120)
+
+        self.gridLayout_131.addWidget(self.displaytimestamp_data22, 0, 1, 1, 1)
+
+
+        self.gridLayout_130.addWidget(self.groupBox_61, 0, 0, 1, 1)
+
+        self.groupBox_62 = QGroupBox(self.tabWidget_time22)
+        self.groupBox_62.setObjectName(u"groupBox_62")
+        self.groupBox_62.setFont(font2)
+        self.gridLayout_132 = QGridLayout(self.groupBox_62)
+        self.gridLayout_132.setObjectName(u"gridLayout_132")
+        self.pushButton_reset_data22 = QPushButton(self.groupBox_62)
+        self.pushButton_reset_data22.setObjectName(u"pushButton_reset_data22")
+
+        self.gridLayout_132.addWidget(self.pushButton_reset_data22, 0, 0, 1, 1)
+
+        self.pushButton_auto_data22 = QPushButton(self.groupBox_62)
+        self.pushButton_auto_data22.setObjectName(u"pushButton_auto_data22")
+
+        self.gridLayout_132.addWidget(self.pushButton_auto_data22, 0, 1, 1, 1)
+
+
+        self.gridLayout_130.addWidget(self.groupBox_62, 0, 1, 1, 1)
+
+        self.tabWidget_time2.addTab(self.tabWidget_time22, "")
+
+        self.gridLayout_99.addWidget(self.tabWidget_time2, 1, 1, 1, 1)
+
+        self.heatmap_data2 = QGroupBox(self.groupBox_data2)
+        self.heatmap_data2.setObjectName(u"heatmap_data2")
+        self.heatmap_data2.setFont(font1)
+        self.gridLayout_93 = QGridLayout(self.heatmap_data2)
+        self.gridLayout_93.setObjectName(u"gridLayout_93")
+        self.frame_29 = QFrame(self.heatmap_data2)
+        self.frame_29.setObjectName(u"frame_29")
+        self.frame_29.setEnabled(True)
+        self.frame_29.setMinimumSize(QSize(0, 200))
+        self.frame_29.setStyleSheet(u"border-color: rgb(170, 170, 170);\n"
+"background-color: rgb(131, 131, 131);\n"
+"")
+        self.frame_29.setFrameShape(QFrame.NoFrame)
+        self.gridLayout_94 = QGridLayout(self.frame_29)
+        self.gridLayout_94.setSpacing(0)
+        self.gridLayout_94.setObjectName(u"gridLayout_94")
+        self.gridLayout_94.setContentsMargins(4, 4, 4, 4)
+        self.horizontalLayout_27 = QHBoxLayout()
+        self.horizontalLayout_27.setObjectName(u"horizontalLayout_27")
+        self.go_down_data23 = QToolButton(self.frame_29)
+        self.go_down_data23.setObjectName(u"go_down_data23")
+        self.go_down_data23.setEnabled(False)
+        self.go_down_data23.setIcon(icon)
+
+        self.horizontalLayout_27.addWidget(self.go_down_data23)
+
+        self.go_up_data23 = QToolButton(self.frame_29)
+        self.go_up_data23.setObjectName(u"go_up_data23")
+        self.go_up_data23.setEnabled(False)
+        self.go_up_data23.setIcon(icon1)
+
+        self.horizontalLayout_27.addWidget(self.go_up_data23)
+
+        self.go_left_data23 = QToolButton(self.frame_29)
+        self.go_left_data23.setObjectName(u"go_left_data23")
+        self.go_left_data23.setEnabled(False)
+        self.go_left_data23.setIcon(icon2)
+
+        self.horizontalLayout_27.addWidget(self.go_left_data23)
+
+        self.go_right_data23 = QToolButton(self.frame_29)
+        self.go_right_data23.setObjectName(u"go_right_data23")
+        self.go_right_data23.setEnabled(False)
+        self.go_right_data23.setIcon(icon3)
+
+        self.horizontalLayout_27.addWidget(self.go_right_data23)
+
+
+        self.gridLayout_94.addLayout(self.horizontalLayout_27, 2, 7, 1, 1)
+
+        self.vtkWidget_data23 = QVTKRenderWindowInteractor(self.frame_29)
+        self.vtkWidget_data23.setObjectName(u"vtkWidget_data23")
+        self.vtkWidget_data23.setEnabled(True)
+        self.vtkWidget_data23.setStyleSheet(u"background-color: rgb(200, 177, 176);")
+
+        self.gridLayout_94.addWidget(self.vtkWidget_data23, 0, 0, 1, 8)
+
+        self.fit_to_zoom_data23 = QPushButton(self.frame_29)
+        self.fit_to_zoom_data23.setObjectName(u"fit_to_zoom_data23")
+        self.fit_to_zoom_data23.setEnabled(False)
+        self.fit_to_zoom_data23.setStyleSheet(u"\n"
+"background-color: rgb(0, 153, 255);")
+        self.fit_to_zoom_data23.setAutoDefault(False)
+        self.fit_to_zoom_data23.setFlat(False)
+
+        self.gridLayout_94.addWidget(self.fit_to_zoom_data23, 1, 0, 2, 1)
+
+        self.horizontalLayout_28 = QHBoxLayout()
+        self.horizontalLayout_28.setObjectName(u"horizontalLayout_28")
+        self.zoom_in_data23 = QToolButton(self.frame_29)
+        self.zoom_in_data23.setObjectName(u"zoom_in_data23")
+        self.zoom_in_data23.setEnabled(False)
+        self.zoom_in_data23.setIcon(icon4)
+        self.zoom_in_data23.setIconSize(QSize(14, 16))
+
+        self.horizontalLayout_28.addWidget(self.zoom_in_data23)
+
+        self.zoom_out_data23 = QToolButton(self.frame_29)
+        self.zoom_out_data23.setObjectName(u"zoom_out_data23")
+        self.zoom_out_data23.setEnabled(False)
+        self.zoom_out_data23.setIcon(icon5)
+
+        self.horizontalLayout_28.addWidget(self.zoom_out_data23)
+
+
+        self.gridLayout_94.addLayout(self.horizontalLayout_28, 2, 6, 1, 1)
+
+
+        self.gridLayout_93.addWidget(self.frame_29, 0, 1, 1, 1)
+
+
+        self.gridLayout_99.addWidget(self.heatmap_data2, 0, 3, 1, 1)
+
+        self.groupBox_39 = QGroupBox(self.groupBox_data2)
+        self.groupBox_39.setObjectName(u"groupBox_39")
+        self.groupBox_39.setMinimumSize(QSize(400, 100))
+        self.groupBox_39.setMaximumSize(QSize(400, 180))
+        self.gridLayout_133 = QGridLayout(self.groupBox_39)
+        self.gridLayout_133.setObjectName(u"gridLayout_133")
+        self.gridLayout_133.setContentsMargins(-1, -1, 9, 9)
+        self.tableintensity_data2 = QTableWidget(self.groupBox_39)
+        if (self.tableintensity_data2.columnCount() < 4):
+            self.tableintensity_data2.setColumnCount(4)
+        __qtablewidgetitem = QTableWidgetItem()
+        self.tableintensity_data2.setHorizontalHeaderItem(0, __qtablewidgetitem)
+        __qtablewidgetitem1 = QTableWidgetItem()
+        self.tableintensity_data2.setHorizontalHeaderItem(1, __qtablewidgetitem1)
+        __qtablewidgetitem2 = QTableWidgetItem()
+        self.tableintensity_data2.setHorizontalHeaderItem(2, __qtablewidgetitem2)
+        __qtablewidgetitem3 = QTableWidgetItem()
+        self.tableintensity_data2.setHorizontalHeaderItem(3, __qtablewidgetitem3)
+        self.tableintensity_data2.setObjectName(u"tableintensity_data2")
+        sizePolicy3 = QSizePolicy(QSizePolicy.Policy.MinimumExpanding, QSizePolicy.Policy.MinimumExpanding)
+        sizePolicy3.setHorizontalStretch(0)
+        sizePolicy3.setVerticalStretch(0)
+        sizePolicy3.setHeightForWidth(self.tableintensity_data2.sizePolicy().hasHeightForWidth())
+        self.tableintensity_data2.setSizePolicy(sizePolicy3)
+        self.tableintensity_data2.setMaximumSize(QSize(16777215, 1677))
+        self.tableintensity_data2.setContextMenuPolicy(Qt.NoContextMenu)
+        self.tableintensity_data2.setSizeAdjustPolicy(QAbstractScrollArea.AdjustToContents)
+        self.tableintensity_data2.setSelectionBehavior(QAbstractItemView.SelectItems)
+        self.tableintensity_data2.horizontalHeader().setDefaultSectionSize(67)
+
+        self.gridLayout_133.addWidget(self.tableintensity_data2, 1, 0, 1, 1)
+
+
+        self.gridLayout_99.addWidget(self.groupBox_39, 1, 2, 1, 1)
+
+        self.groupBox_time21 = QGroupBox(self.groupBox_data2)
+        self.groupBox_time21.setObjectName(u"groupBox_time21")
+        sizePolicy2.setHeightForWidth(self.groupBox_time21.sizePolicy().hasHeightForWidth())
+        self.groupBox_time21.setSizePolicy(sizePolicy2)
+        self.groupBox_time21.setFont(font1)
+        self.gridLayout_91 = QGridLayout(self.groupBox_time21)
+        self.gridLayout_91.setObjectName(u"gridLayout_91")
+        self.frame_19 = QFrame(self.groupBox_time21)
+        self.frame_19.setObjectName(u"frame_19")
+        self.frame_19.setMinimumSize(QSize(0, 200))
+        self.frame_19.setStyleSheet(u"border-color: rgb(170, 170, 170);\n"
+"background-color: rgb(131, 131, 131);\n"
+"")
+        self.frame_19.setFrameShape(QFrame.NoFrame)
+        self.gridLayout_92 = QGridLayout(self.frame_19)
+        self.gridLayout_92.setSpacing(0)
+        self.gridLayout_92.setObjectName(u"gridLayout_92")
+        self.gridLayout_92.setContentsMargins(4, 4, 4, 4)
+        self.fit_to_zoom_data21 = QPushButton(self.frame_19)
+        self.fit_to_zoom_data21.setObjectName(u"fit_to_zoom_data21")
+        self.fit_to_zoom_data21.setStyleSheet(u"\n"
+"background-color: rgb(0, 153, 255);")
+        self.fit_to_zoom_data21.setAutoDefault(False)
+        self.fit_to_zoom_data21.setFlat(False)
+
+        self.gridLayout_92.addWidget(self.fit_to_zoom_data21, 1, 0, 2, 1)
+
+        self.vtkWidget_data21 = QVTKRenderWindowInteractor(self.frame_19)
+        self.vtkWidget_data21.setObjectName(u"vtkWidget_data21")
+        self.vtkWidget_data21.setStyleSheet(u"background-color: rgb(200, 177, 176);")
+
+        self.gridLayout_92.addWidget(self.vtkWidget_data21, 0, 0, 1, 11)
+
+        self.horizontalLayout_25 = QHBoxLayout()
+        self.horizontalLayout_25.setObjectName(u"horizontalLayout_25")
+        self.go_down_data21 = QToolButton(self.frame_19)
+        self.go_down_data21.setObjectName(u"go_down_data21")
+        self.go_down_data21.setIcon(icon)
+
+        self.horizontalLayout_25.addWidget(self.go_down_data21)
+
+        self.go_up_data21 = QToolButton(self.frame_19)
+        self.go_up_data21.setObjectName(u"go_up_data21")
+        self.go_up_data21.setIcon(icon1)
+
+        self.horizontalLayout_25.addWidget(self.go_up_data21)
+
+        self.go_left_data21 = QToolButton(self.frame_19)
+        self.go_left_data21.setObjectName(u"go_left_data21")
+        self.go_left_data21.setIcon(icon2)
+
+        self.horizontalLayout_25.addWidget(self.go_left_data21)
+
+        self.go_right_data21 = QToolButton(self.frame_19)
+        self.go_right_data21.setObjectName(u"go_right_data21")
+        self.go_right_data21.setIcon(icon3)
+
+        self.horizontalLayout_25.addWidget(self.go_right_data21)
+
+
+        self.gridLayout_92.addLayout(self.horizontalLayout_25, 1, 10, 1, 1)
+
+        self.horizontalLayout_26 = QHBoxLayout()
+        self.horizontalLayout_26.setObjectName(u"horizontalLayout_26")
+        self.zoom_in_data21 = QToolButton(self.frame_19)
+        self.zoom_in_data21.setObjectName(u"zoom_in_data21")
+        self.zoom_in_data21.setIcon(icon4)
+
+        self.horizontalLayout_26.addWidget(self.zoom_in_data21)
+
+        self.zoom_out_data21 = QToolButton(self.frame_19)
+        self.zoom_out_data21.setObjectName(u"zoom_out_data21")
+        self.zoom_out_data21.setIcon(icon5)
+
+        self.horizontalLayout_26.addWidget(self.zoom_out_data21)
+
+
+        self.gridLayout_92.addLayout(self.horizontalLayout_26, 1, 9, 1, 1)
+
+
+        self.gridLayout_91.addWidget(self.frame_19, 0, 1, 1, 2)
+
+
+        self.gridLayout_99.addWidget(self.groupBox_time21, 0, 1, 1, 1)
+
+        self.groupBox_time22 = QGroupBox(self.groupBox_data2)
+        self.groupBox_time22.setObjectName(u"groupBox_time22")
+        sizePolicy2.setHeightForWidth(self.groupBox_time22.sizePolicy().hasHeightForWidth())
+        self.groupBox_time22.setSizePolicy(sizePolicy2)
+        self.groupBox_time22.setFont(font1)
+        self.gridLayout_95 = QGridLayout(self.groupBox_time22)
+        self.gridLayout_95.setObjectName(u"gridLayout_95")
+        self.frame_25 = QFrame(self.groupBox_time22)
+        self.frame_25.setObjectName(u"frame_25")
+        self.frame_25.setMinimumSize(QSize(0, 200))
+        self.frame_25.setStyleSheet(u"border-color: rgb(170, 170, 170);\n"
+"background-color: rgb(131, 131, 131);\n"
+"")
+        self.frame_25.setFrameShape(QFrame.NoFrame)
+        self.gridLayout_96 = QGridLayout(self.frame_25)
+        self.gridLayout_96.setSpacing(0)
+        self.gridLayout_96.setObjectName(u"gridLayout_96")
+        self.gridLayout_96.setContentsMargins(4, 4, 4, 4)
+        self.fit_to_zoom_data22 = QPushButton(self.frame_25)
+        self.fit_to_zoom_data22.setObjectName(u"fit_to_zoom_data22")
+        self.fit_to_zoom_data22.setStyleSheet(u"\n"
+"background-color: rgb(0, 153, 255);")
+        self.fit_to_zoom_data22.setAutoDefault(False)
+        self.fit_to_zoom_data22.setFlat(False)
+
+        self.gridLayout_96.addWidget(self.fit_to_zoom_data22, 1, 0, 2, 1)
+
+        self.vtkWidget_data22 = QVTKRenderWindowInteractor(self.frame_25)
+        self.vtkWidget_data22.setObjectName(u"vtkWidget_data22")
+        self.vtkWidget_data22.setStyleSheet(u"background-color: rgb(200, 177, 176);")
+
+        self.gridLayout_96.addWidget(self.vtkWidget_data22, 0, 0, 1, 8)
+
+        self.horizontalLayout_29 = QHBoxLayout()
+        self.horizontalLayout_29.setObjectName(u"horizontalLayout_29")
+        self.go_down_data22 = QToolButton(self.frame_25)
+        self.go_down_data22.setObjectName(u"go_down_data22")
+        self.go_down_data22.setIcon(icon)
+
+        self.horizontalLayout_29.addWidget(self.go_down_data22)
+
+        self.go_up_data22 = QToolButton(self.frame_25)
+        self.go_up_data22.setObjectName(u"go_up_data22")
+        self.go_up_data22.setIcon(icon1)
+
+        self.horizontalLayout_29.addWidget(self.go_up_data22)
+
+        self.go_left_data22 = QToolButton(self.frame_25)
+        self.go_left_data22.setObjectName(u"go_left_data22")
+        self.go_left_data22.setIcon(icon2)
+
+        self.horizontalLayout_29.addWidget(self.go_left_data22)
+
+        self.go_right_data22 = QToolButton(self.frame_25)
+        self.go_right_data22.setObjectName(u"go_right_data22")
+        self.go_right_data22.setIcon(icon3)
+
+        self.horizontalLayout_29.addWidget(self.go_right_data22)
+
+
+        self.gridLayout_96.addLayout(self.horizontalLayout_29, 2, 7, 1, 1)
+
+        self.horizontalLayout_30 = QHBoxLayout()
+        self.horizontalLayout_30.setObjectName(u"horizontalLayout_30")
+        self.zoom_in_data22 = QToolButton(self.frame_25)
+        self.zoom_in_data22.setObjectName(u"zoom_in_data22")
+        self.zoom_in_data22.setIcon(icon4)
+        self.zoom_in_data22.setIconSize(QSize(14, 16))
+
+        self.horizontalLayout_30.addWidget(self.zoom_in_data22)
+
+        self.zoom_out_data22 = QToolButton(self.frame_25)
+        self.zoom_out_data22.setObjectName(u"zoom_out_data22")
+        self.zoom_out_data22.setIcon(icon5)
+
+        self.horizontalLayout_30.addWidget(self.zoom_out_data22)
+
+
+        self.gridLayout_96.addLayout(self.horizontalLayout_30, 2, 6, 1, 1)
+
+
+        self.gridLayout_95.addWidget(self.frame_25, 0, 0, 1, 2)
+
+
+        self.gridLayout_99.addWidget(self.groupBox_time22, 0, 2, 1, 1)
+
+        self.groupbox_legend2 = QGroupBox(self.groupBox_data2)
+        self.groupbox_legend2.setObjectName(u"groupbox_legend2")
+        self.groupbox_legend2.setMaximumSize(QSize(16777215, 120))
+        self.gridLayout_134 = QGridLayout(self.groupbox_legend2)
+        self.gridLayout_134.setObjectName(u"gridLayout_134")
+        self.frame_31 = QFrame(self.groupbox_legend2)
+        self.frame_31.setObjectName(u"frame_31")
+        self.frame_31.setEnabled(True)
+        self.frame_31.setStyleSheet(u"border-color: rgb(170, 170, 170);\n"
+"background-color: rgb(131, 131, 131);\n"
+"")
+        self.frame_31.setFrameShape(QFrame.NoFrame)
+        self.gridLayout_135 = QGridLayout(self.frame_31)
+        self.gridLayout_135.setSpacing(0)
+        self.gridLayout_135.setObjectName(u"gridLayout_135")
+        self.gridLayout_135.setContentsMargins(4, 4, 4, 4)
+        self.vtkWidget_legend2 = QVTKRenderWindowInteractor(self.frame_31)
+        self.vtkWidget_legend2.setObjectName(u"vtkWidget_legend2")
+        self.vtkWidget_legend2.setEnabled(True)
+        self.vtkWidget_legend2.setMinimumSize(QSize(0, 30))
+        self.vtkWidget_legend2.setMaximumSize(QSize(16777215, 167))
+        self.vtkWidget_legend2.setStyleSheet(u"background-color: rgb(200, 177, 176);")
+
+        self.gridLayout_135.addWidget(self.vtkWidget_legend2, 0, 0, 1, 1)
+
+
+        self.gridLayout_134.addWidget(self.frame_31, 0, 0, 1, 1)
+
+
+        self.gridLayout_99.addWidget(self.groupbox_legend2, 1, 3, 1, 1)
+
+        self.gridLayout_99.setColumnStretch(0, 1)
+        self.gridLayout_99.setColumnStretch(1, 1)
+        self.gridLayout_99.setColumnStretch(2, 1)
+
+        self.gridLayout_70.addWidget(self.groupBox_data2, 3, 1, 1, 4)
 
         self.groupBox_data0 = QGroupBox(self.PostSurgery)
         self.groupBox_data0.setObjectName(u"groupBox_data0")
-        sizePolicy2 = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
-        sizePolicy2.setHorizontalStretch(0)
-        sizePolicy2.setVerticalStretch(0)
-        sizePolicy2.setHeightForWidth(self.groupBox_data0.sizePolicy().hasHeightForWidth())
-        self.groupBox_data0.setSizePolicy(sizePolicy2)
+        sizePolicy4 = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        sizePolicy4.setHorizontalStretch(0)
+        sizePolicy4.setVerticalStretch(0)
+        sizePolicy4.setHeightForWidth(self.groupBox_data0.sizePolicy().hasHeightForWidth())
+        self.groupBox_data0.setSizePolicy(sizePolicy4)
         self.groupBox_data0.setMinimumSize(QSize(900, 289))
         self.groupBox_data0.setMaximumSize(QSize(16777215, 16777215))
         self.gridLayout_7 = QGridLayout(self.groupBox_data0)
@@ -179,8 +820,8 @@ class Ui_MainWindow(object):
         self.gridLayout_7.setContentsMargins(9, 9, -1, -1)
         self.data_4d_3d = QStackedWidget(self.groupBox_data0)
         self.data_4d_3d.setObjectName(u"data_4d_3d")
-        sizePolicy2.setHeightForWidth(self.data_4d_3d.sizePolicy().hasHeightForWidth())
-        self.data_4d_3d.setSizePolicy(sizePolicy2)
+        sizePolicy4.setHeightForWidth(self.data_4d_3d.sizePolicy().hasHeightForWidth())
+        self.data_4d_3d.setSizePolicy(sizePolicy4)
         self.data_4d_3d.setFrameShape(QFrame.NoFrame)
         self.page_4Ddata0 = QWidget()
         self.page_4Ddata0.setObjectName(u"page_4Ddata0")
@@ -199,9 +840,6 @@ class Ui_MainWindow(object):
         self.gridLayout_72.setObjectName(u"gridLayout_72")
         self.groupBox_46 = QGroupBox(self.tabWidget_time00)
         self.groupBox_46.setObjectName(u"groupBox_46")
-        font2 = QFont()
-        font2.setPointSize(9)
-        font2.setBold(False)
         self.groupBox_46.setFont(font2)
         self.gridLayout_57 = QGridLayout(self.groupBox_46)
         self.gridLayout_57.setObjectName(u"gridLayout_57")
@@ -352,10 +990,7 @@ class Ui_MainWindow(object):
         self.heatmap_data0 = QGroupBox(self.page_4Ddata0)
         self.heatmap_data0.setObjectName(u"heatmap_data0")
         self.heatmap_data0.setMaximumSize(QSize(16777215, 1000))
-        font3 = QFont()
-        font3.setPointSize(12)
-        font3.setBold(False)
-        self.heatmap_data0.setFont(font3)
+        self.heatmap_data0.setFont(font1)
         self.gridLayout_49 = QGridLayout(self.heatmap_data0)
         self.gridLayout_49.setObjectName(u"gridLayout_49")
         self.frame_26 = QFrame(self.heatmap_data0)
@@ -385,14 +1020,11 @@ class Ui_MainWindow(object):
 
         self.groupBox_time00 = QGroupBox(self.page_4Ddata0)
         self.groupBox_time00.setObjectName(u"groupBox_time00")
-        sizePolicy3 = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
-        sizePolicy3.setHorizontalStretch(0)
-        sizePolicy3.setVerticalStretch(0)
-        sizePolicy3.setHeightForWidth(self.groupBox_time00.sizePolicy().hasHeightForWidth())
-        self.groupBox_time00.setSizePolicy(sizePolicy3)
+        sizePolicy2.setHeightForWidth(self.groupBox_time00.sizePolicy().hasHeightForWidth())
+        self.groupBox_time00.setSizePolicy(sizePolicy2)
         self.groupBox_time00.setMinimumSize(QSize(20, 100))
         self.groupBox_time00.setMaximumSize(QSize(16777215, 1000))
-        self.groupBox_time00.setFont(font3)
+        self.groupBox_time00.setFont(font1)
         self.groupBox_time00.setStyleSheet(u"")
         self.gridLayout_53 = QGridLayout(self.groupBox_time00)
         self.gridLayout_53.setObjectName(u"gridLayout_53")
@@ -432,33 +1064,25 @@ class Ui_MainWindow(object):
         self.horizontalLayout_9.setObjectName(u"horizontalLayout_9")
         self.go_down_data00 = QToolButton(self.frame_3)
         self.go_down_data00.setObjectName(u"go_down_data00")
-        icon1 = QIcon()
-        icon1.addFile(u"Icons/mri/downArrow.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
-        self.go_down_data00.setIcon(icon1)
+        self.go_down_data00.setIcon(icon)
 
         self.horizontalLayout_9.addWidget(self.go_down_data00)
 
         self.go_up_data00 = QToolButton(self.frame_3)
         self.go_up_data00.setObjectName(u"go_up_data00")
-        icon2 = QIcon()
-        icon2.addFile(u"Icons/mri/upArrow.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
-        self.go_up_data00.setIcon(icon2)
+        self.go_up_data00.setIcon(icon1)
 
         self.horizontalLayout_9.addWidget(self.go_up_data00)
 
         self.go_left_data00 = QToolButton(self.frame_3)
         self.go_left_data00.setObjectName(u"go_left_data00")
-        icon3 = QIcon()
-        icon3.addFile(u"Icons/mri/leftArrow.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
-        self.go_left_data00.setIcon(icon3)
+        self.go_left_data00.setIcon(icon2)
 
         self.horizontalLayout_9.addWidget(self.go_left_data00)
 
         self.go_right_data00 = QToolButton(self.frame_3)
         self.go_right_data00.setObjectName(u"go_right_data00")
-        icon4 = QIcon()
-        icon4.addFile(u"Icons/mri/rightArrow.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
-        self.go_right_data00.setIcon(icon4)
+        self.go_right_data00.setIcon(icon3)
 
         self.horizontalLayout_9.addWidget(self.go_right_data00)
 
@@ -469,17 +1093,13 @@ class Ui_MainWindow(object):
         self.horizontalLayout_2.setObjectName(u"horizontalLayout_2")
         self.zoom_in_data00 = QToolButton(self.frame_3)
         self.zoom_in_data00.setObjectName(u"zoom_in_data00")
-        icon5 = QIcon()
-        icon5.addFile(u"Icons/mri/plus.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
-        self.zoom_in_data00.setIcon(icon5)
+        self.zoom_in_data00.setIcon(icon4)
 
         self.horizontalLayout_2.addWidget(self.zoom_in_data00)
 
         self.zoom_out_data00 = QToolButton(self.frame_3)
         self.zoom_out_data00.setObjectName(u"zoom_out_data00")
-        icon6 = QIcon()
-        icon6.addFile(u"Icons/mri/minus.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
-        self.zoom_out_data00.setIcon(icon6)
+        self.zoom_out_data00.setIcon(icon5)
 
         self.horizontalLayout_2.addWidget(self.zoom_out_data00)
 
@@ -497,11 +1117,11 @@ class Ui_MainWindow(object):
 
         self.groupBox_time01 = QGroupBox(self.page_4Ddata0)
         self.groupBox_time01.setObjectName(u"groupBox_time01")
-        sizePolicy3.setHeightForWidth(self.groupBox_time01.sizePolicy().hasHeightForWidth())
-        self.groupBox_time01.setSizePolicy(sizePolicy3)
+        sizePolicy2.setHeightForWidth(self.groupBox_time01.sizePolicy().hasHeightForWidth())
+        self.groupBox_time01.setSizePolicy(sizePolicy2)
         self.groupBox_time01.setMinimumSize(QSize(20, 0))
         self.groupBox_time01.setMaximumSize(QSize(16777215, 1000))
-        self.groupBox_time01.setFont(font3)
+        self.groupBox_time01.setFont(font1)
         self.gridLayout_54 = QGridLayout(self.groupBox_time01)
         self.gridLayout_54.setObjectName(u"gridLayout_54")
         self.frame_17 = QFrame(self.groupBox_time01)
@@ -519,13 +1139,13 @@ class Ui_MainWindow(object):
         self.horizontalLayout_14.setObjectName(u"horizontalLayout_14")
         self.zoom_in_data01 = QToolButton(self.frame_17)
         self.zoom_in_data01.setObjectName(u"zoom_in_data01")
-        self.zoom_in_data01.setIcon(icon5)
+        self.zoom_in_data01.setIcon(icon4)
 
         self.horizontalLayout_14.addWidget(self.zoom_in_data01)
 
         self.zoom_out_data01 = QToolButton(self.frame_17)
         self.zoom_out_data01.setObjectName(u"zoom_out_data01")
-        self.zoom_out_data01.setIcon(icon6)
+        self.zoom_out_data01.setIcon(icon5)
 
         self.horizontalLayout_14.addWidget(self.zoom_out_data01)
 
@@ -545,25 +1165,25 @@ class Ui_MainWindow(object):
         self.horizontalLayout_15.setObjectName(u"horizontalLayout_15")
         self.go_down_data01 = QToolButton(self.frame_17)
         self.go_down_data01.setObjectName(u"go_down_data01")
-        self.go_down_data01.setIcon(icon1)
+        self.go_down_data01.setIcon(icon)
 
         self.horizontalLayout_15.addWidget(self.go_down_data01)
 
         self.go_up_data01 = QToolButton(self.frame_17)
         self.go_up_data01.setObjectName(u"go_up_data01")
-        self.go_up_data01.setIcon(icon2)
+        self.go_up_data01.setIcon(icon1)
 
         self.horizontalLayout_15.addWidget(self.go_up_data01)
 
         self.go_left_data01 = QToolButton(self.frame_17)
         self.go_left_data01.setObjectName(u"go_left_data01")
-        self.go_left_data01.setIcon(icon3)
+        self.go_left_data01.setIcon(icon2)
 
         self.horizontalLayout_15.addWidget(self.go_left_data01)
 
         self.go_right_data01 = QToolButton(self.frame_17)
         self.go_right_data01.setObjectName(u"go_right_data01")
-        self.go_right_data01.setIcon(icon4)
+        self.go_right_data01.setIcon(icon3)
 
         self.horizontalLayout_15.addWidget(self.go_right_data01)
 
@@ -619,11 +1239,11 @@ class Ui_MainWindow(object):
 
         self.groupBox_time02 = QGroupBox(self.page_4Ddata0)
         self.groupBox_time02.setObjectName(u"groupBox_time02")
-        sizePolicy3.setHeightForWidth(self.groupBox_time02.sizePolicy().hasHeightForWidth())
-        self.groupBox_time02.setSizePolicy(sizePolicy3)
+        sizePolicy2.setHeightForWidth(self.groupBox_time02.sizePolicy().hasHeightForWidth())
+        self.groupBox_time02.setSizePolicy(sizePolicy2)
         self.groupBox_time02.setMinimumSize(QSize(20, 0))
         self.groupBox_time02.setMaximumSize(QSize(16777215, 1000))
-        self.groupBox_time02.setFont(font3)
+        self.groupBox_time02.setFont(font1)
         self.gridLayout_55 = QGridLayout(self.groupBox_time02)
         self.gridLayout_55.setObjectName(u"gridLayout_55")
         self.frame_23 = QFrame(self.groupBox_time02)
@@ -641,25 +1261,25 @@ class Ui_MainWindow(object):
         self.horizontalLayout_13.setObjectName(u"horizontalLayout_13")
         self.go_down_data02 = QToolButton(self.frame_23)
         self.go_down_data02.setObjectName(u"go_down_data02")
-        self.go_down_data02.setIcon(icon1)
+        self.go_down_data02.setIcon(icon)
 
         self.horizontalLayout_13.addWidget(self.go_down_data02)
 
         self.go_up_data02 = QToolButton(self.frame_23)
         self.go_up_data02.setObjectName(u"go_up_data02")
-        self.go_up_data02.setIcon(icon2)
+        self.go_up_data02.setIcon(icon1)
 
         self.horizontalLayout_13.addWidget(self.go_up_data02)
 
         self.go_left_data02 = QToolButton(self.frame_23)
         self.go_left_data02.setObjectName(u"go_left_data02")
-        self.go_left_data02.setIcon(icon3)
+        self.go_left_data02.setIcon(icon2)
 
         self.horizontalLayout_13.addWidget(self.go_left_data02)
 
         self.go_right_data02 = QToolButton(self.frame_23)
         self.go_right_data02.setObjectName(u"go_right_data02")
-        self.go_right_data02.setIcon(icon4)
+        self.go_right_data02.setIcon(icon3)
 
         self.horizontalLayout_13.addWidget(self.go_right_data02)
 
@@ -670,14 +1290,14 @@ class Ui_MainWindow(object):
         self.horizontalLayout_10.setObjectName(u"horizontalLayout_10")
         self.zoom_in_data02 = QToolButton(self.frame_23)
         self.zoom_in_data02.setObjectName(u"zoom_in_data02")
-        self.zoom_in_data02.setIcon(icon5)
+        self.zoom_in_data02.setIcon(icon4)
         self.zoom_in_data02.setIconSize(QSize(14, 16))
 
         self.horizontalLayout_10.addWidget(self.zoom_in_data02)
 
         self.zoom_out_data02 = QToolButton(self.frame_23)
         self.zoom_out_data02.setObjectName(u"zoom_out_data02")
-        self.zoom_out_data02.setIcon(icon6)
+        self.zoom_out_data02.setIcon(icon5)
 
         self.horizontalLayout_10.addWidget(self.zoom_out_data02)
 
@@ -715,20 +1335,17 @@ class Ui_MainWindow(object):
         self.tableintensity_data0 = QTableWidget(self.groupBox_25)
         if (self.tableintensity_data0.columnCount() < 4):
             self.tableintensity_data0.setColumnCount(4)
-        __qtablewidgetitem = QTableWidgetItem()
-        self.tableintensity_data0.setHorizontalHeaderItem(0, __qtablewidgetitem)
-        __qtablewidgetitem1 = QTableWidgetItem()
-        self.tableintensity_data0.setHorizontalHeaderItem(1, __qtablewidgetitem1)
-        __qtablewidgetitem2 = QTableWidgetItem()
-        self.tableintensity_data0.setHorizontalHeaderItem(2, __qtablewidgetitem2)
-        __qtablewidgetitem3 = QTableWidgetItem()
-        self.tableintensity_data0.setHorizontalHeaderItem(3, __qtablewidgetitem3)
+        __qtablewidgetitem4 = QTableWidgetItem()
+        self.tableintensity_data0.setHorizontalHeaderItem(0, __qtablewidgetitem4)
+        __qtablewidgetitem5 = QTableWidgetItem()
+        self.tableintensity_data0.setHorizontalHeaderItem(1, __qtablewidgetitem5)
+        __qtablewidgetitem6 = QTableWidgetItem()
+        self.tableintensity_data0.setHorizontalHeaderItem(2, __qtablewidgetitem6)
+        __qtablewidgetitem7 = QTableWidgetItem()
+        self.tableintensity_data0.setHorizontalHeaderItem(3, __qtablewidgetitem7)
         self.tableintensity_data0.setObjectName(u"tableintensity_data0")
-        sizePolicy4 = QSizePolicy(QSizePolicy.Policy.MinimumExpanding, QSizePolicy.Policy.MinimumExpanding)
-        sizePolicy4.setHorizontalStretch(0)
-        sizePolicy4.setVerticalStretch(0)
-        sizePolicy4.setHeightForWidth(self.tableintensity_data0.sizePolicy().hasHeightForWidth())
-        self.tableintensity_data0.setSizePolicy(sizePolicy4)
+        sizePolicy3.setHeightForWidth(self.tableintensity_data0.sizePolicy().hasHeightForWidth())
+        self.tableintensity_data0.setSizePolicy(sizePolicy3)
         self.tableintensity_data0.setMaximumSize(QSize(16777215, 1677))
         self.tableintensity_data0.setContextMenuPolicy(Qt.NoContextMenu)
         self.tableintensity_data0.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
@@ -857,11 +1474,19 @@ class Ui_MainWindow(object):
         self.groupBox_12.setObjectName(u"groupBox_12")
         self.gridLayout_136 = QGridLayout(self.groupBox_12)
         self.gridLayout_136.setObjectName(u"gridLayout_136")
+        self.spinBox_atlas_bregma_x = QSpinBox(self.groupBox_12)
+        self.spinBox_atlas_bregma_x.setObjectName(u"spinBox_atlas_bregma_x")
+        self.spinBox_atlas_bregma_x.setReadOnly(True)
+        self.spinBox_atlas_bregma_x.setButtonSymbols(QAbstractSpinBox.NoButtons)
+        self.spinBox_atlas_bregma_x.setMaximum(1000)
+
+        self.gridLayout_136.addWidget(self.spinBox_atlas_bregma_x, 5, 1, 1, 1)
+
         self.lineEdit_29 = QLineEdit(self.groupBox_12)
         self.lineEdit_29.setObjectName(u"lineEdit_29")
         self.lineEdit_29.setReadOnly(True)
 
-        self.gridLayout_136.addWidget(self.lineEdit_29, 3, 1, 1, 3)
+        self.gridLayout_136.addWidget(self.lineEdit_29, 4, 1, 1, 3)
 
         self.textEdit_4 = QTextEdit(self.groupBox_12)
         self.textEdit_4.setObjectName(u"textEdit_4")
@@ -873,60 +1498,7 @@ class Ui_MainWindow(object):
         self.textEdit_4.setMaximumSize(QSize(16777215, 50))
         self.textEdit_4.setReadOnly(True)
 
-        self.gridLayout_136.addWidget(self.textEdit_4, 5, 1, 1, 3)
-
-        self.doubleSpinBox_d_bregmaz = QDoubleSpinBox(self.groupBox_12)
-        self.doubleSpinBox_d_bregmaz.setObjectName(u"doubleSpinBox_d_bregmaz")
-        self.doubleSpinBox_d_bregmaz.setReadOnly(True)
-        self.doubleSpinBox_d_bregmaz.setButtonSymbols(QAbstractSpinBox.NoButtons)
-        self.doubleSpinBox_d_bregmaz.setMaximum(1500.000000000000000)
-
-        self.gridLayout_136.addWidget(self.doubleSpinBox_d_bregmaz, 7, 3, 1, 1)
-
-        self.spinBox_tp_bregma_y = QSpinBox(self.groupBox_12)
-        self.spinBox_tp_bregma_y.setObjectName(u"spinBox_tp_bregma_y")
-
-        self.gridLayout_136.addWidget(self.spinBox_tp_bregma_y, 2, 2, 1, 1)
-
-        self.spinBox_tp_bregma_x = QSpinBox(self.groupBox_12)
-        self.spinBox_tp_bregma_x.setObjectName(u"spinBox_tp_bregma_x")
-
-        self.gridLayout_136.addWidget(self.spinBox_tp_bregma_x, 2, 1, 1, 1)
-
-        self.spinBox_atlas_bregma_y = QSpinBox(self.groupBox_12)
-        self.spinBox_atlas_bregma_y.setObjectName(u"spinBox_atlas_bregma_y")
-        self.spinBox_atlas_bregma_y.setReadOnly(True)
-        self.spinBox_atlas_bregma_y.setButtonSymbols(QAbstractSpinBox.NoButtons)
-        self.spinBox_atlas_bregma_y.setMaximum(1000)
-
-        self.gridLayout_136.addWidget(self.spinBox_atlas_bregma_y, 4, 2, 1, 1)
-
-        self.doubleSpinBox_d_bregmax = QDoubleSpinBox(self.groupBox_12)
-        self.doubleSpinBox_d_bregmax.setObjectName(u"doubleSpinBox_d_bregmax")
-        self.doubleSpinBox_d_bregmax.setReadOnly(True)
-        self.doubleSpinBox_d_bregmax.setButtonSymbols(QAbstractSpinBox.NoButtons)
-        self.doubleSpinBox_d_bregmax.setMaximum(1500.000000000000000)
-
-        self.gridLayout_136.addWidget(self.doubleSpinBox_d_bregmax, 7, 1, 1, 1)
-
-        self.lineEdit_24 = QLineEdit(self.groupBox_12)
-        self.lineEdit_24.setObjectName(u"lineEdit_24")
-        self.lineEdit_24.setReadOnly(True)
-
-        self.gridLayout_136.addWidget(self.lineEdit_24, 1, 1, 1, 3)
-
-        self.spinBox_atlas_bregma_z = QSpinBox(self.groupBox_12)
-        self.spinBox_atlas_bregma_z.setObjectName(u"spinBox_atlas_bregma_z")
-        self.spinBox_atlas_bregma_z.setReadOnly(True)
-        self.spinBox_atlas_bregma_z.setButtonSymbols(QAbstractSpinBox.NoButtons)
-        self.spinBox_atlas_bregma_z.setMaximum(1000)
-
-        self.gridLayout_136.addWidget(self.spinBox_atlas_bregma_z, 4, 3, 1, 1)
-
-        self.spinBox_tp_bregma_z = QSpinBox(self.groupBox_12)
-        self.spinBox_tp_bregma_z.setObjectName(u"spinBox_tp_bregma_z")
-
-        self.gridLayout_136.addWidget(self.spinBox_tp_bregma_z, 2, 3, 1, 1)
+        self.gridLayout_136.addWidget(self.textEdit_4, 6, 1, 1, 3)
 
         self.pushButton_tp_bregma = QPushButton(self.groupBox_12)
         self.pushButton_tp_bregma.setObjectName(u"pushButton_tp_bregma")
@@ -937,13 +1509,58 @@ class Ui_MainWindow(object):
 
         self.gridLayout_136.addWidget(self.pushButton_tp_bregma, 0, 1, 1, 3)
 
-        self.spinBox_atlas_bregma_x = QSpinBox(self.groupBox_12)
-        self.spinBox_atlas_bregma_x.setObjectName(u"spinBox_atlas_bregma_x")
-        self.spinBox_atlas_bregma_x.setReadOnly(True)
-        self.spinBox_atlas_bregma_x.setButtonSymbols(QAbstractSpinBox.NoButtons)
-        self.spinBox_atlas_bregma_x.setMaximum(1000)
+        self.spinBox_tp_bregma_x = QSpinBox(self.groupBox_12)
+        self.spinBox_tp_bregma_x.setObjectName(u"spinBox_tp_bregma_x")
 
-        self.gridLayout_136.addWidget(self.spinBox_atlas_bregma_x, 4, 1, 1, 1)
+        self.gridLayout_136.addWidget(self.spinBox_tp_bregma_x, 3, 1, 1, 1)
+
+        self.doubleSpinBox_d_bregmax = QDoubleSpinBox(self.groupBox_12)
+        self.doubleSpinBox_d_bregmax.setObjectName(u"doubleSpinBox_d_bregmax")
+        self.doubleSpinBox_d_bregmax.setReadOnly(True)
+        self.doubleSpinBox_d_bregmax.setButtonSymbols(QAbstractSpinBox.NoButtons)
+        self.doubleSpinBox_d_bregmax.setMaximum(1500.000000000000000)
+
+        self.gridLayout_136.addWidget(self.doubleSpinBox_d_bregmax, 8, 1, 1, 1)
+
+        self.doubleSpinBox_d_bregmaz = QDoubleSpinBox(self.groupBox_12)
+        self.doubleSpinBox_d_bregmaz.setObjectName(u"doubleSpinBox_d_bregmaz")
+        self.doubleSpinBox_d_bregmaz.setReadOnly(True)
+        self.doubleSpinBox_d_bregmaz.setButtonSymbols(QAbstractSpinBox.NoButtons)
+        self.doubleSpinBox_d_bregmaz.setMaximum(1500.000000000000000)
+
+        self.gridLayout_136.addWidget(self.doubleSpinBox_d_bregmaz, 8, 3, 1, 1)
+
+        self.spinBox_tp_bregma_z = QSpinBox(self.groupBox_12)
+        self.spinBox_tp_bregma_z.setObjectName(u"spinBox_tp_bregma_z")
+
+        self.gridLayout_136.addWidget(self.spinBox_tp_bregma_z, 3, 3, 1, 1)
+
+        self.spinBox_tp_bregma_y = QSpinBox(self.groupBox_12)
+        self.spinBox_tp_bregma_y.setObjectName(u"spinBox_tp_bregma_y")
+
+        self.gridLayout_136.addWidget(self.spinBox_tp_bregma_y, 3, 2, 1, 1)
+
+        self.spinBox_atlas_bregma_z = QSpinBox(self.groupBox_12)
+        self.spinBox_atlas_bregma_z.setObjectName(u"spinBox_atlas_bregma_z")
+        self.spinBox_atlas_bregma_z.setReadOnly(True)
+        self.spinBox_atlas_bregma_z.setButtonSymbols(QAbstractSpinBox.NoButtons)
+        self.spinBox_atlas_bregma_z.setMaximum(1000)
+
+        self.gridLayout_136.addWidget(self.spinBox_atlas_bregma_z, 5, 3, 1, 1)
+
+        self.spinBox_atlas_bregma_y = QSpinBox(self.groupBox_12)
+        self.spinBox_atlas_bregma_y.setObjectName(u"spinBox_atlas_bregma_y")
+        self.spinBox_atlas_bregma_y.setReadOnly(True)
+        self.spinBox_atlas_bregma_y.setButtonSymbols(QAbstractSpinBox.NoButtons)
+        self.spinBox_atlas_bregma_y.setMaximum(1000)
+
+        self.gridLayout_136.addWidget(self.spinBox_atlas_bregma_y, 5, 2, 1, 1)
+
+        self.lineEdit_24 = QLineEdit(self.groupBox_12)
+        self.lineEdit_24.setObjectName(u"lineEdit_24")
+        self.lineEdit_24.setReadOnly(True)
+
+        self.gridLayout_136.addWidget(self.lineEdit_24, 1, 1, 1, 3)
 
         self.doubleSpinBox_d_bregmay = QDoubleSpinBox(self.groupBox_12)
         self.doubleSpinBox_d_bregmay.setObjectName(u"doubleSpinBox_d_bregmay")
@@ -951,7 +1568,22 @@ class Ui_MainWindow(object):
         self.doubleSpinBox_d_bregmay.setButtonSymbols(QAbstractSpinBox.NoButtons)
         self.doubleSpinBox_d_bregmay.setMaximum(1500.000000000000000)
 
-        self.gridLayout_136.addWidget(self.doubleSpinBox_d_bregmay, 7, 2, 1, 1)
+        self.gridLayout_136.addWidget(self.doubleSpinBox_d_bregmay, 8, 2, 1, 1)
+
+        self.lineEdit_92 = QLineEdit(self.groupBox_12)
+        self.lineEdit_92.setObjectName(u"lineEdit_92")
+
+        self.gridLayout_136.addWidget(self.lineEdit_92, 2, 1, 1, 1)
+
+        self.lineEdit_93 = QLineEdit(self.groupBox_12)
+        self.lineEdit_93.setObjectName(u"lineEdit_93")
+
+        self.gridLayout_136.addWidget(self.lineEdit_93, 2, 2, 1, 1)
+
+        self.lineEdit_94 = QLineEdit(self.groupBox_12)
+        self.lineEdit_94.setObjectName(u"lineEdit_94")
+
+        self.gridLayout_136.addWidget(self.lineEdit_94, 2, 3, 1, 1)
 
 
         self.gridLayout_75.addWidget(self.groupBox_12, 1, 0, 1, 2)
@@ -1015,68 +1647,11 @@ class Ui_MainWindow(object):
         self.groupBox_21.setObjectName(u"groupBox_21")
         self.gridLayout_176 = QGridLayout(self.groupBox_21)
         self.gridLayout_176.setObjectName(u"gridLayout_176")
-        self.textEdit = QTextEdit(self.groupBox_21)
-        self.textEdit.setObjectName(u"textEdit")
-        sizePolicy.setHeightForWidth(self.textEdit.sizePolicy().hasHeightForWidth())
-        self.textEdit.setSizePolicy(sizePolicy)
-        self.textEdit.setMaximumSize(QSize(16777215, 50))
-        self.textEdit.setReadOnly(True)
-
-        self.gridLayout_176.addWidget(self.textEdit, 5, 1, 1, 3)
-
-        self.spinBox_atlas_lambda_y = QSpinBox(self.groupBox_21)
-        self.spinBox_atlas_lambda_y.setObjectName(u"spinBox_atlas_lambda_y")
-        self.spinBox_atlas_lambda_y.setReadOnly(True)
-        self.spinBox_atlas_lambda_y.setButtonSymbols(QAbstractSpinBox.NoButtons)
-        self.spinBox_atlas_lambda_y.setMaximum(1000)
-
-        self.gridLayout_176.addWidget(self.spinBox_atlas_lambda_y, 4, 2, 1, 1)
-
-        self.spinBox_atlas_lambda_x = QSpinBox(self.groupBox_21)
-        self.spinBox_atlas_lambda_x.setObjectName(u"spinBox_atlas_lambda_x")
-        self.spinBox_atlas_lambda_x.setReadOnly(True)
-        self.spinBox_atlas_lambda_x.setButtonSymbols(QAbstractSpinBox.NoButtons)
-        self.spinBox_atlas_lambda_x.setMaximum(1000)
-
-        self.gridLayout_176.addWidget(self.spinBox_atlas_lambda_x, 4, 1, 1, 1)
-
-        self.spinBox_tp_lambda_x = QSpinBox(self.groupBox_21)
-        self.spinBox_tp_lambda_x.setObjectName(u"spinBox_tp_lambda_x")
-
-        self.gridLayout_176.addWidget(self.spinBox_tp_lambda_x, 2, 1, 1, 1)
-
-        self.spinBox_tp_lambda_z = QSpinBox(self.groupBox_21)
-        self.spinBox_tp_lambda_z.setObjectName(u"spinBox_tp_lambda_z")
-
-        self.gridLayout_176.addWidget(self.spinBox_tp_lambda_z, 2, 3, 1, 1)
-
-        self.doubleSpinBox_d_lambdaz = QDoubleSpinBox(self.groupBox_21)
-        self.doubleSpinBox_d_lambdaz.setObjectName(u"doubleSpinBox_d_lambdaz")
-        self.doubleSpinBox_d_lambdaz.setReadOnly(True)
-        self.doubleSpinBox_d_lambdaz.setButtonSymbols(QAbstractSpinBox.NoButtons)
-        self.doubleSpinBox_d_lambdaz.setMaximum(1500.000000000000000)
-
-        self.gridLayout_176.addWidget(self.doubleSpinBox_d_lambdaz, 6, 3, 1, 1)
-
         self.lineEdit_58 = QLineEdit(self.groupBox_21)
         self.lineEdit_58.setObjectName(u"lineEdit_58")
         self.lineEdit_58.setReadOnly(True)
 
         self.gridLayout_176.addWidget(self.lineEdit_58, 1, 1, 1, 3)
-
-        self.doubleSpinBox_d_lambday = QDoubleSpinBox(self.groupBox_21)
-        self.doubleSpinBox_d_lambday.setObjectName(u"doubleSpinBox_d_lambday")
-        self.doubleSpinBox_d_lambday.setReadOnly(True)
-        self.doubleSpinBox_d_lambday.setButtonSymbols(QAbstractSpinBox.NoButtons)
-        self.doubleSpinBox_d_lambday.setMaximum(1500.000000000000000)
-
-        self.gridLayout_176.addWidget(self.doubleSpinBox_d_lambday, 6, 2, 1, 1)
-
-        self.lineEdit_20 = QLineEdit(self.groupBox_21)
-        self.lineEdit_20.setObjectName(u"lineEdit_20")
-        self.lineEdit_20.setReadOnly(True)
-
-        self.gridLayout_176.addWidget(self.lineEdit_20, 3, 1, 1, 3)
 
         self.doubleSpinBox_d_lambdax = QDoubleSpinBox(self.groupBox_21)
         self.doubleSpinBox_d_lambdax.setObjectName(u"doubleSpinBox_d_lambdax")
@@ -1084,12 +1659,29 @@ class Ui_MainWindow(object):
         self.doubleSpinBox_d_lambdax.setButtonSymbols(QAbstractSpinBox.NoButtons)
         self.doubleSpinBox_d_lambdax.setMaximum(1500.000000000000000)
 
-        self.gridLayout_176.addWidget(self.doubleSpinBox_d_lambdax, 6, 1, 1, 1)
+        self.gridLayout_176.addWidget(self.doubleSpinBox_d_lambdax, 7, 1, 1, 1)
 
         self.spinBox_tp_lambda_y = QSpinBox(self.groupBox_21)
         self.spinBox_tp_lambda_y.setObjectName(u"spinBox_tp_lambda_y")
 
-        self.gridLayout_176.addWidget(self.spinBox_tp_lambda_y, 2, 2, 1, 1)
+        self.gridLayout_176.addWidget(self.spinBox_tp_lambda_y, 3, 2, 1, 1)
+
+        self.spinBox_atlas_lambda_x = QSpinBox(self.groupBox_21)
+        self.spinBox_atlas_lambda_x.setObjectName(u"spinBox_atlas_lambda_x")
+        self.spinBox_atlas_lambda_x.setReadOnly(True)
+        self.spinBox_atlas_lambda_x.setButtonSymbols(QAbstractSpinBox.NoButtons)
+        self.spinBox_atlas_lambda_x.setMaximum(1000)
+
+        self.gridLayout_176.addWidget(self.spinBox_atlas_lambda_x, 5, 1, 1, 1)
+
+        self.textEdit = QTextEdit(self.groupBox_21)
+        self.textEdit.setObjectName(u"textEdit")
+        sizePolicy.setHeightForWidth(self.textEdit.sizePolicy().hasHeightForWidth())
+        self.textEdit.setSizePolicy(sizePolicy)
+        self.textEdit.setMaximumSize(QSize(16777215, 50))
+        self.textEdit.setReadOnly(True)
+
+        self.gridLayout_176.addWidget(self.textEdit, 6, 1, 1, 3)
 
         self.pushButton_tp_lambda = QPushButton(self.groupBox_21)
         self.pushButton_tp_lambda.setObjectName(u"pushButton_tp_lambda")
@@ -1099,13 +1691,68 @@ class Ui_MainWindow(object):
 
         self.gridLayout_176.addWidget(self.pushButton_tp_lambda, 0, 1, 1, 3)
 
+        self.lineEdit_20 = QLineEdit(self.groupBox_21)
+        self.lineEdit_20.setObjectName(u"lineEdit_20")
+        self.lineEdit_20.setReadOnly(True)
+
+        self.gridLayout_176.addWidget(self.lineEdit_20, 4, 1, 1, 3)
+
         self.spinBox_atlas_lambda_z = QSpinBox(self.groupBox_21)
         self.spinBox_atlas_lambda_z.setObjectName(u"spinBox_atlas_lambda_z")
         self.spinBox_atlas_lambda_z.setReadOnly(True)
         self.spinBox_atlas_lambda_z.setButtonSymbols(QAbstractSpinBox.NoButtons)
         self.spinBox_atlas_lambda_z.setMaximum(1000)
 
-        self.gridLayout_176.addWidget(self.spinBox_atlas_lambda_z, 4, 3, 1, 1)
+        self.gridLayout_176.addWidget(self.spinBox_atlas_lambda_z, 5, 3, 1, 1)
+
+        self.doubleSpinBox_d_lambday = QDoubleSpinBox(self.groupBox_21)
+        self.doubleSpinBox_d_lambday.setObjectName(u"doubleSpinBox_d_lambday")
+        self.doubleSpinBox_d_lambday.setReadOnly(True)
+        self.doubleSpinBox_d_lambday.setButtonSymbols(QAbstractSpinBox.NoButtons)
+        self.doubleSpinBox_d_lambday.setMaximum(1500.000000000000000)
+
+        self.gridLayout_176.addWidget(self.doubleSpinBox_d_lambday, 7, 2, 1, 1)
+
+        self.doubleSpinBox_d_lambdaz = QDoubleSpinBox(self.groupBox_21)
+        self.doubleSpinBox_d_lambdaz.setObjectName(u"doubleSpinBox_d_lambdaz")
+        self.doubleSpinBox_d_lambdaz.setReadOnly(True)
+        self.doubleSpinBox_d_lambdaz.setButtonSymbols(QAbstractSpinBox.NoButtons)
+        self.doubleSpinBox_d_lambdaz.setMaximum(1500.000000000000000)
+
+        self.gridLayout_176.addWidget(self.doubleSpinBox_d_lambdaz, 7, 3, 1, 1)
+
+        self.spinBox_tp_lambda_x = QSpinBox(self.groupBox_21)
+        self.spinBox_tp_lambda_x.setObjectName(u"spinBox_tp_lambda_x")
+
+        self.gridLayout_176.addWidget(self.spinBox_tp_lambda_x, 3, 1, 1, 1)
+
+        self.spinBox_atlas_lambda_y = QSpinBox(self.groupBox_21)
+        self.spinBox_atlas_lambda_y.setObjectName(u"spinBox_atlas_lambda_y")
+        self.spinBox_atlas_lambda_y.setReadOnly(True)
+        self.spinBox_atlas_lambda_y.setButtonSymbols(QAbstractSpinBox.NoButtons)
+        self.spinBox_atlas_lambda_y.setMaximum(1000)
+
+        self.gridLayout_176.addWidget(self.spinBox_atlas_lambda_y, 5, 2, 1, 1)
+
+        self.spinBox_tp_lambda_z = QSpinBox(self.groupBox_21)
+        self.spinBox_tp_lambda_z.setObjectName(u"spinBox_tp_lambda_z")
+
+        self.gridLayout_176.addWidget(self.spinBox_tp_lambda_z, 3, 3, 1, 1)
+
+        self.lineEdit_95 = QLineEdit(self.groupBox_21)
+        self.lineEdit_95.setObjectName(u"lineEdit_95")
+
+        self.gridLayout_176.addWidget(self.lineEdit_95, 2, 1, 1, 1)
+
+        self.lineEdit_96 = QLineEdit(self.groupBox_21)
+        self.lineEdit_96.setObjectName(u"lineEdit_96")
+
+        self.gridLayout_176.addWidget(self.lineEdit_96, 2, 2, 1, 1)
+
+        self.lineEdit_97 = QLineEdit(self.groupBox_21)
+        self.lineEdit_97.setObjectName(u"lineEdit_97")
+
+        self.gridLayout_176.addWidget(self.lineEdit_97, 2, 3, 1, 1)
 
 
         self.gridLayout_75.addWidget(self.groupBox_21, 3, 0, 1, 2)
@@ -1115,6 +1762,21 @@ class Ui_MainWindow(object):
         self.page_6.setObjectName(u"page_6")
         self.gridLayout_187 = QGridLayout(self.page_6)
         self.gridLayout_187.setObjectName(u"gridLayout_187")
+        self.pushButton_PyLdetection = QPushButton(self.page_6)
+        self.pushButton_PyLdetection.setObjectName(u"pushButton_PyLdetection")
+        self.pushButton_PyLdetection.setEnabled(False)
+        self.pushButton_PyLdetection.setStyleSheet(u" QPushButton { background-color: #e67e22; color: white; } QPushButton:disabled { background-color: #a9713f; color: #cccccc; }")
+
+        self.gridLayout_187.addWidget(self.pushButton_PyLdetection, 14, 0, 1, 2)
+
+        self.pushButton_SaveTraj = QPushButton(self.page_6)
+        self.pushButton_SaveTraj.setObjectName(u"pushButton_SaveTraj")
+        self.pushButton_SaveTraj.setMinimumSize(QSize(0, 50))
+        self.pushButton_SaveTraj.setAutoFillBackground(False)
+        self.pushButton_SaveTraj.setStyleSheet(u" QPushButton { background-color: #e67e22; color: white; } QPushButton:disabled { background-color: #a9713f; color: #cccccc; }")
+
+        self.gridLayout_187.addWidget(self.pushButton_SaveTraj, 15, 0, 1, 2)
+
         self.groupBox_shank = QGroupBox(self.page_6)
         self.groupBox_shank.setObjectName(u"groupBox_shank")
         self.groupBox_shank.setEnabled(False)
@@ -1176,49 +1838,109 @@ class Ui_MainWindow(object):
 
         self.gridLayout_179.setRowStretch(1, 1)
 
-        self.gridLayout_187.addWidget(self.groupBox_shank, 12, 0, 1, 2)
+        self.gridLayout_187.addWidget(self.groupBox_shank, 11, 0, 1, 2)
 
-        self.comboBox_tpColor = QComboBox(self.page_6)
-        self.comboBox_tpColor.setObjectName(u"comboBox_tpColor")
-        self.comboBox_tpColor.setMinimumSize(QSize(0, 50))
+        self.pushButton_tp_3d = QPushButton(self.page_6)
+        self.pushButton_tp_3d.setObjectName(u"pushButton_tp_3d")
+        self.pushButton_tp_3d.setMinimumSize(QSize(0, 50))
+        self.pushButton_tp_3d.setStyleSheet(u" QPushButton { background-color: #e67e22; color: white; } QPushButton:disabled { background-color: #a9713f; color: #cccccc; }")
 
-        self.gridLayout_187.addWidget(self.comboBox_tpColor, 2, 1, 1, 1)
-
-        self.pushButton_SaveTraj = QPushButton(self.page_6)
-        self.pushButton_SaveTraj.setObjectName(u"pushButton_SaveTraj")
-        self.pushButton_SaveTraj.setMinimumSize(QSize(0, 50))
-        self.pushButton_SaveTraj.setAutoFillBackground(False)
-        self.pushButton_SaveTraj.setStyleSheet(u" QPushButton { background-color: #e67e22; color: white; } QPushButton:disabled { background-color: #a9713f; color: #cccccc; }")
-
-        self.gridLayout_187.addWidget(self.pushButton_SaveTraj, 16, 0, 1, 2)
-
-        self.pushButton_PyLdetection = QPushButton(self.page_6)
-        self.pushButton_PyLdetection.setObjectName(u"pushButton_PyLdetection")
-        self.pushButton_PyLdetection.setEnabled(False)
-
-        self.gridLayout_187.addWidget(self.pushButton_PyLdetection, 15, 0, 1, 2)
-
-        self.pushButton_removeShank = QPushButton(self.page_6)
-        self.pushButton_removeShank.setObjectName(u"pushButton_removeShank")
-        self.pushButton_removeShank.setMaximumSize(QSize(16777215, 40))
-        self.pushButton_removeShank.setStyleSheet(u" QPushButton { background-color: #e67e22; color: white; } QPushButton:disabled { background-color: #a9713f; color: #cccccc; }")
-
-        self.gridLayout_187.addWidget(self.pushButton_removeShank, 0, 1, 1, 1)
-
-        self.pushButton_addShank = QPushButton(self.page_6)
-        self.pushButton_addShank.setObjectName(u"pushButton_addShank")
-        self.pushButton_addShank.setMaximumSize(QSize(16777215, 40))
-        self.pushButton_addShank.setStyleSheet(u" QPushButton { background-color: #e67e22; color: white; } QPushButton:disabled { background-color: #a9713f; color: #cccccc; }")
-
-        self.gridLayout_187.addWidget(self.pushButton_addShank, 0, 0, 1, 1)
-
-        self.comboBox_Shanks = QComboBox(self.page_6)
-        self.comboBox_Shanks.setObjectName(u"comboBox_Shanks")
-        self.comboBox_Shanks.setMinimumSize(QSize(0, 50))
-
-        self.gridLayout_187.addWidget(self.comboBox_Shanks, 2, 0, 1, 1)
+        self.gridLayout_187.addWidget(self.pushButton_tp_3d, 0, 0, 1, 2)
 
         self.stackedWidget_trajectoryplanning.addWidget(self.page_6)
+        self.page_31 = QWidget()
+        self.page_31.setObjectName(u"page_31")
+        self.gridLayout_222 = QGridLayout(self.page_31)
+        self.gridLayout_222.setObjectName(u"gridLayout_222")
+        self.groupBox_79 = QGroupBox(self.page_31)
+        self.groupBox_79.setObjectName(u"groupBox_79")
+        self.gridLayout_221 = QGridLayout(self.groupBox_79)
+        self.gridLayout_221.setObjectName(u"gridLayout_221")
+        self.pushButton_insertionPoint = QPushButton(self.groupBox_79)
+        self.pushButton_insertionPoint.setObjectName(u"pushButton_insertionPoint")
+        self.pushButton_insertionPoint.setMinimumSize(QSize(0, 50))
+        self.pushButton_insertionPoint.setMaximumSize(QSize(16777215, 16777215))
+        self.pushButton_insertionPoint.setAutoFillBackground(False)
+        self.pushButton_insertionPoint.setStyleSheet(u" QPushButton { background-color: #e67e22; color: white; } QPushButton:disabled { background-color: #a9713f; color: #cccccc; }")
+
+        self.gridLayout_221.addWidget(self.pushButton_insertionPoint, 1, 1, 1, 3)
+
+        self.spinBox_depth = QDoubleSpinBox(self.groupBox_79)
+        self.spinBox_depth.setObjectName(u"spinBox_depth")
+        self.spinBox_depth.setReadOnly(True)
+        self.spinBox_depth.setButtonSymbols(QAbstractSpinBox.NoButtons)
+        self.spinBox_depth.setMaximum(1500.000000000000000)
+
+        self.gridLayout_221.addWidget(self.spinBox_depth, 6, 1, 1, 3)
+
+        self.spinBox_insertion_y = QSpinBox(self.groupBox_79)
+        self.spinBox_insertion_y.setObjectName(u"spinBox_insertion_y")
+
+        self.gridLayout_221.addWidget(self.spinBox_insertion_y, 3, 2, 1, 1)
+
+        self.lineEdit_107 = QLineEdit(self.groupBox_79)
+        self.lineEdit_107.setObjectName(u"lineEdit_107")
+
+        self.gridLayout_221.addWidget(self.lineEdit_107, 2, 2, 1, 1)
+
+        self.spinBox_insertion_z = QSpinBox(self.groupBox_79)
+        self.spinBox_insertion_z.setObjectName(u"spinBox_insertion_z")
+
+        self.gridLayout_221.addWidget(self.spinBox_insertion_z, 3, 3, 1, 1)
+
+        self.spinBox_insertion_x = QSpinBox(self.groupBox_79)
+        self.spinBox_insertion_x.setObjectName(u"spinBox_insertion_x")
+
+        self.gridLayout_221.addWidget(self.spinBox_insertion_x, 3, 1, 1, 1)
+
+        self.comboBox_insertion_shank = QComboBox(self.groupBox_79)
+        self.comboBox_insertion_shank.addItem("")
+        self.comboBox_insertion_shank.setObjectName(u"comboBox_insertion_shank")
+        font3 = QFont()
+        font3.setPointSize(20)
+        font3.setBold(False)
+        self.comboBox_insertion_shank.setFont(font3)
+
+        self.gridLayout_221.addWidget(self.comboBox_insertion_shank, 0, 1, 1, 3)
+
+        self.pushButton_nextShank = QPushButton(self.groupBox_79)
+        self.pushButton_nextShank.setObjectName(u"pushButton_nextShank")
+        self.pushButton_nextShank.setMinimumSize(QSize(50, 50))
+        self.pushButton_nextShank.setStyleSheet(u" QPushButton { background-color: #e67e22; color: white; } QPushButton:disabled { background-color: #a9713f; color: #cccccc; }")
+
+        self.gridLayout_221.addWidget(self.pushButton_nextShank, 7, 1, 1, 3)
+
+        self.lineEdit_108 = QLineEdit(self.groupBox_79)
+        self.lineEdit_108.setObjectName(u"lineEdit_108")
+
+        self.gridLayout_221.addWidget(self.lineEdit_108, 2, 3, 1, 1)
+
+        self.lineEdit_106 = QLineEdit(self.groupBox_79)
+        self.lineEdit_106.setObjectName(u"lineEdit_106")
+
+        self.gridLayout_221.addWidget(self.lineEdit_106, 2, 1, 1, 1)
+
+        self.textEdit_14 = QTextEdit(self.groupBox_79)
+        self.textEdit_14.setObjectName(u"textEdit_14")
+        sizePolicy5.setHeightForWidth(self.textEdit_14.sizePolicy().hasHeightForWidth())
+        self.textEdit_14.setSizePolicy(sizePolicy5)
+        self.textEdit_14.setMaximumSize(QSize(16777215, 50))
+        self.textEdit_14.setReadOnly(True)
+
+        self.gridLayout_221.addWidget(self.textEdit_14, 4, 1, 1, 3)
+
+
+        self.gridLayout_222.addWidget(self.groupBox_79, 1, 0, 1, 1)
+
+        self.textEdit_5 = QTextEdit(self.page_31)
+        self.textEdit_5.setObjectName(u"textEdit_5")
+        self.textEdit_5.setMinimumSize(QSize(0, 50))
+        self.textEdit_5.setMaximumSize(QSize(16777215, 100))
+        self.textEdit_5.setReadOnly(True)
+
+        self.gridLayout_222.addWidget(self.textEdit_5, 0, 0, 1, 1)
+
+        self.stackedWidget_trajectoryplanning.addWidget(self.page_31)
 
         self.gridLayout_137.addWidget(self.stackedWidget_trajectoryplanning, 0, 0, 1, 1)
 
@@ -1271,252 +1993,6 @@ class Ui_MainWindow(object):
         self.page_23.setObjectName(u"page_23")
         self.gridLayout_143 = QGridLayout(self.page_23)
         self.gridLayout_143.setObjectName(u"gridLayout_143")
-        self.stackedWidget_axial = QStackedWidget(self.page_23)
-        self.stackedWidget_axial.setObjectName(u"stackedWidget_axial")
-        self.page_11 = QWidget()
-        self.page_11.setObjectName(u"page_11")
-        self.gridLayout_178 = QGridLayout(self.page_11)
-        self.gridLayout_178.setObjectName(u"gridLayout_178")
-        self.gridLayout_178.setContentsMargins(0, 0, 0, 0)
-        self.textEdit_7 = QTextEdit(self.page_11)
-        self.textEdit_7.setObjectName(u"textEdit_7")
-        self.textEdit_7.setMinimumSize(QSize(0, 30))
-        self.textEdit_7.setMaximumSize(QSize(16777215, 30))
-        self.textEdit_7.setLayoutDirection(Qt.LeftToRight)
-        self.textEdit_7.setReadOnly(True)
-
-        self.gridLayout_178.addWidget(self.textEdit_7, 0, 0, 1, 1)
-
-        self.frame_11 = QFrame(self.page_11)
-        self.frame_11.setObjectName(u"frame_11")
-        self.frame_11.setMinimumSize(QSize(0, 200))
-        self.frame_11.setStyleSheet(u"border-color: rgb(170, 170, 170);\n"
-"background-color: rgb(131, 131, 131);\n"
-"")
-        self.frame_11.setFrameShape(QFrame.NoFrame)
-        self.gridLayout_146 = QGridLayout(self.frame_11)
-        self.gridLayout_146.setSpacing(0)
-        self.gridLayout_146.setObjectName(u"gridLayout_146")
-        self.gridLayout_146.setContentsMargins(4, 4, 4, 4)
-        self.horizontalLayout_36 = QHBoxLayout()
-        self.horizontalLayout_36.setObjectName(u"horizontalLayout_36")
-        self.go_down_data3d0 = QToolButton(self.frame_11)
-        self.go_down_data3d0.setObjectName(u"go_down_data3d0")
-        self.go_down_data3d0.setIcon(icon1)
-
-        self.horizontalLayout_36.addWidget(self.go_down_data3d0)
-
-        self.go_up_data3d0 = QToolButton(self.frame_11)
-        self.go_up_data3d0.setObjectName(u"go_up_data3d0")
-        self.go_up_data3d0.setIcon(icon2)
-
-        self.horizontalLayout_36.addWidget(self.go_up_data3d0)
-
-        self.go_left_data3d0 = QToolButton(self.frame_11)
-        self.go_left_data3d0.setObjectName(u"go_left_data3d0")
-        self.go_left_data3d0.setIcon(icon3)
-
-        self.horizontalLayout_36.addWidget(self.go_left_data3d0)
-
-        self.go_right_data3d0 = QToolButton(self.frame_11)
-        self.go_right_data3d0.setObjectName(u"go_right_data3d0")
-        self.go_right_data3d0.setIcon(icon4)
-
-        self.horizontalLayout_36.addWidget(self.go_right_data3d0)
-
-
-        self.gridLayout_146.addLayout(self.horizontalLayout_36, 2, 8, 1, 1)
-
-        self.fit_to_zoom_data3d0 = QPushButton(self.frame_11)
-        self.fit_to_zoom_data3d0.setObjectName(u"fit_to_zoom_data3d0")
-        self.fit_to_zoom_data3d0.setStyleSheet(u"\n"
-"background-color: rgb(0, 153, 255);")
-        self.fit_to_zoom_data3d0.setAutoDefault(False)
-        self.fit_to_zoom_data3d0.setFlat(False)
-
-        self.gridLayout_146.addWidget(self.fit_to_zoom_data3d0, 1, 0, 2, 1)
-
-        self.horizontalLayout_37 = QHBoxLayout()
-        self.horizontalLayout_37.setObjectName(u"horizontalLayout_37")
-        self.zoom_in_data3d0 = QToolButton(self.frame_11)
-        self.zoom_in_data3d0.setObjectName(u"zoom_in_data3d0")
-        self.zoom_in_data3d0.setIcon(icon5)
-
-        self.horizontalLayout_37.addWidget(self.zoom_in_data3d0)
-
-        self.zoom_out_data3d0 = QToolButton(self.frame_11)
-        self.zoom_out_data3d0.setObjectName(u"zoom_out_data3d0")
-        self.zoom_out_data3d0.setIcon(icon6)
-
-        self.horizontalLayout_37.addWidget(self.zoom_out_data3d0)
-
-
-        self.gridLayout_146.addLayout(self.horizontalLayout_37, 2, 7, 1, 1)
-
-        self.Scroll_data3d0 = QScrollBar(self.frame_11)
-        self.Scroll_data3d0.setObjectName(u"Scroll_data3d0")
-        self.Scroll_data3d0.setPageStep(10)
-
-        self.gridLayout_146.addWidget(self.Scroll_data3d0, 0, 9, 1, 1)
-
-        self.vtkWidget_data_axial = QVTKRenderWindowInteractor(self.frame_11)
-        self.vtkWidget_data_axial.setObjectName(u"vtkWidget_data_axial")
-        self.vtkWidget_data_axial.setStyleSheet(u"background-color: rgb(200, 177, 176);")
-
-        self.gridLayout_146.addWidget(self.vtkWidget_data_axial, 0, 0, 1, 9)
-
-        self.vtkWidget_data_axial.raise_()
-        self.Scroll_data3d0.raise_()
-        self.fit_to_zoom_data3d0.raise_()
-
-        self.gridLayout_178.addWidget(self.frame_11, 1, 0, 1, 1)
-
-        self.stackedWidget_axial.addWidget(self.page_11)
-        self.page_14 = QWidget()
-        self.page_14.setObjectName(u"page_14")
-        self.gridLayout_196 = QGridLayout(self.page_14)
-        self.gridLayout_196.setObjectName(u"gridLayout_196")
-        self.gridLayout_196.setContentsMargins(0, 0, 0, 0)
-        self.stackedWidget_sagittal_2 = QStackedWidget(self.page_14)
-        self.stackedWidget_sagittal_2.setObjectName(u"stackedWidget_sagittal_2")
-        self.page_19 = QWidget()
-        self.page_19.setObjectName(u"page_19")
-        self.gridLayout_193 = QGridLayout(self.page_19)
-        self.gridLayout_193.setObjectName(u"gridLayout_193")
-        self.gridLayout_193.setContentsMargins(0, 0, 0, 0)
-        self.textEdit_12 = QTextEdit(self.page_19)
-        self.textEdit_12.setObjectName(u"textEdit_12")
-        self.textEdit_12.setMinimumSize(QSize(0, 30))
-        self.textEdit_12.setMaximumSize(QSize(16777215, 30))
-        self.textEdit_12.setReadOnly(True)
-
-        self.gridLayout_193.addWidget(self.textEdit_12, 0, 0, 1, 1)
-
-        self.frame_12 = QFrame(self.page_19)
-        self.frame_12.setObjectName(u"frame_12")
-        self.frame_12.setMinimumSize(QSize(0, 200))
-        self.frame_12.setStyleSheet(u"border-color: rgb(170, 170, 170);\n"
-"background-color: rgb(131, 131, 131);\n"
-"")
-        self.frame_12.setFrameShape(QFrame.NoFrame)
-        self.gridLayout_194 = QGridLayout(self.frame_12)
-        self.gridLayout_194.setSpacing(0)
-        self.gridLayout_194.setObjectName(u"gridLayout_194")
-        self.gridLayout_194.setContentsMargins(4, 4, 4, 4)
-        self.vtkWidget_data_sagittal_2 = QVTKRenderWindowInteractor(self.frame_12)
-        self.vtkWidget_data_sagittal_2.setObjectName(u"vtkWidget_data_sagittal_2")
-        self.vtkWidget_data_sagittal_2.setStyleSheet(u"background-color: rgb(200, 177, 176);")
-
-        self.gridLayout_194.addWidget(self.vtkWidget_data_sagittal_2, 1, 0, 1, 9)
-
-        self.horizontalLayout_38 = QHBoxLayout()
-        self.horizontalLayout_38.setObjectName(u"horizontalLayout_38")
-        self.go_down_data3d1_2 = QToolButton(self.frame_12)
-        self.go_down_data3d1_2.setObjectName(u"go_down_data3d1_2")
-        icon7 = QIcon(QIcon.fromTheme(QIcon.ThemeIcon.GoDown))
-        self.go_down_data3d1_2.setIcon(icon7)
-
-        self.horizontalLayout_38.addWidget(self.go_down_data3d1_2)
-
-        self.go_up_data3d1_2 = QToolButton(self.frame_12)
-        self.go_up_data3d1_2.setObjectName(u"go_up_data3d1_2")
-        icon8 = QIcon(QIcon.fromTheme(QIcon.ThemeIcon.GoUp))
-        self.go_up_data3d1_2.setIcon(icon8)
-
-        self.horizontalLayout_38.addWidget(self.go_up_data3d1_2)
-
-        self.go_left_data3d1_2 = QToolButton(self.frame_12)
-        self.go_left_data3d1_2.setObjectName(u"go_left_data3d1_2")
-
-        self.horizontalLayout_38.addWidget(self.go_left_data3d1_2)
-
-        self.go_right_data3d1_2 = QToolButton(self.frame_12)
-        self.go_right_data3d1_2.setObjectName(u"go_right_data3d1_2")
-
-        self.horizontalLayout_38.addWidget(self.go_right_data3d1_2)
-
-
-        self.gridLayout_194.addLayout(self.horizontalLayout_38, 3, 8, 1, 1)
-
-        self.horizontalLayout_39 = QHBoxLayout()
-        self.horizontalLayout_39.setObjectName(u"horizontalLayout_39")
-        self.zoom_in_data3d1_2 = QToolButton(self.frame_12)
-        self.zoom_in_data3d1_2.setObjectName(u"zoom_in_data3d1_2")
-
-        self.horizontalLayout_39.addWidget(self.zoom_in_data3d1_2)
-
-        self.zoom_out_data3d1_2 = QToolButton(self.frame_12)
-        self.zoom_out_data3d1_2.setObjectName(u"zoom_out_data3d1_2")
-
-        self.horizontalLayout_39.addWidget(self.zoom_out_data3d1_2)
-
-
-        self.gridLayout_194.addLayout(self.horizontalLayout_39, 3, 7, 1, 1)
-
-        self.fit_to_zoom_data3d1_2 = QPushButton(self.frame_12)
-        self.fit_to_zoom_data3d1_2.setObjectName(u"fit_to_zoom_data3d1_2")
-        self.fit_to_zoom_data3d1_2.setStyleSheet(u"\n"
-"background-color: rgb(0, 153, 255);")
-        self.fit_to_zoom_data3d1_2.setAutoDefault(False)
-        self.fit_to_zoom_data3d1_2.setFlat(False)
-
-        self.gridLayout_194.addWidget(self.fit_to_zoom_data3d1_2, 2, 0, 2, 1)
-
-        self.Scroll_data3d1_2 = QScrollBar(self.frame_12)
-        self.Scroll_data3d1_2.setObjectName(u"Scroll_data3d1_2")
-        self.Scroll_data3d1_2.setPageStep(10)
-
-        self.gridLayout_194.addWidget(self.Scroll_data3d1_2, 1, 9, 1, 1)
-
-
-        self.gridLayout_193.addWidget(self.frame_12, 1, 0, 1, 1)
-
-        self.stackedWidget_sagittal_2.addWidget(self.page_19)
-        self.page_20 = QWidget()
-        self.page_20.setObjectName(u"page_20")
-        self.gridLayout_195 = QGridLayout(self.page_20)
-        self.gridLayout_195.setObjectName(u"gridLayout_195")
-        self.gridLayout_195.setContentsMargins(0, 0, 0, 0)
-        self.vtkWidget_trajPlan_3 = QVTKRenderWindowInteractor(self.page_20)
-        self.vtkWidget_trajPlan_3.setObjectName(u"vtkWidget_trajPlan_3")
-        self.vtkWidget_trajPlan_3.setStyleSheet(u"background-color: rgb(200, 177, 176);")
-
-        self.gridLayout_195.addWidget(self.vtkWidget_trajPlan_3, 2, 0, 1, 2)
-
-        self.pushButton_resetAxial = QPushButton(self.page_20)
-        self.pushButton_resetAxial.setObjectName(u"pushButton_resetAxial")
-
-        self.gridLayout_195.addWidget(self.pushButton_resetAxial, 5, 0, 1, 2)
-
-        self.lineEdit_59 = QLineEdit(self.page_20)
-        self.lineEdit_59.setObjectName(u"lineEdit_59")
-        self.lineEdit_59.setMaximumSize(QSize(1677215, 16777215))
-
-        self.gridLayout_195.addWidget(self.lineEdit_59, 3, 0, 1, 1)
-
-        self.horizontalSlider_axial3D = QSlider(self.page_20)
-        self.horizontalSlider_axial3D.setObjectName(u"horizontalSlider_axial3D")
-        self.horizontalSlider_axial3D.setSingleStep(10)
-        self.horizontalSlider_axial3D.setOrientation(Qt.Horizontal)
-
-        self.gridLayout_195.addWidget(self.horizontalSlider_axial3D, 3, 1, 1, 1)
-
-        self.textEdit_13 = QTextEdit(self.page_20)
-        self.textEdit_13.setObjectName(u"textEdit_13")
-        self.textEdit_13.setMinimumSize(QSize(0, 30))
-        self.textEdit_13.setMaximumSize(QSize(16777215, 30))
-        self.textEdit_13.setReadOnly(True)
-
-        self.gridLayout_195.addWidget(self.textEdit_13, 1, 0, 1, 2)
-
-        self.stackedWidget_sagittal_2.addWidget(self.page_20)
-
-        self.gridLayout_196.addWidget(self.stackedWidget_sagittal_2, 0, 0, 1, 1)
-
-        self.stackedWidget_axial.addWidget(self.page_14)
-
-        self.gridLayout_143.addWidget(self.stackedWidget_axial, 0, 0, 1, 1)
-
         self.stackedWidget_sagittal = QStackedWidget(self.page_23)
         self.stackedWidget_sagittal.setObjectName(u"stackedWidget_sagittal")
         self.page_3 = QWidget()
@@ -1543,52 +2019,17 @@ class Ui_MainWindow(object):
         self.gridLayout_144.setSpacing(0)
         self.gridLayout_144.setObjectName(u"gridLayout_144")
         self.gridLayout_144.setContentsMargins(4, 4, 4, 4)
-        self.vtkWidget_data_sagittal = QVTKRenderWindowInteractor(self.frame_9)
-        self.vtkWidget_data_sagittal.setObjectName(u"vtkWidget_data_sagittal")
-        self.vtkWidget_data_sagittal.setStyleSheet(u"background-color: rgb(200, 177, 176);")
-
-        self.gridLayout_144.addWidget(self.vtkWidget_data_sagittal, 1, 0, 1, 9)
-
-        self.horizontalLayout_32 = QHBoxLayout()
-        self.horizontalLayout_32.setObjectName(u"horizontalLayout_32")
-        self.go_down_data3d1 = QToolButton(self.frame_9)
-        self.go_down_data3d1.setObjectName(u"go_down_data3d1")
-        self.go_down_data3d1.setIcon(icon1)
-
-        self.horizontalLayout_32.addWidget(self.go_down_data3d1)
-
-        self.go_up_data3d1 = QToolButton(self.frame_9)
-        self.go_up_data3d1.setObjectName(u"go_up_data3d1")
-        self.go_up_data3d1.setIcon(icon2)
-
-        self.horizontalLayout_32.addWidget(self.go_up_data3d1)
-
-        self.go_left_data3d1 = QToolButton(self.frame_9)
-        self.go_left_data3d1.setObjectName(u"go_left_data3d1")
-        self.go_left_data3d1.setIcon(icon3)
-
-        self.horizontalLayout_32.addWidget(self.go_left_data3d1)
-
-        self.go_right_data3d1 = QToolButton(self.frame_9)
-        self.go_right_data3d1.setObjectName(u"go_right_data3d1")
-        self.go_right_data3d1.setIcon(icon4)
-
-        self.horizontalLayout_32.addWidget(self.go_right_data3d1)
-
-
-        self.gridLayout_144.addLayout(self.horizontalLayout_32, 3, 8, 1, 1)
-
         self.horizontalLayout_33 = QHBoxLayout()
         self.horizontalLayout_33.setObjectName(u"horizontalLayout_33")
         self.zoom_in_data3d1 = QToolButton(self.frame_9)
         self.zoom_in_data3d1.setObjectName(u"zoom_in_data3d1")
-        self.zoom_in_data3d1.setIcon(icon5)
+        self.zoom_in_data3d1.setIcon(icon4)
 
         self.horizontalLayout_33.addWidget(self.zoom_in_data3d1)
 
         self.zoom_out_data3d1 = QToolButton(self.frame_9)
         self.zoom_out_data3d1.setObjectName(u"zoom_out_data3d1")
-        self.zoom_out_data3d1.setIcon(icon6)
+        self.zoom_out_data3d1.setIcon(icon5)
 
         self.horizontalLayout_33.addWidget(self.zoom_out_data3d1)
 
@@ -1603,6 +2044,41 @@ class Ui_MainWindow(object):
         self.fit_to_zoom_data3d1.setFlat(False)
 
         self.gridLayout_144.addWidget(self.fit_to_zoom_data3d1, 2, 0, 2, 1)
+
+        self.horizontalLayout_32 = QHBoxLayout()
+        self.horizontalLayout_32.setObjectName(u"horizontalLayout_32")
+        self.go_down_data3d1 = QToolButton(self.frame_9)
+        self.go_down_data3d1.setObjectName(u"go_down_data3d1")
+        self.go_down_data3d1.setIcon(icon)
+
+        self.horizontalLayout_32.addWidget(self.go_down_data3d1)
+
+        self.go_up_data3d1 = QToolButton(self.frame_9)
+        self.go_up_data3d1.setObjectName(u"go_up_data3d1")
+        self.go_up_data3d1.setIcon(icon1)
+
+        self.horizontalLayout_32.addWidget(self.go_up_data3d1)
+
+        self.go_left_data3d1 = QToolButton(self.frame_9)
+        self.go_left_data3d1.setObjectName(u"go_left_data3d1")
+        self.go_left_data3d1.setIcon(icon2)
+
+        self.horizontalLayout_32.addWidget(self.go_left_data3d1)
+
+        self.go_right_data3d1 = QToolButton(self.frame_9)
+        self.go_right_data3d1.setObjectName(u"go_right_data3d1")
+        self.go_right_data3d1.setIcon(icon3)
+
+        self.horizontalLayout_32.addWidget(self.go_right_data3d1)
+
+
+        self.gridLayout_144.addLayout(self.horizontalLayout_32, 3, 8, 1, 1)
+
+        self.vtkWidget_data_sagittal = QVTKRenderWindowInteractor(self.frame_9)
+        self.vtkWidget_data_sagittal.setObjectName(u"vtkWidget_data_sagittal")
+        self.vtkWidget_data_sagittal.setStyleSheet(u"background-color: rgb(200, 177, 176);")
+
+        self.gridLayout_144.addWidget(self.vtkWidget_data_sagittal, 1, 0, 1, 9)
 
         self.Scroll_data3d1 = QScrollBar(self.frame_9)
         self.Scroll_data3d1.setObjectName(u"Scroll_data3d1")
@@ -1676,13 +2152,13 @@ class Ui_MainWindow(object):
         self.horizontalLayout_35.setObjectName(u"horizontalLayout_35")
         self.zoom_in_data3d2 = QToolButton(self.frame_10)
         self.zoom_in_data3d2.setObjectName(u"zoom_in_data3d2")
-        self.zoom_in_data3d2.setIcon(icon5)
+        self.zoom_in_data3d2.setIcon(icon4)
 
         self.horizontalLayout_35.addWidget(self.zoom_in_data3d2)
 
         self.zoom_out_data3d2 = QToolButton(self.frame_10)
         self.zoom_out_data3d2.setObjectName(u"zoom_out_data3d2")
-        self.zoom_out_data3d2.setIcon(icon6)
+        self.zoom_out_data3d2.setIcon(icon5)
 
         self.horizontalLayout_35.addWidget(self.zoom_out_data3d2)
 
@@ -1714,25 +2190,25 @@ class Ui_MainWindow(object):
         self.horizontalLayout_34.setObjectName(u"horizontalLayout_34")
         self.go_down_data3d2 = QToolButton(self.frame_10)
         self.go_down_data3d2.setObjectName(u"go_down_data3d2")
-        self.go_down_data3d2.setIcon(icon1)
+        self.go_down_data3d2.setIcon(icon)
 
         self.horizontalLayout_34.addWidget(self.go_down_data3d2)
 
         self.go_up_data3d2 = QToolButton(self.frame_10)
         self.go_up_data3d2.setObjectName(u"go_up_data3d2")
-        self.go_up_data3d2.setIcon(icon2)
+        self.go_up_data3d2.setIcon(icon1)
 
         self.horizontalLayout_34.addWidget(self.go_up_data3d2)
 
         self.go_left_data3d2 = QToolButton(self.frame_10)
         self.go_left_data3d2.setObjectName(u"go_left_data3d2")
-        self.go_left_data3d2.setIcon(icon3)
+        self.go_left_data3d2.setIcon(icon2)
 
         self.horizontalLayout_34.addWidget(self.go_left_data3d2)
 
         self.go_right_data3d2 = QToolButton(self.frame_10)
         self.go_right_data3d2.setObjectName(u"go_right_data3d2")
-        self.go_right_data3d2.setIcon(icon4)
+        self.go_right_data3d2.setIcon(icon3)
 
         self.horizontalLayout_34.addWidget(self.go_right_data3d2)
 
@@ -1773,6 +2249,253 @@ class Ui_MainWindow(object):
         self.stackedWidget_coronal.addWidget(self.page_10)
 
         self.gridLayout_143.addWidget(self.stackedWidget_coronal, 0, 2, 1, 1)
+
+        self.stackedWidget_axial = QStackedWidget(self.page_23)
+        self.stackedWidget_axial.setObjectName(u"stackedWidget_axial")
+        self.page_11 = QWidget()
+        self.page_11.setObjectName(u"page_11")
+        self.gridLayout_178 = QGridLayout(self.page_11)
+        self.gridLayout_178.setObjectName(u"gridLayout_178")
+        self.gridLayout_178.setContentsMargins(0, 0, 0, 0)
+        self.textEdit_7 = QTextEdit(self.page_11)
+        self.textEdit_7.setObjectName(u"textEdit_7")
+        self.textEdit_7.setMinimumSize(QSize(0, 30))
+        self.textEdit_7.setMaximumSize(QSize(16777215, 30))
+        self.textEdit_7.setLayoutDirection(Qt.LeftToRight)
+        self.textEdit_7.setReadOnly(True)
+
+        self.gridLayout_178.addWidget(self.textEdit_7, 0, 0, 1, 1)
+
+        self.frame_11 = QFrame(self.page_11)
+        self.frame_11.setObjectName(u"frame_11")
+        self.frame_11.setMinimumSize(QSize(0, 200))
+        self.frame_11.setStyleSheet(u"border-color: rgb(170, 170, 170);\n"
+"background-color: rgb(131, 131, 131);\n"
+"")
+        self.frame_11.setFrameShape(QFrame.NoFrame)
+        self.gridLayout_146 = QGridLayout(self.frame_11)
+        self.gridLayout_146.setSpacing(0)
+        self.gridLayout_146.setObjectName(u"gridLayout_146")
+        self.gridLayout_146.setContentsMargins(4, 4, 4, 4)
+        self.horizontalLayout_36 = QHBoxLayout()
+        self.horizontalLayout_36.setObjectName(u"horizontalLayout_36")
+        self.go_down_data3d0 = QToolButton(self.frame_11)
+        self.go_down_data3d0.setObjectName(u"go_down_data3d0")
+        self.go_down_data3d0.setIcon(icon)
+
+        self.horizontalLayout_36.addWidget(self.go_down_data3d0)
+
+        self.go_up_data3d0 = QToolButton(self.frame_11)
+        self.go_up_data3d0.setObjectName(u"go_up_data3d0")
+        self.go_up_data3d0.setIcon(icon1)
+
+        self.horizontalLayout_36.addWidget(self.go_up_data3d0)
+
+        self.go_left_data3d0 = QToolButton(self.frame_11)
+        self.go_left_data3d0.setObjectName(u"go_left_data3d0")
+        self.go_left_data3d0.setIcon(icon2)
+
+        self.horizontalLayout_36.addWidget(self.go_left_data3d0)
+
+        self.go_right_data3d0 = QToolButton(self.frame_11)
+        self.go_right_data3d0.setObjectName(u"go_right_data3d0")
+        self.go_right_data3d0.setIcon(icon3)
+
+        self.horizontalLayout_36.addWidget(self.go_right_data3d0)
+
+
+        self.gridLayout_146.addLayout(self.horizontalLayout_36, 2, 8, 1, 1)
+
+        self.fit_to_zoom_data3d0 = QPushButton(self.frame_11)
+        self.fit_to_zoom_data3d0.setObjectName(u"fit_to_zoom_data3d0")
+        self.fit_to_zoom_data3d0.setStyleSheet(u"\n"
+"background-color: rgb(0, 153, 255);")
+        self.fit_to_zoom_data3d0.setAutoDefault(False)
+        self.fit_to_zoom_data3d0.setFlat(False)
+
+        self.gridLayout_146.addWidget(self.fit_to_zoom_data3d0, 1, 0, 2, 1)
+
+        self.horizontalLayout_37 = QHBoxLayout()
+        self.horizontalLayout_37.setObjectName(u"horizontalLayout_37")
+        self.zoom_in_data3d0 = QToolButton(self.frame_11)
+        self.zoom_in_data3d0.setObjectName(u"zoom_in_data3d0")
+        self.zoom_in_data3d0.setIcon(icon4)
+
+        self.horizontalLayout_37.addWidget(self.zoom_in_data3d0)
+
+        self.zoom_out_data3d0 = QToolButton(self.frame_11)
+        self.zoom_out_data3d0.setObjectName(u"zoom_out_data3d0")
+        self.zoom_out_data3d0.setIcon(icon5)
+
+        self.horizontalLayout_37.addWidget(self.zoom_out_data3d0)
+
+
+        self.gridLayout_146.addLayout(self.horizontalLayout_37, 2, 7, 1, 1)
+
+        self.Scroll_data3d0 = QScrollBar(self.frame_11)
+        self.Scroll_data3d0.setObjectName(u"Scroll_data3d0")
+        self.Scroll_data3d0.setPageStep(10)
+
+        self.gridLayout_146.addWidget(self.Scroll_data3d0, 0, 9, 1, 1)
+
+        self.vtkWidget_data_axial = QVTKRenderWindowInteractor(self.frame_11)
+        self.vtkWidget_data_axial.setObjectName(u"vtkWidget_data_axial")
+        self.vtkWidget_data_axial.setStyleSheet(u"background-color: rgb(200, 177, 176);")
+
+        self.gridLayout_146.addWidget(self.vtkWidget_data_axial, 0, 0, 1, 9)
+
+        self.vtkWidget_data_axial.raise_()
+        self.Scroll_data3d0.raise_()
+        self.fit_to_zoom_data3d0.raise_()
+
+        self.gridLayout_178.addWidget(self.frame_11, 1, 0, 1, 1)
+
+        self.stackedWidget_axial.addWidget(self.page_11)
+        self.page_14 = QWidget()
+        self.page_14.setObjectName(u"page_14")
+        self.gridLayout_196 = QGridLayout(self.page_14)
+        self.gridLayout_196.setObjectName(u"gridLayout_196")
+        self.gridLayout_196.setContentsMargins(0, 0, 0, 0)
+        self.stackedWidget_sagittal_2 = QStackedWidget(self.page_14)
+        self.stackedWidget_sagittal_2.setObjectName(u"stackedWidget_sagittal_2")
+        self.page_19 = QWidget()
+        self.page_19.setObjectName(u"page_19")
+        self.gridLayout_193 = QGridLayout(self.page_19)
+        self.gridLayout_193.setObjectName(u"gridLayout_193")
+        self.gridLayout_193.setContentsMargins(0, 0, 0, 0)
+        self.textEdit_12 = QTextEdit(self.page_19)
+        self.textEdit_12.setObjectName(u"textEdit_12")
+        self.textEdit_12.setMinimumSize(QSize(0, 30))
+        self.textEdit_12.setMaximumSize(QSize(16777215, 30))
+        self.textEdit_12.setReadOnly(True)
+
+        self.gridLayout_193.addWidget(self.textEdit_12, 0, 0, 1, 1)
+
+        self.frame_12 = QFrame(self.page_19)
+        self.frame_12.setObjectName(u"frame_12")
+        self.frame_12.setMinimumSize(QSize(0, 200))
+        self.frame_12.setStyleSheet(u"border-color: rgb(170, 170, 170);\n"
+"background-color: rgb(131, 131, 131);\n"
+"")
+        self.frame_12.setFrameShape(QFrame.NoFrame)
+        self.gridLayout_194 = QGridLayout(self.frame_12)
+        self.gridLayout_194.setSpacing(0)
+        self.gridLayout_194.setObjectName(u"gridLayout_194")
+        self.gridLayout_194.setContentsMargins(4, 4, 4, 4)
+        self.vtkWidget_data_sagittal_2 = QVTKRenderWindowInteractor(self.frame_12)
+        self.vtkWidget_data_sagittal_2.setObjectName(u"vtkWidget_data_sagittal_2")
+        self.vtkWidget_data_sagittal_2.setStyleSheet(u"background-color: rgb(200, 177, 176);")
+
+        self.gridLayout_194.addWidget(self.vtkWidget_data_sagittal_2, 1, 0, 1, 9)
+
+        self.horizontalLayout_38 = QHBoxLayout()
+        self.horizontalLayout_38.setObjectName(u"horizontalLayout_38")
+        self.go_down_data3d1_2 = QToolButton(self.frame_12)
+        self.go_down_data3d1_2.setObjectName(u"go_down_data3d1_2")
+        icon6 = QIcon(QIcon.fromTheme(QIcon.ThemeIcon.GoDown))
+        self.go_down_data3d1_2.setIcon(icon6)
+
+        self.horizontalLayout_38.addWidget(self.go_down_data3d1_2)
+
+        self.go_up_data3d1_2 = QToolButton(self.frame_12)
+        self.go_up_data3d1_2.setObjectName(u"go_up_data3d1_2")
+        icon7 = QIcon(QIcon.fromTheme(QIcon.ThemeIcon.GoUp))
+        self.go_up_data3d1_2.setIcon(icon7)
+
+        self.horizontalLayout_38.addWidget(self.go_up_data3d1_2)
+
+        self.go_left_data3d1_2 = QToolButton(self.frame_12)
+        self.go_left_data3d1_2.setObjectName(u"go_left_data3d1_2")
+
+        self.horizontalLayout_38.addWidget(self.go_left_data3d1_2)
+
+        self.go_right_data3d1_2 = QToolButton(self.frame_12)
+        self.go_right_data3d1_2.setObjectName(u"go_right_data3d1_2")
+
+        self.horizontalLayout_38.addWidget(self.go_right_data3d1_2)
+
+
+        self.gridLayout_194.addLayout(self.horizontalLayout_38, 3, 8, 1, 1)
+
+        self.horizontalLayout_39 = QHBoxLayout()
+        self.horizontalLayout_39.setObjectName(u"horizontalLayout_39")
+        self.zoom_in_data3d1_2 = QToolButton(self.frame_12)
+        self.zoom_in_data3d1_2.setObjectName(u"zoom_in_data3d1_2")
+
+        self.horizontalLayout_39.addWidget(self.zoom_in_data3d1_2)
+
+        self.zoom_out_data3d1_2 = QToolButton(self.frame_12)
+        self.zoom_out_data3d1_2.setObjectName(u"zoom_out_data3d1_2")
+
+        self.horizontalLayout_39.addWidget(self.zoom_out_data3d1_2)
+
+
+        self.gridLayout_194.addLayout(self.horizontalLayout_39, 3, 7, 1, 1)
+
+        self.fit_to_zoom_data3d1_2 = QPushButton(self.frame_12)
+        self.fit_to_zoom_data3d1_2.setObjectName(u"fit_to_zoom_data3d1_2")
+        self.fit_to_zoom_data3d1_2.setStyleSheet(u"\n"
+"background-color: rgb(0, 153, 255);")
+        self.fit_to_zoom_data3d1_2.setAutoDefault(False)
+        self.fit_to_zoom_data3d1_2.setFlat(False)
+
+        self.gridLayout_194.addWidget(self.fit_to_zoom_data3d1_2, 2, 0, 2, 1)
+
+        self.Scroll_data3d1_2 = QScrollBar(self.frame_12)
+        self.Scroll_data3d1_2.setObjectName(u"Scroll_data3d1_2")
+        self.Scroll_data3d1_2.setPageStep(10)
+
+        self.gridLayout_194.addWidget(self.Scroll_data3d1_2, 1, 9, 1, 1)
+
+
+        self.gridLayout_193.addWidget(self.frame_12, 1, 0, 1, 1)
+
+        self.stackedWidget_sagittal_2.addWidget(self.page_19)
+        self.page_20 = QWidget()
+        self.page_20.setObjectName(u"page_20")
+        self.gridLayout_195 = QGridLayout(self.page_20)
+        self.gridLayout_195.setObjectName(u"gridLayout_195")
+        self.gridLayout_195.setContentsMargins(0, 0, 0, 0)
+        self.vtkWidget_trajPlan_3 = QVTKRenderWindowInteractor(self.page_20)
+        self.vtkWidget_trajPlan_3.setObjectName(u"vtkWidget_trajPlan_3")
+        self.vtkWidget_trajPlan_3.setStyleSheet(u"background-color: rgb(200, 177, 176);")
+
+        self.gridLayout_195.addWidget(self.vtkWidget_trajPlan_3, 2, 0, 1, 2)
+
+        self.pushButton_resetAxial = QPushButton(self.page_20)
+        self.pushButton_resetAxial.setObjectName(u"pushButton_resetAxial")
+
+        self.gridLayout_195.addWidget(self.pushButton_resetAxial, 5, 0, 1, 2)
+
+        self.lineEdit_59 = QLineEdit(self.page_20)
+        self.lineEdit_59.setObjectName(u"lineEdit_59")
+        self.lineEdit_59.setMaximumSize(QSize(1677215, 16777215))
+        self.lineEdit_59.setReadOnly(True)
+
+        self.gridLayout_195.addWidget(self.lineEdit_59, 3, 0, 1, 1)
+
+        self.horizontalSlider_axial3D = QSlider(self.page_20)
+        self.horizontalSlider_axial3D.setObjectName(u"horizontalSlider_axial3D")
+        self.horizontalSlider_axial3D.setSingleStep(10)
+        self.horizontalSlider_axial3D.setOrientation(Qt.Horizontal)
+
+        self.gridLayout_195.addWidget(self.horizontalSlider_axial3D, 3, 1, 1, 1)
+
+        self.textEdit_13 = QTextEdit(self.page_20)
+        self.textEdit_13.setObjectName(u"textEdit_13")
+        self.textEdit_13.setMinimumSize(QSize(0, 30))
+        self.textEdit_13.setMaximumSize(QSize(16777215, 30))
+        self.textEdit_13.setReadOnly(True)
+
+        self.gridLayout_195.addWidget(self.textEdit_13, 1, 0, 1, 2)
+
+        self.stackedWidget_sagittal_2.addWidget(self.page_20)
+
+        self.gridLayout_196.addWidget(self.stackedWidget_sagittal_2, 0, 0, 1, 1)
+
+        self.stackedWidget_axial.addWidget(self.page_14)
+
+        self.gridLayout_143.addWidget(self.stackedWidget_axial, 0, 0, 1, 1)
 
         self.stackedWidget_3d_tp = QStackedWidget(self.page_23)
         self.stackedWidget_3d_tp.setObjectName(u"stackedWidget_3d_tp")
@@ -1925,17 +2648,17 @@ class Ui_MainWindow(object):
         self.tableintensity_data3d = QTableWidget(self.groupBox_40)
         if (self.tableintensity_data3d.columnCount() < 4):
             self.tableintensity_data3d.setColumnCount(4)
-        __qtablewidgetitem4 = QTableWidgetItem()
-        self.tableintensity_data3d.setHorizontalHeaderItem(0, __qtablewidgetitem4)
-        __qtablewidgetitem5 = QTableWidgetItem()
-        self.tableintensity_data3d.setHorizontalHeaderItem(1, __qtablewidgetitem5)
-        __qtablewidgetitem6 = QTableWidgetItem()
-        self.tableintensity_data3d.setHorizontalHeaderItem(2, __qtablewidgetitem6)
-        __qtablewidgetitem7 = QTableWidgetItem()
-        self.tableintensity_data3d.setHorizontalHeaderItem(3, __qtablewidgetitem7)
+        __qtablewidgetitem8 = QTableWidgetItem()
+        self.tableintensity_data3d.setHorizontalHeaderItem(0, __qtablewidgetitem8)
+        __qtablewidgetitem9 = QTableWidgetItem()
+        self.tableintensity_data3d.setHorizontalHeaderItem(1, __qtablewidgetitem9)
+        __qtablewidgetitem10 = QTableWidgetItem()
+        self.tableintensity_data3d.setHorizontalHeaderItem(2, __qtablewidgetitem10)
+        __qtablewidgetitem11 = QTableWidgetItem()
+        self.tableintensity_data3d.setHorizontalHeaderItem(3, __qtablewidgetitem11)
         self.tableintensity_data3d.setObjectName(u"tableintensity_data3d")
-        sizePolicy4.setHeightForWidth(self.tableintensity_data3d.sizePolicy().hasHeightForWidth())
-        self.tableintensity_data3d.setSizePolicy(sizePolicy4)
+        sizePolicy3.setHeightForWidth(self.tableintensity_data3d.sizePolicy().hasHeightForWidth())
+        self.tableintensity_data3d.setSizePolicy(sizePolicy3)
         self.tableintensity_data3d.setMaximumSize(QSize(700, 1677))
         self.tableintensity_data3d.setContextMenuPolicy(Qt.NoContextMenu)
         self.tableintensity_data3d.setSizeAdjustPolicy(QAbstractScrollArea.AdjustToContents)
@@ -1955,25 +2678,60 @@ class Ui_MainWindow(object):
         self.page_30.setObjectName(u"page_30")
         self.gridLayout_214 = QGridLayout(self.page_30)
         self.gridLayout_214.setObjectName(u"gridLayout_214")
+        self.gridLayout_214.setHorizontalSpacing(6)
+        self.gridLayout_214.setContentsMargins(0, 0, 0, 0)
+        self.frame = QFrame(self.page_30)
+        self.frame.setObjectName(u"frame")
+        self.frame.setFrameShape(QFrame.StyledPanel)
+        self.frame.setFrameShadow(QFrame.Raised)
+        self.gridLayout_177 = QGridLayout(self.frame)
+        self.gridLayout_177.setObjectName(u"gridLayout_177")
+        self.pushButton_axialView = QPushButton(self.frame)
+        self.pushButton_axialView.setObjectName(u"pushButton_axialView")
+        self.pushButton_axialView.setEnabled(False)
+        self.pushButton_axialView.setCheckable(True)
+        self.pushButton_axialView.setChecked(True)
+
+        self.gridLayout_177.addWidget(self.pushButton_axialView, 0, 0, 1, 1)
+
+        self.pushButton_sagittalView = QPushButton(self.frame)
+        self.pushButton_sagittalView.setObjectName(u"pushButton_sagittalView")
+        self.pushButton_sagittalView.setEnabled(False)
+        self.pushButton_sagittalView.setCheckable(True)
+        self.pushButton_sagittalView.setChecked(True)
+
+        self.gridLayout_177.addWidget(self.pushButton_sagittalView, 0, 1, 1, 1)
+
+        self.pushButton_coronalView = QPushButton(self.frame)
+        self.pushButton_coronalView.setObjectName(u"pushButton_coronalView")
+        self.pushButton_coronalView.setEnabled(False)
+        self.pushButton_coronalView.setCheckable(True)
+        self.pushButton_coronalView.setChecked(True)
+
+        self.gridLayout_177.addWidget(self.pushButton_coronalView, 0, 2, 1, 1)
+
+
+        self.gridLayout_214.addWidget(self.frame, 0, 3, 1, 1)
+
         self.groupBox_70 = QGroupBox(self.page_30)
         self.groupBox_70.setObjectName(u"groupBox_70")
         self.groupBox_70.setMaximumSize(QSize(16777215, 200))
         self.gridLayout_212 = QGridLayout(self.groupBox_70)
         self.gridLayout_212.setObjectName(u"gridLayout_212")
-        self.lineEdit_78 = QLineEdit(self.groupBox_70)
-        self.lineEdit_78.setObjectName(u"lineEdit_78")
-        self.lineEdit_78.setReadOnly(True)
+        self.spinBox_x_data3d_2 = QSpinBox(self.groupBox_70)
+        self.spinBox_x_data3d_2.setObjectName(u"spinBox_x_data3d_2")
+        self.spinBox_x_data3d_2.setMaximumSize(QSize(16777215, 30))
+        self.spinBox_x_data3d_2.setButtonSymbols(QAbstractSpinBox.UpDownArrows)
+        self.spinBox_x_data3d_2.setMinimum(1)
+        self.spinBox_x_data3d_2.setMaximum(512)
 
-        self.gridLayout_212.addWidget(self.lineEdit_78, 0, 2, 1, 1)
+        self.gridLayout_212.addWidget(self.spinBox_x_data3d_2, 1, 1, 1, 1)
 
-        self.spinBox_y_data3d_2 = QSpinBox(self.groupBox_70)
-        self.spinBox_y_data3d_2.setObjectName(u"spinBox_y_data3d_2")
-        self.spinBox_y_data3d_2.setMaximumSize(QSize(16777215, 30))
-        self.spinBox_y_data3d_2.setButtonSymbols(QAbstractSpinBox.UpDownArrows)
-        self.spinBox_y_data3d_2.setMinimum(1)
-        self.spinBox_y_data3d_2.setMaximum(1024)
+        self.lineEdit_80 = QLineEdit(self.groupBox_70)
+        self.lineEdit_80.setObjectName(u"lineEdit_80")
+        self.lineEdit_80.setReadOnly(True)
 
-        self.gridLayout_212.addWidget(self.spinBox_y_data3d_2, 1, 2, 1, 1)
+        self.gridLayout_212.addWidget(self.lineEdit_80, 0, 3, 1, 1)
 
         self.spinBox_z_data3d_2 = QSpinBox(self.groupBox_70)
         self.spinBox_z_data3d_2.setObjectName(u"spinBox_z_data3d_2")
@@ -1984,14 +2742,20 @@ class Ui_MainWindow(object):
 
         self.gridLayout_212.addWidget(self.spinBox_z_data3d_2, 1, 3, 1, 1)
 
-        self.spinBox_x_data3d_2 = QSpinBox(self.groupBox_70)
-        self.spinBox_x_data3d_2.setObjectName(u"spinBox_x_data3d_2")
-        self.spinBox_x_data3d_2.setMaximumSize(QSize(16777215, 30))
-        self.spinBox_x_data3d_2.setButtonSymbols(QAbstractSpinBox.UpDownArrows)
-        self.spinBox_x_data3d_2.setMinimum(1)
-        self.spinBox_x_data3d_2.setMaximum(512)
+        self.spinBox_y_data3d_2 = QSpinBox(self.groupBox_70)
+        self.spinBox_y_data3d_2.setObjectName(u"spinBox_y_data3d_2")
+        self.spinBox_y_data3d_2.setMaximumSize(QSize(16777215, 30))
+        self.spinBox_y_data3d_2.setButtonSymbols(QAbstractSpinBox.UpDownArrows)
+        self.spinBox_y_data3d_2.setMinimum(1)
+        self.spinBox_y_data3d_2.setMaximum(1024)
 
-        self.gridLayout_212.addWidget(self.spinBox_x_data3d_2, 1, 1, 1, 1)
+        self.gridLayout_212.addWidget(self.spinBox_y_data3d_2, 1, 2, 1, 1)
+
+        self.lineEdit_78 = QLineEdit(self.groupBox_70)
+        self.lineEdit_78.setObjectName(u"lineEdit_78")
+        self.lineEdit_78.setReadOnly(True)
+
+        self.gridLayout_212.addWidget(self.lineEdit_78, 0, 2, 1, 1)
 
         self.lineEdit_79 = QLineEdit(self.groupBox_70)
         self.lineEdit_79.setObjectName(u"lineEdit_79")
@@ -1999,161 +2763,8 @@ class Ui_MainWindow(object):
 
         self.gridLayout_212.addWidget(self.lineEdit_79, 0, 1, 1, 1)
 
-        self.lineEdit_80 = QLineEdit(self.groupBox_70)
-        self.lineEdit_80.setObjectName(u"lineEdit_80")
-        self.lineEdit_80.setReadOnly(True)
 
-        self.gridLayout_212.addWidget(self.lineEdit_80, 0, 3, 1, 1)
-
-
-        self.gridLayout_214.addWidget(self.groupBox_70, 0, 0, 3, 1)
-
-        self.groupBox_75 = QGroupBox(self.page_30)
-        self.groupBox_75.setObjectName(u"groupBox_75")
-        self.gridLayout_189 = QGridLayout(self.groupBox_75)
-        self.gridLayout_189.setObjectName(u"gridLayout_189")
-        self.spinBox_tp_insert_z = QSpinBox(self.groupBox_75)
-        self.spinBox_tp_insert_z.setObjectName(u"spinBox_tp_insert_z")
-        self.spinBox_tp_insert_z.setReadOnly(True)
-        self.spinBox_tp_insert_z.setButtonSymbols(QAbstractSpinBox.NoButtons)
-        self.spinBox_tp_insert_z.setMaximum(1000)
-
-        self.gridLayout_189.addWidget(self.spinBox_tp_insert_z, 1, 3, 1, 1)
-
-        self.pushButton_tp_insert = QPushButton(self.groupBox_75)
-        self.pushButton_tp_insert.setObjectName(u"pushButton_tp_insert")
-        self.pushButton_tp_insert.setMaximumSize(QSize(16777215, 16777215))
-        self.pushButton_tp_insert.setStyleSheet(u" QPushButton { background-color: #e67e22; color: white; } QPushButton:disabled { background-color: #a9713f; color: #cccccc; }")
-
-        self.gridLayout_189.addWidget(self.pushButton_tp_insert, 0, 1, 1, 3)
-
-        self.spinBox_tp_insert_x = QSpinBox(self.groupBox_75)
-        self.spinBox_tp_insert_x.setObjectName(u"spinBox_tp_insert_x")
-        self.spinBox_tp_insert_x.setReadOnly(True)
-        self.spinBox_tp_insert_x.setButtonSymbols(QAbstractSpinBox.NoButtons)
-        self.spinBox_tp_insert_x.setMaximum(1000)
-
-        self.gridLayout_189.addWidget(self.spinBox_tp_insert_x, 1, 1, 1, 1)
-
-        self.spinBox_tp_insert_y = QSpinBox(self.groupBox_75)
-        self.spinBox_tp_insert_y.setObjectName(u"spinBox_tp_insert_y")
-        self.spinBox_tp_insert_y.setReadOnly(True)
-        self.spinBox_tp_insert_y.setButtonSymbols(QAbstractSpinBox.NoButtons)
-        self.spinBox_tp_insert_y.setMaximum(1000)
-
-        self.gridLayout_189.addWidget(self.spinBox_tp_insert_y, 1, 2, 1, 1)
-
-
-        self.gridLayout_214.addWidget(self.groupBox_75, 0, 1, 4, 1)
-
-        self.groupBox_74 = QGroupBox(self.page_30)
-        self.groupBox_74.setObjectName(u"groupBox_74")
-        self.gridLayout_188 = QGridLayout(self.groupBox_74)
-        self.gridLayout_188.setObjectName(u"gridLayout_188")
-        self.spinBox_tp_deep_x = QSpinBox(self.groupBox_74)
-        self.spinBox_tp_deep_x.setObjectName(u"spinBox_tp_deep_x")
-        self.spinBox_tp_deep_x.setMaximum(1000)
-
-        self.gridLayout_188.addWidget(self.spinBox_tp_deep_x, 1, 0, 1, 1)
-
-        self.pushButton_tp_deep = QPushButton(self.groupBox_74)
-        self.pushButton_tp_deep.setObjectName(u"pushButton_tp_deep")
-        self.pushButton_tp_deep.setMaximumSize(QSize(16777215, 16777215))
-        self.pushButton_tp_deep.setStyleSheet(u" QPushButton { background-color: #e67e22; color: white; } QPushButton:disabled { background-color: #a9713f; color: #cccccc; }")
-
-        self.gridLayout_188.addWidget(self.pushButton_tp_deep, 0, 0, 1, 3)
-
-        self.spinBox_tp_deep_z = QSpinBox(self.groupBox_74)
-        self.spinBox_tp_deep_z.setObjectName(u"spinBox_tp_deep_z")
-        self.spinBox_tp_deep_z.setMaximum(1000)
-
-        self.gridLayout_188.addWidget(self.spinBox_tp_deep_z, 1, 2, 1, 1)
-
-        self.spinBox_tp_deep_y = QSpinBox(self.groupBox_74)
-        self.spinBox_tp_deep_y.setObjectName(u"spinBox_tp_deep_y")
-        self.spinBox_tp_deep_y.setMaximum(1000)
-
-        self.gridLayout_188.addWidget(self.spinBox_tp_deep_y, 1, 1, 1, 1)
-
-
-        self.gridLayout_214.addWidget(self.groupBox_74, 0, 2, 4, 1)
-
-        self.frame = QFrame(self.page_30)
-        self.frame.setObjectName(u"frame")
-        self.frame.setFrameShape(QFrame.StyledPanel)
-        self.frame.setFrameShadow(QFrame.Raised)
-        self.gridLayout_177 = QGridLayout(self.frame)
-        self.gridLayout_177.setObjectName(u"gridLayout_177")
-        self.pushButton_coronalView = QPushButton(self.frame)
-        self.pushButton_coronalView.setObjectName(u"pushButton_coronalView")
-        self.pushButton_coronalView.setEnabled(False)
-        self.pushButton_coronalView.setCheckable(True)
-        self.pushButton_coronalView.setChecked(True)
-
-        self.gridLayout_177.addWidget(self.pushButton_coronalView, 0, 2, 1, 1)
-
-        self.pushButton_sagittalView = QPushButton(self.frame)
-        self.pushButton_sagittalView.setObjectName(u"pushButton_sagittalView")
-        self.pushButton_sagittalView.setEnabled(False)
-        self.pushButton_sagittalView.setCheckable(True)
-        self.pushButton_sagittalView.setChecked(True)
-
-        self.gridLayout_177.addWidget(self.pushButton_sagittalView, 0, 1, 1, 1)
-
-        self.pushButton_axialView = QPushButton(self.frame)
-        self.pushButton_axialView.setObjectName(u"pushButton_axialView")
-        self.pushButton_axialView.setEnabled(False)
-        self.pushButton_axialView.setCheckable(True)
-        self.pushButton_axialView.setChecked(True)
-
-        self.gridLayout_177.addWidget(self.pushButton_axialView, 0, 0, 1, 1)
-
-
-        self.gridLayout_214.addWidget(self.frame, 0, 3, 1, 1)
-
-        self.pushButton_edgemask = QPushButton(self.page_30)
-        self.pushButton_edgemask.setObjectName(u"pushButton_edgemask")
-        self.pushButton_edgemask.setCheckable(True)
-
-        self.gridLayout_214.addWidget(self.pushButton_edgemask, 1, 3, 1, 1)
-
-        self.checkBox_brain_region = QCheckBox(self.page_30)
-        self.checkBox_brain_region.setObjectName(u"checkBox_brain_region")
-        self.checkBox_brain_region.setChecked(True)
-
-        self.gridLayout_214.addWidget(self.checkBox_brain_region, 2, 3, 1, 1)
-
-        self.groupBox_71 = QGroupBox(self.page_30)
-        self.groupBox_71.setObjectName(u"groupBox_71")
-        self.groupBox_71.setMinimumSize(QSize(100, 100))
-        self.groupBox_71.setMaximumSize(QSize(16777215, 200))
-        self.gridLayout_213 = QGridLayout(self.groupBox_71)
-        self.gridLayout_213.setObjectName(u"gridLayout_213")
-        self.gridLayout_213.setContentsMargins(-1, -1, 9, 9)
-        self.tableintensity_data3d_2 = QTableWidget(self.groupBox_71)
-        if (self.tableintensity_data3d_2.columnCount() < 4):
-            self.tableintensity_data3d_2.setColumnCount(4)
-        __qtablewidgetitem8 = QTableWidgetItem()
-        self.tableintensity_data3d_2.setHorizontalHeaderItem(0, __qtablewidgetitem8)
-        __qtablewidgetitem9 = QTableWidgetItem()
-        self.tableintensity_data3d_2.setHorizontalHeaderItem(1, __qtablewidgetitem9)
-        __qtablewidgetitem10 = QTableWidgetItem()
-        self.tableintensity_data3d_2.setHorizontalHeaderItem(2, __qtablewidgetitem10)
-        __qtablewidgetitem11 = QTableWidgetItem()
-        self.tableintensity_data3d_2.setHorizontalHeaderItem(3, __qtablewidgetitem11)
-        self.tableintensity_data3d_2.setObjectName(u"tableintensity_data3d_2")
-        sizePolicy4.setHeightForWidth(self.tableintensity_data3d_2.sizePolicy().hasHeightForWidth())
-        self.tableintensity_data3d_2.setSizePolicy(sizePolicy4)
-        self.tableintensity_data3d_2.setMaximumSize(QSize(700, 1677))
-        self.tableintensity_data3d_2.setContextMenuPolicy(Qt.NoContextMenu)
-        self.tableintensity_data3d_2.setSizeAdjustPolicy(QAbstractScrollArea.AdjustToContents)
-        self.tableintensity_data3d_2.setSelectionBehavior(QAbstractItemView.SelectItems)
-        self.tableintensity_data3d_2.horizontalHeader().setDefaultSectionSize(67)
-
-        self.gridLayout_213.addWidget(self.tableintensity_data3d_2, 1, 0, 1, 1)
-
-
-        self.gridLayout_214.addWidget(self.groupBox_71, 3, 0, 1, 1)
+        self.gridLayout_214.addWidget(self.groupBox_70, 0, 0, 1, 1)
 
         self.groupBox_72 = QGroupBox(self.page_30)
         self.groupBox_72.setObjectName(u"groupBox_72")
@@ -2171,6 +2782,7 @@ class Ui_MainWindow(object):
         self.textEdit_distance_shank = QTextEdit(self.groupBox_72)
         self.textEdit_distance_shank.setObjectName(u"textEdit_distance_shank")
         self.textEdit_distance_shank.setEnabled(False)
+        self.textEdit_distance_shank.setMinimumSize(QSize(0, 50))
         self.textEdit_distance_shank.setReadOnly(True)
 
         self.gridLayout_215.addWidget(self.textEdit_distance_shank, 2, 0, 1, 2)
@@ -2178,13 +2790,194 @@ class Ui_MainWindow(object):
 
         self.gridLayout_214.addWidget(self.groupBox_72, 3, 3, 1, 1)
 
+        self.groupBox_74 = QGroupBox(self.page_30)
+        self.groupBox_74.setObjectName(u"groupBox_74")
+        self.gridLayout_188 = QGridLayout(self.groupBox_74)
+        self.gridLayout_188.setObjectName(u"gridLayout_188")
+        self.pushButton_tp_deep = QPushButton(self.groupBox_74)
+        self.pushButton_tp_deep.setObjectName(u"pushButton_tp_deep")
+        self.pushButton_tp_deep.setMinimumSize(QSize(0, 50))
+        self.pushButton_tp_deep.setMaximumSize(QSize(16777215, 16777215))
+        self.pushButton_tp_deep.setStyleSheet(u" QPushButton { background-color: #e67e22; color: white; } QPushButton:disabled { background-color: #a9713f; color: #cccccc; }")
+
+        self.gridLayout_188.addWidget(self.pushButton_tp_deep, 0, 0, 1, 3)
+
+        self.spinBox_tp_deep_z = QSpinBox(self.groupBox_74)
+        self.spinBox_tp_deep_z.setObjectName(u"spinBox_tp_deep_z")
+        self.spinBox_tp_deep_z.setMaximum(1000)
+
+        self.gridLayout_188.addWidget(self.spinBox_tp_deep_z, 2, 2, 1, 1)
+
+        self.spinBox_tp_deep_x = QSpinBox(self.groupBox_74)
+        self.spinBox_tp_deep_x.setObjectName(u"spinBox_tp_deep_x")
+        self.spinBox_tp_deep_x.setMaximum(1000)
+
+        self.gridLayout_188.addWidget(self.spinBox_tp_deep_x, 2, 0, 1, 1)
+
+        self.spinBox_tp_deep_y = QSpinBox(self.groupBox_74)
+        self.spinBox_tp_deep_y.setObjectName(u"spinBox_tp_deep_y")
+        self.spinBox_tp_deep_y.setMaximum(1000)
+
+        self.gridLayout_188.addWidget(self.spinBox_tp_deep_y, 2, 1, 1, 1)
+
+        self.lineEdit_89 = QLineEdit(self.groupBox_74)
+        self.lineEdit_89.setObjectName(u"lineEdit_89")
+        self.lineEdit_89.setReadOnly(True)
+
+        self.gridLayout_188.addWidget(self.lineEdit_89, 1, 0, 1, 1)
+
+        self.lineEdit_90 = QLineEdit(self.groupBox_74)
+        self.lineEdit_90.setObjectName(u"lineEdit_90")
+        self.lineEdit_90.setReadOnly(True)
+
+        self.gridLayout_188.addWidget(self.lineEdit_90, 1, 1, 1, 1)
+
+        self.lineEdit_91 = QLineEdit(self.groupBox_74)
+        self.lineEdit_91.setObjectName(u"lineEdit_91")
+        self.lineEdit_91.setReadOnly(True)
+
+        self.gridLayout_188.addWidget(self.lineEdit_91, 1, 2, 1, 1)
+
+
+        self.gridLayout_214.addWidget(self.groupBox_74, 1, 2, 3, 1)
+
+        self.groupBox_71 = QGroupBox(self.page_30)
+        self.groupBox_71.setObjectName(u"groupBox_71")
+        self.groupBox_71.setMinimumSize(QSize(100, 100))
+        self.groupBox_71.setMaximumSize(QSize(16777215, 200))
+        self.gridLayout_213 = QGridLayout(self.groupBox_71)
+        self.gridLayout_213.setObjectName(u"gridLayout_213")
+        self.gridLayout_213.setContentsMargins(-1, -1, 9, 9)
+        self.tableintensity_data3d_2 = QTableWidget(self.groupBox_71)
+        if (self.tableintensity_data3d_2.columnCount() < 4):
+            self.tableintensity_data3d_2.setColumnCount(4)
+        __qtablewidgetitem12 = QTableWidgetItem()
+        self.tableintensity_data3d_2.setHorizontalHeaderItem(0, __qtablewidgetitem12)
+        __qtablewidgetitem13 = QTableWidgetItem()
+        self.tableintensity_data3d_2.setHorizontalHeaderItem(1, __qtablewidgetitem13)
+        __qtablewidgetitem14 = QTableWidgetItem()
+        self.tableintensity_data3d_2.setHorizontalHeaderItem(2, __qtablewidgetitem14)
+        __qtablewidgetitem15 = QTableWidgetItem()
+        self.tableintensity_data3d_2.setHorizontalHeaderItem(3, __qtablewidgetitem15)
+        self.tableintensity_data3d_2.setObjectName(u"tableintensity_data3d_2")
+        sizePolicy3.setHeightForWidth(self.tableintensity_data3d_2.sizePolicy().hasHeightForWidth())
+        self.tableintensity_data3d_2.setSizePolicy(sizePolicy3)
+        self.tableintensity_data3d_2.setMaximumSize(QSize(700, 1677))
+        self.tableintensity_data3d_2.setContextMenuPolicy(Qt.NoContextMenu)
+        self.tableintensity_data3d_2.setSizeAdjustPolicy(QAbstractScrollArea.AdjustToContents)
+        self.tableintensity_data3d_2.setSelectionBehavior(QAbstractItemView.SelectItems)
+        self.tableintensity_data3d_2.horizontalHeader().setDefaultSectionSize(67)
+
+        self.gridLayout_213.addWidget(self.tableintensity_data3d_2, 1, 0, 1, 1)
+
+
+        self.gridLayout_214.addWidget(self.groupBox_71, 1, 0, 3, 1)
+
+        self.checkBox_brain_region = QCheckBox(self.page_30)
+        self.checkBox_brain_region.setObjectName(u"checkBox_brain_region")
+        self.checkBox_brain_region.setChecked(True)
+
+        self.gridLayout_214.addWidget(self.checkBox_brain_region, 2, 3, 1, 1)
+
+        self.groupBox_75 = QGroupBox(self.page_30)
+        self.groupBox_75.setObjectName(u"groupBox_75")
+        self.gridLayout_189 = QGridLayout(self.groupBox_75)
+        self.gridLayout_189.setObjectName(u"gridLayout_189")
+        self.pushButton_tp_insert = QPushButton(self.groupBox_75)
+        self.pushButton_tp_insert.setObjectName(u"pushButton_tp_insert")
+        self.pushButton_tp_insert.setMinimumSize(QSize(0, 50))
+        self.pushButton_tp_insert.setMaximumSize(QSize(16777215, 16777215))
+        self.pushButton_tp_insert.setStyleSheet(u" QPushButton { background-color: #e67e22; color: white; } QPushButton:disabled { background-color: #a9713f; color: #cccccc; }")
+
+        self.gridLayout_189.addWidget(self.pushButton_tp_insert, 0, 1, 1, 3)
+
+        self.spinBox_tp_insert_x = QSpinBox(self.groupBox_75)
+        self.spinBox_tp_insert_x.setObjectName(u"spinBox_tp_insert_x")
+        self.spinBox_tp_insert_x.setReadOnly(True)
+        self.spinBox_tp_insert_x.setButtonSymbols(QAbstractSpinBox.NoButtons)
+        self.spinBox_tp_insert_x.setMaximum(1000)
+
+        self.gridLayout_189.addWidget(self.spinBox_tp_insert_x, 2, 1, 1, 1)
+
+        self.spinBox_tp_insert_y = QSpinBox(self.groupBox_75)
+        self.spinBox_tp_insert_y.setObjectName(u"spinBox_tp_insert_y")
+        self.spinBox_tp_insert_y.setReadOnly(True)
+        self.spinBox_tp_insert_y.setButtonSymbols(QAbstractSpinBox.NoButtons)
+        self.spinBox_tp_insert_y.setMaximum(1000)
+
+        self.gridLayout_189.addWidget(self.spinBox_tp_insert_y, 2, 2, 1, 1)
+
+        self.spinBox_tp_insert_z = QSpinBox(self.groupBox_75)
+        self.spinBox_tp_insert_z.setObjectName(u"spinBox_tp_insert_z")
+        self.spinBox_tp_insert_z.setReadOnly(True)
+        self.spinBox_tp_insert_z.setButtonSymbols(QAbstractSpinBox.NoButtons)
+        self.spinBox_tp_insert_z.setMaximum(1000)
+
+        self.gridLayout_189.addWidget(self.spinBox_tp_insert_z, 2, 3, 1, 1)
+
+        self.lineEdit_19 = QLineEdit(self.groupBox_75)
+        self.lineEdit_19.setObjectName(u"lineEdit_19")
+        self.lineEdit_19.setReadOnly(True)
+
+        self.gridLayout_189.addWidget(self.lineEdit_19, 1, 1, 1, 1)
+
+        self.lineEdit_30 = QLineEdit(self.groupBox_75)
+        self.lineEdit_30.setObjectName(u"lineEdit_30")
+        self.lineEdit_30.setReadOnly(True)
+
+        self.gridLayout_189.addWidget(self.lineEdit_30, 1, 2, 1, 1)
+
+        self.lineEdit_88 = QLineEdit(self.groupBox_75)
+        self.lineEdit_88.setObjectName(u"lineEdit_88")
+        self.lineEdit_88.setReadOnly(True)
+
+        self.gridLayout_189.addWidget(self.lineEdit_88, 1, 3, 1, 1)
+
+
+        self.gridLayout_214.addWidget(self.groupBox_75, 0, 2, 1, 1)
+
+        self.groupBox_73 = QGroupBox(self.page_30)
+        self.groupBox_73.setObjectName(u"groupBox_73")
+        self.gridLayout_216 = QGridLayout(self.groupBox_73)
+        self.gridLayout_216.setObjectName(u"gridLayout_216")
+        self.pushButton_removeShank = QPushButton(self.groupBox_73)
+        self.pushButton_removeShank.setObjectName(u"pushButton_removeShank")
+        self.pushButton_removeShank.setMaximumSize(QSize(16777215, 40))
+        self.pushButton_removeShank.setStyleSheet(u" QPushButton { background-color: #e67e22; color: white; } QPushButton:disabled { background-color: #a9713f; color: #cccccc; }")
+
+        self.gridLayout_216.addWidget(self.pushButton_removeShank, 5, 0, 1, 1)
+
+        self.comboBox_Shanks = QComboBox(self.groupBox_73)
+        self.comboBox_Shanks.setObjectName(u"comboBox_Shanks")
+        self.comboBox_Shanks.setMinimumSize(QSize(0, 50))
+        self.comboBox_Shanks.setFont(font3)
+
+        self.gridLayout_216.addWidget(self.comboBox_Shanks, 1, 0, 1, 1)
+
+        self.comboBox_tpColor = QComboBox(self.groupBox_73)
+        self.comboBox_tpColor.setObjectName(u"comboBox_tpColor")
+        self.comboBox_tpColor.setMinimumSize(QSize(0, 50))
+        self.comboBox_tpColor.setFont(font3)
+
+        self.gridLayout_216.addWidget(self.comboBox_tpColor, 3, 0, 1, 1)
+
+        self.pushButton_addShank = QPushButton(self.groupBox_73)
+        self.pushButton_addShank.setObjectName(u"pushButton_addShank")
+        self.pushButton_addShank.setMaximumSize(QSize(16777215, 40))
+        self.pushButton_addShank.setStyleSheet(u" QPushButton { background-color: #e67e22; color: white; } QPushButton:disabled { background-color: #a9713f; color: #cccccc; }")
+
+        self.gridLayout_216.addWidget(self.pushButton_addShank, 4, 0, 1, 1)
+
+
+        self.gridLayout_214.addWidget(self.groupBox_73, 0, 1, 4, 1)
+
         self.gridLayout_214.setColumnStretch(0, 1)
         self.gridLayout_214.setColumnStretch(1, 1)
         self.gridLayout_214.setColumnStretch(2, 1)
         self.gridLayout_214.setColumnStretch(3, 1)
         self.stackedWidget_3d_tp.addWidget(self.page_30)
 
-        self.gridLayout_143.addWidget(self.stackedWidget_3d_tp, 1, 0, 1, 3)
+        self.gridLayout_143.addWidget(self.stackedWidget_3d_tp, 2, 0, 1, 3)
 
         self.gridLayout_143.setColumnStretch(0, 1)
         self.gridLayout_143.setColumnStretch(1, 1)
@@ -2383,707 +3176,15 @@ class Ui_MainWindow(object):
 
         self.gridLayout_70.addWidget(self.groupBox_data0, 1, 1, 1, 4)
 
-        self.groupBox_data2 = QGroupBox(self.PostSurgery)
-        self.groupBox_data2.setObjectName(u"groupBox_data2")
-        self.groupBox_data2.setMinimumSize(QSize(0, 177))
-        self.gridLayout_99 = QGridLayout(self.groupBox_data2)
-        self.gridLayout_99.setObjectName(u"gridLayout_99")
-        self.groupBox_32 = QGroupBox(self.groupBox_data2)
-        self.groupBox_32.setObjectName(u"groupBox_32")
-        self.gridLayout_33 = QGridLayout(self.groupBox_32)
-        self.gridLayout_33.setObjectName(u"gridLayout_33")
-        self.spinBox_x_data2 = QSpinBox(self.groupBox_32)
-        self.spinBox_x_data2.setObjectName(u"spinBox_x_data2")
-        self.spinBox_x_data2.setMaximumSize(QSize(16777215, 30))
-        self.spinBox_x_data2.setButtonSymbols(QAbstractSpinBox.UpDownArrows)
-        self.spinBox_x_data2.setMinimum(1)
-        self.spinBox_x_data2.setMaximum(120)
-
-        self.gridLayout_33.addWidget(self.spinBox_x_data2, 0, 0, 1, 1)
-
-        self.spinBox_y_data2 = QSpinBox(self.groupBox_32)
-        self.spinBox_y_data2.setObjectName(u"spinBox_y_data2")
-        self.spinBox_y_data2.setMaximumSize(QSize(16777215, 30))
-        self.spinBox_y_data2.setButtonSymbols(QAbstractSpinBox.UpDownArrows)
-        self.spinBox_y_data2.setMinimum(1)
-        self.spinBox_y_data2.setMaximum(120)
-
-        self.gridLayout_33.addWidget(self.spinBox_y_data2, 0, 1, 1, 1)
-
-        self.spinBox_z_data2 = QSpinBox(self.groupBox_32)
-        self.spinBox_z_data2.setObjectName(u"spinBox_z_data2")
-        self.spinBox_z_data2.setMaximumSize(QSize(16777215, 30))
-        self.spinBox_z_data2.setButtonSymbols(QAbstractSpinBox.UpDownArrows)
-        self.spinBox_z_data2.setMinimum(1)
-        self.spinBox_z_data2.setMaximum(60)
-
-        self.gridLayout_33.addWidget(self.spinBox_z_data2, 0, 2, 1, 1)
-
-
-        self.gridLayout_99.addWidget(self.groupBox_32, 1, 0, 1, 1)
-
-        self.groupBox_time20 = QGroupBox(self.groupBox_data2)
-        self.groupBox_time20.setObjectName(u"groupBox_time20")
-        sizePolicy3.setHeightForWidth(self.groupBox_time20.sizePolicy().hasHeightForWidth())
-        self.groupBox_time20.setSizePolicy(sizePolicy3)
-        self.groupBox_time20.setMaximumSize(QSize(16777215, 16777215))
-        self.groupBox_time20.setFont(font3)
-        self.groupBox_time20.setStyleSheet(u"")
-        self.gridLayout_97 = QGridLayout(self.groupBox_time20)
-        self.gridLayout_97.setObjectName(u"gridLayout_97")
-        self.frame_8 = QFrame(self.groupBox_time20)
-        self.frame_8.setObjectName(u"frame_8")
-        self.frame_8.setMinimumSize(QSize(0, 200))
-        self.frame_8.setStyleSheet(u"border-color: rgb(170, 170, 170);\n"
-"background-color: rgb(131, 131, 131);\n"
-"")
-        self.frame_8.setFrameShape(QFrame.NoFrame)
-        self.gridLayout_98 = QGridLayout(self.frame_8)
-        self.gridLayout_98.setSpacing(0)
-        self.gridLayout_98.setObjectName(u"gridLayout_98")
-        self.gridLayout_98.setContentsMargins(4, 4, 4, 4)
-        self.fit_to_zoom_data20 = QPushButton(self.frame_8)
-        self.fit_to_zoom_data20.setObjectName(u"fit_to_zoom_data20")
-        self.fit_to_zoom_data20.setStyleSheet(u"\n"
-"background-color: rgb(0, 153, 255);")
-        self.fit_to_zoom_data20.setAutoDefault(False)
-        self.fit_to_zoom_data20.setFlat(False)
-
-        self.gridLayout_98.addWidget(self.fit_to_zoom_data20, 1, 0, 2, 1)
-
-        self.vtkWidget_data20 = QVTKRenderWindowInteractor(self.frame_8)
-        self.vtkWidget_data20.setObjectName(u"vtkWidget_data20")
-        self.vtkWidget_data20.setStyleSheet(u"background-color: rgb(200, 177, 176);")
-
-        self.gridLayout_98.addWidget(self.vtkWidget_data20, 0, 0, 1, 9)
-
-        self.Scroll_data2 = QScrollBar(self.frame_8)
-        self.Scroll_data2.setObjectName(u"Scroll_data2")
-        self.Scroll_data2.setPageStep(10)
-
-        self.gridLayout_98.addWidget(self.Scroll_data2, 0, 9, 1, 1)
-
-        self.horizontalLayout_31 = QHBoxLayout()
-        self.horizontalLayout_31.setObjectName(u"horizontalLayout_31")
-        self.go_down_data20 = QToolButton(self.frame_8)
-        self.go_down_data20.setObjectName(u"go_down_data20")
-        self.go_down_data20.setIcon(icon1)
-
-        self.horizontalLayout_31.addWidget(self.go_down_data20)
-
-        self.go_up_data20 = QToolButton(self.frame_8)
-        self.go_up_data20.setObjectName(u"go_up_data20")
-        self.go_up_data20.setIcon(icon2)
-
-        self.horizontalLayout_31.addWidget(self.go_up_data20)
-
-        self.go_left_data20 = QToolButton(self.frame_8)
-        self.go_left_data20.setObjectName(u"go_left_data20")
-        self.go_left_data20.setIcon(icon3)
-
-        self.horizontalLayout_31.addWidget(self.go_left_data20)
-
-        self.go_right_data20 = QToolButton(self.frame_8)
-        self.go_right_data20.setObjectName(u"go_right_data20")
-        self.go_right_data20.setIcon(icon4)
-
-        self.horizontalLayout_31.addWidget(self.go_right_data20)
-
-
-        self.gridLayout_98.addLayout(self.horizontalLayout_31, 2, 8, 1, 1)
-
-        self.horizontalLayout_4 = QHBoxLayout()
-        self.horizontalLayout_4.setObjectName(u"horizontalLayout_4")
-        self.zoom_in_data20 = QToolButton(self.frame_8)
-        self.zoom_in_data20.setObjectName(u"zoom_in_data20")
-        self.zoom_in_data20.setIcon(icon5)
-
-        self.horizontalLayout_4.addWidget(self.zoom_in_data20)
-
-        self.zoom_out_data20 = QToolButton(self.frame_8)
-        self.zoom_out_data20.setObjectName(u"zoom_out_data20")
-        self.zoom_out_data20.setIcon(icon6)
-
-        self.horizontalLayout_4.addWidget(self.zoom_out_data20)
-
-
-        self.gridLayout_98.addLayout(self.horizontalLayout_4, 2, 7, 1, 1)
-
-
-        self.gridLayout_97.addWidget(self.frame_8, 0, 0, 1, 2)
-
-
-        self.gridLayout_99.addWidget(self.groupBox_time20, 0, 0, 1, 1)
-
-        self.tabWidget_time2 = QTabWidget(self.groupBox_data2)
-        self.tabWidget_time2.setObjectName(u"tabWidget_time2")
-        self.tabWidget_time20 = QWidget()
-        self.tabWidget_time20.setObjectName(u"tabWidget_time20")
-        self.gridLayout_116 = QGridLayout(self.tabWidget_time20)
-        self.gridLayout_116.setObjectName(u"gridLayout_116")
-        self.groupBox_57 = QGroupBox(self.tabWidget_time20)
-        self.groupBox_57.setObjectName(u"groupBox_57")
-        self.groupBox_57.setFont(font2)
-        self.gridLayout_125 = QGridLayout(self.groupBox_57)
-        self.gridLayout_125.setObjectName(u"gridLayout_125")
-        self.changetimestamp_data20 = QSlider(self.groupBox_57)
-        self.changetimestamp_data20.setObjectName(u"changetimestamp_data20")
-        self.changetimestamp_data20.setStyleSheet(u"")
-        self.changetimestamp_data20.setMaximum(99)
-        self.changetimestamp_data20.setSingleStep(1)
-        self.changetimestamp_data20.setPageStep(1)
-        self.changetimestamp_data20.setValue(0)
-        self.changetimestamp_data20.setOrientation(Qt.Horizontal)
-
-        self.gridLayout_125.addWidget(self.changetimestamp_data20, 0, 0, 1, 1)
-
-        self.displaytimestamp_data20 = QSpinBox(self.groupBox_57)
-        self.displaytimestamp_data20.setObjectName(u"displaytimestamp_data20")
-        self.displaytimestamp_data20.setButtonSymbols(QAbstractSpinBox.UpDownArrows)
-        self.displaytimestamp_data20.setMinimum(1)
-        self.displaytimestamp_data20.setMaximum(120)
-
-        self.gridLayout_125.addWidget(self.displaytimestamp_data20, 0, 1, 1, 1)
-
-
-        self.gridLayout_116.addWidget(self.groupBox_57, 1, 0, 1, 1)
-
-        self.groupBox_58 = QGroupBox(self.tabWidget_time20)
-        self.groupBox_58.setObjectName(u"groupBox_58")
-        self.groupBox_58.setFont(font2)
-        self.gridLayout_126 = QGridLayout(self.groupBox_58)
-        self.gridLayout_126.setObjectName(u"gridLayout_126")
-        self.pushButton_reset_data20 = QPushButton(self.groupBox_58)
-        self.pushButton_reset_data20.setObjectName(u"pushButton_reset_data20")
-
-        self.gridLayout_126.addWidget(self.pushButton_reset_data20, 0, 0, 1, 1)
-
-        self.pushButton_auto_data20 = QPushButton(self.groupBox_58)
-        self.pushButton_auto_data20.setObjectName(u"pushButton_auto_data20")
-
-        self.gridLayout_126.addWidget(self.pushButton_auto_data20, 0, 1, 1, 1)
-
-
-        self.gridLayout_116.addWidget(self.groupBox_58, 1, 1, 1, 1)
-
-        self.tabWidget_time2.addTab(self.tabWidget_time20, "")
-        self.tabWidget_time21 = QWidget()
-        self.tabWidget_time21.setObjectName(u"tabWidget_time21")
-        self.gridLayout_127 = QGridLayout(self.tabWidget_time21)
-        self.gridLayout_127.setObjectName(u"gridLayout_127")
-        self.groupBox_59 = QGroupBox(self.tabWidget_time21)
-        self.groupBox_59.setObjectName(u"groupBox_59")
-        self.groupBox_59.setFont(font2)
-        self.gridLayout_128 = QGridLayout(self.groupBox_59)
-        self.gridLayout_128.setObjectName(u"gridLayout_128")
-        self.changetimestamp_data21 = QSlider(self.groupBox_59)
-        self.changetimestamp_data21.setObjectName(u"changetimestamp_data21")
-        self.changetimestamp_data21.setStyleSheet(u"")
-        self.changetimestamp_data21.setMaximum(99)
-        self.changetimestamp_data21.setSingleStep(1)
-        self.changetimestamp_data21.setPageStep(1)
-        self.changetimestamp_data21.setValue(0)
-        self.changetimestamp_data21.setOrientation(Qt.Horizontal)
-
-        self.gridLayout_128.addWidget(self.changetimestamp_data21, 0, 0, 1, 1)
-
-        self.displaytimestamp_data21 = QSpinBox(self.groupBox_59)
-        self.displaytimestamp_data21.setObjectName(u"displaytimestamp_data21")
-        self.displaytimestamp_data21.setButtonSymbols(QAbstractSpinBox.UpDownArrows)
-        self.displaytimestamp_data21.setMinimum(1)
-        self.displaytimestamp_data21.setMaximum(120)
-
-        self.gridLayout_128.addWidget(self.displaytimestamp_data21, 0, 1, 1, 1)
-
-
-        self.gridLayout_127.addWidget(self.groupBox_59, 0, 0, 1, 1)
-
-        self.groupBox_60 = QGroupBox(self.tabWidget_time21)
-        self.groupBox_60.setObjectName(u"groupBox_60")
-        self.groupBox_60.setFont(font2)
-        self.gridLayout_129 = QGridLayout(self.groupBox_60)
-        self.gridLayout_129.setObjectName(u"gridLayout_129")
-        self.pushButton_auto_data21 = QPushButton(self.groupBox_60)
-        self.pushButton_auto_data21.setObjectName(u"pushButton_auto_data21")
-
-        self.gridLayout_129.addWidget(self.pushButton_auto_data21, 0, 1, 1, 1)
-
-        self.pushButton_reset_data21 = QPushButton(self.groupBox_60)
-        self.pushButton_reset_data21.setObjectName(u"pushButton_reset_data21")
-
-        self.gridLayout_129.addWidget(self.pushButton_reset_data21, 0, 0, 1, 1)
-
-
-        self.gridLayout_127.addWidget(self.groupBox_60, 0, 1, 1, 1)
-
-        self.tabWidget_time2.addTab(self.tabWidget_time21, "")
-        self.tabWidget_time22 = QWidget()
-        self.tabWidget_time22.setObjectName(u"tabWidget_time22")
-        self.gridLayout_130 = QGridLayout(self.tabWidget_time22)
-        self.gridLayout_130.setObjectName(u"gridLayout_130")
-        self.groupBox_61 = QGroupBox(self.tabWidget_time22)
-        self.groupBox_61.setObjectName(u"groupBox_61")
-        self.groupBox_61.setFont(font2)
-        self.gridLayout_131 = QGridLayout(self.groupBox_61)
-        self.gridLayout_131.setObjectName(u"gridLayout_131")
-        self.changetimestamp_data22 = QSlider(self.groupBox_61)
-        self.changetimestamp_data22.setObjectName(u"changetimestamp_data22")
-        self.changetimestamp_data22.setStyleSheet(u"")
-        self.changetimestamp_data22.setMaximum(99)
-        self.changetimestamp_data22.setSingleStep(1)
-        self.changetimestamp_data22.setPageStep(1)
-        self.changetimestamp_data22.setValue(0)
-        self.changetimestamp_data22.setOrientation(Qt.Horizontal)
-
-        self.gridLayout_131.addWidget(self.changetimestamp_data22, 0, 0, 1, 1)
-
-        self.displaytimestamp_data22 = QSpinBox(self.groupBox_61)
-        self.displaytimestamp_data22.setObjectName(u"displaytimestamp_data22")
-        self.displaytimestamp_data22.setButtonSymbols(QAbstractSpinBox.UpDownArrows)
-        self.displaytimestamp_data22.setMinimum(1)
-        self.displaytimestamp_data22.setMaximum(120)
-
-        self.gridLayout_131.addWidget(self.displaytimestamp_data22, 0, 1, 1, 1)
-
-
-        self.gridLayout_130.addWidget(self.groupBox_61, 0, 0, 1, 1)
-
-        self.groupBox_62 = QGroupBox(self.tabWidget_time22)
-        self.groupBox_62.setObjectName(u"groupBox_62")
-        self.groupBox_62.setFont(font2)
-        self.gridLayout_132 = QGridLayout(self.groupBox_62)
-        self.gridLayout_132.setObjectName(u"gridLayout_132")
-        self.pushButton_reset_data22 = QPushButton(self.groupBox_62)
-        self.pushButton_reset_data22.setObjectName(u"pushButton_reset_data22")
-
-        self.gridLayout_132.addWidget(self.pushButton_reset_data22, 0, 0, 1, 1)
-
-        self.pushButton_auto_data22 = QPushButton(self.groupBox_62)
-        self.pushButton_auto_data22.setObjectName(u"pushButton_auto_data22")
-
-        self.gridLayout_132.addWidget(self.pushButton_auto_data22, 0, 1, 1, 1)
-
-
-        self.gridLayout_130.addWidget(self.groupBox_62, 0, 1, 1, 1)
-
-        self.tabWidget_time2.addTab(self.tabWidget_time22, "")
-
-        self.gridLayout_99.addWidget(self.tabWidget_time2, 1, 1, 1, 1)
-
-        self.heatmap_data2 = QGroupBox(self.groupBox_data2)
-        self.heatmap_data2.setObjectName(u"heatmap_data2")
-        self.heatmap_data2.setFont(font3)
-        self.gridLayout_93 = QGridLayout(self.heatmap_data2)
-        self.gridLayout_93.setObjectName(u"gridLayout_93")
-        self.frame_29 = QFrame(self.heatmap_data2)
-        self.frame_29.setObjectName(u"frame_29")
-        self.frame_29.setEnabled(True)
-        self.frame_29.setMinimumSize(QSize(0, 200))
-        self.frame_29.setStyleSheet(u"border-color: rgb(170, 170, 170);\n"
-"background-color: rgb(131, 131, 131);\n"
-"")
-        self.frame_29.setFrameShape(QFrame.NoFrame)
-        self.gridLayout_94 = QGridLayout(self.frame_29)
-        self.gridLayout_94.setSpacing(0)
-        self.gridLayout_94.setObjectName(u"gridLayout_94")
-        self.gridLayout_94.setContentsMargins(4, 4, 4, 4)
-        self.horizontalLayout_27 = QHBoxLayout()
-        self.horizontalLayout_27.setObjectName(u"horizontalLayout_27")
-        self.go_down_data23 = QToolButton(self.frame_29)
-        self.go_down_data23.setObjectName(u"go_down_data23")
-        self.go_down_data23.setEnabled(False)
-        self.go_down_data23.setIcon(icon1)
-
-        self.horizontalLayout_27.addWidget(self.go_down_data23)
-
-        self.go_up_data23 = QToolButton(self.frame_29)
-        self.go_up_data23.setObjectName(u"go_up_data23")
-        self.go_up_data23.setEnabled(False)
-        self.go_up_data23.setIcon(icon2)
-
-        self.horizontalLayout_27.addWidget(self.go_up_data23)
-
-        self.go_left_data23 = QToolButton(self.frame_29)
-        self.go_left_data23.setObjectName(u"go_left_data23")
-        self.go_left_data23.setEnabled(False)
-        self.go_left_data23.setIcon(icon3)
-
-        self.horizontalLayout_27.addWidget(self.go_left_data23)
-
-        self.go_right_data23 = QToolButton(self.frame_29)
-        self.go_right_data23.setObjectName(u"go_right_data23")
-        self.go_right_data23.setEnabled(False)
-        self.go_right_data23.setIcon(icon4)
-
-        self.horizontalLayout_27.addWidget(self.go_right_data23)
-
-
-        self.gridLayout_94.addLayout(self.horizontalLayout_27, 2, 7, 1, 1)
-
-        self.vtkWidget_data23 = QVTKRenderWindowInteractor(self.frame_29)
-        self.vtkWidget_data23.setObjectName(u"vtkWidget_data23")
-        self.vtkWidget_data23.setEnabled(True)
-        self.vtkWidget_data23.setStyleSheet(u"background-color: rgb(200, 177, 176);")
-
-        self.gridLayout_94.addWidget(self.vtkWidget_data23, 0, 0, 1, 8)
-
-        self.fit_to_zoom_data23 = QPushButton(self.frame_29)
-        self.fit_to_zoom_data23.setObjectName(u"fit_to_zoom_data23")
-        self.fit_to_zoom_data23.setEnabled(False)
-        self.fit_to_zoom_data23.setStyleSheet(u"\n"
-"background-color: rgb(0, 153, 255);")
-        self.fit_to_zoom_data23.setAutoDefault(False)
-        self.fit_to_zoom_data23.setFlat(False)
-
-        self.gridLayout_94.addWidget(self.fit_to_zoom_data23, 1, 0, 2, 1)
-
-        self.horizontalLayout_28 = QHBoxLayout()
-        self.horizontalLayout_28.setObjectName(u"horizontalLayout_28")
-        self.zoom_in_data23 = QToolButton(self.frame_29)
-        self.zoom_in_data23.setObjectName(u"zoom_in_data23")
-        self.zoom_in_data23.setEnabled(False)
-        self.zoom_in_data23.setIcon(icon5)
-        self.zoom_in_data23.setIconSize(QSize(14, 16))
-
-        self.horizontalLayout_28.addWidget(self.zoom_in_data23)
-
-        self.zoom_out_data23 = QToolButton(self.frame_29)
-        self.zoom_out_data23.setObjectName(u"zoom_out_data23")
-        self.zoom_out_data23.setEnabled(False)
-        self.zoom_out_data23.setIcon(icon6)
-
-        self.horizontalLayout_28.addWidget(self.zoom_out_data23)
-
-
-        self.gridLayout_94.addLayout(self.horizontalLayout_28, 2, 6, 1, 1)
-
-
-        self.gridLayout_93.addWidget(self.frame_29, 0, 1, 1, 1)
-
-
-        self.gridLayout_99.addWidget(self.heatmap_data2, 0, 3, 1, 1)
-
-        self.groupBox_39 = QGroupBox(self.groupBox_data2)
-        self.groupBox_39.setObjectName(u"groupBox_39")
-        self.groupBox_39.setMinimumSize(QSize(400, 100))
-        self.groupBox_39.setMaximumSize(QSize(400, 180))
-        self.gridLayout_133 = QGridLayout(self.groupBox_39)
-        self.gridLayout_133.setObjectName(u"gridLayout_133")
-        self.gridLayout_133.setContentsMargins(-1, -1, 9, 9)
-        self.tableintensity_data2 = QTableWidget(self.groupBox_39)
-        if (self.tableintensity_data2.columnCount() < 4):
-            self.tableintensity_data2.setColumnCount(4)
-        __qtablewidgetitem12 = QTableWidgetItem()
-        self.tableintensity_data2.setHorizontalHeaderItem(0, __qtablewidgetitem12)
-        __qtablewidgetitem13 = QTableWidgetItem()
-        self.tableintensity_data2.setHorizontalHeaderItem(1, __qtablewidgetitem13)
-        __qtablewidgetitem14 = QTableWidgetItem()
-        self.tableintensity_data2.setHorizontalHeaderItem(2, __qtablewidgetitem14)
-        __qtablewidgetitem15 = QTableWidgetItem()
-        self.tableintensity_data2.setHorizontalHeaderItem(3, __qtablewidgetitem15)
-        self.tableintensity_data2.setObjectName(u"tableintensity_data2")
-        sizePolicy4.setHeightForWidth(self.tableintensity_data2.sizePolicy().hasHeightForWidth())
-        self.tableintensity_data2.setSizePolicy(sizePolicy4)
-        self.tableintensity_data2.setMaximumSize(QSize(16777215, 1677))
-        self.tableintensity_data2.setContextMenuPolicy(Qt.NoContextMenu)
-        self.tableintensity_data2.setSizeAdjustPolicy(QAbstractScrollArea.AdjustToContents)
-        self.tableintensity_data2.setSelectionBehavior(QAbstractItemView.SelectItems)
-        self.tableintensity_data2.horizontalHeader().setDefaultSectionSize(67)
-
-        self.gridLayout_133.addWidget(self.tableintensity_data2, 1, 0, 1, 1)
-
-
-        self.gridLayout_99.addWidget(self.groupBox_39, 1, 2, 1, 1)
-
-        self.groupBox_time21 = QGroupBox(self.groupBox_data2)
-        self.groupBox_time21.setObjectName(u"groupBox_time21")
-        sizePolicy3.setHeightForWidth(self.groupBox_time21.sizePolicy().hasHeightForWidth())
-        self.groupBox_time21.setSizePolicy(sizePolicy3)
-        self.groupBox_time21.setFont(font3)
-        self.gridLayout_91 = QGridLayout(self.groupBox_time21)
-        self.gridLayout_91.setObjectName(u"gridLayout_91")
-        self.frame_19 = QFrame(self.groupBox_time21)
-        self.frame_19.setObjectName(u"frame_19")
-        self.frame_19.setMinimumSize(QSize(0, 200))
-        self.frame_19.setStyleSheet(u"border-color: rgb(170, 170, 170);\n"
-"background-color: rgb(131, 131, 131);\n"
-"")
-        self.frame_19.setFrameShape(QFrame.NoFrame)
-        self.gridLayout_92 = QGridLayout(self.frame_19)
-        self.gridLayout_92.setSpacing(0)
-        self.gridLayout_92.setObjectName(u"gridLayout_92")
-        self.gridLayout_92.setContentsMargins(4, 4, 4, 4)
-        self.fit_to_zoom_data21 = QPushButton(self.frame_19)
-        self.fit_to_zoom_data21.setObjectName(u"fit_to_zoom_data21")
-        self.fit_to_zoom_data21.setStyleSheet(u"\n"
-"background-color: rgb(0, 153, 255);")
-        self.fit_to_zoom_data21.setAutoDefault(False)
-        self.fit_to_zoom_data21.setFlat(False)
-
-        self.gridLayout_92.addWidget(self.fit_to_zoom_data21, 1, 0, 2, 1)
-
-        self.vtkWidget_data21 = QVTKRenderWindowInteractor(self.frame_19)
-        self.vtkWidget_data21.setObjectName(u"vtkWidget_data21")
-        self.vtkWidget_data21.setStyleSheet(u"background-color: rgb(200, 177, 176);")
-
-        self.gridLayout_92.addWidget(self.vtkWidget_data21, 0, 0, 1, 11)
-
-        self.horizontalLayout_25 = QHBoxLayout()
-        self.horizontalLayout_25.setObjectName(u"horizontalLayout_25")
-        self.go_down_data21 = QToolButton(self.frame_19)
-        self.go_down_data21.setObjectName(u"go_down_data21")
-        self.go_down_data21.setIcon(icon1)
-
-        self.horizontalLayout_25.addWidget(self.go_down_data21)
-
-        self.go_up_data21 = QToolButton(self.frame_19)
-        self.go_up_data21.setObjectName(u"go_up_data21")
-        self.go_up_data21.setIcon(icon2)
-
-        self.horizontalLayout_25.addWidget(self.go_up_data21)
-
-        self.go_left_data21 = QToolButton(self.frame_19)
-        self.go_left_data21.setObjectName(u"go_left_data21")
-        self.go_left_data21.setIcon(icon3)
-
-        self.horizontalLayout_25.addWidget(self.go_left_data21)
-
-        self.go_right_data21 = QToolButton(self.frame_19)
-        self.go_right_data21.setObjectName(u"go_right_data21")
-        self.go_right_data21.setIcon(icon4)
-
-        self.horizontalLayout_25.addWidget(self.go_right_data21)
-
-
-        self.gridLayout_92.addLayout(self.horizontalLayout_25, 1, 10, 1, 1)
-
-        self.horizontalLayout_26 = QHBoxLayout()
-        self.horizontalLayout_26.setObjectName(u"horizontalLayout_26")
-        self.zoom_in_data21 = QToolButton(self.frame_19)
-        self.zoom_in_data21.setObjectName(u"zoom_in_data21")
-        self.zoom_in_data21.setIcon(icon5)
-
-        self.horizontalLayout_26.addWidget(self.zoom_in_data21)
-
-        self.zoom_out_data21 = QToolButton(self.frame_19)
-        self.zoom_out_data21.setObjectName(u"zoom_out_data21")
-        self.zoom_out_data21.setIcon(icon6)
-
-        self.horizontalLayout_26.addWidget(self.zoom_out_data21)
-
-
-        self.gridLayout_92.addLayout(self.horizontalLayout_26, 1, 9, 1, 1)
-
-
-        self.gridLayout_91.addWidget(self.frame_19, 0, 1, 1, 2)
-
-
-        self.gridLayout_99.addWidget(self.groupBox_time21, 0, 1, 1, 1)
-
-        self.groupBox_time22 = QGroupBox(self.groupBox_data2)
-        self.groupBox_time22.setObjectName(u"groupBox_time22")
-        sizePolicy3.setHeightForWidth(self.groupBox_time22.sizePolicy().hasHeightForWidth())
-        self.groupBox_time22.setSizePolicy(sizePolicy3)
-        self.groupBox_time22.setFont(font3)
-        self.gridLayout_95 = QGridLayout(self.groupBox_time22)
-        self.gridLayout_95.setObjectName(u"gridLayout_95")
-        self.frame_25 = QFrame(self.groupBox_time22)
-        self.frame_25.setObjectName(u"frame_25")
-        self.frame_25.setMinimumSize(QSize(0, 200))
-        self.frame_25.setStyleSheet(u"border-color: rgb(170, 170, 170);\n"
-"background-color: rgb(131, 131, 131);\n"
-"")
-        self.frame_25.setFrameShape(QFrame.NoFrame)
-        self.gridLayout_96 = QGridLayout(self.frame_25)
-        self.gridLayout_96.setSpacing(0)
-        self.gridLayout_96.setObjectName(u"gridLayout_96")
-        self.gridLayout_96.setContentsMargins(4, 4, 4, 4)
-        self.fit_to_zoom_data22 = QPushButton(self.frame_25)
-        self.fit_to_zoom_data22.setObjectName(u"fit_to_zoom_data22")
-        self.fit_to_zoom_data22.setStyleSheet(u"\n"
-"background-color: rgb(0, 153, 255);")
-        self.fit_to_zoom_data22.setAutoDefault(False)
-        self.fit_to_zoom_data22.setFlat(False)
-
-        self.gridLayout_96.addWidget(self.fit_to_zoom_data22, 1, 0, 2, 1)
-
-        self.vtkWidget_data22 = QVTKRenderWindowInteractor(self.frame_25)
-        self.vtkWidget_data22.setObjectName(u"vtkWidget_data22")
-        self.vtkWidget_data22.setStyleSheet(u"background-color: rgb(200, 177, 176);")
-
-        self.gridLayout_96.addWidget(self.vtkWidget_data22, 0, 0, 1, 8)
-
-        self.horizontalLayout_29 = QHBoxLayout()
-        self.horizontalLayout_29.setObjectName(u"horizontalLayout_29")
-        self.go_down_data22 = QToolButton(self.frame_25)
-        self.go_down_data22.setObjectName(u"go_down_data22")
-        self.go_down_data22.setIcon(icon1)
-
-        self.horizontalLayout_29.addWidget(self.go_down_data22)
-
-        self.go_up_data22 = QToolButton(self.frame_25)
-        self.go_up_data22.setObjectName(u"go_up_data22")
-        self.go_up_data22.setIcon(icon2)
-
-        self.horizontalLayout_29.addWidget(self.go_up_data22)
-
-        self.go_left_data22 = QToolButton(self.frame_25)
-        self.go_left_data22.setObjectName(u"go_left_data22")
-        self.go_left_data22.setIcon(icon3)
-
-        self.horizontalLayout_29.addWidget(self.go_left_data22)
-
-        self.go_right_data22 = QToolButton(self.frame_25)
-        self.go_right_data22.setObjectName(u"go_right_data22")
-        self.go_right_data22.setIcon(icon4)
-
-        self.horizontalLayout_29.addWidget(self.go_right_data22)
-
-
-        self.gridLayout_96.addLayout(self.horizontalLayout_29, 2, 7, 1, 1)
-
-        self.horizontalLayout_30 = QHBoxLayout()
-        self.horizontalLayout_30.setObjectName(u"horizontalLayout_30")
-        self.zoom_in_data22 = QToolButton(self.frame_25)
-        self.zoom_in_data22.setObjectName(u"zoom_in_data22")
-        self.zoom_in_data22.setIcon(icon5)
-        self.zoom_in_data22.setIconSize(QSize(14, 16))
-
-        self.horizontalLayout_30.addWidget(self.zoom_in_data22)
-
-        self.zoom_out_data22 = QToolButton(self.frame_25)
-        self.zoom_out_data22.setObjectName(u"zoom_out_data22")
-        self.zoom_out_data22.setIcon(icon6)
-
-        self.horizontalLayout_30.addWidget(self.zoom_out_data22)
-
-
-        self.gridLayout_96.addLayout(self.horizontalLayout_30, 2, 6, 1, 1)
-
-
-        self.gridLayout_95.addWidget(self.frame_25, 0, 0, 1, 2)
-
-
-        self.gridLayout_99.addWidget(self.groupBox_time22, 0, 2, 1, 1)
-
-        self.groupbox_legend2 = QGroupBox(self.groupBox_data2)
-        self.groupbox_legend2.setObjectName(u"groupbox_legend2")
-        self.groupbox_legend2.setMaximumSize(QSize(16777215, 120))
-        self.gridLayout_134 = QGridLayout(self.groupbox_legend2)
-        self.gridLayout_134.setObjectName(u"gridLayout_134")
-        self.frame_31 = QFrame(self.groupbox_legend2)
-        self.frame_31.setObjectName(u"frame_31")
-        self.frame_31.setEnabled(True)
-        self.frame_31.setStyleSheet(u"border-color: rgb(170, 170, 170);\n"
-"background-color: rgb(131, 131, 131);\n"
-"")
-        self.frame_31.setFrameShape(QFrame.NoFrame)
-        self.gridLayout_135 = QGridLayout(self.frame_31)
-        self.gridLayout_135.setSpacing(0)
-        self.gridLayout_135.setObjectName(u"gridLayout_135")
-        self.gridLayout_135.setContentsMargins(4, 4, 4, 4)
-        self.vtkWidget_legend2 = QVTKRenderWindowInteractor(self.frame_31)
-        self.vtkWidget_legend2.setObjectName(u"vtkWidget_legend2")
-        self.vtkWidget_legend2.setEnabled(True)
-        self.vtkWidget_legend2.setMinimumSize(QSize(0, 30))
-        self.vtkWidget_legend2.setMaximumSize(QSize(16777215, 167))
-        self.vtkWidget_legend2.setStyleSheet(u"background-color: rgb(200, 177, 176);")
-
-        self.gridLayout_135.addWidget(self.vtkWidget_legend2, 0, 0, 1, 1)
-
-
-        self.gridLayout_134.addWidget(self.frame_31, 0, 0, 1, 1)
-
-
-        self.gridLayout_99.addWidget(self.groupbox_legend2, 1, 3, 1, 1)
-
-        self.gridLayout_99.setColumnStretch(0, 1)
-        self.gridLayout_99.setColumnStretch(1, 1)
-        self.gridLayout_99.setColumnStretch(2, 1)
-
-        self.gridLayout_70.addWidget(self.groupBox_data2, 3, 1, 1, 4)
-
-        self.groupBox_barcode = QGroupBox(self.PostSurgery)
-        self.groupBox_barcode.setObjectName(u"groupBox_barcode")
-        self.gridLayout_8 = QGridLayout(self.groupBox_barcode)
-        self.gridLayout_8.setObjectName(u"gridLayout_8")
-        self.comboBox_mridBarcodes = QComboBox(self.groupBox_barcode)
-        self.comboBox_mridBarcodes.setObjectName(u"comboBox_mridBarcodes")
-
-        self.gridLayout_8.addWidget(self.comboBox_mridBarcodes, 0, 0, 1, 1)
-
-        self.groupbox_barcode0 = QGroupBox(self.groupBox_barcode)
-        self.groupbox_barcode0.setObjectName(u"groupbox_barcode0")
-        self.groupbox_barcode0.setMinimumSize(QSize(0, 200))
-        self.groupbox_barcode0.setMaximumSize(QSize(16777215, 1000))
-        self.gridLayout_67 = QGridLayout(self.groupbox_barcode0)
-        self.gridLayout_67.setObjectName(u"gridLayout_67")
-        self.widget_barcode_detected = MplWidget(self.groupbox_barcode0)
-        self.widget_barcode_detected.setObjectName(u"widget_barcode_detected")
-        self.widget_barcode_detected.setMinimumSize(QSize(0, 100))
-
-        self.gridLayout_67.addWidget(self.widget_barcode_detected, 0, 0, 1, 1)
-
-
-        self.gridLayout_8.addWidget(self.groupbox_barcode0, 3, 0, 1, 1)
-
-        self.tableWidget_barcode = QTableWidget(self.groupBox_barcode)
-        if (self.tableWidget_barcode.columnCount() < 4):
-            self.tableWidget_barcode.setColumnCount(4)
-        __qtablewidgetitem16 = QTableWidgetItem()
-        self.tableWidget_barcode.setHorizontalHeaderItem(0, __qtablewidgetitem16)
-        __qtablewidgetitem17 = QTableWidgetItem()
-        self.tableWidget_barcode.setHorizontalHeaderItem(1, __qtablewidgetitem17)
-        __qtablewidgetitem18 = QTableWidgetItem()
-        self.tableWidget_barcode.setHorizontalHeaderItem(2, __qtablewidgetitem18)
-        __qtablewidgetitem19 = QTableWidgetItem()
-        self.tableWidget_barcode.setHorizontalHeaderItem(3, __qtablewidgetitem19)
-        if (self.tableWidget_barcode.rowCount() < 2):
-            self.tableWidget_barcode.setRowCount(2)
-        __qtablewidgetitem20 = QTableWidgetItem()
-        self.tableWidget_barcode.setVerticalHeaderItem(0, __qtablewidgetitem20)
-        __qtablewidgetitem21 = QTableWidgetItem()
-        self.tableWidget_barcode.setVerticalHeaderItem(1, __qtablewidgetitem21)
-        self.tableWidget_barcode.setObjectName(u"tableWidget_barcode")
-        sizePolicy4.setHeightForWidth(self.tableWidget_barcode.sizePolicy().hasHeightForWidth())
-        self.tableWidget_barcode.setSizePolicy(sizePolicy4)
-        self.tableWidget_barcode.setMinimumSize(QSize(300, 100))
-        self.tableWidget_barcode.setMaximumSize(QSize(721, 383))
-        self.tableWidget_barcode.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
-        self.tableWidget_barcode.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
-        self.tableWidget_barcode.setSizeAdjustPolicy(QAbstractScrollArea.AdjustToContents)
-
-        self.gridLayout_8.addWidget(self.tableWidget_barcode, 1, 0, 1, 1)
-
-        self.groupBox_4 = QGroupBox(self.groupBox_barcode)
-        self.groupBox_4.setObjectName(u"groupBox_4")
-        self.gridLayout_27 = QGridLayout(self.groupBox_4)
-        self.gridLayout_27.setObjectName(u"gridLayout_27")
-        self.ca1_signal_widget = MplWidget(self.groupBox_4)
-        self.ca1_signal_widget.setObjectName(u"ca1_signal_widget")
-
-        self.gridLayout_27.addWidget(self.ca1_signal_widget, 0, 0, 1, 1)
-
-
-        self.gridLayout_8.addWidget(self.groupBox_4, 4, 0, 1, 1)
-
-        self.groupbox_barcode1 = QGroupBox(self.groupBox_barcode)
-        self.groupbox_barcode1.setObjectName(u"groupbox_barcode1")
-        self.groupbox_barcode1.setMinimumSize(QSize(0, 200))
-        self.groupbox_barcode1.setMaximumSize(QSize(16777215, 1000))
-        self.gridLayout_6 = QGridLayout(self.groupbox_barcode1)
-        self.gridLayout_6.setObjectName(u"gridLayout_6")
-        self.widget_barcode_reconstructed = MplWidget(self.groupbox_barcode1)
-        self.widget_barcode_reconstructed.setObjectName(u"widget_barcode_reconstructed")
-        self.widget_barcode_reconstructed.setMinimumSize(QSize(0, 100))
-
-        self.gridLayout_6.addWidget(self.widget_barcode_reconstructed, 0, 0, 1, 1)
-
-
-        self.gridLayout_8.addWidget(self.groupbox_barcode1, 2, 0, 1, 1)
-
-
-        self.gridLayout_70.addWidget(self.groupBox_barcode, 0, 5, 4, 1)
+        self.pushButton_metadata = QPushButton(self.PostSurgery)
+        self.pushButton_metadata.setObjectName(u"pushButton_metadata")
+        self.pushButton_metadata.setMaximumSize(QSize(50, 16777215))
+        icon8 = QIcon()
+        icon8.addFile(u"Icons/mri/person14.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        self.pushButton_metadata.setIcon(icon8)
+        self.pushButton_metadata.setIconSize(QSize(32, 32))
+
+        self.gridLayout_70.addWidget(self.pushButton_metadata, 0, 4, 1, 1)
 
         self.groupBox_data1 = QGroupBox(self.PostSurgery)
         self.groupBox_data1.setObjectName(u"groupBox_data1")
@@ -3122,9 +3223,9 @@ class Ui_MainWindow(object):
 
         self.groupBox_time11 = QGroupBox(self.groupBox_data1)
         self.groupBox_time11.setObjectName(u"groupBox_time11")
-        sizePolicy3.setHeightForWidth(self.groupBox_time11.sizePolicy().hasHeightForWidth())
-        self.groupBox_time11.setSizePolicy(sizePolicy3)
-        self.groupBox_time11.setFont(font3)
+        sizePolicy2.setHeightForWidth(self.groupBox_time11.sizePolicy().hasHeightForWidth())
+        self.groupBox_time11.setSizePolicy(sizePolicy2)
+        self.groupBox_time11.setFont(font1)
         self.gridLayout_85 = QGridLayout(self.groupBox_time11)
         self.gridLayout_85.setObjectName(u"gridLayout_85")
         self.frame_7 = QFrame(self.groupBox_time11)
@@ -3157,25 +3258,25 @@ class Ui_MainWindow(object):
         self.horizontalLayout_18.setObjectName(u"horizontalLayout_18")
         self.go_down_data11 = QToolButton(self.frame_7)
         self.go_down_data11.setObjectName(u"go_down_data11")
-        self.go_down_data11.setIcon(icon1)
+        self.go_down_data11.setIcon(icon)
 
         self.horizontalLayout_18.addWidget(self.go_down_data11)
 
         self.go_up_data11 = QToolButton(self.frame_7)
         self.go_up_data11.setObjectName(u"go_up_data11")
-        self.go_up_data11.setIcon(icon2)
+        self.go_up_data11.setIcon(icon1)
 
         self.horizontalLayout_18.addWidget(self.go_up_data11)
 
         self.go_left_data11 = QToolButton(self.frame_7)
         self.go_left_data11.setObjectName(u"go_left_data11")
-        self.go_left_data11.setIcon(icon3)
+        self.go_left_data11.setIcon(icon2)
 
         self.horizontalLayout_18.addWidget(self.go_left_data11)
 
         self.go_right_data11 = QToolButton(self.frame_7)
         self.go_right_data11.setObjectName(u"go_right_data11")
-        self.go_right_data11.setIcon(icon4)
+        self.go_right_data11.setIcon(icon3)
 
         self.horizontalLayout_18.addWidget(self.go_right_data11)
 
@@ -3186,13 +3287,13 @@ class Ui_MainWindow(object):
         self.horizontalLayout_3.setObjectName(u"horizontalLayout_3")
         self.zoom_in_data11 = QToolButton(self.frame_7)
         self.zoom_in_data11.setObjectName(u"zoom_in_data11")
-        self.zoom_in_data11.setIcon(icon5)
+        self.zoom_in_data11.setIcon(icon4)
 
         self.horizontalLayout_3.addWidget(self.zoom_in_data11)
 
         self.zoom_out_data11 = QToolButton(self.frame_7)
         self.zoom_out_data11.setObjectName(u"zoom_out_data11")
-        self.zoom_out_data11.setIcon(icon6)
+        self.zoom_out_data11.setIcon(icon5)
 
         self.horizontalLayout_3.addWidget(self.zoom_out_data11)
 
@@ -3215,17 +3316,17 @@ class Ui_MainWindow(object):
         self.tableintensity_data1 = QTableWidget(self.groupBox_38)
         if (self.tableintensity_data1.columnCount() < 4):
             self.tableintensity_data1.setColumnCount(4)
-        __qtablewidgetitem22 = QTableWidgetItem()
-        self.tableintensity_data1.setHorizontalHeaderItem(0, __qtablewidgetitem22)
-        __qtablewidgetitem23 = QTableWidgetItem()
-        self.tableintensity_data1.setHorizontalHeaderItem(1, __qtablewidgetitem23)
-        __qtablewidgetitem24 = QTableWidgetItem()
-        self.tableintensity_data1.setHorizontalHeaderItem(2, __qtablewidgetitem24)
-        __qtablewidgetitem25 = QTableWidgetItem()
-        self.tableintensity_data1.setHorizontalHeaderItem(3, __qtablewidgetitem25)
+        __qtablewidgetitem16 = QTableWidgetItem()
+        self.tableintensity_data1.setHorizontalHeaderItem(0, __qtablewidgetitem16)
+        __qtablewidgetitem17 = QTableWidgetItem()
+        self.tableintensity_data1.setHorizontalHeaderItem(1, __qtablewidgetitem17)
+        __qtablewidgetitem18 = QTableWidgetItem()
+        self.tableintensity_data1.setHorizontalHeaderItem(2, __qtablewidgetitem18)
+        __qtablewidgetitem19 = QTableWidgetItem()
+        self.tableintensity_data1.setHorizontalHeaderItem(3, __qtablewidgetitem19)
         self.tableintensity_data1.setObjectName(u"tableintensity_data1")
-        sizePolicy4.setHeightForWidth(self.tableintensity_data1.sizePolicy().hasHeightForWidth())
-        self.tableintensity_data1.setSizePolicy(sizePolicy4)
+        sizePolicy3.setHeightForWidth(self.tableintensity_data1.sizePolicy().hasHeightForWidth())
+        self.tableintensity_data1.setSizePolicy(sizePolicy3)
         self.tableintensity_data1.setMaximumSize(QSize(16777215, 1677))
         self.tableintensity_data1.setContextMenuPolicy(Qt.NoContextMenu)
         self.tableintensity_data1.setSizeAdjustPolicy(QAbstractScrollArea.AdjustToContents)
@@ -3239,7 +3340,7 @@ class Ui_MainWindow(object):
 
         self.heatmap_data1 = QGroupBox(self.groupBox_data1)
         self.heatmap_data1.setObjectName(u"heatmap_data1")
-        self.heatmap_data1.setFont(font3)
+        self.heatmap_data1.setFont(font1)
         self.gridLayout_87 = QGridLayout(self.heatmap_data1)
         self.gridLayout_87.setObjectName(u"gridLayout_87")
         self.frame_28 = QFrame(self.heatmap_data1)
@@ -3276,28 +3377,28 @@ class Ui_MainWindow(object):
         self.go_down_data13 = QToolButton(self.frame_28)
         self.go_down_data13.setObjectName(u"go_down_data13")
         self.go_down_data13.setEnabled(True)
-        self.go_down_data13.setIcon(icon1)
+        self.go_down_data13.setIcon(icon)
 
         self.horizontalLayout_23.addWidget(self.go_down_data13)
 
         self.go_up_data13 = QToolButton(self.frame_28)
         self.go_up_data13.setObjectName(u"go_up_data13")
         self.go_up_data13.setEnabled(True)
-        self.go_up_data13.setIcon(icon2)
+        self.go_up_data13.setIcon(icon1)
 
         self.horizontalLayout_23.addWidget(self.go_up_data13)
 
         self.go_left_data13 = QToolButton(self.frame_28)
         self.go_left_data13.setObjectName(u"go_left_data13")
         self.go_left_data13.setEnabled(True)
-        self.go_left_data13.setIcon(icon3)
+        self.go_left_data13.setIcon(icon2)
 
         self.horizontalLayout_23.addWidget(self.go_left_data13)
 
         self.go_right_data13 = QToolButton(self.frame_28)
         self.go_right_data13.setObjectName(u"go_right_data13")
         self.go_right_data13.setEnabled(True)
-        self.go_right_data13.setIcon(icon4)
+        self.go_right_data13.setIcon(icon3)
 
         self.horizontalLayout_23.addWidget(self.go_right_data13)
 
@@ -3309,7 +3410,7 @@ class Ui_MainWindow(object):
         self.zoom_in_data13 = QToolButton(self.frame_28)
         self.zoom_in_data13.setObjectName(u"zoom_in_data13")
         self.zoom_in_data13.setEnabled(True)
-        self.zoom_in_data13.setIcon(icon5)
+        self.zoom_in_data13.setIcon(icon4)
         self.zoom_in_data13.setIconSize(QSize(14, 16))
 
         self.horizontalLayout_24.addWidget(self.zoom_in_data13)
@@ -3317,7 +3418,7 @@ class Ui_MainWindow(object):
         self.zoom_out_data13 = QToolButton(self.frame_28)
         self.zoom_out_data13.setObjectName(u"zoom_out_data13")
         self.zoom_out_data13.setEnabled(True)
-        self.zoom_out_data13.setIcon(icon6)
+        self.zoom_out_data13.setIcon(icon5)
 
         self.horizontalLayout_24.addWidget(self.zoom_out_data13)
 
@@ -3362,14 +3463,29 @@ class Ui_MainWindow(object):
 
         self.gridLayout_35.addWidget(self.spinBox_z_data1, 1, 2, 1, 1)
 
+        self.lineEdit_101 = QLineEdit(self.groupBox_24)
+        self.lineEdit_101.setObjectName(u"lineEdit_101")
+
+        self.gridLayout_35.addWidget(self.lineEdit_101, 0, 0, 1, 1)
+
+        self.lineEdit_102 = QLineEdit(self.groupBox_24)
+        self.lineEdit_102.setObjectName(u"lineEdit_102")
+
+        self.gridLayout_35.addWidget(self.lineEdit_102, 0, 1, 1, 1)
+
+        self.lineEdit_103 = QLineEdit(self.groupBox_24)
+        self.lineEdit_103.setObjectName(u"lineEdit_103")
+
+        self.gridLayout_35.addWidget(self.lineEdit_103, 0, 2, 1, 1)
+
 
         self.gridLayout_89.addWidget(self.groupBox_24, 1, 0, 1, 1)
 
         self.groupBox_time12 = QGroupBox(self.groupBox_data1)
         self.groupBox_time12.setObjectName(u"groupBox_time12")
-        sizePolicy3.setHeightForWidth(self.groupBox_time12.sizePolicy().hasHeightForWidth())
-        self.groupBox_time12.setSizePolicy(sizePolicy3)
-        self.groupBox_time12.setFont(font3)
+        sizePolicy2.setHeightForWidth(self.groupBox_time12.sizePolicy().hasHeightForWidth())
+        self.groupBox_time12.setSizePolicy(sizePolicy2)
+        self.groupBox_time12.setFont(font1)
         self.gridLayout_83 = QGridLayout(self.groupBox_time12)
         self.gridLayout_83.setObjectName(u"gridLayout_83")
         self.frame_18 = QFrame(self.groupBox_time12)
@@ -3402,25 +3518,25 @@ class Ui_MainWindow(object):
         self.horizontalLayout_21.setObjectName(u"horizontalLayout_21")
         self.go_down_data12 = QToolButton(self.frame_18)
         self.go_down_data12.setObjectName(u"go_down_data12")
-        self.go_down_data12.setIcon(icon1)
+        self.go_down_data12.setIcon(icon)
 
         self.horizontalLayout_21.addWidget(self.go_down_data12)
 
         self.go_up_data12 = QToolButton(self.frame_18)
         self.go_up_data12.setObjectName(u"go_up_data12")
-        self.go_up_data12.setIcon(icon2)
+        self.go_up_data12.setIcon(icon1)
 
         self.horizontalLayout_21.addWidget(self.go_up_data12)
 
         self.go_left_data12 = QToolButton(self.frame_18)
         self.go_left_data12.setObjectName(u"go_left_data12")
-        self.go_left_data12.setIcon(icon3)
+        self.go_left_data12.setIcon(icon2)
 
         self.horizontalLayout_21.addWidget(self.go_left_data12)
 
         self.go_right_data12 = QToolButton(self.frame_18)
         self.go_right_data12.setObjectName(u"go_right_data12")
-        self.go_right_data12.setIcon(icon4)
+        self.go_right_data12.setIcon(icon3)
 
         self.horizontalLayout_21.addWidget(self.go_right_data12)
 
@@ -3431,13 +3547,13 @@ class Ui_MainWindow(object):
         self.horizontalLayout_22.setObjectName(u"horizontalLayout_22")
         self.zoom_in_data12 = QToolButton(self.frame_18)
         self.zoom_in_data12.setObjectName(u"zoom_in_data12")
-        self.zoom_in_data12.setIcon(icon5)
+        self.zoom_in_data12.setIcon(icon4)
 
         self.horizontalLayout_22.addWidget(self.zoom_in_data12)
 
         self.zoom_out_data12 = QToolButton(self.frame_18)
         self.zoom_out_data12.setObjectName(u"zoom_out_data12")
-        self.zoom_out_data12.setIcon(icon6)
+        self.zoom_out_data12.setIcon(icon5)
 
         self.horizontalLayout_22.addWidget(self.zoom_out_data12)
 
@@ -3607,10 +3723,10 @@ class Ui_MainWindow(object):
 
         self.groupBox_time10 = QGroupBox(self.groupBox_data1)
         self.groupBox_time10.setObjectName(u"groupBox_time10")
-        sizePolicy3.setHeightForWidth(self.groupBox_time10.sizePolicy().hasHeightForWidth())
-        self.groupBox_time10.setSizePolicy(sizePolicy3)
+        sizePolicy2.setHeightForWidth(self.groupBox_time10.sizePolicy().hasHeightForWidth())
+        self.groupBox_time10.setSizePolicy(sizePolicy2)
         self.groupBox_time10.setMaximumSize(QSize(16777215, 16777215))
-        self.groupBox_time10.setFont(font3)
+        self.groupBox_time10.setFont(font1)
         self.groupBox_time10.setStyleSheet(u"")
         self.gridLayout_66 = QGridLayout(self.groupBox_time10)
         self.gridLayout_66.setObjectName(u"gridLayout_66")
@@ -3629,14 +3745,14 @@ class Ui_MainWindow(object):
         self.horizontalLayout_20.setObjectName(u"horizontalLayout_20")
         self.zoom_in_data10 = QToolButton(self.frame_24)
         self.zoom_in_data10.setObjectName(u"zoom_in_data10")
-        self.zoom_in_data10.setIcon(icon5)
+        self.zoom_in_data10.setIcon(icon4)
         self.zoom_in_data10.setIconSize(QSize(14, 16))
 
         self.horizontalLayout_20.addWidget(self.zoom_in_data10)
 
         self.zoom_out_data10 = QToolButton(self.frame_24)
         self.zoom_out_data10.setObjectName(u"zoom_out_data10")
-        self.zoom_out_data10.setIcon(icon6)
+        self.zoom_out_data10.setIcon(icon5)
 
         self.horizontalLayout_20.addWidget(self.zoom_out_data10)
 
@@ -3662,25 +3778,25 @@ class Ui_MainWindow(object):
         self.horizontalLayout_19.setObjectName(u"horizontalLayout_19")
         self.go_down_data10 = QToolButton(self.frame_24)
         self.go_down_data10.setObjectName(u"go_down_data10")
-        self.go_down_data10.setIcon(icon1)
+        self.go_down_data10.setIcon(icon)
 
         self.horizontalLayout_19.addWidget(self.go_down_data10)
 
         self.go_up_data10 = QToolButton(self.frame_24)
         self.go_up_data10.setObjectName(u"go_up_data10")
-        self.go_up_data10.setIcon(icon2)
+        self.go_up_data10.setIcon(icon1)
 
         self.horizontalLayout_19.addWidget(self.go_up_data10)
 
         self.go_left_data10 = QToolButton(self.frame_24)
         self.go_left_data10.setObjectName(u"go_left_data10")
-        self.go_left_data10.setIcon(icon3)
+        self.go_left_data10.setIcon(icon2)
 
         self.horizontalLayout_19.addWidget(self.go_left_data10)
 
         self.go_right_data10 = QToolButton(self.frame_24)
         self.go_right_data10.setObjectName(u"go_right_data10")
-        self.go_right_data10.setIcon(icon4)
+        self.go_right_data10.setIcon(icon3)
 
         self.horizontalLayout_19.addWidget(self.go_right_data10)
 
@@ -3705,14 +3821,103 @@ class Ui_MainWindow(object):
 
         self.gridLayout_70.addWidget(self.groupBox_data1, 2, 1, 1, 4)
 
+        self.file_name_displayed = QLabel(self.PostSurgery)
+        self.file_name_displayed.setObjectName(u"file_name_displayed")
+        self.file_name_displayed.setMinimumSize(QSize(800, 0))
+
+        self.gridLayout_70.addWidget(self.file_name_displayed, 0, 1, 1, 1)
+
+        self.groupBox_barcode = QGroupBox(self.PostSurgery)
+        self.groupBox_barcode.setObjectName(u"groupBox_barcode")
+        self.gridLayout_8 = QGridLayout(self.groupBox_barcode)
+        self.gridLayout_8.setObjectName(u"gridLayout_8")
+        self.comboBox_mridBarcodes = QComboBox(self.groupBox_barcode)
+        self.comboBox_mridBarcodes.setObjectName(u"comboBox_mridBarcodes")
+
+        self.gridLayout_8.addWidget(self.comboBox_mridBarcodes, 0, 0, 1, 1)
+
+        self.groupbox_barcode0 = QGroupBox(self.groupBox_barcode)
+        self.groupbox_barcode0.setObjectName(u"groupbox_barcode0")
+        self.groupbox_barcode0.setMinimumSize(QSize(0, 200))
+        self.groupbox_barcode0.setMaximumSize(QSize(16777215, 1000))
+        self.gridLayout_67 = QGridLayout(self.groupbox_barcode0)
+        self.gridLayout_67.setObjectName(u"gridLayout_67")
+        self.widget_barcode_detected = MplWidget(self.groupbox_barcode0)
+        self.widget_barcode_detected.setObjectName(u"widget_barcode_detected")
+        self.widget_barcode_detected.setMinimumSize(QSize(0, 100))
+
+        self.gridLayout_67.addWidget(self.widget_barcode_detected, 0, 0, 1, 1)
+
+
+        self.gridLayout_8.addWidget(self.groupbox_barcode0, 3, 0, 1, 1)
+
+        self.tableWidget_barcode = QTableWidget(self.groupBox_barcode)
+        if (self.tableWidget_barcode.columnCount() < 4):
+            self.tableWidget_barcode.setColumnCount(4)
+        __qtablewidgetitem20 = QTableWidgetItem()
+        self.tableWidget_barcode.setHorizontalHeaderItem(0, __qtablewidgetitem20)
+        __qtablewidgetitem21 = QTableWidgetItem()
+        self.tableWidget_barcode.setHorizontalHeaderItem(1, __qtablewidgetitem21)
+        __qtablewidgetitem22 = QTableWidgetItem()
+        self.tableWidget_barcode.setHorizontalHeaderItem(2, __qtablewidgetitem22)
+        __qtablewidgetitem23 = QTableWidgetItem()
+        self.tableWidget_barcode.setHorizontalHeaderItem(3, __qtablewidgetitem23)
+        if (self.tableWidget_barcode.rowCount() < 2):
+            self.tableWidget_barcode.setRowCount(2)
+        __qtablewidgetitem24 = QTableWidgetItem()
+        self.tableWidget_barcode.setVerticalHeaderItem(0, __qtablewidgetitem24)
+        __qtablewidgetitem25 = QTableWidgetItem()
+        self.tableWidget_barcode.setVerticalHeaderItem(1, __qtablewidgetitem25)
+        self.tableWidget_barcode.setObjectName(u"tableWidget_barcode")
+        sizePolicy3.setHeightForWidth(self.tableWidget_barcode.sizePolicy().hasHeightForWidth())
+        self.tableWidget_barcode.setSizePolicy(sizePolicy3)
+        self.tableWidget_barcode.setMinimumSize(QSize(300, 100))
+        self.tableWidget_barcode.setMaximumSize(QSize(721, 383))
+        self.tableWidget_barcode.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        self.tableWidget_barcode.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        self.tableWidget_barcode.setSizeAdjustPolicy(QAbstractScrollArea.AdjustToContents)
+
+        self.gridLayout_8.addWidget(self.tableWidget_barcode, 1, 0, 1, 1)
+
+        self.groupBox_4 = QGroupBox(self.groupBox_barcode)
+        self.groupBox_4.setObjectName(u"groupBox_4")
+        self.gridLayout_27 = QGridLayout(self.groupBox_4)
+        self.gridLayout_27.setObjectName(u"gridLayout_27")
+        self.ca1_signal_widget = MplWidget(self.groupBox_4)
+        self.ca1_signal_widget.setObjectName(u"ca1_signal_widget")
+
+        self.gridLayout_27.addWidget(self.ca1_signal_widget, 0, 0, 1, 1)
+
+
+        self.gridLayout_8.addWidget(self.groupBox_4, 4, 0, 1, 1)
+
+        self.groupbox_barcode1 = QGroupBox(self.groupBox_barcode)
+        self.groupbox_barcode1.setObjectName(u"groupbox_barcode1")
+        self.groupbox_barcode1.setMinimumSize(QSize(0, 200))
+        self.groupbox_barcode1.setMaximumSize(QSize(16777215, 1000))
+        self.gridLayout_6 = QGridLayout(self.groupbox_barcode1)
+        self.gridLayout_6.setObjectName(u"gridLayout_6")
+        self.widget_barcode_reconstructed = MplWidget(self.groupbox_barcode1)
+        self.widget_barcode_reconstructed.setObjectName(u"widget_barcode_reconstructed")
+        self.widget_barcode_reconstructed.setMinimumSize(QSize(0, 100))
+
+        self.gridLayout_6.addWidget(self.widget_barcode_reconstructed, 0, 0, 1, 1)
+
+
+        self.gridLayout_8.addWidget(self.groupbox_barcode1, 2, 0, 1, 1)
+
+
+        self.gridLayout_70.addWidget(self.groupBox_barcode, 0, 5, 4, 1)
+
         self.pushButton_questionmark = QPushButton(self.PostSurgery)
         self.pushButton_questionmark.setObjectName(u"pushButton_questionmark")
+        self.pushButton_questionmark.setMaximumSize(QSize(50, 16777215))
         icon9 = QIcon()
         icon9.addFile(u"Icons/mri/question_mark.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.pushButton_questionmark.setIcon(icon9)
         self.pushButton_questionmark.setIconSize(QSize(32, 32))
 
-        self.gridLayout_70.addWidget(self.pushButton_questionmark, 0, 2, 1, 1)
+        self.gridLayout_70.addWidget(self.pushButton_questionmark, 0, 3, 1, 1)
 
         self.tabWidget.addTab(self.PostSurgery, "")
         self.tab_15 = QWidget()
@@ -3723,21 +3928,22 @@ class Ui_MainWindow(object):
         self.groupBox_register.setObjectName(u"groupBox_register")
         self.gridLayout_14 = QGridLayout(self.groupBox_register)
         self.gridLayout_14.setObjectName(u"gridLayout_14")
-        self.groupBox_26 = QGroupBox(self.groupBox_register)
-        self.groupBox_26.setObjectName(u"groupBox_26")
-        self.gridLayout_3 = QGridLayout(self.groupBox_26)
-        self.gridLayout_3.setObjectName(u"gridLayout_3")
-        self.comboBox_finest = QComboBox(self.groupBox_26)
-        self.comboBox_finest.addItem("")
-        self.comboBox_finest.addItem("")
-        self.comboBox_finest.addItem("")
-        self.comboBox_finest.setObjectName(u"comboBox_finest")
-        self.comboBox_finest.setEnabled(True)
+        self.groupBox_17 = QGroupBox(self.groupBox_register)
+        self.groupBox_17.setObjectName(u"groupBox_17")
+        self.gridLayout_4 = QGridLayout(self.groupBox_17)
+        self.gridLayout_4.setObjectName(u"gridLayout_4")
+        self.comboBox_coarest = QComboBox(self.groupBox_17)
+        self.comboBox_coarest.addItem("")
+        self.comboBox_coarest.addItem("")
+        self.comboBox_coarest.addItem("")
+        self.comboBox_coarest.addItem("")
+        self.comboBox_coarest.setObjectName(u"comboBox_coarest")
+        self.comboBox_coarest.setEnabled(True)
 
-        self.gridLayout_3.addWidget(self.comboBox_finest, 0, 0, 1, 1)
+        self.gridLayout_4.addWidget(self.comboBox_coarest, 0, 0, 1, 1)
 
 
-        self.gridLayout_14.addWidget(self.groupBox_26, 1, 1, 1, 1)
+        self.gridLayout_14.addWidget(self.groupBox_17, 2, 0, 1, 1)
 
         self.groupBox_27 = QGroupBox(self.groupBox_register)
         self.groupBox_27.setObjectName(u"groupBox_27")
@@ -3750,18 +3956,18 @@ class Ui_MainWindow(object):
 
         self.gridLayout_2.addWidget(self.comboBox_movingimg, 2, 1, 1, 1)
 
-        self.textEdit_6 = QTextEdit(self.groupBox_27)
-        self.textEdit_6.setObjectName(u"textEdit_6")
-        self.textEdit_6.setMaximumSize(QSize(16777215, 50))
-
-        self.gridLayout_2.addWidget(self.textEdit_6, 0, 1, 1, 1)
-
         self.textEdit_pixels = QTextEdit(self.groupBox_27)
         self.textEdit_pixels.setObjectName(u"textEdit_pixels")
         self.textEdit_pixels.setMaximumSize(QSize(16777215, 50))
         self.textEdit_pixels.setStyleSheet(u"color: rgb(170, 0, 0);")
 
         self.gridLayout_2.addWidget(self.textEdit_pixels, 3, 1, 1, 1)
+
+        self.textEdit_6 = QTextEdit(self.groupBox_27)
+        self.textEdit_6.setObjectName(u"textEdit_6")
+        self.textEdit_6.setMaximumSize(QSize(16777215, 50))
+
+        self.gridLayout_2.addWidget(self.textEdit_6, 0, 1, 1, 1)
 
         self.pushButton_loadOtherImage = QPushButton(self.groupBox_27)
         self.pushButton_loadOtherImage.setObjectName(u"pushButton_loadOtherImage")
@@ -3778,29 +3984,36 @@ class Ui_MainWindow(object):
         self.pushButton_registration.setAcceptDrops(False)
         self.pushButton_registration.setStyleSheet(u" QPushButton { background-color: #e67e22; color: white; } QPushButton:disabled { background-color: #a9713f; color: #cccccc; }")
 
-        self.gridLayout_14.addWidget(self.pushButton_registration, 2, 1, 1, 1)
+        self.gridLayout_14.addWidget(self.pushButton_registration, 3, 1, 1, 1)
 
         self.pushButton_regCancel = QPushButton(self.groupBox_register)
         self.pushButton_regCancel.setObjectName(u"pushButton_regCancel")
 
-        self.gridLayout_14.addWidget(self.pushButton_regCancel, 2, 0, 1, 1)
+        self.gridLayout_14.addWidget(self.pushButton_regCancel, 3, 0, 1, 1)
 
-        self.groupBox_17 = QGroupBox(self.groupBox_register)
-        self.groupBox_17.setObjectName(u"groupBox_17")
-        self.gridLayout_4 = QGridLayout(self.groupBox_17)
-        self.gridLayout_4.setObjectName(u"gridLayout_4")
-        self.comboBox_coarest = QComboBox(self.groupBox_17)
-        self.comboBox_coarest.addItem("")
-        self.comboBox_coarest.addItem("")
-        self.comboBox_coarest.addItem("")
-        self.comboBox_coarest.addItem("")
-        self.comboBox_coarest.setObjectName(u"comboBox_coarest")
-        self.comboBox_coarest.setEnabled(True)
+        self.groupBox_26 = QGroupBox(self.groupBox_register)
+        self.groupBox_26.setObjectName(u"groupBox_26")
+        self.gridLayout_3 = QGridLayout(self.groupBox_26)
+        self.gridLayout_3.setObjectName(u"gridLayout_3")
+        self.comboBox_finest = QComboBox(self.groupBox_26)
+        self.comboBox_finest.addItem("")
+        self.comboBox_finest.addItem("")
+        self.comboBox_finest.addItem("")
+        self.comboBox_finest.setObjectName(u"comboBox_finest")
+        self.comboBox_finest.setEnabled(True)
 
-        self.gridLayout_4.addWidget(self.comboBox_coarest, 0, 0, 1, 1)
+        self.gridLayout_3.addWidget(self.comboBox_finest, 0, 0, 1, 1)
 
 
-        self.gridLayout_14.addWidget(self.groupBox_17, 1, 0, 1, 1)
+        self.gridLayout_14.addWidget(self.groupBox_26, 2, 1, 1, 1)
+
+        self.comboBox_regitstration_metric = QComboBox(self.groupBox_register)
+        self.comboBox_regitstration_metric.addItem("")
+        self.comboBox_regitstration_metric.addItem("")
+        self.comboBox_regitstration_metric.addItem("")
+        self.comboBox_regitstration_metric.setObjectName(u"comboBox_regitstration_metric")
+
+        self.gridLayout_14.addWidget(self.comboBox_regitstration_metric, 1, 0, 1, 2)
 
 
         self.gridLayout_104.addWidget(self.groupBox_register, 1, 0, 1, 1)
@@ -3972,7 +4185,7 @@ class Ui_MainWindow(object):
         self.checkBox_Brush.setObjectName(u"checkBox_Brush")
         self.checkBox_Brush.setEnabled(True)
         self.checkBox_Brush.setMaximumSize(QSize(16777215, 16777215))
-        self.checkBox_Brush.setFont(font3)
+        self.checkBox_Brush.setFont(font1)
         self.checkBox_Brush.setIconSize(QSize(16, 16))
         self.checkBox_Brush.setChecked(True)
 
@@ -4835,34 +5048,70 @@ class Ui_MainWindow(object):
         self.stackedWidget_segmentation.setObjectName(u"stackedWidget_segmentation")
         self.stackedWidget_segmentation.setEnabled(True)
         self.stackedWidget_segmentation.setMaximumSize(QSize(300, 16777215))
+        self.stackedWidget_segmentation.setStyleSheet(u" QPushButton { background-color: #e67e22; color: white; } QPushButton:disabled { background-color: #a9713f; color: #cccccc; }")
         self.page_13 = QWidget()
         self.page_13.setObjectName(u"page_13")
         self.gridLayout_152 = QGridLayout(self.page_13)
         self.gridLayout_152.setObjectName(u"gridLayout_152")
+        self.pushButton_Next1 = QPushButton(self.page_13)
+        self.pushButton_Next1.setObjectName(u"pushButton_Next1")
+        self.pushButton_Next1.setStyleSheet(u" QPushButton { background-color: #e67e22; color: white; } QPushButton:disabled { background-color: #a9713f; color: #cccccc; }")
+
+        self.gridLayout_152.addWidget(self.pushButton_Next1, 3, 1, 1, 1)
+
+        self.pushButton_Back1 = QPushButton(self.page_13)
+        self.pushButton_Back1.setObjectName(u"pushButton_Back1")
+        self.pushButton_Back1.setEnabled(False)
+
+        self.gridLayout_152.addWidget(self.pushButton_Back1, 3, 0, 1, 1)
+
+        self.checkBox_threshold = QCheckBox(self.page_13)
+        self.checkBox_threshold.setObjectName(u"checkBox_threshold")
+        self.checkBox_threshold.setEnabled(True)
+        font7 = QFont()
+        font7.setPointSize(12)
+        self.checkBox_threshold.setFont(font7)
+        self.checkBox_threshold.setChecked(True)
+
+        self.gridLayout_152.addWidget(self.checkBox_threshold, 1, 0, 1, 2)
+
+        self.textBrowser_5 = QTextBrowser(self.page_13)
+        self.textBrowser_5.setObjectName(u"textBrowser_5")
+        self.textBrowser_5.setMaximumSize(QSize(16777215, 50))
+        self.textBrowser_5.setStyleSheet(u"")
+        self.textBrowser_5.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        self.textBrowser_5.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+
+        self.gridLayout_152.addWidget(self.textBrowser_5, 0, 0, 1, 2)
+
         self.frame_15 = QFrame(self.page_13)
         self.frame_15.setObjectName(u"frame_15")
-        self.frame_15.setMaximumSize(QSize(16777215, 300))
+        self.frame_15.setMaximumSize(QSize(16777215, 400))
         self.frame_15.setFrameShape(QFrame.NoFrame)
         self.gridLayout_28 = QGridLayout(self.frame_15)
         self.gridLayout_28.setObjectName(u"gridLayout_28")
         self.groupBox_7 = QGroupBox(self.frame_15)
         self.groupBox_7.setObjectName(u"groupBox_7")
-        self.groupBox_7.setMaximumSize(QSize(16777215, 100))
+        self.groupBox_7.setMaximumSize(QSize(16777215, 150))
+        self.groupBox_7.setFont(font7)
         self.gridLayout_29 = QGridLayout(self.groupBox_7)
         self.gridLayout_29.setObjectName(u"gridLayout_29")
         self.radioButton_bounded = QRadioButton(self.groupBox_7)
         self.radioButton_bounded.setObjectName(u"radioButton_bounded")
+        self.radioButton_bounded.setFont(font7)
         self.radioButton_bounded.setChecked(True)
 
         self.gridLayout_29.addWidget(self.radioButton_bounded, 0, 0, 1, 1)
 
         self.radioButton_lower = QRadioButton(self.groupBox_7)
         self.radioButton_lower.setObjectName(u"radioButton_lower")
+        self.radioButton_lower.setFont(font7)
 
         self.gridLayout_29.addWidget(self.radioButton_lower, 1, 0, 1, 1)
 
         self.radioButton_upper = QRadioButton(self.groupBox_7)
         self.radioButton_upper.setObjectName(u"radioButton_upper")
+        self.radioButton_upper.setFont(font7)
 
         self.gridLayout_29.addWidget(self.radioButton_upper, 2, 0, 1, 1)
 
@@ -4923,60 +5172,6 @@ class Ui_MainWindow(object):
 
 
         self.gridLayout_152.addWidget(self.frame_15, 2, 0, 1, 2)
-
-        self.textBrowser_5 = QTextBrowser(self.page_13)
-        self.textBrowser_5.setObjectName(u"textBrowser_5")
-        self.textBrowser_5.setMaximumSize(QSize(16777215, 50))
-        self.textBrowser_5.setStyleSheet(u"")
-        self.textBrowser_5.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
-        self.textBrowser_5.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
-
-        self.gridLayout_152.addWidget(self.textBrowser_5, 0, 0, 1, 2)
-
-        self.pushButton_Next1 = QPushButton(self.page_13)
-        self.pushButton_Next1.setObjectName(u"pushButton_Next1")
-
-        self.gridLayout_152.addWidget(self.pushButton_Next1, 4, 1, 1, 1)
-
-        self.checkBox_threshold = QCheckBox(self.page_13)
-        self.checkBox_threshold.setObjectName(u"checkBox_threshold")
-        self.checkBox_threshold.setEnabled(True)
-        self.checkBox_threshold.setChecked(True)
-
-        self.gridLayout_152.addWidget(self.checkBox_threshold, 1, 0, 1, 2)
-
-        self.groupBox_skull_radius = QGroupBox(self.page_13)
-        self.groupBox_skull_radius.setObjectName(u"groupBox_skull_radius")
-        self.groupBox_skull_radius.setMaximumSize(QSize(16777215, 80))
-        self.gridLayout_224 = QGridLayout(self.groupBox_skull_radius)
-        self.gridLayout_224.setObjectName(u"gridLayout_224")
-        self.ScrollBar_skull_radius = QSlider(self.groupBox_skull_radius)
-        self.ScrollBar_skull_radius.setObjectName(u"ScrollBar_skull_radius")
-        self.ScrollBar_skull_radius.setMaximum(5000)
-        self.ScrollBar_skull_radius.setSingleStep(1)
-        self.ScrollBar_skull_radius.setPageStep(10)
-        self.ScrollBar_skull_radius.setValue(0)
-        self.ScrollBar_skull_radius.setOrientation(Qt.Horizontal)
-
-        self.gridLayout_224.addWidget(self.ScrollBar_skull_radius, 0, 0, 1, 1)
-
-        self.doubleSpinBox_skull_radius = QDoubleSpinBox(self.groupBox_skull_radius)
-        self.doubleSpinBox_skull_radius.setObjectName(u"doubleSpinBox_skull_radius")
-        self.doubleSpinBox_skull_radius.setMaximumSize(QSize(16777215, 30))
-        self.doubleSpinBox_skull_radius.setDecimals(3)
-        self.doubleSpinBox_skull_radius.setMaximum(5.000000000000000)
-        self.doubleSpinBox_skull_radius.setSingleStep(0.100000000000000)
-
-        self.gridLayout_224.addWidget(self.doubleSpinBox_skull_radius, 0, 1, 1, 1)
-
-
-        self.gridLayout_152.addWidget(self.groupBox_skull_radius, 3, 0, 1, 2)
-
-        self.pushButton_Back1 = QPushButton(self.page_13)
-        self.pushButton_Back1.setObjectName(u"pushButton_Back1")
-        self.pushButton_Back1.setEnabled(False)
-
-        self.gridLayout_152.addWidget(self.pushButton_Back1, 4, 0, 1, 1)
 
         self.stackedWidget_segmentation.addWidget(self.page_13)
         self.initialization = QWidget()
@@ -5181,6 +5376,20 @@ class Ui_MainWindow(object):
         self.tab_6.setObjectName(u"tab_6")
         self.gridLayout_173 = QGridLayout(self.tab_6)
         self.gridLayout_173.setObjectName(u"gridLayout_173")
+        self.tp_dwi1D_frame = QFrame(self.tab_6)
+        self.tp_dwi1D_frame.setObjectName(u"tp_dwi1D_frame")
+        self.tp_dwi1D_frame.setFrameShape(QFrame.StyledPanel)
+        self.tp_dwi1D_frame.setFrameShadow(QFrame.Raised)
+        self.gridLayout_183 = QGridLayout(self.tp_dwi1D_frame)
+        self.gridLayout_183.setObjectName(u"gridLayout_183")
+        self.tp_dwi1D_widget = MplWidget(self.tp_dwi1D_frame)
+        self.tp_dwi1D_widget.setObjectName(u"tp_dwi1D_widget")
+
+        self.gridLayout_183.addWidget(self.tp_dwi1D_widget, 0, 0, 1, 1)
+
+
+        self.gridLayout_173.addWidget(self.tp_dwi1D_frame, 0, 1, 1, 1)
+
         self.groupBox_paintbrush = QGroupBox(self.tab_6)
         self.groupBox_paintbrush.setObjectName(u"groupBox_paintbrush")
         self.groupBox_paintbrush.setEnabled(True)
@@ -5195,7 +5404,7 @@ class Ui_MainWindow(object):
         self.gridLayout_43.setObjectName(u"gridLayout_43")
         self.stackedWidget_4D = QStackedWidget(self.groupBox_paintbrush)
         self.stackedWidget_4D.setObjectName(u"stackedWidget_4D")
-        self.stackedWidget_4D.setMinimumSize(QSize(0, 0))
+        self.stackedWidget_4D.setMinimumSize(QSize(150, 0))
         self.stackedWidget_4D.setMaximumSize(QSize(16777215, 16777215))
         self.page_8 = QWidget()
         self.page_8.setObjectName(u"page_8")
@@ -5209,11 +5418,11 @@ class Ui_MainWindow(object):
         sizePolicy7.setHeightForWidth(self.pushButton_anatOK.sizePolicy().hasHeightForWidth())
         self.pushButton_anatOK.setSizePolicy(sizePolicy7)
         self.pushButton_anatOK.setMinimumSize(QSize(100, 80))
-        font7 = QFont()
-        font7.setBold(False)
-        font7.setStyleStrategy(QFont.PreferDefault)
-        self.pushButton_anatOK.setFont(font7)
-        self.pushButton_anatOK.setStyleSheet(u"background-color: rgb(237, 51, 59);")
+        font8 = QFont()
+        font8.setBold(False)
+        font8.setStyleStrategy(QFont.PreferDefault)
+        self.pushButton_anatOK.setFont(font8)
+        self.pushButton_anatOK.setStyleSheet(u" QPushButton { background-color: #e67e22; color: white; } QPushButton:disabled { background-color: #a9713f; color: #cccccc; }")
 
         self.gridLayout.addWidget(self.pushButton_anatOK, 1, 1, 1, 1)
 
@@ -5236,7 +5445,7 @@ class Ui_MainWindow(object):
         self.pushButton_segOK = QPushButton(self.page_9)
         self.pushButton_segOK.setObjectName(u"pushButton_segOK")
         self.pushButton_segOK.setMinimumSize(QSize(100, 80))
-        self.pushButton_segOK.setStyleSheet(u"background-color: rgb(237, 51, 59);")
+        self.pushButton_segOK.setStyleSheet(u" QPushButton { background-color: #e67e22; color: white; } QPushButton:disabled { background-color: #a9713f; color: #cccccc; }")
 
         self.gridLayout_80.addWidget(self.pushButton_segOK, 1, 1, 1, 1)
 
@@ -5259,7 +5468,7 @@ class Ui_MainWindow(object):
         self.checkBox_Brush_MRID.setObjectName(u"checkBox_Brush_MRID")
         self.checkBox_Brush_MRID.setEnabled(True)
         self.checkBox_Brush_MRID.setMaximumSize(QSize(16777215, 16777215))
-        self.checkBox_Brush_MRID.setFont(font3)
+        self.checkBox_Brush_MRID.setFont(font1)
         self.checkBox_Brush_MRID.setIconSize(QSize(16, 16))
         self.checkBox_Brush_MRID.setChecked(True)
 
@@ -5405,7 +5614,7 @@ class Ui_MainWindow(object):
         self.gridLayout_37.addWidget(self.tableWidget_labels, 0, 0, 1, 1)
 
 
-        self.gridLayout_38.addWidget(self.groupBox_47, 1, 0, 1, 1)
+        self.gridLayout_38.addWidget(self.groupBox_47, 0, 1, 1, 1)
 
 
         self.gridLayout_43.addWidget(self.groupBox_33, 0, 4, 4, 1)
@@ -5430,7 +5639,7 @@ class Ui_MainWindow(object):
         self.paintbrush_dataview = QComboBox(self.groupBox_48)
         self.paintbrush_dataview.setObjectName(u"paintbrush_dataview")
 
-        self.gridLayout_45.addWidget(self.paintbrush_dataview, 0, 1, 1, 1)
+        self.gridLayout_45.addWidget(self.paintbrush_dataview, 1, 0, 1, 1)
 
 
         self.gridLayout_44.addWidget(self.groupBox_48, 0, 0, 1, 1)
@@ -5444,6 +5653,7 @@ class Ui_MainWindow(object):
 
         self.gridLayout_43.addWidget(self.groupBox_36, 0, 5, 4, 1)
 
+        self.gridLayout_43.setColumnStretch(5, 1)
 
         self.gridLayout_173.addWidget(self.groupBox_paintbrush, 0, 0, 1, 1)
 
@@ -5491,6 +5701,7 @@ class Ui_MainWindow(object):
 
         self.pushButton_SaveSpacing = QPushButton(self.frame_spacing)
         self.pushButton_SaveSpacing.setObjectName(u"pushButton_SaveSpacing")
+        self.pushButton_SaveSpacing.setStyleSheet(u" QPushButton { background-color: #e67e22; color: white; } QPushButton:disabled { background-color: #a9713f; color: #cccccc; }")
 
         self.gridLayout_181.addWidget(self.pushButton_SaveSpacing, 5, 4, 1, 5)
 
@@ -5518,6 +5729,7 @@ class Ui_MainWindow(object):
 
         self.lineEdit_47 = QLineEdit(self.frame_spacing)
         self.lineEdit_47.setObjectName(u"lineEdit_47")
+        self.lineEdit_47.setMinimumSize(QSize(100, 0))
         self.lineEdit_47.setReadOnly(True)
 
         self.gridLayout_181.addWidget(self.lineEdit_47, 3, 0, 1, 1)
@@ -5538,6 +5750,7 @@ class Ui_MainWindow(object):
 
         self.lineEdit_48 = QLineEdit(self.frame_spacing)
         self.lineEdit_48.setObjectName(u"lineEdit_48")
+        self.lineEdit_48.setMinimumSize(QSize(100, 0))
         self.lineEdit_48.setReadOnly(True)
 
         self.gridLayout_181.addWidget(self.lineEdit_48, 2, 0, 1, 1)
@@ -5551,6 +5764,7 @@ class Ui_MainWindow(object):
 
         self.lineEdit_46 = QLineEdit(self.frame_spacing)
         self.lineEdit_46.setObjectName(u"lineEdit_46")
+        self.lineEdit_46.setMinimumSize(QSize(100, 0))
         self.lineEdit_46.setReadOnly(True)
 
         self.gridLayout_181.addWidget(self.lineEdit_46, 1, 0, 1, 1)
@@ -5579,6 +5793,7 @@ class Ui_MainWindow(object):
 
         self.pushButton_cancel_spacing = QPushButton(self.frame_spacing)
         self.pushButton_cancel_spacing.setObjectName(u"pushButton_cancel_spacing")
+        self.pushButton_cancel_spacing.setStyleSheet(u" QPushButton { background-color: #e67e22; color: white; } QPushButton:disabled { background-color: #a9713f; color: #cccccc; }")
 
         self.gridLayout_181.addWidget(self.pushButton_cancel_spacing, 5, 0, 1, 4)
 
@@ -5619,12 +5834,19 @@ class Ui_MainWindow(object):
         self.frame_metadata.setFrameShadow(QFrame.Raised)
         self.gridLayout_180 = QGridLayout(self.frame_metadata)
         self.gridLayout_180.setObjectName(u"gridLayout_180")
-        self.lineEdit_42 = QLineEdit(self.frame_metadata)
-        self.lineEdit_42.setObjectName(u"lineEdit_42")
-        self.lineEdit_42.setMaximumSize(QSize(30, 16777215))
-        self.lineEdit_42.setReadOnly(True)
+        self.spinBox_dimz = QSpinBox(self.frame_metadata)
+        self.spinBox_dimz.setObjectName(u"spinBox_dimz")
+        self.spinBox_dimz.setReadOnly(True)
+        self.spinBox_dimz.setButtonSymbols(QAbstractSpinBox.NoButtons)
+        self.spinBox_dimz.setMaximum(100000)
 
-        self.gridLayout_180.addWidget(self.lineEdit_42, 4, 6, 1, 1)
+        self.gridLayout_180.addWidget(self.spinBox_dimz, 2, 7, 1, 1)
+
+        self.lineEdit_direction = QTextEdit(self.frame_metadata)
+        self.lineEdit_direction.setObjectName(u"lineEdit_direction")
+        self.lineEdit_direction.setMaximumSize(QSize(500, 100))
+
+        self.gridLayout_180.addWidget(self.lineEdit_direction, 8, 1, 1, 7)
 
         self.doubleSpinBox_originx = QDoubleSpinBox(self.frame_metadata)
         self.doubleSpinBox_originx.setObjectName(u"doubleSpinBox_originx")
@@ -5633,70 +5855,43 @@ class Ui_MainWindow(object):
         self.doubleSpinBox_originx.setDecimals(5)
         self.doubleSpinBox_originx.setMinimum(-1000.000000000000000)
 
-        self.gridLayout_180.addWidget(self.doubleSpinBox_originx, 4, 2, 1, 1)
+        self.gridLayout_180.addWidget(self.doubleSpinBox_originx, 5, 2, 1, 1)
 
-        self.lineEdit_28 = QLineEdit(self.frame_metadata)
-        self.lineEdit_28.setObjectName(u"lineEdit_28")
-        self.lineEdit_28.setReadOnly(True)
+        self.lineEdit_42 = QLineEdit(self.frame_metadata)
+        self.lineEdit_42.setObjectName(u"lineEdit_42")
+        self.lineEdit_42.setMaximumSize(QSize(30, 16777215))
+        self.lineEdit_42.setReadOnly(True)
 
-        self.gridLayout_180.addWidget(self.lineEdit_28, 8, 0, 1, 1)
+        self.gridLayout_180.addWidget(self.lineEdit_42, 5, 6, 1, 1)
 
-        self.lineEdit_34 = QLineEdit(self.frame_metadata)
-        self.lineEdit_34.setObjectName(u"lineEdit_34")
-        self.lineEdit_34.setMaximumSize(QSize(30, 16777215))
-        self.lineEdit_34.setReadOnly(False)
+        self.doubleSpinBox_originy = QDoubleSpinBox(self.frame_metadata)
+        self.doubleSpinBox_originy.setObjectName(u"doubleSpinBox_originy")
+        self.doubleSpinBox_originy.setReadOnly(True)
+        self.doubleSpinBox_originy.setButtonSymbols(QAbstractSpinBox.NoButtons)
+        self.doubleSpinBox_originy.setDecimals(5)
+        self.doubleSpinBox_originy.setMinimum(-1000.000000000000000)
 
-        self.gridLayout_180.addWidget(self.lineEdit_34, 2, 1, 1, 1)
+        self.gridLayout_180.addWidget(self.doubleSpinBox_originy, 5, 5, 1, 1)
+
+        self.lineEdit_25 = QLineEdit(self.frame_metadata)
+        self.lineEdit_25.setObjectName(u"lineEdit_25")
+        self.lineEdit_25.setMinimumSize(QSize(90, 0))
+        self.lineEdit_25.setReadOnly(False)
+
+        self.gridLayout_180.addWidget(self.lineEdit_25, 3, 0, 1, 1)
 
         self.pushButton_SaveMetadata = QPushButton(self.frame_metadata)
         self.pushButton_SaveMetadata.setObjectName(u"pushButton_SaveMetadata")
+        self.pushButton_SaveMetadata.setStyleSheet(u" QPushButton { background-color: #e67e22; color: white; } QPushButton:disabled { background-color: #a9713f; color: #cccccc; }")
 
-        self.gridLayout_180.addWidget(self.pushButton_SaveMetadata, 9, 3, 1, 5)
+        self.gridLayout_180.addWidget(self.pushButton_SaveMetadata, 10, 2, 1, 6)
 
-        self.lineEdit_23 = QLineEdit(self.frame_metadata)
-        self.lineEdit_23.setObjectName(u"lineEdit_23")
-        self.lineEdit_23.setReadOnly(False)
+        self.lineEdit_26 = QLineEdit(self.frame_metadata)
+        self.lineEdit_26.setObjectName(u"lineEdit_26")
+        self.lineEdit_26.setMinimumSize(QSize(90, 0))
+        self.lineEdit_26.setReadOnly(False)
 
-        self.gridLayout_180.addWidget(self.lineEdit_23, 2, 0, 1, 1)
-
-        self.lineEdit_37 = QLineEdit(self.frame_metadata)
-        self.lineEdit_37.setObjectName(u"lineEdit_37")
-        self.lineEdit_37.setMaximumSize(QSize(30, 16777215))
-        self.lineEdit_37.setReadOnly(False)
-
-        self.gridLayout_180.addWidget(self.lineEdit_37, 2, 4, 1, 1)
-
-        self.comboBox = QComboBox(self.frame_metadata)
-        self.comboBox.setObjectName(u"comboBox")
-
-        self.gridLayout_180.addWidget(self.comboBox, 0, 0, 1, 8)
-
-        self.pushButton_changeSpacing = QPushButton(self.frame_metadata)
-        self.pushButton_changeSpacing.setObjectName(u"pushButton_changeSpacing")
-
-        self.gridLayout_180.addWidget(self.pushButton_changeSpacing, 9, 0, 1, 1)
-
-        self.doubleSpinBox_minIntensity = QDoubleSpinBox(self.frame_metadata)
-        self.doubleSpinBox_minIntensity.setObjectName(u"doubleSpinBox_minIntensity")
-        self.doubleSpinBox_minIntensity.setReadOnly(True)
-        self.doubleSpinBox_minIntensity.setButtonSymbols(QAbstractSpinBox.NoButtons)
-        self.doubleSpinBox_minIntensity.setDecimals(5)
-
-        self.gridLayout_180.addWidget(self.doubleSpinBox_minIntensity, 8, 5, 1, 1)
-
-        self.lineEdit_40 = QLineEdit(self.frame_metadata)
-        self.lineEdit_40.setObjectName(u"lineEdit_40")
-        self.lineEdit_40.setMaximumSize(QSize(30, 16777215))
-        self.lineEdit_40.setReadOnly(False)
-
-        self.gridLayout_180.addWidget(self.lineEdit_40, 2, 6, 1, 1)
-
-        self.lineEdit_39 = QLineEdit(self.frame_metadata)
-        self.lineEdit_39.setObjectName(u"lineEdit_39")
-        self.lineEdit_39.setMaximumSize(QSize(30, 16777215))
-        self.lineEdit_39.setReadOnly(False)
-
-        self.gridLayout_180.addWidget(self.lineEdit_39, 4, 4, 1, 1)
+        self.gridLayout_180.addWidget(self.lineEdit_26, 5, 0, 1, 1)
 
         self.lineEdit_35 = QLineEdit(self.frame_metadata)
         self.lineEdit_35.setObjectName(u"lineEdit_35")
@@ -5713,16 +5908,40 @@ class Ui_MainWindow(object):
 
         self.gridLayout_180.addWidget(self.spinBox_dimy, 2, 5, 1, 1)
 
-        self.pushButton_cancel_metadata = QPushButton(self.frame_metadata)
-        self.pushButton_cancel_metadata.setObjectName(u"pushButton_cancel_metadata")
+        self.lineEdit_44 = QLineEdit(self.frame_metadata)
+        self.lineEdit_44.setObjectName(u"lineEdit_44")
+        self.lineEdit_44.setMaximumSize(QSize(40, 16777215))
+        self.lineEdit_44.setReadOnly(True)
 
-        self.gridLayout_180.addWidget(self.pushButton_cancel_metadata, 9, 1, 1, 2)
+        self.gridLayout_180.addWidget(self.lineEdit_44, 9, 4, 1, 1)
 
-        self.lineEdit_26 = QLineEdit(self.frame_metadata)
-        self.lineEdit_26.setObjectName(u"lineEdit_26")
-        self.lineEdit_26.setReadOnly(False)
+        self.lineEdit_27 = QLineEdit(self.frame_metadata)
+        self.lineEdit_27.setObjectName(u"lineEdit_27")
+        self.lineEdit_27.setMinimumSize(QSize(90, 0))
+        self.lineEdit_27.setReadOnly(True)
 
-        self.gridLayout_180.addWidget(self.lineEdit_26, 4, 0, 1, 1)
+        self.gridLayout_180.addWidget(self.lineEdit_27, 6, 0, 1, 1)
+
+        self.lineEdit_34 = QLineEdit(self.frame_metadata)
+        self.lineEdit_34.setObjectName(u"lineEdit_34")
+        self.lineEdit_34.setMaximumSize(QSize(30, 16777215))
+        self.lineEdit_34.setReadOnly(False)
+
+        self.gridLayout_180.addWidget(self.lineEdit_34, 2, 1, 1, 1)
+
+        self.lineEdit_28 = QLineEdit(self.frame_metadata)
+        self.lineEdit_28.setObjectName(u"lineEdit_28")
+        self.lineEdit_28.setMinimumSize(QSize(90, 0))
+        self.lineEdit_28.setReadOnly(True)
+
+        self.gridLayout_180.addWidget(self.lineEdit_28, 9, 0, 1, 1)
+
+        self.lineEdit_41 = QLineEdit(self.frame_metadata)
+        self.lineEdit_41.setObjectName(u"lineEdit_41")
+        self.lineEdit_41.setMaximumSize(QSize(30, 16777215))
+        self.lineEdit_41.setReadOnly(False)
+
+        self.gridLayout_180.addWidget(self.lineEdit_41, 3, 6, 1, 1)
 
         self.doubleSpinBox_spacingy = QDoubleSpinBox(self.frame_metadata)
         self.doubleSpinBox_spacingy.setObjectName(u"doubleSpinBox_spacingy")
@@ -5732,42 +5951,47 @@ class Ui_MainWindow(object):
 
         self.gridLayout_180.addWidget(self.doubleSpinBox_spacingy, 3, 5, 1, 1)
 
-        self.lineEdit_44 = QLineEdit(self.frame_metadata)
-        self.lineEdit_44.setObjectName(u"lineEdit_44")
-        self.lineEdit_44.setMaximumSize(QSize(40, 16777215))
-        self.lineEdit_44.setReadOnly(True)
+        self.pushButton_cancel_metadata = QPushButton(self.frame_metadata)
+        self.pushButton_cancel_metadata.setObjectName(u"pushButton_cancel_metadata")
+        self.pushButton_cancel_metadata.setStyleSheet(u" QPushButton { background-color: #e67e22; color: white; } QPushButton:disabled { background-color: #a9713f; color: #cccccc; }")
 
-        self.gridLayout_180.addWidget(self.lineEdit_44, 8, 4, 1, 1)
+        self.gridLayout_180.addWidget(self.pushButton_cancel_metadata, 10, 0, 1, 1)
 
-        self.pushButton_reorient = QPushButton(self.frame_metadata)
-        self.pushButton_reorient.setObjectName(u"pushButton_reorient")
-        self.pushButton_reorient.setCheckable(True)
-        self.pushButton_reorient.setChecked(False)
+        self.lineEdit_38 = QLineEdit(self.frame_metadata)
+        self.lineEdit_38.setObjectName(u"lineEdit_38")
+        self.lineEdit_38.setMaximumSize(QSize(30, 16777215))
+        self.lineEdit_38.setReadOnly(False)
 
-        self.gridLayout_180.addWidget(self.pushButton_reorient, 5, 7, 1, 1)
+        self.gridLayout_180.addWidget(self.lineEdit_38, 3, 4, 1, 1)
 
-        self.doubleSpinBox_originz = QDoubleSpinBox(self.frame_metadata)
-        self.doubleSpinBox_originz.setObjectName(u"doubleSpinBox_originz")
-        self.doubleSpinBox_originz.setReadOnly(True)
-        self.doubleSpinBox_originz.setButtonSymbols(QAbstractSpinBox.NoButtons)
-        self.doubleSpinBox_originz.setDecimals(5)
-        self.doubleSpinBox_originz.setMinimum(-1000.000000000000000)
+        self.doubleSpinBox_maxIntensity = QDoubleSpinBox(self.frame_metadata)
+        self.doubleSpinBox_maxIntensity.setObjectName(u"doubleSpinBox_maxIntensity")
+        self.doubleSpinBox_maxIntensity.setReadOnly(True)
+        self.doubleSpinBox_maxIntensity.setButtonSymbols(QAbstractSpinBox.NoButtons)
+        self.doubleSpinBox_maxIntensity.setDecimals(5)
 
-        self.gridLayout_180.addWidget(self.doubleSpinBox_originz, 4, 7, 1, 1)
+        self.gridLayout_180.addWidget(self.doubleSpinBox_maxIntensity, 9, 7, 1, 1)
 
-        self.lineEdit_36 = QLineEdit(self.frame_metadata)
-        self.lineEdit_36.setObjectName(u"lineEdit_36")
-        self.lineEdit_36.setMaximumSize(QSize(30, 16777215))
-        self.lineEdit_36.setReadOnly(False)
+        self.lineEdit_23 = QLineEdit(self.frame_metadata)
+        self.lineEdit_23.setObjectName(u"lineEdit_23")
+        self.lineEdit_23.setMinimumSize(QSize(90, 0))
+        self.lineEdit_23.setReadOnly(False)
 
-        self.gridLayout_180.addWidget(self.lineEdit_36, 4, 1, 1, 1)
+        self.gridLayout_180.addWidget(self.lineEdit_23, 2, 0, 1, 1)
 
-        self.lineEdit_41 = QLineEdit(self.frame_metadata)
-        self.lineEdit_41.setObjectName(u"lineEdit_41")
-        self.lineEdit_41.setMaximumSize(QSize(30, 16777215))
-        self.lineEdit_41.setReadOnly(False)
+        self.lineEdit_37 = QLineEdit(self.frame_metadata)
+        self.lineEdit_37.setObjectName(u"lineEdit_37")
+        self.lineEdit_37.setMaximumSize(QSize(30, 16777215))
+        self.lineEdit_37.setReadOnly(False)
 
-        self.gridLayout_180.addWidget(self.lineEdit_41, 3, 6, 1, 1)
+        self.gridLayout_180.addWidget(self.lineEdit_37, 2, 4, 1, 1)
+
+        self.lineEdit_39 = QLineEdit(self.frame_metadata)
+        self.lineEdit_39.setObjectName(u"lineEdit_39")
+        self.lineEdit_39.setMaximumSize(QSize(30, 16777215))
+        self.lineEdit_39.setReadOnly(False)
+
+        self.gridLayout_180.addWidget(self.lineEdit_39, 5, 4, 1, 1)
 
         self.spinBox_dimx = QSpinBox(self.frame_metadata)
         self.spinBox_dimx.setObjectName(u"spinBox_dimx")
@@ -5777,6 +6001,49 @@ class Ui_MainWindow(object):
 
         self.gridLayout_180.addWidget(self.spinBox_dimx, 2, 2, 1, 1)
 
+        self.doubleSpinBox_originz = QDoubleSpinBox(self.frame_metadata)
+        self.doubleSpinBox_originz.setObjectName(u"doubleSpinBox_originz")
+        self.doubleSpinBox_originz.setReadOnly(True)
+        self.doubleSpinBox_originz.setButtonSymbols(QAbstractSpinBox.NoButtons)
+        self.doubleSpinBox_originz.setDecimals(5)
+        self.doubleSpinBox_originz.setMinimum(-1000.000000000000000)
+
+        self.gridLayout_180.addWidget(self.doubleSpinBox_originz, 5, 7, 1, 1)
+
+        self.doubleSpinBox_minIntensity = QDoubleSpinBox(self.frame_metadata)
+        self.doubleSpinBox_minIntensity.setObjectName(u"doubleSpinBox_minIntensity")
+        self.doubleSpinBox_minIntensity.setReadOnly(True)
+        self.doubleSpinBox_minIntensity.setButtonSymbols(QAbstractSpinBox.NoButtons)
+        self.doubleSpinBox_minIntensity.setDecimals(5)
+
+        self.gridLayout_180.addWidget(self.doubleSpinBox_minIntensity, 9, 5, 1, 1)
+
+        self.lineEdit_36 = QLineEdit(self.frame_metadata)
+        self.lineEdit_36.setObjectName(u"lineEdit_36")
+        self.lineEdit_36.setMaximumSize(QSize(30, 16777215))
+        self.lineEdit_36.setReadOnly(False)
+
+        self.gridLayout_180.addWidget(self.lineEdit_36, 5, 1, 1, 1)
+
+        self.lineEdit_45 = QLineEdit(self.frame_metadata)
+        self.lineEdit_45.setObjectName(u"lineEdit_45")
+        self.lineEdit_45.setMaximumSize(QSize(40, 16777215))
+        self.lineEdit_45.setReadOnly(True)
+
+        self.gridLayout_180.addWidget(self.lineEdit_45, 9, 6, 1, 1)
+
+        self.comboBox = QComboBox(self.frame_metadata)
+        self.comboBox.setObjectName(u"comboBox")
+
+        self.gridLayout_180.addWidget(self.comboBox, 0, 0, 1, 8)
+
+        self.lineEdit_40 = QLineEdit(self.frame_metadata)
+        self.lineEdit_40.setObjectName(u"lineEdit_40")
+        self.lineEdit_40.setMaximumSize(QSize(30, 16777215))
+        self.lineEdit_40.setReadOnly(False)
+
+        self.gridLayout_180.addWidget(self.lineEdit_40, 2, 6, 1, 1)
+
         self.doubleSpinBox_spacingx = QDoubleSpinBox(self.frame_metadata)
         self.doubleSpinBox_spacingx.setObjectName(u"doubleSpinBox_spacingx")
         self.doubleSpinBox_spacingx.setReadOnly(True)
@@ -5784,67 +6051,6 @@ class Ui_MainWindow(object):
         self.doubleSpinBox_spacingx.setDecimals(5)
 
         self.gridLayout_180.addWidget(self.doubleSpinBox_spacingx, 3, 2, 1, 1)
-
-        self.lineEdit_32 = QLineEdit(self.frame_metadata)
-        self.lineEdit_32.setObjectName(u"lineEdit_32")
-        self.lineEdit_32.setReadOnly(True)
-
-        self.gridLayout_180.addWidget(self.lineEdit_32, 7, 0, 1, 1)
-
-        self.lineEdit_direction = QTextEdit(self.frame_metadata)
-        self.lineEdit_direction.setObjectName(u"lineEdit_direction")
-        self.lineEdit_direction.setMaximumSize(QSize(500, 100))
-
-        self.gridLayout_180.addWidget(self.lineEdit_direction, 7, 1, 1, 7)
-
-        self.lineEdit_27 = QLineEdit(self.frame_metadata)
-        self.lineEdit_27.setObjectName(u"lineEdit_27")
-        self.lineEdit_27.setReadOnly(True)
-
-        self.gridLayout_180.addWidget(self.lineEdit_27, 5, 0, 1, 1)
-
-        self.lineEdit_25 = QLineEdit(self.frame_metadata)
-        self.lineEdit_25.setObjectName(u"lineEdit_25")
-        self.lineEdit_25.setReadOnly(False)
-
-        self.gridLayout_180.addWidget(self.lineEdit_25, 3, 0, 1, 1)
-
-        self.doubleSpinBox_originy = QDoubleSpinBox(self.frame_metadata)
-        self.doubleSpinBox_originy.setObjectName(u"doubleSpinBox_originy")
-        self.doubleSpinBox_originy.setReadOnly(True)
-        self.doubleSpinBox_originy.setButtonSymbols(QAbstractSpinBox.NoButtons)
-        self.doubleSpinBox_originy.setDecimals(5)
-        self.doubleSpinBox_originy.setMinimum(-1000.000000000000000)
-
-        self.gridLayout_180.addWidget(self.doubleSpinBox_originy, 4, 5, 1, 1)
-
-        self.doubleSpinBox_maxIntensity = QDoubleSpinBox(self.frame_metadata)
-        self.doubleSpinBox_maxIntensity.setObjectName(u"doubleSpinBox_maxIntensity")
-        self.doubleSpinBox_maxIntensity.setReadOnly(True)
-        self.doubleSpinBox_maxIntensity.setButtonSymbols(QAbstractSpinBox.NoButtons)
-        self.doubleSpinBox_maxIntensity.setDecimals(5)
-
-        self.gridLayout_180.addWidget(self.doubleSpinBox_maxIntensity, 8, 7, 1, 1)
-
-        self.lineEdit_DicomOrient = QLineEdit(self.frame_metadata)
-        self.lineEdit_DicomOrient.setObjectName(u"lineEdit_DicomOrient")
-        self.lineEdit_DicomOrient.setReadOnly(True)
-
-        self.gridLayout_180.addWidget(self.lineEdit_DicomOrient, 5, 4, 1, 3)
-
-        self.lineEdit_38 = QLineEdit(self.frame_metadata)
-        self.lineEdit_38.setObjectName(u"lineEdit_38")
-        self.lineEdit_38.setMaximumSize(QSize(30, 16777215))
-        self.lineEdit_38.setReadOnly(False)
-
-        self.gridLayout_180.addWidget(self.lineEdit_38, 3, 4, 1, 1)
-
-        self.lineEdit_45 = QLineEdit(self.frame_metadata)
-        self.lineEdit_45.setObjectName(u"lineEdit_45")
-        self.lineEdit_45.setMaximumSize(QSize(40, 16777215))
-        self.lineEdit_45.setReadOnly(True)
-
-        self.gridLayout_180.addWidget(self.lineEdit_45, 8, 6, 1, 1)
 
         self.doubleSpinBox_spacingz = QDoubleSpinBox(self.frame_metadata)
         self.doubleSpinBox_spacingz.setObjectName(u"doubleSpinBox_spacingz")
@@ -5854,36 +6060,119 @@ class Ui_MainWindow(object):
 
         self.gridLayout_180.addWidget(self.doubleSpinBox_spacingz, 3, 7, 1, 1)
 
-        self.spinBox_dimz = QSpinBox(self.frame_metadata)
-        self.spinBox_dimz.setObjectName(u"spinBox_dimz")
-        self.spinBox_dimz.setReadOnly(True)
-        self.spinBox_dimz.setButtonSymbols(QAbstractSpinBox.NoButtons)
-        self.spinBox_dimz.setMaximum(100000)
+        self.lineEdit_32 = QLineEdit(self.frame_metadata)
+        self.lineEdit_32.setObjectName(u"lineEdit_32")
+        self.lineEdit_32.setMinimumSize(QSize(90, 0))
+        self.lineEdit_32.setReadOnly(True)
 
-        self.gridLayout_180.addWidget(self.spinBox_dimz, 2, 7, 1, 1)
+        self.gridLayout_180.addWidget(self.lineEdit_32, 8, 0, 1, 1)
+
+        self.pushButton_reorient = QPushButton(self.frame_metadata)
+        self.pushButton_reorient.setObjectName(u"pushButton_reorient")
+        self.pushButton_reorient.setStyleSheet(u" QPushButton { background-color: #e67e22; color: white; } QPushButton:disabled { background-color: #a9713f; color: #cccccc; }")
+        self.pushButton_reorient.setCheckable(True)
+        self.pushButton_reorient.setChecked(False)
+
+        self.gridLayout_180.addWidget(self.pushButton_reorient, 6, 7, 1, 1)
+
+        self.pushButton_changeSpacing = QPushButton(self.frame_metadata)
+        self.pushButton_changeSpacing.setObjectName(u"pushButton_changeSpacing")
+        self.pushButton_changeSpacing.setStyleSheet(u" QPushButton { background-color: #e67e22; color: white; } QPushButton:disabled { background-color: #a9713f; color: #cccccc; }")
+
+        self.gridLayout_180.addWidget(self.pushButton_changeSpacing, 4, 0, 1, 8)
+
+        self.lineEdit_DicomOrient = QLineEdit(self.frame_metadata)
+        self.lineEdit_DicomOrient.setObjectName(u"lineEdit_DicomOrient")
+        self.lineEdit_DicomOrient.setReadOnly(True)
+
+        self.gridLayout_180.addWidget(self.lineEdit_DicomOrient, 6, 3, 1, 4)
 
 
         self.gridLayout_173.addWidget(self.frame_metadata, 1, 0, 1, 1)
-
-        self.tp_dwi1D_frame = QFrame(self.tab_6)
-        self.tp_dwi1D_frame.setObjectName(u"tp_dwi1D_frame")
-        self.tp_dwi1D_frame.setFrameShape(QFrame.StyledPanel)
-        self.tp_dwi1D_frame.setFrameShadow(QFrame.Raised)
-        self.gridLayout_183 = QGridLayout(self.tp_dwi1D_frame)
-        self.gridLayout_183.setObjectName(u"gridLayout_183")
-        self.tp_dwi1D_widget = MplWidget(self.tp_dwi1D_frame)
-        self.tp_dwi1D_widget.setObjectName(u"tp_dwi1D_widget")
-
-        self.gridLayout_183.addWidget(self.tp_dwi1D_widget, 0, 0, 1, 1)
-
-
-        self.gridLayout_173.addWidget(self.tp_dwi1D_frame, 0, 1, 1, 1)
 
         self.tabWidget.addTab(self.tab_6, "")
         self.tab_ephys = QWidget()
         self.tab_ephys.setObjectName(u"tab_ephys")
         self.gridLayout_22 = QGridLayout(self.tab_ephys)
         self.gridLayout_22.setObjectName(u"gridLayout_22")
+        self.frame_2 = QFrame(self.tab_ephys)
+        self.frame_2.setObjectName(u"frame_2")
+        self.frame_2.setMaximumSize(QSize(300, 16777215))
+        self.frame_2.setFrameShape(QFrame.StyledPanel)
+        self.frame_2.setFrameShadow(QFrame.Raised)
+        self.gridLayout_168 = QGridLayout(self.frame_2)
+        self.gridLayout_168.setObjectName(u"gridLayout_168")
+        self.pushButton_deselectAll = QPushButton(self.frame_2)
+        self.pushButton_deselectAll.setObjectName(u"pushButton_deselectAll")
+
+        self.gridLayout_168.addWidget(self.pushButton_deselectAll, 2, 2, 1, 1)
+
+        self.tableWidget_ephys = QTableWidget(self.frame_2)
+        self.tableWidget_ephys.setObjectName(u"tableWidget_ephys")
+        self.tableWidget_ephys.setMaximumSize(QSize(300, 16777215))
+        self.tableWidget_ephys.setFont(font2)
+        self.tableWidget_ephys.setSizeAdjustPolicy(QAbstractScrollArea.AdjustToContents)
+        self.tableWidget_ephys.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self.tableWidget_ephys.setSelectionMode(QAbstractItemView.ContiguousSelection)
+        self.tableWidget_ephys.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.tableWidget_ephys.horizontalHeader().setCascadingSectionResizes(False)
+
+        self.gridLayout_168.addWidget(self.tableWidget_ephys, 1, 1, 1, 2)
+
+        self.pushButton_selectAll = QPushButton(self.frame_2)
+        self.pushButton_selectAll.setObjectName(u"pushButton_selectAll")
+
+        self.gridLayout_168.addWidget(self.pushButton_selectAll, 2, 1, 1, 1)
+
+        self.pushButton_showChannels = QPushButton(self.frame_2)
+        self.pushButton_showChannels.setObjectName(u"pushButton_showChannels")
+        self.pushButton_showChannels.setCheckable(True)
+        self.pushButton_showChannels.setChecked(True)
+
+        self.gridLayout_168.addWidget(self.pushButton_showChannels, 3, 1, 1, 2)
+
+        self.pushButton_anatRegion = QPushButton(self.frame_2)
+        self.pushButton_anatRegion.setObjectName(u"pushButton_anatRegion")
+        self.pushButton_anatRegion.setMinimumSize(QSize(0, 72))
+        self.pushButton_anatRegion.setFont(font1)
+        self.pushButton_anatRegion.setStyleSheet(u"color: rgb(224, 27, 36);")
+
+        self.gridLayout_168.addWidget(self.pushButton_anatRegion, 4, 1, 1, 2)
+
+        self.groupBox_5 = QGroupBox(self.frame_2)
+        self.groupBox_5.setObjectName(u"groupBox_5")
+        self.groupBox_5.setMaximumSize(QSize(16777215, 300))
+        self.gridLayout_165 = QGridLayout(self.groupBox_5)
+        self.gridLayout_165.setObjectName(u"gridLayout_165")
+        self.comboBox_mridTag = QComboBox(self.groupBox_5)
+        self.comboBox_mridTag.setObjectName(u"comboBox_mridTag")
+        self.comboBox_mridTag.setEnabled(True)
+        self.comboBox_mridTag.setMinimumSize(QSize(0, 0))
+        self.comboBox_mridTag.setStyleSheet(u"color: rgb(224, 27, 36);")
+        self.comboBox_mridTag.setEditable(False)
+        self.comboBox_mridTag.setInsertPolicy(QComboBox.InsertAtBottom)
+        self.comboBox_mridTag.setSizeAdjustPolicy(QComboBox.AdjustToContents)
+
+        self.gridLayout_165.addWidget(self.comboBox_mridTag, 1, 0, 1, 1)
+
+        self.lineEdit_60 = QLineEdit(self.groupBox_5)
+        self.lineEdit_60.setObjectName(u"lineEdit_60")
+        self.lineEdit_60.setReadOnly(True)
+
+        self.gridLayout_165.addWidget(self.lineEdit_60, 0, 0, 1, 1)
+
+
+        self.gridLayout_168.addWidget(self.groupBox_5, 0, 1, 1, 2)
+
+
+        self.gridLayout_22.addWidget(self.frame_2, 1, 3, 1, 1)
+
+        self.textEdit_ephys = QLabel(self.tab_ephys)
+        self.textEdit_ephys.setObjectName(u"textEdit_ephys")
+        self.textEdit_ephys.setMinimumSize(QSize(300, 100))
+
+        self.gridLayout_22.addWidget(self.textEdit_ephys, 0, 3, 1, 1)
+
         self.tabWidget_ephys = QTabWidget(self.tab_ephys)
         self.tabWidget_ephys.setObjectName(u"tabWidget_ephys")
         self.tab_4 = QWidget()
@@ -6301,88 +6590,7 @@ class Ui_MainWindow(object):
 
         self.tabWidget_ephys.addTab(self.tab_7, "")
 
-        self.gridLayout_22.addWidget(self.tabWidget_ephys, 0, 4, 3, 1)
-
-        self.frame_2 = QFrame(self.tab_ephys)
-        self.frame_2.setObjectName(u"frame_2")
-        self.frame_2.setMaximumSize(QSize(300, 16777215))
-        self.frame_2.setFrameShape(QFrame.StyledPanel)
-        self.frame_2.setFrameShadow(QFrame.Raised)
-        self.gridLayout_168 = QGridLayout(self.frame_2)
-        self.gridLayout_168.setObjectName(u"gridLayout_168")
-        self.pushButton_deselectAll = QPushButton(self.frame_2)
-        self.pushButton_deselectAll.setObjectName(u"pushButton_deselectAll")
-
-        self.gridLayout_168.addWidget(self.pushButton_deselectAll, 2, 2, 1, 1)
-
-        self.tableWidget_ephys = QTableWidget(self.frame_2)
-        self.tableWidget_ephys.setObjectName(u"tableWidget_ephys")
-        self.tableWidget_ephys.setMaximumSize(QSize(300, 16777215))
-        self.tableWidget_ephys.setFont(font2)
-        self.tableWidget_ephys.setSizeAdjustPolicy(QAbstractScrollArea.AdjustToContents)
-        self.tableWidget_ephys.setEditTriggers(QAbstractItemView.NoEditTriggers)
-        self.tableWidget_ephys.setSelectionMode(QAbstractItemView.ContiguousSelection)
-        self.tableWidget_ephys.setSelectionBehavior(QAbstractItemView.SelectRows)
-        self.tableWidget_ephys.horizontalHeader().setCascadingSectionResizes(False)
-
-        self.gridLayout_168.addWidget(self.tableWidget_ephys, 1, 1, 1, 2)
-
-        self.pushButton_selectAll = QPushButton(self.frame_2)
-        self.pushButton_selectAll.setObjectName(u"pushButton_selectAll")
-
-        self.gridLayout_168.addWidget(self.pushButton_selectAll, 2, 1, 1, 1)
-
-        self.pushButton_showChannels = QPushButton(self.frame_2)
-        self.pushButton_showChannels.setObjectName(u"pushButton_showChannels")
-        self.pushButton_showChannels.setCheckable(True)
-        self.pushButton_showChannels.setChecked(True)
-
-        self.gridLayout_168.addWidget(self.pushButton_showChannels, 3, 1, 1, 2)
-
-        self.pushButton_anatRegion = QPushButton(self.frame_2)
-        self.pushButton_anatRegion.setObjectName(u"pushButton_anatRegion")
-        self.pushButton_anatRegion.setMinimumSize(QSize(0, 72))
-        self.pushButton_anatRegion.setFont(font3)
-        self.pushButton_anatRegion.setStyleSheet(u"color: rgb(224, 27, 36);")
-
-        self.gridLayout_168.addWidget(self.pushButton_anatRegion, 4, 1, 1, 2)
-
-        self.groupBox_5 = QGroupBox(self.frame_2)
-        self.groupBox_5.setObjectName(u"groupBox_5")
-        self.groupBox_5.setMaximumSize(QSize(16777215, 300))
-        self.gridLayout_165 = QGridLayout(self.groupBox_5)
-        self.gridLayout_165.setObjectName(u"gridLayout_165")
-        self.comboBox_mridTag = QComboBox(self.groupBox_5)
-        self.comboBox_mridTag.setObjectName(u"comboBox_mridTag")
-        self.comboBox_mridTag.setEnabled(True)
-        self.comboBox_mridTag.setMinimumSize(QSize(0, 0))
-        self.comboBox_mridTag.setStyleSheet(u"color: rgb(224, 27, 36);")
-        self.comboBox_mridTag.setEditable(False)
-        self.comboBox_mridTag.setInsertPolicy(QComboBox.InsertAtBottom)
-        self.comboBox_mridTag.setSizeAdjustPolicy(QComboBox.AdjustToContents)
-
-        self.gridLayout_165.addWidget(self.comboBox_mridTag, 1, 0, 1, 1)
-
-        self.lineEdit_60 = QLineEdit(self.groupBox_5)
-        self.lineEdit_60.setObjectName(u"lineEdit_60")
-        self.lineEdit_60.setReadOnly(True)
-
-        self.gridLayout_165.addWidget(self.lineEdit_60, 0, 0, 1, 1)
-
-
-        self.gridLayout_168.addWidget(self.groupBox_5, 0, 1, 1, 2)
-
-
-        self.gridLayout_22.addWidget(self.frame_2, 2, 3, 1, 1)
-
-        self.textEdit_ephys = QTextEdit(self.tab_ephys)
-        self.textEdit_ephys.setObjectName(u"textEdit_ephys")
-        self.textEdit_ephys.setMaximumSize(QSize(300, 100))
-        self.textEdit_ephys.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.textEdit_ephys.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.textEdit_ephys.setReadOnly(True)
-
-        self.gridLayout_22.addWidget(self.textEdit_ephys, 0, 3, 1, 1)
+        self.gridLayout_22.addWidget(self.tabWidget_ephys, 0, 4, 2, 1)
 
         self.tabWidget.addTab(self.tab_ephys, "")
         self.tab = QWidget()
@@ -6528,17 +6736,80 @@ class Ui_MainWindow(object):
         self.frame_samri.setFrameShadow(QFrame.Raised)
         self.gridLayout_139 = QGridLayout(self.frame_samri)
         self.gridLayout_139.setObjectName(u"gridLayout_139")
-        self.lineEdit_16 = QLineEdit(self.frame_samri)
-        self.lineEdit_16.setObjectName(u"lineEdit_16")
-        self.lineEdit_16.setReadOnly(True)
+        self.pushButton_register = QPushButton(self.frame_samri)
+        self.pushButton_register.setObjectName(u"pushButton_register")
+        self.pushButton_register.setMinimumSize(QSize(0, 50))
+        self.pushButton_register.setStyleSheet(u" QPushButton { background-color: #e67e22; color: white; } QPushButton:disabled { background-color: #a9713f; color: #cccccc; }")
 
-        self.gridLayout_139.addWidget(self.lineEdit_16, 7, 1, 1, 1)
+        self.gridLayout_139.addWidget(self.pushButton_register, 16, 2, 1, 2)
 
-        self.lineEdit_base_path = QTextEdit(self.frame_samri)
-        self.lineEdit_base_path.setObjectName(u"lineEdit_base_path")
-        self.lineEdit_base_path.setMaximumSize(QSize(16777215, 70))
+        self.pushButton_browseAtlas = QPushButton(self.frame_samri)
+        self.pushButton_browseAtlas.setObjectName(u"pushButton_browseAtlas")
 
-        self.gridLayout_139.addWidget(self.lineEdit_base_path, 2, 2, 1, 1)
+        self.gridLayout_139.addWidget(self.pushButton_browseAtlas, 3, 3, 1, 1)
+
+        self.pushButton_browseBru2 = QPushButton(self.frame_samri)
+        self.pushButton_browseBru2.setObjectName(u"pushButton_browseBru2")
+
+        self.gridLayout_139.addWidget(self.pushButton_browseBru2, 1, 3, 1, 1)
+
+        self.lineEdit_7 = QLineEdit(self.frame_samri)
+        self.lineEdit_7.setObjectName(u"lineEdit_7")
+        self.lineEdit_7.setReadOnly(True)
+
+        self.gridLayout_139.addWidget(self.lineEdit_7, 2, 1, 1, 1)
+
+        self.lineEdit_movMask = QTextEdit(self.frame_samri)
+        self.lineEdit_movMask.setObjectName(u"lineEdit_movMask")
+        self.lineEdit_movMask.setMaximumSize(QSize(16777215, 100))
+        self.lineEdit_movMask.setReadOnly(True)
+
+        self.gridLayout_139.addWidget(self.lineEdit_movMask, 12, 2, 1, 1)
+
+        self.checkBox_presurgery = QCheckBox(self.frame_samri)
+        self.checkBox_presurgery.setObjectName(u"checkBox_presurgery")
+
+        self.gridLayout_139.addWidget(self.checkBox_presurgery, 14, 1, 1, 1)
+
+        self.lineEdit_bru2_path = QTextEdit(self.frame_samri)
+        self.lineEdit_bru2_path.setObjectName(u"lineEdit_bru2_path")
+        self.lineEdit_bru2_path.setMaximumSize(QSize(16777215, 70))
+
+        self.gridLayout_139.addWidget(self.lineEdit_bru2_path, 1, 2, 1, 1)
+
+        self.comboBox_working_session = QComboBox(self.frame_samri)
+        self.comboBox_working_session.setObjectName(u"comboBox_working_session")
+
+        self.gridLayout_139.addWidget(self.comboBox_working_session, 5, 2, 1, 2)
+
+        self.lineEdit_5 = QLineEdit(self.frame_samri)
+        self.lineEdit_5.setObjectName(u"lineEdit_5")
+        self.lineEdit_5.setReadOnly(True)
+
+        self.gridLayout_139.addWidget(self.lineEdit_5, 1, 1, 1, 1)
+
+        self.lineEdit_10 = QLineEdit(self.frame_samri)
+        self.lineEdit_10.setObjectName(u"lineEdit_10")
+        self.lineEdit_10.setReadOnly(True)
+
+        self.gridLayout_139.addWidget(self.lineEdit_10, 3, 1, 1, 1)
+
+        self.pushButton_browseBase = QPushButton(self.frame_samri)
+        self.pushButton_browseBase.setObjectName(u"pushButton_browseBase")
+
+        self.gridLayout_139.addWidget(self.pushButton_browseBase, 2, 3, 1, 1)
+
+        self.checkBox_atlasmask = QCheckBox(self.frame_samri)
+        self.checkBox_atlasmask.setObjectName(u"checkBox_atlasmask")
+        self.checkBox_atlasmask.setChecked(True)
+
+        self.gridLayout_139.addWidget(self.checkBox_atlasmask, 4, 1, 1, 1)
+
+        self.lineEdit_14 = QLineEdit(self.frame_samri)
+        self.lineEdit_14.setObjectName(u"lineEdit_14")
+        self.lineEdit_14.setReadOnly(True)
+
+        self.gridLayout_139.addWidget(self.lineEdit_14, 8, 1, 1, 1)
 
         self.frame_6 = QFrame(self.frame_samri)
         self.frame_6.setObjectName(u"frame_6")
@@ -6560,131 +6831,11 @@ class Ui_MainWindow(object):
 
         self.gridLayout_139.addWidget(self.frame_6, 12, 3, 1, 1)
 
-        self.pushButton_browseBru2 = QPushButton(self.frame_samri)
-        self.pushButton_browseBru2.setObjectName(u"pushButton_browseBru2")
-
-        self.gridLayout_139.addWidget(self.pushButton_browseBru2, 1, 3, 1, 1)
-
-        self.lineEdit_7 = QLineEdit(self.frame_samri)
-        self.lineEdit_7.setObjectName(u"lineEdit_7")
-        self.lineEdit_7.setReadOnly(True)
-
-        self.gridLayout_139.addWidget(self.lineEdit_7, 2, 1, 1, 1)
-
-        self.checkBox_elastic = QCheckBox(self.frame_samri)
-        self.checkBox_elastic.setObjectName(u"checkBox_elastic")
-        self.checkBox_elastic.setChecked(True)
-
-        self.gridLayout_139.addWidget(self.checkBox_elastic, 15, 1, 1, 1)
-
-        self.lineEdit_animalID = QLineEdit(self.frame_samri)
-        self.lineEdit_animalID.setObjectName(u"lineEdit_animalID")
-        self.lineEdit_animalID.setStyleSheet(u"color: rgb(224, 27, 36);")
-        self.lineEdit_animalID.setReadOnly(True)
-
-        self.gridLayout_139.addWidget(self.lineEdit_animalID, 0, 1, 1, 3)
-
-        self.lineEdit_11 = QLineEdit(self.frame_samri)
-        self.lineEdit_11.setObjectName(u"lineEdit_11")
-        self.lineEdit_11.setReadOnly(True)
-
-        self.gridLayout_139.addWidget(self.lineEdit_11, 12, 1, 1, 1)
-
-        self.pushButton_browseBase = QPushButton(self.frame_samri)
-        self.pushButton_browseBase.setObjectName(u"pushButton_browseBase")
-
-        self.gridLayout_139.addWidget(self.pushButton_browseBase, 2, 3, 1, 1)
-
-        self.lineEdit_movMask = QTextEdit(self.frame_samri)
-        self.lineEdit_movMask.setObjectName(u"lineEdit_movMask")
-        self.lineEdit_movMask.setMaximumSize(QSize(16777215, 100))
-        self.lineEdit_movMask.setReadOnly(True)
-
-        self.gridLayout_139.addWidget(self.lineEdit_movMask, 12, 2, 1, 1)
-
-        self.comboBox_tasks = QComboBox(self.frame_samri)
-        self.comboBox_tasks.setObjectName(u"comboBox_tasks")
-
-        self.gridLayout_139.addWidget(self.comboBox_tasks, 6, 2, 1, 2)
-
         self.lineEdit_atlas_path = QTextEdit(self.frame_samri)
         self.lineEdit_atlas_path.setObjectName(u"lineEdit_atlas_path")
         self.lineEdit_atlas_path.setMaximumSize(QSize(16777215, 70))
 
         self.gridLayout_139.addWidget(self.lineEdit_atlas_path, 3, 2, 1, 1)
-
-        self.comboBox_working_session = QComboBox(self.frame_samri)
-        self.comboBox_working_session.setObjectName(u"comboBox_working_session")
-
-        self.gridLayout_139.addWidget(self.comboBox_working_session, 5, 2, 1, 2)
-
-        self.lineEdit_14 = QLineEdit(self.frame_samri)
-        self.lineEdit_14.setObjectName(u"lineEdit_14")
-        self.lineEdit_14.setReadOnly(True)
-
-        self.gridLayout_139.addWidget(self.lineEdit_14, 8, 1, 1, 1)
-
-        self.spinBox_num_threads = QSpinBox(self.frame_samri)
-        self.spinBox_num_threads.setObjectName(u"spinBox_num_threads")
-
-        self.gridLayout_139.addWidget(self.spinBox_num_threads, 8, 2, 1, 2)
-
-        self.lineEdit_17 = QLineEdit(self.frame_samri)
-        self.lineEdit_17.setObjectName(u"lineEdit_17")
-        self.lineEdit_17.setReadOnly(True)
-
-        self.gridLayout_139.addWidget(self.lineEdit_17, 6, 1, 1, 1)
-
-        self.pushButton_browseAtlas = QPushButton(self.frame_samri)
-        self.pushButton_browseAtlas.setObjectName(u"pushButton_browseAtlas")
-
-        self.gridLayout_139.addWidget(self.pushButton_browseAtlas, 3, 3, 1, 1)
-
-        self.lineEdit_15 = QLineEdit(self.frame_samri)
-        self.lineEdit_15.setObjectName(u"lineEdit_15")
-        self.lineEdit_15.setReadOnly(True)
-
-        self.gridLayout_139.addWidget(self.lineEdit_15, 5, 1, 1, 1)
-
-        self.checkBox_presurgery = QCheckBox(self.frame_samri)
-        self.checkBox_presurgery.setObjectName(u"checkBox_presurgery")
-
-        self.gridLayout_139.addWidget(self.checkBox_presurgery, 14, 1, 1, 1)
-
-        self.lineEdit_5 = QLineEdit(self.frame_samri)
-        self.lineEdit_5.setObjectName(u"lineEdit_5")
-        self.lineEdit_5.setReadOnly(True)
-
-        self.gridLayout_139.addWidget(self.lineEdit_5, 1, 1, 1, 1)
-
-        self.comboBox_register_key = QComboBox(self.frame_samri)
-        self.comboBox_register_key.setObjectName(u"comboBox_register_key")
-
-        self.gridLayout_139.addWidget(self.comboBox_register_key, 7, 2, 1, 2)
-
-        self.lineEdit_bru2_path = QTextEdit(self.frame_samri)
-        self.lineEdit_bru2_path.setObjectName(u"lineEdit_bru2_path")
-        self.lineEdit_bru2_path.setMaximumSize(QSize(16777215, 70))
-
-        self.gridLayout_139.addWidget(self.lineEdit_bru2_path, 1, 2, 1, 1)
-
-        self.lineEdit_10 = QLineEdit(self.frame_samri)
-        self.lineEdit_10.setObjectName(u"lineEdit_10")
-        self.lineEdit_10.setReadOnly(True)
-
-        self.gridLayout_139.addWidget(self.lineEdit_10, 3, 1, 1, 1)
-
-        self.checkBox_atlasmask = QCheckBox(self.frame_samri)
-        self.checkBox_atlasmask.setObjectName(u"checkBox_atlasmask")
-        self.checkBox_atlasmask.setChecked(True)
-
-        self.gridLayout_139.addWidget(self.checkBox_atlasmask, 4, 1, 1, 1)
-
-        self.checkBox_mov_mask = QCheckBox(self.frame_samri)
-        self.checkBox_mov_mask.setObjectName(u"checkBox_mov_mask")
-        self.checkBox_mov_mask.setChecked(True)
-
-        self.gridLayout_139.addWidget(self.checkBox_mov_mask, 9, 1, 1, 1)
 
         self.pushButton_biascorrection = QPushButton(self.frame_samri)
         self.pushButton_biascorrection.setObjectName(u"pushButton_biascorrection")
@@ -6693,15 +6844,84 @@ class Ui_MainWindow(object):
 
         self.gridLayout_139.addWidget(self.pushButton_biascorrection, 16, 1, 1, 1)
 
-        self.pushButton_register = QPushButton(self.frame_samri)
-        self.pushButton_register.setObjectName(u"pushButton_register")
-        self.pushButton_register.setMinimumSize(QSize(0, 50))
-        self.pushButton_register.setStyleSheet(u" QPushButton { background-color: #e67e22; color: white; } QPushButton:disabled { background-color: #a9713f; color: #cccccc; }")
+        self.spinBox_num_threads = QSpinBox(self.frame_samri)
+        self.spinBox_num_threads.setObjectName(u"spinBox_num_threads")
 
-        self.gridLayout_139.addWidget(self.pushButton_register, 16, 2, 1, 2)
+        self.gridLayout_139.addWidget(self.spinBox_num_threads, 8, 2, 1, 2)
+
+        self.checkBox_mov_mask = QCheckBox(self.frame_samri)
+        self.checkBox_mov_mask.setObjectName(u"checkBox_mov_mask")
+        self.checkBox_mov_mask.setChecked(True)
+
+        self.gridLayout_139.addWidget(self.checkBox_mov_mask, 9, 1, 1, 1)
+
+        self.lineEdit_11 = QLineEdit(self.frame_samri)
+        self.lineEdit_11.setObjectName(u"lineEdit_11")
+        self.lineEdit_11.setReadOnly(True)
+
+        self.gridLayout_139.addWidget(self.lineEdit_11, 12, 1, 1, 1)
+
+        self.lineEdit_17 = QLineEdit(self.frame_samri)
+        self.lineEdit_17.setObjectName(u"lineEdit_17")
+        self.lineEdit_17.setReadOnly(True)
+
+        self.gridLayout_139.addWidget(self.lineEdit_17, 6, 1, 1, 1)
+
+        self.lineEdit_16 = QLineEdit(self.frame_samri)
+        self.lineEdit_16.setObjectName(u"lineEdit_16")
+        self.lineEdit_16.setReadOnly(True)
+
+        self.gridLayout_139.addWidget(self.lineEdit_16, 7, 1, 1, 1)
+
+        self.checkBox_elastic = QCheckBox(self.frame_samri)
+        self.checkBox_elastic.setObjectName(u"checkBox_elastic")
+        self.checkBox_elastic.setChecked(True)
+
+        self.gridLayout_139.addWidget(self.checkBox_elastic, 15, 1, 1, 1)
+
+        self.comboBox_register_key = QComboBox(self.frame_samri)
+        self.comboBox_register_key.setObjectName(u"comboBox_register_key")
+
+        self.gridLayout_139.addWidget(self.comboBox_register_key, 7, 2, 1, 2)
+
+        self.lineEdit_base_path = QTextEdit(self.frame_samri)
+        self.lineEdit_base_path.setObjectName(u"lineEdit_base_path")
+        self.lineEdit_base_path.setMaximumSize(QSize(16777215, 70))
+
+        self.gridLayout_139.addWidget(self.lineEdit_base_path, 2, 2, 1, 1)
+
+        self.lineEdit_animalID = QLineEdit(self.frame_samri)
+        self.lineEdit_animalID.setObjectName(u"lineEdit_animalID")
+        self.lineEdit_animalID.setStyleSheet(u"color: rgb(224, 27, 36);")
+        self.lineEdit_animalID.setReadOnly(True)
+
+        self.gridLayout_139.addWidget(self.lineEdit_animalID, 0, 1, 1, 3)
+
+        self.lineEdit_15 = QLineEdit(self.frame_samri)
+        self.lineEdit_15.setObjectName(u"lineEdit_15")
+        self.lineEdit_15.setReadOnly(True)
+
+        self.gridLayout_139.addWidget(self.lineEdit_15, 5, 1, 1, 1)
+
+        self.comboBox_tasks = QComboBox(self.frame_samri)
+        self.comboBox_tasks.setObjectName(u"comboBox_tasks")
+
+        self.gridLayout_139.addWidget(self.comboBox_tasks, 6, 2, 1, 2)
+
+        self.pushButton_paths = QPushButton(self.frame_samri)
+        self.pushButton_paths.setObjectName(u"pushButton_paths")
+
+        self.gridLayout_139.addWidget(self.pushButton_paths, 15, 3, 1, 1)
 
 
         self.gridLayout_90.addWidget(self.frame_samri, 2, 4, 1, 1)
+
+        self.pushButton_questionmark_samri = QPushButton(self.tab_samri)
+        self.pushButton_questionmark_samri.setObjectName(u"pushButton_questionmark_samri")
+        self.pushButton_questionmark_samri.setIcon(icon9)
+        self.pushButton_questionmark_samri.setIconSize(QSize(32, 32))
+
+        self.gridLayout_90.addWidget(self.pushButton_questionmark_samri, 0, 3, 1, 1)
 
         self.frame_4 = QFrame(self.tab_samri)
         self.frame_4.setObjectName(u"frame_4")
@@ -6743,12 +6963,6 @@ class Ui_MainWindow(object):
 
         self.gridLayout_138.addWidget(self.lineEdit_rawBase, 0, 1, 1, 1)
 
-        self.checkBox_bidsflag = QCheckBox(self.frame_4)
-        self.checkBox_bidsflag.setObjectName(u"checkBox_bidsflag")
-        self.checkBox_bidsflag.setChecked(True)
-
-        self.gridLayout_138.addWidget(self.checkBox_bidsflag, 4, 0, 1, 2)
-
         self.lineEdit_password = QLineEdit(self.frame_4)
         self.lineEdit_password.setObjectName(u"lineEdit_password")
 
@@ -6787,6 +7001,17 @@ class Ui_MainWindow(object):
 
         self.gridLayout_138.addWidget(self.pushButton_re_fetch, 6, 0, 1, 1)
 
+        self.checkBox_bidsflag = QCheckBox(self.frame_4)
+        self.checkBox_bidsflag.setObjectName(u"checkBox_bidsflag")
+        self.checkBox_bidsflag.setChecked(True)
+
+        self.gridLayout_138.addWidget(self.checkBox_bidsflag, 4, 0, 1, 1)
+
+        self.pushButton_credentials = QPushButton(self.frame_4)
+        self.pushButton_credentials.setObjectName(u"pushButton_credentials")
+
+        self.gridLayout_138.addWidget(self.pushButton_credentials, 4, 1, 1, 1)
+
 
         self.gridLayout_90.addWidget(self.frame_4, 0, 4, 2, 1)
 
@@ -6796,13 +7021,6 @@ class Ui_MainWindow(object):
 
         self.gridLayout_90.addWidget(self.lineEdit_4, 0, 0, 1, 3)
 
-        self.pushButton_questionmark_samri = QPushButton(self.tab_samri)
-        self.pushButton_questionmark_samri.setObjectName(u"pushButton_questionmark_samri")
-        self.pushButton_questionmark_samri.setIcon(icon9)
-        self.pushButton_questionmark_samri.setIconSize(QSize(32, 32))
-
-        self.gridLayout_90.addWidget(self.pushButton_questionmark_samri, 0, 3, 1, 1)
-
         self.plainTextEdit_SAMRI = QPlainTextEdit(self.tab_samri)
         self.plainTextEdit_SAMRI.setObjectName(u"plainTextEdit_SAMRI")
         self.plainTextEdit_SAMRI.setReadOnly(True)
@@ -6811,6 +7029,262 @@ class Ui_MainWindow(object):
 
         self.gridLayout_90.setColumnStretch(0, 2)
         self.tabWidget.addTab(self.tab_samri, "")
+        self.surgery = QWidget()
+        self.surgery.setObjectName(u"surgery")
+        self.gridLayout_219 = QGridLayout(self.surgery)
+        self.gridLayout_219.setObjectName(u"gridLayout_219")
+        self.groupBox_76 = QGroupBox(self.surgery)
+        self.groupBox_76.setObjectName(u"groupBox_76")
+        self.groupBox_76.setMaximumSize(QSize(16777215, 200))
+        self.gridLayout_217 = QGridLayout(self.groupBox_76)
+        self.gridLayout_217.setObjectName(u"gridLayout_217")
+        self.lineEdit_82 = QLineEdit(self.groupBox_76)
+        self.lineEdit_82.setObjectName(u"lineEdit_82")
+        self.lineEdit_82.setReadOnly(True)
+
+        self.gridLayout_217.addWidget(self.lineEdit_82, 0, 1, 1, 1)
+
+        self.lineEdit_81 = QLineEdit(self.groupBox_76)
+        self.lineEdit_81.setObjectName(u"lineEdit_81")
+        self.lineEdit_81.setReadOnly(True)
+
+        self.gridLayout_217.addWidget(self.lineEdit_81, 0, 2, 1, 1)
+
+        self.lineEdit_83 = QLineEdit(self.groupBox_76)
+        self.lineEdit_83.setObjectName(u"lineEdit_83")
+        self.lineEdit_83.setReadOnly(True)
+
+        self.gridLayout_217.addWidget(self.lineEdit_83, 0, 3, 1, 1)
+
+        self.doubleSpinBox_sag_b = QDoubleSpinBox(self.groupBox_76)
+        self.doubleSpinBox_sag_b.setObjectName(u"doubleSpinBox_sag_b")
+        self.doubleSpinBox_sag_b.setDecimals(2)
+        self.doubleSpinBox_sag_b.setMinimum(-200.000000000000000)
+        self.doubleSpinBox_sag_b.setMaximum(200.000000000000000)
+
+        self.gridLayout_217.addWidget(self.doubleSpinBox_sag_b, 1, 1, 1, 1)
+
+        self.doubleSpinBox_cor_b = QDoubleSpinBox(self.groupBox_76)
+        self.doubleSpinBox_cor_b.setObjectName(u"doubleSpinBox_cor_b")
+        self.doubleSpinBox_cor_b.setDecimals(2)
+        self.doubleSpinBox_cor_b.setMinimum(-200.000000000000000)
+        self.doubleSpinBox_cor_b.setMaximum(200.000000000000000)
+
+        self.gridLayout_217.addWidget(self.doubleSpinBox_cor_b, 1, 2, 1, 1)
+
+        self.doubleSpinBox_ax_b = QDoubleSpinBox(self.groupBox_76)
+        self.doubleSpinBox_ax_b.setObjectName(u"doubleSpinBox_ax_b")
+        self.doubleSpinBox_ax_b.setDecimals(2)
+        self.doubleSpinBox_ax_b.setMinimum(-200.000000000000000)
+        self.doubleSpinBox_ax_b.setMaximum(200.000000000000000)
+
+        self.gridLayout_217.addWidget(self.doubleSpinBox_ax_b, 1, 3, 1, 1)
+
+
+        self.gridLayout_219.addWidget(self.groupBox_76, 2, 0, 1, 1)
+
+        self.groupBox_77 = QGroupBox(self.surgery)
+        self.groupBox_77.setObjectName(u"groupBox_77")
+        self.groupBox_77.setMaximumSize(QSize(16777215, 200))
+        self.gridLayout_218 = QGridLayout(self.groupBox_77)
+        self.gridLayout_218.setObjectName(u"gridLayout_218")
+        self.lineEdit_84 = QLineEdit(self.groupBox_77)
+        self.lineEdit_84.setObjectName(u"lineEdit_84")
+        self.lineEdit_84.setReadOnly(True)
+
+        self.gridLayout_218.addWidget(self.lineEdit_84, 0, 2, 1, 1)
+
+        self.lineEdit_86 = QLineEdit(self.groupBox_77)
+        self.lineEdit_86.setObjectName(u"lineEdit_86")
+        self.lineEdit_86.setReadOnly(True)
+
+        self.gridLayout_218.addWidget(self.lineEdit_86, 0, 3, 1, 1)
+
+        self.lineEdit_85 = QLineEdit(self.groupBox_77)
+        self.lineEdit_85.setObjectName(u"lineEdit_85")
+        self.lineEdit_85.setReadOnly(True)
+
+        self.gridLayout_218.addWidget(self.lineEdit_85, 0, 1, 1, 1)
+
+        self.doubleSpinBox_sag_l = QDoubleSpinBox(self.groupBox_77)
+        self.doubleSpinBox_sag_l.setObjectName(u"doubleSpinBox_sag_l")
+        self.doubleSpinBox_sag_l.setDecimals(2)
+        self.doubleSpinBox_sag_l.setMinimum(-200.000000000000000)
+        self.doubleSpinBox_sag_l.setMaximum(200.000000000000000)
+
+        self.gridLayout_218.addWidget(self.doubleSpinBox_sag_l, 1, 1, 1, 1)
+
+        self.doubleSpinBox_cor_l = QDoubleSpinBox(self.groupBox_77)
+        self.doubleSpinBox_cor_l.setObjectName(u"doubleSpinBox_cor_l")
+        self.doubleSpinBox_cor_l.setDecimals(2)
+        self.doubleSpinBox_cor_l.setMinimum(-200.000000000000000)
+        self.doubleSpinBox_cor_l.setMaximum(200.000000000000000)
+
+        self.gridLayout_218.addWidget(self.doubleSpinBox_cor_l, 1, 2, 1, 1)
+
+        self.doubleSpinBox_ax_l = QDoubleSpinBox(self.groupBox_77)
+        self.doubleSpinBox_ax_l.setObjectName(u"doubleSpinBox_ax_l")
+        self.doubleSpinBox_ax_l.setDecimals(2)
+        self.doubleSpinBox_ax_l.setMinimum(-200.000000000000000)
+        self.doubleSpinBox_ax_l.setMaximum(200.000000000000000)
+
+        self.gridLayout_218.addWidget(self.doubleSpinBox_ax_l, 1, 3, 1, 1)
+
+
+        self.gridLayout_219.addWidget(self.groupBox_77, 3, 0, 1, 1)
+
+        self.label = QLabel(self.surgery)
+        self.label.setObjectName(u"label")
+        self.label.setMinimumSize(QSize(500, 0))
+
+        self.gridLayout_219.addWidget(self.label, 0, 0, 1, 1)
+
+        self.pushButton_questionmark_2 = QPushButton(self.surgery)
+        self.pushButton_questionmark_2.setObjectName(u"pushButton_questionmark_2")
+        self.pushButton_questionmark_2.setMaximumSize(QSize(50, 16777215))
+        self.pushButton_questionmark_2.setLayoutDirection(Qt.RightToLeft)
+        self.pushButton_questionmark_2.setAutoFillBackground(False)
+        self.pushButton_questionmark_2.setIcon(icon9)
+        self.pushButton_questionmark_2.setIconSize(QSize(32, 32))
+
+        self.gridLayout_219.addWidget(self.pushButton_questionmark_2, 0, 3, 1, 1)
+
+        self.label_2 = QLabel(self.surgery)
+        self.label_2.setObjectName(u"label_2")
+        self.label_2.setMaximumSize(QSize(16777215, 50))
+        self.label_2.setFont(font4)
+
+        self.gridLayout_219.addWidget(self.label_2, 4, 3, 1, 1)
+
+        self.frame_13 = QFrame(self.surgery)
+        self.frame_13.setObjectName(u"frame_13")
+        self.frame_13.setMinimumSize(QSize(500, 200))
+        self.frame_13.setStyleSheet(u"border-color: rgb(170, 170, 170);\n"
+"background-color: rgb(131, 131, 131);\n"
+"")
+        self.frame_13.setFrameShape(QFrame.NoFrame)
+        self.gridLayout_224 = QGridLayout(self.frame_13)
+        self.gridLayout_224.setSpacing(0)
+        self.gridLayout_224.setObjectName(u"gridLayout_224")
+        self.gridLayout_224.setContentsMargins(4, 4, 4, 4)
+        self.horizontalLayout_40 = QHBoxLayout()
+        self.horizontalLayout_40.setObjectName(u"horizontalLayout_40")
+        self.zoom_in_surgery = QToolButton(self.frame_13)
+        self.zoom_in_surgery.setObjectName(u"zoom_in_surgery")
+        self.zoom_in_surgery.setIcon(icon4)
+
+        self.horizontalLayout_40.addWidget(self.zoom_in_surgery)
+
+        self.zoom_out_surgery = QToolButton(self.frame_13)
+        self.zoom_out_surgery.setObjectName(u"zoom_out_surgery")
+        self.zoom_out_surgery.setIcon(icon5)
+
+        self.horizontalLayout_40.addWidget(self.zoom_out_surgery)
+
+
+        self.gridLayout_224.addLayout(self.horizontalLayout_40, 3, 2, 1, 1)
+
+        self.horizontalLayout_41 = QHBoxLayout()
+        self.horizontalLayout_41.setObjectName(u"horizontalLayout_41")
+        self.go_down_surgery = QToolButton(self.frame_13)
+        self.go_down_surgery.setObjectName(u"go_down_surgery")
+        self.go_down_surgery.setIcon(icon)
+
+        self.horizontalLayout_41.addWidget(self.go_down_surgery)
+
+        self.go_up_surgery = QToolButton(self.frame_13)
+        self.go_up_surgery.setObjectName(u"go_up_surgery")
+        self.go_up_surgery.setIcon(icon1)
+
+        self.horizontalLayout_41.addWidget(self.go_up_surgery)
+
+        self.go_left_surgery = QToolButton(self.frame_13)
+        self.go_left_surgery.setObjectName(u"go_left_surgery")
+        self.go_left_surgery.setIcon(icon2)
+
+        self.horizontalLayout_41.addWidget(self.go_left_surgery)
+
+        self.go_right_surgery = QToolButton(self.frame_13)
+        self.go_right_surgery.setObjectName(u"go_right_surgery")
+        self.go_right_surgery.setIcon(icon3)
+
+        self.horizontalLayout_41.addWidget(self.go_right_surgery)
+
+
+        self.gridLayout_224.addLayout(self.horizontalLayout_41, 3, 3, 1, 1)
+
+        self.fit_to_zoom_surgery = QPushButton(self.frame_13)
+        self.fit_to_zoom_surgery.setObjectName(u"fit_to_zoom_surgery")
+        self.fit_to_zoom_surgery.setStyleSheet(u"\n"
+"background-color: rgb(0, 153, 255);")
+        self.fit_to_zoom_surgery.setAutoDefault(False)
+        self.fit_to_zoom_surgery.setFlat(False)
+
+        self.gridLayout_224.addWidget(self.fit_to_zoom_surgery, 3, 1, 1, 1)
+
+        self.widget_axialView = QWidget(self.frame_13)
+        self.widget_axialView.setObjectName(u"widget_axialView")
+
+        self.gridLayout_224.addWidget(self.widget_axialView, 2, 1, 1, 3)
+
+        self.Scroll_surgery = QScrollBar(self.frame_13)
+        self.Scroll_surgery.setObjectName(u"Scroll_surgery")
+        self.Scroll_surgery.setPageStep(10)
+
+        self.gridLayout_224.addWidget(self.Scroll_surgery, 2, 4, 1, 1)
+
+        self.gridLayout_224.setRowStretch(2, 1)
+
+        self.gridLayout_219.addWidget(self.frame_13, 5, 3, 2, 1)
+
+        self.tableWidget = QTableWidget(self.surgery)
+        self.tableWidget.setObjectName(u"tableWidget")
+        self.tableWidget.setMaximumSize(QSize(16777215, 16777215))
+
+        self.gridLayout_219.addWidget(self.tableWidget, 2, 3, 2, 1)
+
+        self.pushButton_switchCS = QPushButton(self.surgery)
+        self.pushButton_switchCS.setObjectName(u"pushButton_switchCS")
+        self.pushButton_switchCS.setMinimumSize(QSize(0, 50))
+        self.pushButton_switchCS.setStyleSheet(u" QPushButton { background-color: #e67e22; color: white; } QPushButton:disabled { background-color: #a9713f; color: #cccccc; }")
+
+        self.gridLayout_219.addWidget(self.pushButton_switchCS, 7, 3, 1, 1)
+
+        self.groupBox_78 = QGroupBox(self.surgery)
+        self.groupBox_78.setObjectName(u"groupBox_78")
+        self.groupBox_78.setMaximumSize(QSize(16777215, 75))
+        self.gridLayout_220 = QGridLayout(self.groupBox_78)
+        self.gridLayout_220.setObjectName(u"gridLayout_220")
+        self.resetCamera_vis3D_2 = QPushButton(self.groupBox_78)
+        self.resetCamera_vis3D_2.setObjectName(u"resetCamera_vis3D_2")
+        self.resetCamera_vis3D_2.setEnabled(True)
+        self.resetCamera_vis3D_2.setStyleSheet(u"")
+        self.resetCamera_vis3D_2.setIcon(icon20)
+        self.resetCamera_vis3D_2.setIconSize(QSize(40, 40))
+        self.resetCamera_vis3D_2.setAutoDefault(False)
+        self.resetCamera_vis3D_2.setFlat(False)
+
+        self.gridLayout_220.addWidget(self.resetCamera_vis3D_2, 0, 0, 1, 1)
+
+        self.change_perspective_vis3D_2 = QPushButton(self.groupBox_78)
+        self.change_perspective_vis3D_2.setObjectName(u"change_perspective_vis3D_2")
+        self.change_perspective_vis3D_2.setStyleSheet(u"")
+        self.change_perspective_vis3D_2.setIcon(icon21)
+        self.change_perspective_vis3D_2.setIconSize(QSize(40, 40))
+
+        self.gridLayout_220.addWidget(self.change_perspective_vis3D_2, 0, 1, 1, 1)
+
+
+        self.gridLayout_219.addWidget(self.groupBox_78, 7, 0, 1, 1)
+
+        self.widget = QWidget(self.surgery)
+        self.widget.setObjectName(u"widget")
+        self.widget.setMinimumSize(QSize(100, 100))
+
+        self.gridLayout_219.addWidget(self.widget, 4, 0, 3, 2)
+
+        self.gridLayout_219.setColumnStretch(3, 1)
+        self.tabWidget.addTab(self.surgery, "")
 
         self.gridLayout_79.addWidget(self.tabWidget, 0, 0, 1, 1)
 
@@ -6910,22 +7384,6 @@ class Ui_MainWindow(object):
         self.gridLayout_34.addWidget(self.tabWidget_visualisation, 0, 0, 1, 1)
 
         MainWindow.setCentralWidget(self.centralwidget)
-        self.menubar = QMenuBar(MainWindow)
-        self.menubar.setObjectName(u"menubar")
-        self.menubar.setGeometry(QRect(0, 0, 2184, 23))
-        self.menuGUI = QMenu(self.menubar)
-        self.menuGUI.setObjectName(u"menuGUI")
-        self.menuTools = QMenu(self.menubar)
-        self.menuTools.setObjectName(u"menuTools")
-        self.menu4D_Tools = QMenu(self.menubar)
-        self.menu4D_Tools.setObjectName(u"menu4D_Tools")
-        self.menuElectrode_Localization = QMenu(self.menu4D_Tools)
-        self.menuElectrode_Localization.setObjectName(u"menuElectrode_Localization")
-        self.menuEphys_Analysis = QMenu(self.menubar)
-        self.menuEphys_Analysis.setObjectName(u"menuEphys_Analysis")
-        self.menuSurgery = QMenu(self.menubar)
-        self.menuSurgery.setObjectName(u"menuSurgery")
-        MainWindow.setMenuBar(self.menubar)
         self.statusbar = QStatusBar(MainWindow)
         self.statusbar.setObjectName(u"statusbar")
         MainWindow.setStatusBar(self.statusbar)
@@ -7289,6 +7747,22 @@ class Ui_MainWindow(object):
         self.gridLayout_69.setRowStretch(2, 1)
         self.dockWidget_ephys.setWidget(self.Dock_ephys)
         MainWindow.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.dockWidget_ephys)
+        self.menubar = QMenuBar(MainWindow)
+        self.menubar.setObjectName(u"menubar")
+        self.menubar.setGeometry(QRect(0, 0, 2184, 23))
+        self.menuGUI = QMenu(self.menubar)
+        self.menuGUI.setObjectName(u"menuGUI")
+        self.menuTrajectory_Planning = QMenu(self.menuGUI)
+        self.menuTrajectory_Planning.setObjectName(u"menuTrajectory_Planning")
+        self.menuTools = QMenu(self.menubar)
+        self.menuTools.setObjectName(u"menuTools")
+        self.menu4D_Tools = QMenu(self.menubar)
+        self.menu4D_Tools.setObjectName(u"menu4D_Tools")
+        self.menuElectrode_Localization = QMenu(self.menu4D_Tools)
+        self.menuElectrode_Localization.setObjectName(u"menuElectrode_Localization")
+        self.menuEphys_Analysis = QMenu(self.menubar)
+        self.menuEphys_Analysis.setObjectName(u"menuEphys_Analysis")
+        MainWindow.setMenuBar(self.menubar)
         QWidget.setTabOrder(self.spinBox_x_data3d, self.spinBox_y_data3d)
         QWidget.setTabOrder(self.spinBox_y_data3d, self.spinBox_z_data3d)
         QWidget.setTabOrder(self.spinBox_z_data3d, self.spinBox_tp_bregma_x)
@@ -7336,8 +7810,7 @@ class Ui_MainWindow(object):
         QWidget.setTabOrder(self.pushButton_reset_data12, self.pushButton_auto_data12)
         QWidget.setTabOrder(self.pushButton_auto_data12, self.tableintensity_data1)
         QWidget.setTabOrder(self.tableintensity_data1, self.vtkWidget_legend1)
-        QWidget.setTabOrder(self.vtkWidget_legend1, self.file_name_displayed)
-        QWidget.setTabOrder(self.file_name_displayed, self.go_left_data12)
+        QWidget.setTabOrder(self.vtkWidget_legend1, self.go_left_data12)
         QWidget.setTabOrder(self.go_left_data12, self.go_right_data12)
         QWidget.setTabOrder(self.go_right_data12, self.zoom_in_data12)
         QWidget.setTabOrder(self.zoom_in_data12, self.fit_to_zoom_data20)
@@ -7387,8 +7860,7 @@ class Ui_MainWindow(object):
         QWidget.setTabOrder(self.go_right_data22, self.zoom_in_data22)
         QWidget.setTabOrder(self.zoom_in_data22, self.zoom_out_data22)
         QWidget.setTabOrder(self.zoom_out_data22, self.vtkWidget_legend2)
-        QWidget.setTabOrder(self.vtkWidget_legend2, self.pushButton_metadata)
-        QWidget.setTabOrder(self.pushButton_metadata, self.tabWidget_time0)
+        QWidget.setTabOrder(self.vtkWidget_legend2, self.tabWidget_time0)
         QWidget.setTabOrder(self.tabWidget_time0, self.changetimestamp_data00)
         QWidget.setTabOrder(self.changetimestamp_data00, self.displaytimestamp_data00)
         QWidget.setTabOrder(self.displaytimestamp_data00, self.pushButton_reset_data00)
@@ -7636,8 +8108,7 @@ class Ui_MainWindow(object):
         QWidget.setTabOrder(self.brush_sizeSlider4d, self.comboBox_paintOver_Post)
         QWidget.setTabOrder(self.comboBox_paintOver_Post, self.tableWidget_labels)
         QWidget.setTabOrder(self.tableWidget_labels, self.histogram_label)
-        QWidget.setTabOrder(self.histogram_label, self.paintbrush_dataview)
-        QWidget.setTabOrder(self.paintbrush_dataview, self.lineEdit_52)
+        QWidget.setTabOrder(self.histogram_label, self.lineEdit_52)
         QWidget.setTabOrder(self.lineEdit_52, self.doubleSpinBox_fovy)
         QWidget.setTabOrder(self.doubleSpinBox_fovy, self.lineEdit_56)
         QWidget.setTabOrder(self.lineEdit_56, self.doubleSpinBox_spay)
@@ -7661,8 +8132,7 @@ class Ui_MainWindow(object):
         QWidget.setTabOrder(self.lineEdit_49, self.lineEdit_57)
         QWidget.setTabOrder(self.lineEdit_57, self.doubleSpinBox_spaz)
         QWidget.setTabOrder(self.doubleSpinBox_spaz, self.lineEdit_38)
-        QWidget.setTabOrder(self.lineEdit_38, self.pushButton_cancel_metadata)
-        QWidget.setTabOrder(self.pushButton_cancel_metadata, self.doubleSpinBox_originx)
+        QWidget.setTabOrder(self.lineEdit_38, self.doubleSpinBox_originx)
         QWidget.setTabOrder(self.doubleSpinBox_originx, self.lineEdit_40)
         QWidget.setTabOrder(self.lineEdit_40, self.spinBox_dimy)
         QWidget.setTabOrder(self.spinBox_dimy, self.comboBox)
@@ -7690,8 +8160,7 @@ class Ui_MainWindow(object):
         QWidget.setTabOrder(self.lineEdit_direction, self.doubleSpinBox_spacingx)
         QWidget.setTabOrder(self.doubleSpinBox_spacingx, self.lineEdit_45)
         QWidget.setTabOrder(self.lineEdit_45, self.lineEdit_37)
-        QWidget.setTabOrder(self.lineEdit_37, self.pushButton_changeSpacing)
-        QWidget.setTabOrder(self.pushButton_changeSpacing, self.doubleSpinBox_minIntensity)
+        QWidget.setTabOrder(self.lineEdit_37, self.doubleSpinBox_minIntensity)
         QWidget.setTabOrder(self.doubleSpinBox_minIntensity, self.lineEdit_34)
         QWidget.setTabOrder(self.lineEdit_34, self.pushButton_reorient)
         QWidget.setTabOrder(self.pushButton_reorient, self.lineEdit_DicomOrient)
@@ -7791,9 +8260,8 @@ class Ui_MainWindow(object):
         self.menubar.addAction(self.menuTools.menuAction())
         self.menubar.addAction(self.menu4D_Tools.menuAction())
         self.menubar.addAction(self.menuEphys_Analysis.menuAction())
-        self.menubar.addAction(self.menuSurgery.menuAction())
         self.menuGUI.addAction(self.actionStart_SAMRI_process)
-        self.menuGUI.addAction(self.actionTrajectory_Planning)
+        self.menuGUI.addAction(self.menuTrajectory_Planning.menuAction())
         self.menuGUI.addAction(self.actionOpen)
         self.menuGUI.addAction(self.actionOpen_ephys_Data)
         self.menuGUI.addSeparator()
@@ -7803,6 +8271,8 @@ class Ui_MainWindow(object):
         self.menuGUI.addSeparator()
         self.menuGUI.addAction(self.actionQuit)
         self.menuGUI.addAction(self.actionNew_Window)
+        self.menuTrajectory_Planning.addAction(self.actionTrajectory_Planning_2)
+        self.menuTrajectory_Planning.addAction(self.actionDuring_Surgery)
         self.menuTools.addAction(self.actionOpen_Session_2)
         self.menuTools.addSeparator()
         self.menuTools.addAction(self.actionPaintbrush)
@@ -7829,12 +8299,16 @@ class Ui_MainWindow(object):
         self.menuEphys_Analysis.addAction(self.actionTheta_Detection)
         self.menuEphys_Analysis.addAction(self.actionLoad_Spike_Sorting)
         self.menuEphys_Analysis.addSeparator()
-        self.menuSurgery.addAction(self.actionOpen_Session_4)
 
         self.retranslateUi(MainWindow)
 
         self.tabWidget_visualisation.setCurrentIndex(0)
-        self.tabWidget.setCurrentIndex(5)
+        self.tabWidget.setCurrentIndex(6)
+        self.fit_to_zoom_data20.setDefault(False)
+        self.tabWidget_time2.setCurrentIndex(0)
+        self.fit_to_zoom_data23.setDefault(False)
+        self.fit_to_zoom_data21.setDefault(False)
+        self.fit_to_zoom_data22.setDefault(False)
         self.data_4d_3d.setCurrentIndex(1)
         self.tabWidget_time0.setCurrentIndex(0)
         self.fit_to_zoom_data00.setDefault(False)
@@ -7843,28 +8317,23 @@ class Ui_MainWindow(object):
         self.stackedWidget_3d.setCurrentIndex(0)
         self.stackedWidget_trajectoryplanning.setCurrentIndex(1)
         self.stackedWidget_dfx.setCurrentIndex(0)
-        self.stackedWidget_axial.setCurrentIndex(0)
-        self.fit_to_zoom_data3d0.setDefault(False)
-        self.stackedWidget_sagittal_2.setCurrentIndex(1)
-        self.fit_to_zoom_data3d1_2.setDefault(False)
         self.stackedWidget_sagittal.setCurrentIndex(0)
         self.fit_to_zoom_data3d1.setDefault(False)
         self.stackedWidget_coronal.setCurrentIndex(0)
         self.fit_to_zoom_data3d2.setDefault(False)
-        self.stackedWidget_3d_tp.setCurrentIndex(1)
-        self.fit_to_zoom_data20.setDefault(False)
-        self.tabWidget_time2.setCurrentIndex(0)
-        self.fit_to_zoom_data23.setDefault(False)
-        self.fit_to_zoom_data21.setDefault(False)
-        self.fit_to_zoom_data22.setDefault(False)
+        self.stackedWidget_axial.setCurrentIndex(1)
+        self.fit_to_zoom_data3d0.setDefault(False)
+        self.stackedWidget_sagittal_2.setCurrentIndex(1)
+        self.fit_to_zoom_data3d1_2.setDefault(False)
+        self.stackedWidget_3d_tp.setCurrentIndex(0)
         self.fit_to_zoom_data11.setDefault(False)
         self.fit_to_zoom_data13.setDefault(False)
         self.fit_to_zoom_data12.setDefault(False)
         self.tabWidget_time1.setCurrentIndex(0)
         self.fit_to_zoom_data10.setDefault(False)
-        self.comboBox_finest.setCurrentIndex(0)
-        self.comboBox_movingimg.setCurrentIndex(-1)
         self.comboBox_coarest.setCurrentIndex(0)
+        self.comboBox_movingimg.setCurrentIndex(-1)
+        self.comboBox_finest.setCurrentIndex(0)
         self.tabWidget_4.setCurrentIndex(0)
         self.contrast_data.setCurrentIndex(0)
         self.tabWidget_3.setCurrentIndex(0)
@@ -7878,6 +8347,8 @@ class Ui_MainWindow(object):
         self.stackedWidget_video.setCurrentIndex(0)
         self.stackedWidget.setCurrentIndex(1)
         self.tabWidget_LFP.setCurrentIndex(3)
+        self.fit_to_zoom_surgery.setDefault(False)
+        self.resetCamera_vis3D_2.setDefault(False)
         self.resetCamera_vis3D.setDefault(False)
         self.stackedWidget_theta.setCurrentIndex(0)
         self.stackedWidget_ripplAI.setCurrentIndex(0)
@@ -7892,101 +8363,546 @@ class Ui_MainWindow(object):
         MainWindow.setAccessibleName("")
 #endif // QT_CONFIG(accessibility)
         self.actionOpen.setText(QCoreApplication.translate("MainWindow", u"Load MRI Image", None))
+#if QT_CONFIG(tooltip)
+        self.actionOpen.setToolTip(QCoreApplication.translate("MainWindow", u"Open a NIfTI (.nii.gz) file as the main MRI dataset for a new session.", None))
+#endif // QT_CONFIG(tooltip)
         self.actionAdd.setText(QCoreApplication.translate("MainWindow", u"Add Another Image (3D)", None))
         self.actionSave_Image.setText(QCoreApplication.translate("MainWindow", u"Save Image", None))
         self.actionQuit.setText(QCoreApplication.translate("MainWindow", u"Quit", None))
         self.actionPaintbrush.setText(QCoreApplication.translate("MainWindow", u"Paintbrush", None))
+#if QT_CONFIG(tooltip)
+        self.actionPaintbrush.setToolTip(QCoreApplication.translate("MainWindow", u"Open the paintbrush tool to manually draw or edit a label volume.", None))
+#endif // QT_CONFIG(tooltip)
         self.actionmain_code_2.setText(QCoreApplication.translate("MainWindow", u"main code 2", None))
         self.actionGaussian_Centers.setText(QCoreApplication.translate("MainWindow", u"Warping and Gaussian Centres Extraction", None))
+#if QT_CONFIG(tooltip)
+        self.actionGaussian_Centers.setToolTip(QCoreApplication.translate("MainWindow", u"Open warping and Gaussian-centre extraction for electrode localisation.", None))
+#endif // QT_CONFIG(tooltip)
         self.actionGet_Coordinates.setText(QCoreApplication.translate("MainWindow", u"Final Localization", None))
+#if QT_CONFIG(tooltip)
+        self.actionGet_Coordinates.setToolTip(QCoreApplication.translate("MainWindow", u"Compute the final electrode localisation from the extracted coordinates.", None))
+#endif // QT_CONFIG(tooltip)
         self.actionStart_with_Labels.setText(QCoreApplication.translate("MainWindow", u"Start with Labels", None))
         self.actionAddViewImage.setText(QCoreApplication.translate("MainWindow", u"Load Another MRI Image", None))
+#if QT_CONFIG(tooltip)
+        self.actionAddViewImage.setToolTip(QCoreApplication.translate("MainWindow", u"Add another NIfTI file as an overlay layer on top of the current volume.", None))
+#endif // QT_CONFIG(tooltip)
         self.actionContrast_Adjustments.setText(QCoreApplication.translate("MainWindow", u"Contrast Adjustments", None))
+#if QT_CONFIG(tooltip)
+        self.actionContrast_Adjustments.setToolTip(QCoreApplication.translate("MainWindow", u"Open contrast/brightness controls for 4D data.", None))
+#endif // QT_CONFIG(tooltip)
         self.actionResample.setText(QCoreApplication.translate("MainWindow", u"Resample", None))
+#if QT_CONFIG(tooltip)
+        self.actionResample.setToolTip(QCoreApplication.translate("MainWindow", u"Open the resampling controls to change this volume's voxel spacing.", None))
+#endif // QT_CONFIG(tooltip)
         self.actionRegister.setText(QCoreApplication.translate("MainWindow", u"Registration", None))
+#if QT_CONFIG(tooltip)
+        self.actionRegister.setToolTip(QCoreApplication.translate("MainWindow", u"Open the registration workflow to align this volume to a reference/atlas.", None))
+#endif // QT_CONFIG(tooltip)
         self.actionContrast_Adjustments_2.setText(QCoreApplication.translate("MainWindow", u"Measurement", None))
         self.actionStart_MRIDlabels.setText(QCoreApplication.translate("MainWindow", u"MRID-tag label creation", None))
+#if QT_CONFIG(tooltip)
+        self.actionStart_MRIDlabels.setToolTip(QCoreApplication.translate("MainWindow", u"Open the dialog to define MRID tags and start creating anatomical region labels.", None))
+#endif // QT_CONFIG(tooltip)
         self.actionOpen_ephys_Data.setText(QCoreApplication.translate("MainWindow", u"Load ephys Data", None))
+#if QT_CONFIG(tooltip)
+        self.actionOpen_ephys_Data.setToolTip(QCoreApplication.translate("MainWindow", u"Open a .dat electrophysiology recording (requires a matching .xml file in the same folder).", None))
+#endif // QT_CONFIG(tooltip)
         self.actionSegmentation.setText(QCoreApplication.translate("MainWindow", u"Segmentation", None))
+#if QT_CONFIG(tooltip)
+        self.actionSegmentation.setToolTip(QCoreApplication.translate("MainWindow", u"Open the segmentation tool for this volume.", None))
+#endif // QT_CONFIG(tooltip)
         self.actionGet_Position_in_HPC.setText(QCoreApplication.translate("MainWindow", u"Get Position in HPC", None))
         self.actionMeasurement.setText(QCoreApplication.translate("MainWindow", u"Measurement", None))
+#if QT_CONFIG(tooltip)
+        self.actionMeasurement.setToolTip(QCoreApplication.translate("MainWindow", u"Toggle distance-measurement mode on the MRI views.", None))
+#endif // QT_CONFIG(tooltip)
         self.actionVisualize_3D_data.setText(QCoreApplication.translate("MainWindow", u"Visualize 3D data", None))
         self.actionStart_SAMRI_process.setText(QCoreApplication.translate("MainWindow", u"Start SAMRI process", None))
-        self.actionTd.setText(QCoreApplication.translate("MainWindow", u"Trajectory Planning", None))
-        self.actionTrajectory_Planning.setText(QCoreApplication.translate("MainWindow", u"Trajectory Planning", None))
-        self.actionNew_Window.setText(QCoreApplication.translate("MainWindow", u"New Window", None))
-        self.actionRippl_AI.setText(QCoreApplication.translate("MainWindow", u"Rippl AI", None))
-        self.actionTheta_Detection.setText(QCoreApplication.translate("MainWindow", u"Theta Detection", None))
-        self.actionLoad_Spike_Sorting.setText(QCoreApplication.translate("MainWindow", u"Show Spiking Raster Plot", None))
-        self.actionOpen_Session.setText(QCoreApplication.translate("MainWindow", u"Open Session", None))
-        self.actionOpen_Session_2.setText(QCoreApplication.translate("MainWindow", u"Open Session", None))
-        self.actionOpen_Session_3.setText(QCoreApplication.translate("MainWindow", u"Open Session", None))
-        self.actionOpen_Session_4.setText(QCoreApplication.translate("MainWindow", u"Open Session", None))
-        self.actionLoad_Prev_Session.setText(QCoreApplication.translate("MainWindow", u"Load Prev. File", None))
-        self.file_name_displayed.setHtml(QCoreApplication.translate("MainWindow", u"<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
-"<html><head><meta name=\"qrichtext\" content=\"1\" /><meta charset=\"utf-8\" /><style type=\"text/css\">\n"
-"p, li { white-space: pre-wrap; }\n"
-"hr { height: 1px; border-width: 0; }\n"
-"li.unchecked::marker { content: \"\\2610\"; }\n"
-"li.checked::marker { content: \"\\2612\"; }\n"
-"</style></head><body style=\" font-family:'Ubuntu Sans'; font-size:12pt; font-weight:700; font-style:normal;\">\n"
-"<p align=\"center\" style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-family:'Segoe UI'; font-size:8pt; color:#ff0000;\">PLEASE LOAD FILE</span></p></body></html>", None))
 #if QT_CONFIG(tooltip)
-        self.pushButton_metadata.setToolTip(QCoreApplication.translate("MainWindow", u"Metadata of Files", None))
+        self.actionStart_SAMRI_process.setToolTip(QCoreApplication.translate("MainWindow", u"Start the SAMRI fetch / bias-correction / registration workflow for an animal ID.", None))
 #endif // QT_CONFIG(tooltip)
-        self.pushButton_metadata.setText("")
+        self.actionTd.setText(QCoreApplication.translate("MainWindow", u"Trajectory Planning", None))
+        self.actionNew_Window.setText(QCoreApplication.translate("MainWindow", u"New Window", None))
+#if QT_CONFIG(tooltip)
+        self.actionNew_Window.setToolTip(QCoreApplication.translate("MainWindow", u"Launch a second, independent copy of this application in a separate process.", None))
+#endif // QT_CONFIG(tooltip)
+        self.actionRippl_AI.setText(QCoreApplication.translate("MainWindow", u"Rippl AI", None))
+#if QT_CONFIG(tooltip)
+        self.actionRippl_AI.setToolTip(QCoreApplication.translate("MainWindow", u"Run Rippl-AI ripple (SWR) detection on the loaded recording.", None))
+#endif // QT_CONFIG(tooltip)
+        self.actionTheta_Detection.setText(QCoreApplication.translate("MainWindow", u"Theta Detection", None))
+#if QT_CONFIG(tooltip)
+        self.actionTheta_Detection.setToolTip(QCoreApplication.translate("MainWindow", u"Run theta-event detection on the loaded recording.", None))
+#endif // QT_CONFIG(tooltip)
+        self.actionLoad_Spike_Sorting.setText(QCoreApplication.translate("MainWindow", u"Show Spiking Raster Plot", None))
+#if QT_CONFIG(tooltip)
+        self.actionLoad_Spike_Sorting.setToolTip(QCoreApplication.translate("MainWindow", u"Show the spike-sorting raster plot for this recording.", None))
+#endif // QT_CONFIG(tooltip)
+        self.actionOpen_Session.setText(QCoreApplication.translate("MainWindow", u"Open Session", None))
+#if QT_CONFIG(tooltip)
+        self.actionOpen_Session.setToolTip(QCoreApplication.translate("MainWindow", u"Reopen a previously loaded 4D MRI session, or load a new one.", None))
+#endif // QT_CONFIG(tooltip)
+        self.actionOpen_Session_2.setText(QCoreApplication.translate("MainWindow", u"Open Session", None))
+#if QT_CONFIG(tooltip)
+        self.actionOpen_Session_2.setToolTip(QCoreApplication.translate("MainWindow", u"Reopen a previously loaded 3D MRI session, or load a new one.", None))
+#endif // QT_CONFIG(tooltip)
+        self.actionOpen_Session_3.setText(QCoreApplication.translate("MainWindow", u"Open Session", None))
+#if QT_CONFIG(tooltip)
+        self.actionOpen_Session_3.setToolTip(QCoreApplication.translate("MainWindow", u"Reopen a previously loaded ephys recording, or load a new one.", None))
+#endif // QT_CONFIG(tooltip)
+        self.actionOpen_Session_4.setText(QCoreApplication.translate("MainWindow", u"Open Session", None))
+#if QT_CONFIG(tooltip)
+        self.actionOpen_Session_4.setToolTip(QCoreApplication.translate("MainWindow", u"Reopen a previous SAMRI animal ID, or start a new one.", None))
+#endif // QT_CONFIG(tooltip)
+        self.actionLoad_Prev_Session.setText(QCoreApplication.translate("MainWindow", u"Load Prev. File", None))
+#if QT_CONFIG(tooltip)
+        self.actionLoad_Prev_Session.setToolTip(QCoreApplication.translate("MainWindow", u"Reopen any previously loaded MRI file, ephys recording, or SAMRI animal ID.", None))
+#endif // QT_CONFIG(tooltip)
+        self.actionDuring_Surgery.setText(QCoreApplication.translate("MainWindow", u"During Surgery", None))
+        self.actionTrajectory_Planning_2.setText(QCoreApplication.translate("MainWindow", u"Pre-surgery Planning", None))
+#if QT_CONFIG(tooltip)
+        self.actionTrajectory_Planning_2.setToolTip(QCoreApplication.translate("MainWindow", u"Open pre-surgery trajectory planning for the loaded MRI volume.", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.groupBox_data2.setToolTip(QCoreApplication.translate("MainWindow", u"Axial view comparison panel: one or more 4D timestamps of the axial slice shown side by side, each with its own cursor, pan/zoom, and contrast controls.", None))
+#endif // QT_CONFIG(tooltip)
+        self.groupBox_data2.setTitle(QCoreApplication.translate("MainWindow", u"View AXIAL", None))
+#if QT_CONFIG(tooltip)
+        self.groupBox_32.setToolTip(QCoreApplication.translate("MainWindow", u"Cursor position (x, y, z) for this comparison panel.", None))
+#endif // QT_CONFIG(tooltip)
+        self.groupBox_32.setTitle(QCoreApplication.translate("MainWindow", u"Cursor position (x,y,z)", None))
+#if QT_CONFIG(tooltip)
+        self.spinBox_x_data2.setToolTip(QCoreApplication.translate("MainWindow", u"X voxel coordinate of the cursor for this comparison panel; type a value to move the crosshair there.", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.spinBox_y_data2.setToolTip(QCoreApplication.translate("MainWindow", u"Y voxel coordinate of the cursor for this comparison panel; type a value to move the crosshair there.", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.spinBox_z_data2.setToolTip(QCoreApplication.translate("MainWindow", u"Z voxel coordinate of the cursor for this comparison panel; type a value to move the crosshair there.", None))
+#endif // QT_CONFIG(tooltip)
+        self.lineEdit_98.setText(QCoreApplication.translate("MainWindow", u"sagittal", None))
+        self.lineEdit_99.setText(QCoreApplication.translate("MainWindow", u"coronal", None))
+        self.lineEdit_100.setText(QCoreApplication.translate("MainWindow", u"sagittal", None))
+#if QT_CONFIG(tooltip)
+        self.groupBox_time20.setToolTip(QCoreApplication.translate("MainWindow", u"Timestamp panel for one 4D frame: the title updates to the frame's actual timestamp, and it holds this frame's own pan/zoom controls.", None))
+#endif // QT_CONFIG(tooltip)
+        self.groupBox_time20.setTitle(QCoreApplication.translate("MainWindow", u"Timestamp t=0", None))
+#if QT_CONFIG(tooltip)
+        self.fit_to_zoom_data20.setToolTip(QCoreApplication.translate("MainWindow", u"Fit the image to the window.", None))
+#endif // QT_CONFIG(tooltip)
+        self.fit_to_zoom_data20.setText(QCoreApplication.translate("MainWindow", u"Fit-to-Zoom", None))
+#if QT_CONFIG(tooltip)
+        self.go_down_data20.setToolTip(QCoreApplication.translate("MainWindow", u"Pan the view down.", None))
+#endif // QT_CONFIG(tooltip)
+        self.go_down_data20.setText(QCoreApplication.translate("MainWindow", u"<", None))
+#if QT_CONFIG(tooltip)
+        self.go_up_data20.setToolTip(QCoreApplication.translate("MainWindow", u"Pan the view up.", None))
+#endif // QT_CONFIG(tooltip)
+        self.go_up_data20.setText(QCoreApplication.translate("MainWindow", u">", None))
+#if QT_CONFIG(tooltip)
+        self.go_left_data20.setToolTip(QCoreApplication.translate("MainWindow", u"Pan the view left.", None))
+#endif // QT_CONFIG(tooltip)
+        self.go_left_data20.setText(QCoreApplication.translate("MainWindow", u"<", None))
+#if QT_CONFIG(tooltip)
+        self.go_right_data20.setToolTip(QCoreApplication.translate("MainWindow", u"Pan the view right.", None))
+#endif // QT_CONFIG(tooltip)
+        self.go_right_data20.setText(QCoreApplication.translate("MainWindow", u">", None))
+#if QT_CONFIG(tooltip)
+        self.zoom_in_data20.setToolTip(QCoreApplication.translate("MainWindow", u"Zoom in on this view.", None))
+#endif // QT_CONFIG(tooltip)
+        self.zoom_in_data20.setText(QCoreApplication.translate("MainWindow", u"+", None))
+#if QT_CONFIG(tooltip)
+        self.zoom_out_data20.setToolTip(QCoreApplication.translate("MainWindow", u"Zoom out on this view.", None))
+#endif // QT_CONFIG(tooltip)
+        self.zoom_out_data20.setText(QCoreApplication.translate("MainWindow", u"-", None))
+#if QT_CONFIG(tooltip)
+        self.groupBox_57.setToolTip(QCoreApplication.translate("MainWindow", u"Choose which 4D timestamp (frame) is displayed in this panel.", None))
+#endif // QT_CONFIG(tooltip)
+        self.groupBox_57.setTitle(QCoreApplication.translate("MainWindow", u"Timestamp Slider", None))
+#if QT_CONFIG(tooltip)
+        self.changetimestamp_data20.setToolTip(QCoreApplication.translate("MainWindow", u"Slide to choose which 4D timestamp (frame) is displayed in this panel.", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.displaytimestamp_data20.setToolTip(QCoreApplication.translate("MainWindow", u"Index of the 4D timestamp (frame) currently displayed in this panel; type a value to jump to it.", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.groupBox_58.setToolTip(QCoreApplication.translate("MainWindow", u"Auto-compute or reset the window/level (brightness/contrast) for this panel's image.", None))
+#endif // QT_CONFIG(tooltip)
+        self.groupBox_58.setTitle(QCoreApplication.translate("MainWindow", u"Contrast Adjustment", None))
+#if QT_CONFIG(tooltip)
+        self.pushButton_reset_data20.setToolTip(QCoreApplication.translate("MainWindow", u"Reset the window/level (brightness/contrast) to its initial values.", None))
+#endif // QT_CONFIG(tooltip)
+        self.pushButton_reset_data20.setText(QCoreApplication.translate("MainWindow", u"Reset", None))
+#if QT_CONFIG(tooltip)
+        self.pushButton_auto_data20.setToolTip(QCoreApplication.translate("MainWindow", u"Automatically compute the window/level (brightness/contrast) from the image data.", None))
+#endif // QT_CONFIG(tooltip)
+        self.pushButton_auto_data20.setText(QCoreApplication.translate("MainWindow", u"Auto", None))
+        self.tabWidget_time2.setTabText(self.tabWidget_time2.indexOf(self.tabWidget_time20), QCoreApplication.translate("MainWindow", u"Timestamp 1", None))
+#if QT_CONFIG(tooltip)
+        self.groupBox_59.setToolTip(QCoreApplication.translate("MainWindow", u"Choose which 4D timestamp (frame) is displayed in this panel.", None))
+#endif // QT_CONFIG(tooltip)
+        self.groupBox_59.setTitle(QCoreApplication.translate("MainWindow", u"Timestamp Slider", None))
+#if QT_CONFIG(tooltip)
+        self.changetimestamp_data21.setToolTip(QCoreApplication.translate("MainWindow", u"Slide to choose which 4D timestamp (frame) is displayed in this panel.", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.displaytimestamp_data21.setToolTip(QCoreApplication.translate("MainWindow", u"Index of the 4D timestamp (frame) currently displayed in this panel; type a value to jump to it.", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.groupBox_60.setToolTip(QCoreApplication.translate("MainWindow", u"Auto-compute or reset the window/level (brightness/contrast) for this panel's image.", None))
+#endif // QT_CONFIG(tooltip)
+        self.groupBox_60.setTitle(QCoreApplication.translate("MainWindow", u"Contrast Adjustment", None))
+#if QT_CONFIG(tooltip)
+        self.pushButton_auto_data21.setToolTip(QCoreApplication.translate("MainWindow", u"Automatically compute the window/level (brightness/contrast) from the image data.", None))
+#endif // QT_CONFIG(tooltip)
+        self.pushButton_auto_data21.setText(QCoreApplication.translate("MainWindow", u"Auto", None))
+#if QT_CONFIG(tooltip)
+        self.pushButton_reset_data21.setToolTip(QCoreApplication.translate("MainWindow", u"Reset the window/level (brightness/contrast) to its initial values.", None))
+#endif // QT_CONFIG(tooltip)
+        self.pushButton_reset_data21.setText(QCoreApplication.translate("MainWindow", u"Reset", None))
+        self.tabWidget_time2.setTabText(self.tabWidget_time2.indexOf(self.tabWidget_time21), QCoreApplication.translate("MainWindow", u"Timestamp 2", None))
+#if QT_CONFIG(tooltip)
+        self.groupBox_61.setToolTip(QCoreApplication.translate("MainWindow", u"Choose which 4D timestamp (frame) is displayed in this panel.", None))
+#endif // QT_CONFIG(tooltip)
+        self.groupBox_61.setTitle(QCoreApplication.translate("MainWindow", u"Timestamp Slider", None))
+#if QT_CONFIG(tooltip)
+        self.changetimestamp_data22.setToolTip(QCoreApplication.translate("MainWindow", u"Slide to choose which 4D timestamp (frame) is displayed in this panel.", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.displaytimestamp_data22.setToolTip(QCoreApplication.translate("MainWindow", u"Index of the 4D timestamp (frame) currently displayed in this panel; type a value to jump to it.", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.groupBox_62.setToolTip(QCoreApplication.translate("MainWindow", u"Auto-compute or reset the window/level (brightness/contrast) for this panel's image.", None))
+#endif // QT_CONFIG(tooltip)
+        self.groupBox_62.setTitle(QCoreApplication.translate("MainWindow", u"Contrast Adjustment", None))
+#if QT_CONFIG(tooltip)
+        self.pushButton_reset_data22.setToolTip(QCoreApplication.translate("MainWindow", u"Reset the window/level (brightness/contrast) to its initial values.", None))
+#endif // QT_CONFIG(tooltip)
+        self.pushButton_reset_data22.setText(QCoreApplication.translate("MainWindow", u"Reset", None))
+#if QT_CONFIG(tooltip)
+        self.pushButton_auto_data22.setToolTip(QCoreApplication.translate("MainWindow", u"Automatically compute the window/level (brightness/contrast) from the image data.", None))
+#endif // QT_CONFIG(tooltip)
+        self.pushButton_auto_data22.setText(QCoreApplication.translate("MainWindow", u"Auto", None))
+        self.tabWidget_time2.setTabText(self.tabWidget_time2.indexOf(self.tabWidget_time22), QCoreApplication.translate("MainWindow", u"Timestamp 3", None))
+#if QT_CONFIG(tooltip)
+        self.heatmap_data2.setToolTip(QCoreApplication.translate("MainWindow", u"Heatmap overlay for this view, made visible once MRID-tag segmentation/tagging has been run.", None))
+#endif // QT_CONFIG(tooltip)
+        self.heatmap_data2.setTitle(QCoreApplication.translate("MainWindow", u"Heatmap", None))
+#if QT_CONFIG(tooltip)
+        self.go_down_data23.setToolTip(QCoreApplication.translate("MainWindow", u"Pan the view down.", None))
+#endif // QT_CONFIG(tooltip)
+        self.go_down_data23.setText(QCoreApplication.translate("MainWindow", u"<", None))
+#if QT_CONFIG(tooltip)
+        self.go_up_data23.setToolTip(QCoreApplication.translate("MainWindow", u"Pan the view up.", None))
+#endif // QT_CONFIG(tooltip)
+        self.go_up_data23.setText(QCoreApplication.translate("MainWindow", u">", None))
+#if QT_CONFIG(tooltip)
+        self.go_left_data23.setToolTip(QCoreApplication.translate("MainWindow", u"Pan the view left.", None))
+#endif // QT_CONFIG(tooltip)
+        self.go_left_data23.setText(QCoreApplication.translate("MainWindow", u"<", None))
+#if QT_CONFIG(tooltip)
+        self.go_right_data23.setToolTip(QCoreApplication.translate("MainWindow", u"Pan the view right.", None))
+#endif // QT_CONFIG(tooltip)
+        self.go_right_data23.setText(QCoreApplication.translate("MainWindow", u">", None))
+#if QT_CONFIG(tooltip)
+        self.fit_to_zoom_data23.setToolTip(QCoreApplication.translate("MainWindow", u"Fit the image to the window.", None))
+#endif // QT_CONFIG(tooltip)
+        self.fit_to_zoom_data23.setText(QCoreApplication.translate("MainWindow", u"Fit-to-Zoom", None))
+#if QT_CONFIG(tooltip)
+        self.zoom_in_data23.setToolTip(QCoreApplication.translate("MainWindow", u"Zoom in on this view.", None))
+#endif // QT_CONFIG(tooltip)
+        self.zoom_in_data23.setText(QCoreApplication.translate("MainWindow", u"+", None))
+#if QT_CONFIG(tooltip)
+        self.zoom_out_data23.setToolTip(QCoreApplication.translate("MainWindow", u"Zoom out on this view.", None))
+#endif // QT_CONFIG(tooltip)
+        self.zoom_out_data23.setText(QCoreApplication.translate("MainWindow", u"-", None))
+#if QT_CONFIG(tooltip)
+        self.groupBox_39.setToolTip(QCoreApplication.translate("MainWindow", u"Shows the image intensity value at the cursor's current position in this panel.", None))
+#endif // QT_CONFIG(tooltip)
+        self.groupBox_39.setTitle(QCoreApplication.translate("MainWindow", u"Intensity under cursor", None))
+        ___qtablewidgetitem = self.tableintensity_data2.horizontalHeaderItem(1)
+        ___qtablewidgetitem.setText(QCoreApplication.translate("MainWindow", u"Layer", None));
+        ___qtablewidgetitem1 = self.tableintensity_data2.horizontalHeaderItem(2)
+        ___qtablewidgetitem1.setText(QCoreApplication.translate("MainWindow", u"Intensity", None));
+        ___qtablewidgetitem2 = self.tableintensity_data2.horizontalHeaderItem(3)
+        ___qtablewidgetitem2.setText(QCoreApplication.translate("MainWindow", u"Opacity", None));
+#if QT_CONFIG(tooltip)
+        self.groupBox_time21.setToolTip(QCoreApplication.translate("MainWindow", u"Timestamp panel for one 4D frame: the title updates to the frame's actual timestamp, and it holds this frame's own pan/zoom controls.", None))
+#endif // QT_CONFIG(tooltip)
+        self.groupBox_time21.setTitle(QCoreApplication.translate("MainWindow", u"Timestamp t=4", None))
+#if QT_CONFIG(tooltip)
+        self.fit_to_zoom_data21.setToolTip(QCoreApplication.translate("MainWindow", u"Fit the image to the window.", None))
+#endif // QT_CONFIG(tooltip)
+        self.fit_to_zoom_data21.setText(QCoreApplication.translate("MainWindow", u"Fit-to-Zoom", None))
+#if QT_CONFIG(tooltip)
+        self.go_down_data21.setToolTip(QCoreApplication.translate("MainWindow", u"Pan the view down.", None))
+#endif // QT_CONFIG(tooltip)
+        self.go_down_data21.setText(QCoreApplication.translate("MainWindow", u"<", None))
+#if QT_CONFIG(tooltip)
+        self.go_up_data21.setToolTip(QCoreApplication.translate("MainWindow", u"Pan the view up.", None))
+#endif // QT_CONFIG(tooltip)
+        self.go_up_data21.setText(QCoreApplication.translate("MainWindow", u">", None))
+#if QT_CONFIG(tooltip)
+        self.go_left_data21.setToolTip(QCoreApplication.translate("MainWindow", u"Pan the view left.", None))
+#endif // QT_CONFIG(tooltip)
+        self.go_left_data21.setText(QCoreApplication.translate("MainWindow", u"<", None))
+#if QT_CONFIG(tooltip)
+        self.go_right_data21.setToolTip(QCoreApplication.translate("MainWindow", u"Pan the view right.", None))
+#endif // QT_CONFIG(tooltip)
+        self.go_right_data21.setText(QCoreApplication.translate("MainWindow", u">", None))
+#if QT_CONFIG(tooltip)
+        self.zoom_in_data21.setToolTip(QCoreApplication.translate("MainWindow", u"Zoom in on this view.", None))
+#endif // QT_CONFIG(tooltip)
+        self.zoom_in_data21.setText(QCoreApplication.translate("MainWindow", u"+", None))
+#if QT_CONFIG(tooltip)
+        self.zoom_out_data21.setToolTip(QCoreApplication.translate("MainWindow", u"Zoom out on this view.", None))
+#endif // QT_CONFIG(tooltip)
+        self.zoom_out_data21.setText(QCoreApplication.translate("MainWindow", u"-", None))
+        self.groupBox_time22.setTitle(QCoreApplication.translate("MainWindow", u"Timestamp t=8", None))
+#if QT_CONFIG(tooltip)
+        self.fit_to_zoom_data22.setToolTip(QCoreApplication.translate("MainWindow", u"Reset zoom and pan to fit the whole image in this view.", None))
+#endif // QT_CONFIG(tooltip)
+        self.fit_to_zoom_data22.setText(QCoreApplication.translate("MainWindow", u"Fit-to-Zoom", None))
+#if QT_CONFIG(tooltip)
+        self.go_down_data22.setToolTip(QCoreApplication.translate("MainWindow", u"Pan the view down.", None))
+#endif // QT_CONFIG(tooltip)
+        self.go_down_data22.setText(QCoreApplication.translate("MainWindow", u"<", None))
+#if QT_CONFIG(tooltip)
+        self.go_up_data22.setToolTip(QCoreApplication.translate("MainWindow", u"Pan the view up.", None))
+#endif // QT_CONFIG(tooltip)
+        self.go_up_data22.setText(QCoreApplication.translate("MainWindow", u">", None))
+#if QT_CONFIG(tooltip)
+        self.go_left_data22.setToolTip(QCoreApplication.translate("MainWindow", u"Pan the view left.", None))
+#endif // QT_CONFIG(tooltip)
+        self.go_left_data22.setText(QCoreApplication.translate("MainWindow", u"<", None))
+#if QT_CONFIG(tooltip)
+        self.go_right_data22.setToolTip(QCoreApplication.translate("MainWindow", u"Pan the view right.", None))
+#endif // QT_CONFIG(tooltip)
+        self.go_right_data22.setText(QCoreApplication.translate("MainWindow", u">", None))
+#if QT_CONFIG(tooltip)
+        self.zoom_in_data22.setToolTip(QCoreApplication.translate("MainWindow", u"Zoom in on this view.", None))
+#endif // QT_CONFIG(tooltip)
+        self.zoom_in_data22.setText(QCoreApplication.translate("MainWindow", u"+", None))
+#if QT_CONFIG(tooltip)
+        self.zoom_out_data22.setToolTip(QCoreApplication.translate("MainWindow", u"Zoom out on this view.", None))
+#endif // QT_CONFIG(tooltip)
+        self.zoom_out_data22.setText(QCoreApplication.translate("MainWindow", u"-", None))
+#if QT_CONFIG(tooltip)
+        self.groupbox_legend2.setToolTip(QCoreApplication.translate("MainWindow", u"Color scale for the electrode/shank heatmap overlay; only shown while heatmap mode is active.", None))
+#endif // QT_CONFIG(tooltip)
+        self.groupbox_legend2.setTitle(QCoreApplication.translate("MainWindow", u"Heatmap Intensities", None))
+#if QT_CONFIG(tooltip)
+        self.groupBox_data0.setToolTip(QCoreApplication.translate("MainWindow", u"This dataset's coronal/sagittal/axial panels, each with its own timepoint, contrast, and cursor controls.", None))
+#endif // QT_CONFIG(tooltip)
         self.groupBox_data0.setTitle(QCoreApplication.translate("MainWindow", u"View", None))
+#if QT_CONFIG(tooltip)
+        self.groupBox_46.setToolTip(QCoreApplication.translate("MainWindow", u"Scrub through this panel's timepoint independently of the other two orthogonal views, so you can compare different frames of the same 4D scan side by side.", None))
+#endif // QT_CONFIG(tooltip)
         self.groupBox_46.setTitle(QCoreApplication.translate("MainWindow", u"Timestamp Slider", None))
+#if QT_CONFIG(tooltip)
+        self.changetimestamp_data00.setToolTip(QCoreApplication.translate("MainWindow", u"Drag to jump to a different timepoint (frame) of the 4D scan for this panel; stays synced with the spin box next to it.", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.displaytimestamp_data00.setToolTip(QCoreApplication.translate("MainWindow", u"Current timepoint (frame) index shown in this panel; stays synced with the slider next to it.", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.groupBox_49.setToolTip(QCoreApplication.translate("MainWindow", u"Adjust this panel's window/level (contrast/brightness) with the sliders, or use Auto/Reset.", None))
+#endif // QT_CONFIG(tooltip)
         self.groupBox_49.setTitle(QCoreApplication.translate("MainWindow", u"Contrast Adjustment", None))
+#if QT_CONFIG(tooltip)
+        self.pushButton_reset_data00.setToolTip(QCoreApplication.translate("MainWindow", u"Reset this panel's contrast/brightness (window/level) back to the volume's initial values.", None))
+#endif // QT_CONFIG(tooltip)
         self.pushButton_reset_data00.setText(QCoreApplication.translate("MainWindow", u"Reset", None))
+#if QT_CONFIG(tooltip)
+        self.pushButton_auto_data00.setToolTip(QCoreApplication.translate("MainWindow", u"Automatically compute contrast/brightness (window/level) from this panel's intensity range (Ctrl+J does this for every panel at once).", None))
+#endif // QT_CONFIG(tooltip)
         self.pushButton_auto_data00.setText(QCoreApplication.translate("MainWindow", u"Auto", None))
         self.tabWidget_time0.setTabText(self.tabWidget_time0.indexOf(self.tabWidget_time00), QCoreApplication.translate("MainWindow", u"Timestamp t=0", None))
+#if QT_CONFIG(tooltip)
+        self.groupBox_41.setToolTip(QCoreApplication.translate("MainWindow", u"Scrub through this panel's timepoint independently of the other two orthogonal views, so you can compare different frames of the same 4D scan side by side.", None))
+#endif // QT_CONFIG(tooltip)
         self.groupBox_41.setTitle(QCoreApplication.translate("MainWindow", u"Timestamp Slider", None))
+#if QT_CONFIG(tooltip)
+        self.changetimestamp_data01.setToolTip(QCoreApplication.translate("MainWindow", u"Drag to jump to a different timepoint (frame) of the 4D scan for this panel; stays synced with the spin box next to it.", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.displaytimestamp_data01.setToolTip(QCoreApplication.translate("MainWindow", u"Current timepoint (frame) index shown in this panel; stays synced with the slider next to it.", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.groupBox_42.setToolTip(QCoreApplication.translate("MainWindow", u"Adjust this panel's window/level (contrast/brightness) with the sliders, or use Auto/Reset.", None))
+#endif // QT_CONFIG(tooltip)
         self.groupBox_42.setTitle(QCoreApplication.translate("MainWindow", u"Contrast Adjustment", None))
+#if QT_CONFIG(tooltip)
+        self.pushButton_auto_data01.setToolTip(QCoreApplication.translate("MainWindow", u"Automatically compute contrast/brightness (window/level) from this panel's intensity range (Ctrl+J does this for every panel at once).", None))
+#endif // QT_CONFIG(tooltip)
         self.pushButton_auto_data01.setText(QCoreApplication.translate("MainWindow", u"Auto", None))
+#if QT_CONFIG(tooltip)
+        self.pushButton_reset_data01.setToolTip(QCoreApplication.translate("MainWindow", u"Reset this panel's contrast/brightness (window/level) back to the volume's initial values.", None))
+#endif // QT_CONFIG(tooltip)
         self.pushButton_reset_data01.setText(QCoreApplication.translate("MainWindow", u"Reset", None))
         self.tabWidget_time0.setTabText(self.tabWidget_time0.indexOf(self.tabWidget_time01), QCoreApplication.translate("MainWindow", u"Timestamp t=4", None))
+#if QT_CONFIG(tooltip)
+        self.groupBox_44.setToolTip(QCoreApplication.translate("MainWindow", u"Scrub through this panel's timepoint independently of the other two orthogonal views, so you can compare different frames of the same 4D scan side by side.", None))
+#endif // QT_CONFIG(tooltip)
         self.groupBox_44.setTitle(QCoreApplication.translate("MainWindow", u"Timestamp Slider", None))
+#if QT_CONFIG(tooltip)
+        self.changetimestamp_data02.setToolTip(QCoreApplication.translate("MainWindow", u"Drag to jump to a different timepoint (frame) of the 4D scan for this panel; stays synced with the spin box next to it.", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.displaytimestamp_data02.setToolTip(QCoreApplication.translate("MainWindow", u"Current timepoint (frame) index shown in this panel; stays synced with the slider next to it.", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.groupBox_43.setToolTip(QCoreApplication.translate("MainWindow", u"Adjust this panel's window/level (contrast/brightness) with the sliders, or use Auto/Reset.", None))
+#endif // QT_CONFIG(tooltip)
         self.groupBox_43.setTitle(QCoreApplication.translate("MainWindow", u"Contrast Adjustment", None))
+#if QT_CONFIG(tooltip)
+        self.pushButton_reset_data02.setToolTip(QCoreApplication.translate("MainWindow", u"Reset this panel's contrast/brightness (window/level) back to the volume's initial values.", None))
+#endif // QT_CONFIG(tooltip)
         self.pushButton_reset_data02.setText(QCoreApplication.translate("MainWindow", u"Reset", None))
+#if QT_CONFIG(tooltip)
+        self.pushButton_auto_data02.setToolTip(QCoreApplication.translate("MainWindow", u"Automatically compute contrast/brightness (window/level) from this panel's intensity range (Ctrl+J does this for every panel at once).", None))
+#endif // QT_CONFIG(tooltip)
         self.pushButton_auto_data02.setText(QCoreApplication.translate("MainWindow", u"Auto", None))
         self.tabWidget_time0.setTabText(self.tabWidget_time0.indexOf(self.tabWidget_time02), QCoreApplication.translate("MainWindow", u"Timestamp  t=8", None))
+#if QT_CONFIG(tooltip)
+        self.heatmap_data0.setToolTip(QCoreApplication.translate("MainWindow", u"Computed MRID-tag heatmap for this dataset; appears once the heatmap/segmentation analysis has been run.", None))
+#endif // QT_CONFIG(tooltip)
         self.heatmap_data0.setTitle(QCoreApplication.translate("MainWindow", u"Heatmap", None))
+#if QT_CONFIG(tooltip)
+        self.groupBox_time00.setToolTip(QCoreApplication.translate("MainWindow", u"Coronal/sagittal/axial panel currently showing timepoint 0 of the 4D scan, with its own pan/zoom controls.", None))
+#endif // QT_CONFIG(tooltip)
         self.groupBox_time00.setTitle(QCoreApplication.translate("MainWindow", u"Timestamp t=0", None))
+#if QT_CONFIG(tooltip)
+        self.fit_to_zoom_data00.setToolTip(QCoreApplication.translate("MainWindow", u"Fit this view to the window, resetting pan and zoom.", None))
+#endif // QT_CONFIG(tooltip)
         self.fit_to_zoom_data00.setText(QCoreApplication.translate("MainWindow", u"Fit-to-Zoom", None))
+#if QT_CONFIG(tooltip)
+        self.go_down_data00.setToolTip(QCoreApplication.translate("MainWindow", u"Pan the view down.", None))
+#endif // QT_CONFIG(tooltip)
         self.go_down_data00.setText(QCoreApplication.translate("MainWindow", u"<", None))
+#if QT_CONFIG(tooltip)
+        self.go_up_data00.setToolTip(QCoreApplication.translate("MainWindow", u"Pan the view up.", None))
+#endif // QT_CONFIG(tooltip)
         self.go_up_data00.setText(QCoreApplication.translate("MainWindow", u">", None))
+#if QT_CONFIG(tooltip)
+        self.go_left_data00.setToolTip(QCoreApplication.translate("MainWindow", u"Pan the view left.", None))
+#endif // QT_CONFIG(tooltip)
         self.go_left_data00.setText(QCoreApplication.translate("MainWindow", u"<", None))
+#if QT_CONFIG(tooltip)
+        self.go_right_data00.setToolTip(QCoreApplication.translate("MainWindow", u"Pan the view right.", None))
+#endif // QT_CONFIG(tooltip)
         self.go_right_data00.setText(QCoreApplication.translate("MainWindow", u">", None))
+#if QT_CONFIG(tooltip)
+        self.zoom_in_data00.setToolTip(QCoreApplication.translate("MainWindow", u"Zoom in on this view.", None))
+#endif // QT_CONFIG(tooltip)
         self.zoom_in_data00.setText(QCoreApplication.translate("MainWindow", u"+", None))
+#if QT_CONFIG(tooltip)
+        self.zoom_out_data00.setToolTip(QCoreApplication.translate("MainWindow", u"Zoom out on this view.", None))
+#endif // QT_CONFIG(tooltip)
         self.zoom_out_data00.setText(QCoreApplication.translate("MainWindow", u"-", None))
+#if QT_CONFIG(tooltip)
+        self.groupBox_time01.setToolTip(QCoreApplication.translate("MainWindow", u"Coronal/sagittal/axial panel currently showing timepoint 4 of the 4D scan, with its own pan/zoom controls.", None))
+#endif // QT_CONFIG(tooltip)
         self.groupBox_time01.setTitle(QCoreApplication.translate("MainWindow", u"Timestamp t=4", None))
+#if QT_CONFIG(tooltip)
+        self.zoom_in_data01.setToolTip(QCoreApplication.translate("MainWindow", u"Zoom in on this view.", None))
+#endif // QT_CONFIG(tooltip)
         self.zoom_in_data01.setText(QCoreApplication.translate("MainWindow", u"+", None))
+#if QT_CONFIG(tooltip)
+        self.zoom_out_data01.setToolTip(QCoreApplication.translate("MainWindow", u"Zoom out on this view.", None))
+#endif // QT_CONFIG(tooltip)
         self.zoom_out_data01.setText(QCoreApplication.translate("MainWindow", u"-", None))
+#if QT_CONFIG(tooltip)
+        self.fit_to_zoom_data01.setToolTip(QCoreApplication.translate("MainWindow", u"Fit this view to the window, resetting pan and zoom.", None))
+#endif // QT_CONFIG(tooltip)
         self.fit_to_zoom_data01.setText(QCoreApplication.translate("MainWindow", u"Fit-to-Zoom", None))
+#if QT_CONFIG(tooltip)
+        self.go_down_data01.setToolTip(QCoreApplication.translate("MainWindow", u"Pan the view down.", None))
+#endif // QT_CONFIG(tooltip)
         self.go_down_data01.setText(QCoreApplication.translate("MainWindow", u"<", None))
+#if QT_CONFIG(tooltip)
+        self.go_up_data01.setToolTip(QCoreApplication.translate("MainWindow", u"Pan the view up.", None))
+#endif // QT_CONFIG(tooltip)
         self.go_up_data01.setText(QCoreApplication.translate("MainWindow", u">", None))
+#if QT_CONFIG(tooltip)
+        self.go_left_data01.setToolTip(QCoreApplication.translate("MainWindow", u"Pan the view left.", None))
+#endif // QT_CONFIG(tooltip)
         self.go_left_data01.setText(QCoreApplication.translate("MainWindow", u"<", None))
+#if QT_CONFIG(tooltip)
+        self.go_right_data01.setToolTip(QCoreApplication.translate("MainWindow", u"Pan the view right.", None))
+#endif // QT_CONFIG(tooltip)
         self.go_right_data01.setText(QCoreApplication.translate("MainWindow", u">", None))
+#if QT_CONFIG(tooltip)
+        self.groupBox_34.setToolTip(QCoreApplication.translate("MainWindow", u"Live crosshair cursor position for this dataset, in voxel coordinates.", None))
+#endif // QT_CONFIG(tooltip)
         self.groupBox_34.setTitle(QCoreApplication.translate("MainWindow", u"Cursor Position (x,y,z)", None))
+#if QT_CONFIG(tooltip)
+        self.spinBox_y_data0.setToolTip(QCoreApplication.translate("MainWindow", u"Voxel y-coordinate of the cursor; type a value to move the cursor there, or it updates as you move the cursor in the views.", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.spinBox_x_data0.setToolTip(QCoreApplication.translate("MainWindow", u"Voxel x-coordinate of the cursor; type a value to move the cursor there, or it updates as you move the cursor in the views.", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.spinBox_z_data0.setToolTip(QCoreApplication.translate("MainWindow", u"Voxel z-coordinate of the cursor; type a value to move the cursor there, or it updates as you move the cursor in the views.", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.groupBox_time02.setToolTip(QCoreApplication.translate("MainWindow", u"Coronal/sagittal/axial panel currently showing timepoint 8 of the 4D scan, with its own pan/zoom controls.", None))
+#endif // QT_CONFIG(tooltip)
         self.groupBox_time02.setTitle(QCoreApplication.translate("MainWindow", u"Timestamp t=8", None))
+#if QT_CONFIG(tooltip)
+        self.go_down_data02.setToolTip(QCoreApplication.translate("MainWindow", u"Pan the view down.", None))
+#endif // QT_CONFIG(tooltip)
         self.go_down_data02.setText(QCoreApplication.translate("MainWindow", u"<", None))
+#if QT_CONFIG(tooltip)
+        self.go_up_data02.setToolTip(QCoreApplication.translate("MainWindow", u"Pan the view up.", None))
+#endif // QT_CONFIG(tooltip)
         self.go_up_data02.setText(QCoreApplication.translate("MainWindow", u">", None))
+#if QT_CONFIG(tooltip)
+        self.go_left_data02.setToolTip(QCoreApplication.translate("MainWindow", u"Pan the view left.", None))
+#endif // QT_CONFIG(tooltip)
         self.go_left_data02.setText(QCoreApplication.translate("MainWindow", u"<", None))
+#if QT_CONFIG(tooltip)
+        self.go_right_data02.setToolTip(QCoreApplication.translate("MainWindow", u"Pan the view right.", None))
+#endif // QT_CONFIG(tooltip)
         self.go_right_data02.setText(QCoreApplication.translate("MainWindow", u">", None))
+#if QT_CONFIG(tooltip)
+        self.zoom_in_data02.setToolTip(QCoreApplication.translate("MainWindow", u"Zoom in on this view.", None))
+#endif // QT_CONFIG(tooltip)
         self.zoom_in_data02.setText(QCoreApplication.translate("MainWindow", u"+", None))
+#if QT_CONFIG(tooltip)
+        self.zoom_out_data02.setToolTip(QCoreApplication.translate("MainWindow", u"Zoom out on this view.", None))
+#endif // QT_CONFIG(tooltip)
         self.zoom_out_data02.setText(QCoreApplication.translate("MainWindow", u"-", None))
+#if QT_CONFIG(tooltip)
+        self.fit_to_zoom_data02.setToolTip(QCoreApplication.translate("MainWindow", u"Fit this view to the window, resetting pan and zoom.", None))
+#endif // QT_CONFIG(tooltip)
         self.fit_to_zoom_data02.setText(QCoreApplication.translate("MainWindow", u"Fit-to-Zoom", None))
+#if QT_CONFIG(tooltip)
+        self.groupBox_25.setToolTip(QCoreApplication.translate("MainWindow", u"Live voxel intensity value at the current cursor position.", None))
+#endif // QT_CONFIG(tooltip)
         self.groupBox_25.setTitle(QCoreApplication.translate("MainWindow", u"Intensity under cursor", None))
-        ___qtablewidgetitem = self.tableintensity_data0.horizontalHeaderItem(1)
-        ___qtablewidgetitem.setText(QCoreApplication.translate("MainWindow", u"Layer", None));
-        ___qtablewidgetitem1 = self.tableintensity_data0.horizontalHeaderItem(2)
-        ___qtablewidgetitem1.setText(QCoreApplication.translate("MainWindow", u"Intensity", None));
-        ___qtablewidgetitem2 = self.tableintensity_data0.horizontalHeaderItem(3)
-        ___qtablewidgetitem2.setText(QCoreApplication.translate("MainWindow", u"Opacity", None));
+        ___qtablewidgetitem3 = self.tableintensity_data0.horizontalHeaderItem(1)
+        ___qtablewidgetitem3.setText(QCoreApplication.translate("MainWindow", u"Layer", None));
+        ___qtablewidgetitem4 = self.tableintensity_data0.horizontalHeaderItem(2)
+        ___qtablewidgetitem4.setText(QCoreApplication.translate("MainWindow", u"Intensity", None));
+        ___qtablewidgetitem5 = self.tableintensity_data0.horizontalHeaderItem(3)
+        ___qtablewidgetitem5.setText(QCoreApplication.translate("MainWindow", u"Opacity", None));
+#if QT_CONFIG(tooltip)
+        self.groupbox_legend0.setToolTip(QCoreApplication.translate("MainWindow", u"Color scale (colorbar) for interpreting the heatmap's intensity values.", None))
+#endif // QT_CONFIG(tooltip)
         self.groupbox_legend0.setTitle(QCoreApplication.translate("MainWindow", u"Heatmap Intensities", None))
+#if QT_CONFIG(tooltip)
+        self.pushButton_tp_next0.setToolTip(QCoreApplication.translate("MainWindow", u"Continue to the next step (mark forbidden regions)", None))
+#endif // QT_CONFIG(tooltip)
         self.pushButton_tp_next0.setText(QCoreApplication.translate("MainWindow", u"Next", None))
+#if QT_CONFIG(tooltip)
+        self.groupBox_12.setToolTip(QCoreApplication.translate("MainWindow", u"Bregma position marked on this animal's own scan, alongside where it lands in the atlas after registration.", None))
+#endif // QT_CONFIG(tooltip)
         self.groupBox_12.setTitle(QCoreApplication.translate("MainWindow", u"Bregma Coordinates xyz ", None))
+#if QT_CONFIG(tooltip)
+        self.spinBox_atlas_bregma_x.setToolTip(QCoreApplication.translate("MainWindow", u"Where the atlas predicts bregma to be, in this animal's MRI (read-only)", None))
+#endif // QT_CONFIG(tooltip)
         self.lineEdit_29.setText(QCoreApplication.translate("MainWindow", u"Atlas registered Bregma [xyz]", None))
         self.textEdit_4.setHtml(QCoreApplication.translate("MainWindow", u"<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
 "<html><head><meta name=\"qrichtext\" content=\"1\" /><meta charset=\"utf-8\" /><style type=\"text/css\">\n"
@@ -7996,12 +8912,42 @@ class Ui_MainWindow(object):
 "li.checked::marker { content: \"\\2612\"; }\n"
 "</style></head><body style=\" font-family:'Ubuntu Sans'; font-size:11pt; font-weight:400; font-style:normal;\">\n"
 "<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\">Absolute Distance between Animal and Atlas Bregma</p></body></html>", None))
-        self.doubleSpinBox_d_bregmaz.setSuffix(QCoreApplication.translate("MainWindow", u"mm", None))
-        self.doubleSpinBox_d_bregmax.setSuffix(QCoreApplication.translate("MainWindow", u"mm", None))
-        self.lineEdit_24.setText(QCoreApplication.translate("MainWindow", u"Animal Bregma Coordinates [xyz]", None))
+#if QT_CONFIG(tooltip)
+        self.pushButton_tp_bregma.setToolTip(QCoreApplication.translate("MainWindow", u"Pick the bregma point by clicking it in the MRI view", None))
+#endif // QT_CONFIG(tooltip)
         self.pushButton_tp_bregma.setText(QCoreApplication.translate("MainWindow", u"Save Cursor Position \n"
 " as Bregma", None))
+#if QT_CONFIG(tooltip)
+        self.spinBox_tp_bregma_x.setToolTip(QCoreApplication.translate("MainWindow", u"Bregma coordinate in the subject's own MRI (voxel index)", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.doubleSpinBox_d_bregmax.setToolTip(QCoreApplication.translate("MainWindow", u"Per-axis offset between your picked bregma and the atlas-predicted location", None))
+#endif // QT_CONFIG(tooltip)
+        self.doubleSpinBox_d_bregmax.setSuffix(QCoreApplication.translate("MainWindow", u"mm", None))
+#if QT_CONFIG(tooltip)
+        self.doubleSpinBox_d_bregmaz.setToolTip(QCoreApplication.translate("MainWindow", u"Per-axis offset between your picked bregma and the atlas-predicted location", None))
+#endif // QT_CONFIG(tooltip)
+        self.doubleSpinBox_d_bregmaz.setSuffix(QCoreApplication.translate("MainWindow", u"mm", None))
+#if QT_CONFIG(tooltip)
+        self.spinBox_tp_bregma_z.setToolTip(QCoreApplication.translate("MainWindow", u"Bregma coordinate in the subject's own MRI (voxel index)", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.spinBox_tp_bregma_y.setToolTip(QCoreApplication.translate("MainWindow", u"Bregma coordinate in the subject's own MRI (voxel index)", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.spinBox_atlas_bregma_z.setToolTip(QCoreApplication.translate("MainWindow", u"Where the atlas predicts bregma to be, in this animal's MRI (read-only)", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.spinBox_atlas_bregma_y.setToolTip(QCoreApplication.translate("MainWindow", u"Where the atlas predicts bregma to be, in this animal's MRI (read-only)", None))
+#endif // QT_CONFIG(tooltip)
+        self.lineEdit_24.setText(QCoreApplication.translate("MainWindow", u"Animal Bregma Coordinates [xyz]", None))
+#if QT_CONFIG(tooltip)
+        self.doubleSpinBox_d_bregmay.setToolTip(QCoreApplication.translate("MainWindow", u"Per-axis offset between your picked bregma and the atlas-predicted location", None))
+#endif // QT_CONFIG(tooltip)
         self.doubleSpinBox_d_bregmay.setSuffix(QCoreApplication.translate("MainWindow", u"mm", None))
+        self.lineEdit_92.setText(QCoreApplication.translate("MainWindow", u"sagittal", None))
+        self.lineEdit_93.setText(QCoreApplication.translate("MainWindow", u"coronal", None))
+        self.lineEdit_94.setText(QCoreApplication.translate("MainWindow", u"axial", None))
         self.textEdit_2.setHtml(QCoreApplication.translate("MainWindow", u"<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
 "<html><head><meta name=\"qrichtext\" content=\"1\" /><meta charset=\"utf-8\" /><style type=\"text/css\">\n"
 "p, li { white-space: pre-wrap; }\n"
@@ -8010,14 +8956,40 @@ class Ui_MainWindow(object):
 "li.checked::marker { content: \"\\2612\"; }\n"
 "</style></head><body style=\" font-family:'Ubuntu Sans'; font-size:11pt; font-weight:400; font-style:normal;\">\n"
 "<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-family:'Sans'; font-size:10pt;\">Please select Bregma and Lambda in the MRI Image</span></p></body></html>", None))
+#if QT_CONFIG(tooltip)
+        self.groupBox_22.setToolTip(QCoreApplication.translate("MainWindow", u"Compares the Bregma-Lambda distance measured on this animal's scan to the atlas, and the scaling ratio between them.", None))
+#endif // QT_CONFIG(tooltip)
         self.groupBox_22.setTitle(QCoreApplication.translate("MainWindow", u"Distances  between Bregma and Lambda", None))
         self.lineEdit_31.setText(QCoreApplication.translate("MainWindow", u"Animal MRI", None))
         self.lineEdit_43.setText(QCoreApplication.translate("MainWindow", u"Ratio: Animal / Atlas", None))
         self.lineEdit_33.setText(QCoreApplication.translate("MainWindow", u"Atlas registered points", None))
+#if QT_CONFIG(tooltip)
+        self.doubleSpinBox_distanceAtlas.setToolTip(QCoreApplication.translate("MainWindow", u"Bregma-lambda distance in the atlas template", None))
+#endif // QT_CONFIG(tooltip)
         self.doubleSpinBox_distanceAtlas.setSuffix(QCoreApplication.translate("MainWindow", u"mm", None))
+#if QT_CONFIG(tooltip)
+        self.doubleSpinBox_tp_ratio.setToolTip(QCoreApplication.translate("MainWindow", u"Ratio of this animal's bregma-lambda distance to the atlas's -- a scaling sanity check", None))
+#endif // QT_CONFIG(tooltip)
         self.doubleSpinBox_tp_ratio.setSuffix("")
+#if QT_CONFIG(tooltip)
+        self.doubleSpinBox_distance.setToolTip(QCoreApplication.translate("MainWindow", u"Distance between your picked bregma and lambda, in this animal's MRI", None))
+#endif // QT_CONFIG(tooltip)
         self.doubleSpinBox_distance.setSuffix(QCoreApplication.translate("MainWindow", u"mm", None))
+#if QT_CONFIG(tooltip)
+        self.groupBox_21.setToolTip(QCoreApplication.translate("MainWindow", u"Lambda position marked on this animal's own scan, alongside where it lands in the atlas after registration.", None))
+#endif // QT_CONFIG(tooltip)
         self.groupBox_21.setTitle(QCoreApplication.translate("MainWindow", u"Lambda Coordinates xyz", None))
+        self.lineEdit_58.setText(QCoreApplication.translate("MainWindow", u"Animal Lambda Coordinates [xyz]", None))
+#if QT_CONFIG(tooltip)
+        self.doubleSpinBox_d_lambdax.setToolTip(QCoreApplication.translate("MainWindow", u"Per-axis offset between your picked lambda and the atlas-predicted location", None))
+#endif // QT_CONFIG(tooltip)
+        self.doubleSpinBox_d_lambdax.setSuffix(QCoreApplication.translate("MainWindow", u"mm", None))
+#if QT_CONFIG(tooltip)
+        self.spinBox_tp_lambda_y.setToolTip(QCoreApplication.translate("MainWindow", u"Lambda coordinate in the subject's own MRI (voxel index)", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.spinBox_atlas_lambda_x.setToolTip(QCoreApplication.translate("MainWindow", u"Where the atlas predicts lambda to be, in this animal's MRI (read-only)", None))
+#endif // QT_CONFIG(tooltip)
         self.textEdit.setHtml(QCoreApplication.translate("MainWindow", u"<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
 "<html><head><meta name=\"qrichtext\" content=\"1\" /><meta charset=\"utf-8\" /><style type=\"text/css\">\n"
 "p, li { white-space: pre-wrap; }\n"
@@ -8026,69 +8998,113 @@ class Ui_MainWindow(object):
 "li.checked::marker { content: \"\\2612\"; }\n"
 "</style></head><body style=\" font-family:'Ubuntu Sans'; font-size:11pt; font-weight:400; font-style:normal;\">\n"
 "<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\">Absolute Distance between Animal and Atlas Lambda</p></body></html>", None))
-        self.doubleSpinBox_d_lambdaz.setSuffix(QCoreApplication.translate("MainWindow", u"mm", None))
-        self.lineEdit_58.setText(QCoreApplication.translate("MainWindow", u"Animal Lambda Coordinates [xyz]", None))
-        self.doubleSpinBox_d_lambday.setSuffix(QCoreApplication.translate("MainWindow", u"mm", None))
-        self.lineEdit_20.setText(QCoreApplication.translate("MainWindow", u"Atlas registered Lambda [xyz]", None))
-        self.doubleSpinBox_d_lambdax.setSuffix(QCoreApplication.translate("MainWindow", u"mm", None))
+#if QT_CONFIG(tooltip)
+        self.pushButton_tp_lambda.setToolTip(QCoreApplication.translate("MainWindow", u"Pick the lambda point by clicking it in the MRI view", None))
+#endif // QT_CONFIG(tooltip)
         self.pushButton_tp_lambda.setText(QCoreApplication.translate("MainWindow", u"Save Cursor Position \n"
 " as Lambda", None))
-        self.groupBox_shank.setTitle(QCoreApplication.translate("MainWindow", u"Shank Info", None))
-        self.pushButton_geometry_dfx.setText(QCoreApplication.translate("MainWindow", u"Edit User-defined Shank Geometry", None))
-        self.lineEdit_21.setText(QCoreApplication.translate("MainWindow", u"Total Channels", None))
-        self.lineEdit_22.setText(QCoreApplication.translate("MainWindow", u"Channel Separation", None))
-        self.spinBox_tp_separation.setSuffix(QCoreApplication.translate("MainWindow", u"um", None))
-        self.pushButton_SaveTraj.setText(QCoreApplication.translate("MainWindow", u"Save Trajectory", None))
+        self.lineEdit_20.setText(QCoreApplication.translate("MainWindow", u"Atlas registered Lambda [xyz]", None))
+#if QT_CONFIG(tooltip)
+        self.spinBox_atlas_lambda_z.setToolTip(QCoreApplication.translate("MainWindow", u"Where the atlas predicts lambda to be, in this animal's MRI (read-only)", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.doubleSpinBox_d_lambday.setToolTip(QCoreApplication.translate("MainWindow", u"Per-axis offset between your picked lambda and the atlas-predicted location", None))
+#endif // QT_CONFIG(tooltip)
+        self.doubleSpinBox_d_lambday.setSuffix(QCoreApplication.translate("MainWindow", u"mm", None))
+#if QT_CONFIG(tooltip)
+        self.doubleSpinBox_d_lambdaz.setToolTip(QCoreApplication.translate("MainWindow", u"Per-axis offset between your picked lambda and the atlas-predicted location", None))
+#endif // QT_CONFIG(tooltip)
+        self.doubleSpinBox_d_lambdaz.setSuffix(QCoreApplication.translate("MainWindow", u"mm", None))
+#if QT_CONFIG(tooltip)
+        self.spinBox_tp_lambda_x.setToolTip(QCoreApplication.translate("MainWindow", u"Lambda coordinate in the subject's own MRI (voxel index)", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.spinBox_atlas_lambda_y.setToolTip(QCoreApplication.translate("MainWindow", u"Where the atlas predicts lambda to be, in this animal's MRI (read-only)", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.spinBox_tp_lambda_z.setToolTip(QCoreApplication.translate("MainWindow", u"Lambda coordinate in the subject's own MRI (voxel index)", None))
+#endif // QT_CONFIG(tooltip)
+        self.lineEdit_95.setText(QCoreApplication.translate("MainWindow", u"sagittal", None))
+        self.lineEdit_96.setText(QCoreApplication.translate("MainWindow", u"coronal", None))
+        self.lineEdit_97.setText(QCoreApplication.translate("MainWindow", u"axial", None))
 #if QT_CONFIG(tooltip)
         self.pushButton_PyLdetection.setToolTip(QCoreApplication.translate("MainWindow", u"Channel in CA1 needed", None))
 #endif // QT_CONFIG(tooltip)
         self.pushButton_PyLdetection.setText(QCoreApplication.translate("MainWindow", u"Detect PyL using DWI", None))
-        self.pushButton_removeShank.setText(QCoreApplication.translate("MainWindow", u"Remove  \n"
-" Shank", None))
-        self.pushButton_addShank.setText(QCoreApplication.translate("MainWindow", u"Add Another \n"
-" Shank", None))
+#if QT_CONFIG(tooltip)
+        self.pushButton_SaveTraj.setToolTip(QCoreApplication.translate("MainWindow", u"Save the planned trajectories", None))
+#endif // QT_CONFIG(tooltip)
+        self.pushButton_SaveTraj.setText(QCoreApplication.translate("MainWindow", u"Save Trajectory", None))
+#if QT_CONFIG(tooltip)
+        self.groupBox_shank.setToolTip(QCoreApplication.translate("MainWindow", u"Electrode geometry summary for the selected shank (channel count and spacing), plus a button to define a custom, non-standard layout.", None))
+#endif // QT_CONFIG(tooltip)
+        self.groupBox_shank.setTitle(QCoreApplication.translate("MainWindow", u"Shank Info", None))
+#if QT_CONFIG(tooltip)
+        self.pushButton_geometry_dfx.setToolTip(QCoreApplication.translate("MainWindow", u"Open the panel for defining custom (bent) shank geometry from a DXF file", None))
+#endif // QT_CONFIG(tooltip)
+        self.pushButton_geometry_dfx.setText(QCoreApplication.translate("MainWindow", u"Edit User-defined Shank Geometry", None))
+        self.lineEdit_21.setText(QCoreApplication.translate("MainWindow", u"Total Channels", None))
+#if QT_CONFIG(tooltip)
+        self.spinBox_tp_channels.setToolTip(QCoreApplication.translate("MainWindow", u"Number of electrode contacts on this shank", None))
+#endif // QT_CONFIG(tooltip)
+        self.lineEdit_22.setText(QCoreApplication.translate("MainWindow", u"Channel Separation", None))
+#if QT_CONFIG(tooltip)
+        self.spinBox_tp_separation.setToolTip(QCoreApplication.translate("MainWindow", u"Distance between adjacent contacts", None))
+#endif // QT_CONFIG(tooltip)
+        self.spinBox_tp_separation.setSuffix(QCoreApplication.translate("MainWindow", u"um", None))
+#if QT_CONFIG(tooltip)
+        self.pushButton_tp_3d.setToolTip(QCoreApplication.translate("MainWindow", u"Open a 3D view of the atlas and planned shanks alongside this window", None))
+#endif // QT_CONFIG(tooltip)
+        self.pushButton_tp_3d.setText(QCoreApplication.translate("MainWindow", u"3D Visualilsation", None))
+#if QT_CONFIG(tooltip)
+        self.groupBox_79.setToolTip(QCoreApplication.translate("MainWindow", u"Bregma position marked on this animal's own scan, alongside where it lands in the atlas after registration.", None))
+#endif // QT_CONFIG(tooltip)
+        self.groupBox_79.setTitle(QCoreApplication.translate("MainWindow", u"Skull Insertion Point Coordinates xyz ", None))
+#if QT_CONFIG(tooltip)
+        self.pushButton_insertionPoint.setToolTip(QCoreApplication.translate("MainWindow", u"Pick the bregma point by clicking it in the MRI view", None))
+#endif // QT_CONFIG(tooltip)
+        self.pushButton_insertionPoint.setText(QCoreApplication.translate("MainWindow", u"Save Cursor Position \n"
+" as Skull Insertion Point", None))
+#if QT_CONFIG(tooltip)
+        self.spinBox_depth.setToolTip(QCoreApplication.translate("MainWindow", u"Per-axis offset between your picked bregma and the atlas-predicted location", None))
+#endif // QT_CONFIG(tooltip)
+        self.spinBox_depth.setSuffix(QCoreApplication.translate("MainWindow", u"mm", None))
+#if QT_CONFIG(tooltip)
+        self.spinBox_insertion_y.setToolTip(QCoreApplication.translate("MainWindow", u"Bregma coordinate in the subject's own MRI (voxel index)", None))
+#endif // QT_CONFIG(tooltip)
+        self.lineEdit_107.setText(QCoreApplication.translate("MainWindow", u"coronal", None))
+#if QT_CONFIG(tooltip)
+        self.spinBox_insertion_z.setToolTip(QCoreApplication.translate("MainWindow", u"Bregma coordinate in the subject's own MRI (voxel index)", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.spinBox_insertion_x.setToolTip(QCoreApplication.translate("MainWindow", u"Bregma coordinate in the subject's own MRI (voxel index)", None))
+#endif // QT_CONFIG(tooltip)
+        self.comboBox_insertion_shank.setItemText(0, QCoreApplication.translate("MainWindow", u"test", None))
+
+        self.pushButton_nextShank.setText(QCoreApplication.translate("MainWindow", u"NEXT", None))
+        self.lineEdit_108.setText(QCoreApplication.translate("MainWindow", u"axial", None))
+        self.lineEdit_106.setText(QCoreApplication.translate("MainWindow", u"sagittal", None))
+        self.textEdit_14.setHtml(QCoreApplication.translate("MainWindow", u"<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
+"<html><head><meta name=\"qrichtext\" content=\"1\" /><meta charset=\"utf-8\" /><style type=\"text/css\">\n"
+"p, li { white-space: pre-wrap; }\n"
+"hr { height: 1px; border-width: 0; }\n"
+"li.unchecked::marker { content: \"\\2610\"; }\n"
+"li.checked::marker { content: \"\\2612\"; }\n"
+"</style></head><body style=\" font-family:'Ubuntu Sans'; font-size:11pt; font-weight:400; font-style:normal;\">\n"
+"<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\">Depth between Insertion and deepest Point</p></body></html>", None))
+        self.textEdit_5.setHtml(QCoreApplication.translate("MainWindow", u"<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
+"<html><head><meta name=\"qrichtext\" content=\"1\" /><meta charset=\"utf-8\" /><style type=\"text/css\">\n"
+"p, li { white-space: pre-wrap; }\n"
+"hr { height: 1px; border-width: 0; }\n"
+"li.unchecked::marker { content: \"\\2610\"; }\n"
+"li.checked::marker { content: \"\\2612\"; }\n"
+"</style></head><body style=\" font-family:'Ubuntu Sans'; font-size:11pt; font-weight:400; font-style:normal;\">\n"
+"<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-family:'Sans'; font-size:10pt;\">Please select Skull Insertion Point of each shank</span></p></body></html>", None))
         self.lineEdit_vis3D.setText(QCoreApplication.translate("MainWindow", u"3D Visualisation", None))
+#if QT_CONFIG(tooltip)
+        self.pushButton_seg3D.setToolTip(QCoreApplication.translate("MainWindow", u"Reset the 3D camera view", None))
+#endif // QT_CONFIG(tooltip)
         self.pushButton_seg3D.setText(QCoreApplication.translate("MainWindow", u"Reset Camera", None))
-        self.textEdit_7.setHtml(QCoreApplication.translate("MainWindow", u"<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
-"<html><head><meta name=\"qrichtext\" content=\"1\" /><meta charset=\"utf-8\" /><style type=\"text/css\">\n"
-"p, li { white-space: pre-wrap; }\n"
-"hr { height: 1px; border-width: 0; }\n"
-"li.unchecked::marker { content: \"\\2610\"; }\n"
-"li.checked::marker { content: \"\\2612\"; }\n"
-"</style></head><body style=\" font-family:'Ubuntu Sans'; font-size:11pt; font-weight:400; font-style:normal;\">\n"
-"<p align=\"center\" style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-family:'Sans'; font-size:16pt;\">AXIAL</span></p></body></html>", None))
-        self.go_down_data3d0.setText(QCoreApplication.translate("MainWindow", u"<", None))
-        self.go_up_data3d0.setText(QCoreApplication.translate("MainWindow", u">", None))
-        self.go_left_data3d0.setText(QCoreApplication.translate("MainWindow", u"<", None))
-        self.go_right_data3d0.setText(QCoreApplication.translate("MainWindow", u">", None))
-        self.fit_to_zoom_data3d0.setText(QCoreApplication.translate("MainWindow", u"Fit-to-Zoom", None))
-        self.zoom_in_data3d0.setText("")
-        self.zoom_out_data3d0.setText("")
-        self.textEdit_12.setHtml(QCoreApplication.translate("MainWindow", u"<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
-"<html><head><meta name=\"qrichtext\" content=\"1\" /><meta charset=\"utf-8\" /><style type=\"text/css\">\n"
-"p, li { white-space: pre-wrap; }\n"
-"hr { height: 1px; border-width: 0; }\n"
-"li.unchecked::marker { content: \"\\2610\"; }\n"
-"li.checked::marker { content: \"\\2612\"; }\n"
-"</style></head><body style=\" font-family:'Ubuntu Sans'; font-size:11pt; font-weight:400; font-style:normal;\">\n"
-"<p align=\"center\" style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-family:'Sans'; font-size:16pt;\">SAGITTAL</span></p></body></html>", None))
-        self.go_down_data3d1_2.setText(QCoreApplication.translate("MainWindow", u"<", None))
-        self.go_up_data3d1_2.setText(QCoreApplication.translate("MainWindow", u">", None))
-        self.go_left_data3d1_2.setText(QCoreApplication.translate("MainWindow", u"<", None))
-        self.go_right_data3d1_2.setText(QCoreApplication.translate("MainWindow", u">", None))
-        self.zoom_in_data3d1_2.setText(QCoreApplication.translate("MainWindow", u"+", None))
-        self.zoom_out_data3d1_2.setText(QCoreApplication.translate("MainWindow", u"-", None))
-        self.fit_to_zoom_data3d1_2.setText(QCoreApplication.translate("MainWindow", u"Fit-to-Zoom", None))
-        self.pushButton_resetAxial.setText(QCoreApplication.translate("MainWindow", u"Reset Camera", None))
-        self.lineEdit_59.setText(QCoreApplication.translate("MainWindow", u"Change Depth of Slicing", None))
-        self.textEdit_13.setHtml(QCoreApplication.translate("MainWindow", u"<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
-"<html><head><meta name=\"qrichtext\" content=\"1\" /><meta charset=\"utf-8\" /><style type=\"text/css\">\n"
-"p, li { white-space: pre-wrap; }\n"
-"hr { height: 1px; border-width: 0; }\n"
-"li.unchecked::marker { content: \"\\2610\"; }\n"
-"li.checked::marker { content: \"\\2612\"; }\n"
-"</style></head><body style=\" font-family:'Ubuntu Sans'; font-size:11pt; font-weight:400; font-style:normal;\">\n"
-"<p align=\"center\" style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-family:'Sans'; font-size:16pt;\">3D View (Axial)</span></p></body></html>", None))
         self.textEdit_8.setHtml(QCoreApplication.translate("MainWindow", u"<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
 "<html><head><meta name=\"qrichtext\" content=\"1\" /><meta charset=\"utf-8\" /><style type=\"text/css\">\n"
 "p, li { white-space: pre-wrap; }\n"
@@ -8097,13 +9113,34 @@ class Ui_MainWindow(object):
 "li.checked::marker { content: \"\\2612\"; }\n"
 "</style></head><body style=\" font-family:'Ubuntu Sans'; font-size:11pt; font-weight:400; font-style:normal;\">\n"
 "<p align=\"center\" style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-family:'Sans'; font-size:16pt;\">SAGITTAL</span></p></body></html>", None))
-        self.go_down_data3d1.setText(QCoreApplication.translate("MainWindow", u"<", None))
-        self.go_up_data3d1.setText(QCoreApplication.translate("MainWindow", u">", None))
-        self.go_left_data3d1.setText(QCoreApplication.translate("MainWindow", u"<", None))
-        self.go_right_data3d1.setText(QCoreApplication.translate("MainWindow", u">", None))
+#if QT_CONFIG(tooltip)
+        self.zoom_in_data3d1.setToolTip(QCoreApplication.translate("MainWindow", u"Zoom in", None))
+#endif // QT_CONFIG(tooltip)
         self.zoom_in_data3d1.setText("")
+#if QT_CONFIG(tooltip)
+        self.zoom_out_data3d1.setToolTip(QCoreApplication.translate("MainWindow", u"Zoom out", None))
+#endif // QT_CONFIG(tooltip)
         self.zoom_out_data3d1.setText("")
+#if QT_CONFIG(tooltip)
+        self.fit_to_zoom_data3d1.setToolTip(QCoreApplication.translate("MainWindow", u"Fit the image to the window", None))
+#endif // QT_CONFIG(tooltip)
         self.fit_to_zoom_data3d1.setText(QCoreApplication.translate("MainWindow", u"Fit-to-Zoom", None))
+#if QT_CONFIG(tooltip)
+        self.go_down_data3d1.setToolTip(QCoreApplication.translate("MainWindow", u"Pan down", None))
+#endif // QT_CONFIG(tooltip)
+        self.go_down_data3d1.setText(QCoreApplication.translate("MainWindow", u"<", None))
+#if QT_CONFIG(tooltip)
+        self.go_up_data3d1.setToolTip(QCoreApplication.translate("MainWindow", u"Pan up", None))
+#endif // QT_CONFIG(tooltip)
+        self.go_up_data3d1.setText(QCoreApplication.translate("MainWindow", u">", None))
+#if QT_CONFIG(tooltip)
+        self.go_left_data3d1.setToolTip(QCoreApplication.translate("MainWindow", u"Pan left", None))
+#endif // QT_CONFIG(tooltip)
+        self.go_left_data3d1.setText(QCoreApplication.translate("MainWindow", u"<", None))
+#if QT_CONFIG(tooltip)
+        self.go_right_data3d1.setToolTip(QCoreApplication.translate("MainWindow", u"Pan right", None))
+#endif // QT_CONFIG(tooltip)
+        self.go_right_data3d1.setText(QCoreApplication.translate("MainWindow", u">", None))
         self.textEdit_11.setHtml(QCoreApplication.translate("MainWindow", u"<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
 "<html><head><meta name=\"qrichtext\" content=\"1\" /><meta charset=\"utf-8\" /><style type=\"text/css\">\n"
 "p, li { white-space: pre-wrap; }\n"
@@ -8112,6 +9149,9 @@ class Ui_MainWindow(object):
 "li.checked::marker { content: \"\\2612\"; }\n"
 "</style></head><body style=\" font-family:'Ubuntu Sans'; font-size:11pt; font-weight:400; font-style:normal;\">\n"
 "<p align=\"center\" style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-family:'Sans'; font-size:16pt;\">3D View (Sagittal)</span></p></body></html>", None))
+#if QT_CONFIG(tooltip)
+        self.pushButton_resetSagittal.setToolTip(QCoreApplication.translate("MainWindow", u"Reset this view's zoom/pan to default", None))
+#endif // QT_CONFIG(tooltip)
         self.pushButton_resetSagittal.setText(QCoreApplication.translate("MainWindow", u"Reset Camera", None))
         self.textEdit_9.setHtml(QCoreApplication.translate("MainWindow", u"<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
 "<html><head><meta name=\"qrichtext\" content=\"1\" /><meta charset=\"utf-8\" /><style type=\"text/css\">\n"
@@ -8121,12 +9161,33 @@ class Ui_MainWindow(object):
 "li.checked::marker { content: \"\\2612\"; }\n"
 "</style></head><body style=\" font-family:'Ubuntu Sans'; font-size:11pt; font-weight:400; font-style:normal;\">\n"
 "<p align=\"center\" style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-family:'Sans'; font-size:16pt;\">CORONAL</span></p></body></html>", None))
+#if QT_CONFIG(tooltip)
+        self.zoom_in_data3d2.setToolTip(QCoreApplication.translate("MainWindow", u"Zoom in", None))
+#endif // QT_CONFIG(tooltip)
         self.zoom_in_data3d2.setText("")
+#if QT_CONFIG(tooltip)
+        self.zoom_out_data3d2.setToolTip(QCoreApplication.translate("MainWindow", u"Zoom out", None))
+#endif // QT_CONFIG(tooltip)
         self.zoom_out_data3d2.setText("")
+#if QT_CONFIG(tooltip)
+        self.fit_to_zoom_data3d2.setToolTip(QCoreApplication.translate("MainWindow", u"Fit the image to the window", None))
+#endif // QT_CONFIG(tooltip)
         self.fit_to_zoom_data3d2.setText(QCoreApplication.translate("MainWindow", u"Fit-to-Zoom", None))
+#if QT_CONFIG(tooltip)
+        self.go_down_data3d2.setToolTip(QCoreApplication.translate("MainWindow", u"Pan down", None))
+#endif // QT_CONFIG(tooltip)
         self.go_down_data3d2.setText("")
+#if QT_CONFIG(tooltip)
+        self.go_up_data3d2.setToolTip(QCoreApplication.translate("MainWindow", u"Pan up", None))
+#endif // QT_CONFIG(tooltip)
         self.go_up_data3d2.setText("")
+#if QT_CONFIG(tooltip)
+        self.go_left_data3d2.setToolTip(QCoreApplication.translate("MainWindow", u"Pan left", None))
+#endif // QT_CONFIG(tooltip)
         self.go_left_data3d2.setText("")
+#if QT_CONFIG(tooltip)
+        self.go_right_data3d2.setToolTip(QCoreApplication.translate("MainWindow", u"Pan right", None))
+#endif // QT_CONFIG(tooltip)
         self.go_right_data3d2.setText("")
         self.textEdit_10.setHtml(QCoreApplication.translate("MainWindow", u"<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
 "<html><head><meta name=\"qrichtext\" content=\"1\" /><meta charset=\"utf-8\" /><style type=\"text/css\">\n"
@@ -8136,52 +9197,191 @@ class Ui_MainWindow(object):
 "li.checked::marker { content: \"\\2612\"; }\n"
 "</style></head><body style=\" font-family:'Ubuntu Sans'; font-size:11pt; font-weight:400; font-style:normal;\">\n"
 "<p align=\"center\" style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-family:'Sans'; font-size:16pt;\">3D View (Coronal)</span></p></body></html>", None))
+#if QT_CONFIG(tooltip)
+        self.pushButton_resetCoronal.setToolTip(QCoreApplication.translate("MainWindow", u"Reset this view's zoom/pan to default", None))
+#endif // QT_CONFIG(tooltip)
         self.pushButton_resetCoronal.setText(QCoreApplication.translate("MainWindow", u"Reset Camera", None))
+        self.textEdit_7.setHtml(QCoreApplication.translate("MainWindow", u"<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
+"<html><head><meta name=\"qrichtext\" content=\"1\" /><meta charset=\"utf-8\" /><style type=\"text/css\">\n"
+"p, li { white-space: pre-wrap; }\n"
+"hr { height: 1px; border-width: 0; }\n"
+"li.unchecked::marker { content: \"\\2610\"; }\n"
+"li.checked::marker { content: \"\\2612\"; }\n"
+"</style></head><body style=\" font-family:'Ubuntu Sans'; font-size:11pt; font-weight:400; font-style:normal;\">\n"
+"<p align=\"center\" style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-family:'Sans'; font-size:16pt;\">AXIAL</span></p></body></html>", None))
+#if QT_CONFIG(tooltip)
+        self.go_down_data3d0.setToolTip(QCoreApplication.translate("MainWindow", u"Pan down", None))
+#endif // QT_CONFIG(tooltip)
+        self.go_down_data3d0.setText(QCoreApplication.translate("MainWindow", u"<", None))
+#if QT_CONFIG(tooltip)
+        self.go_up_data3d0.setToolTip(QCoreApplication.translate("MainWindow", u"Pan up", None))
+#endif // QT_CONFIG(tooltip)
+        self.go_up_data3d0.setText(QCoreApplication.translate("MainWindow", u">", None))
+#if QT_CONFIG(tooltip)
+        self.go_left_data3d0.setToolTip(QCoreApplication.translate("MainWindow", u"Pan left", None))
+#endif // QT_CONFIG(tooltip)
+        self.go_left_data3d0.setText(QCoreApplication.translate("MainWindow", u"<", None))
+#if QT_CONFIG(tooltip)
+        self.go_right_data3d0.setToolTip(QCoreApplication.translate("MainWindow", u"Pan right", None))
+#endif // QT_CONFIG(tooltip)
+        self.go_right_data3d0.setText(QCoreApplication.translate("MainWindow", u">", None))
+#if QT_CONFIG(tooltip)
+        self.fit_to_zoom_data3d0.setToolTip(QCoreApplication.translate("MainWindow", u"Fit the image to the window", None))
+#endif // QT_CONFIG(tooltip)
+        self.fit_to_zoom_data3d0.setText(QCoreApplication.translate("MainWindow", u"Fit-to-Zoom", None))
+#if QT_CONFIG(tooltip)
+        self.zoom_in_data3d0.setToolTip(QCoreApplication.translate("MainWindow", u"Zoom in", None))
+#endif // QT_CONFIG(tooltip)
+        self.zoom_in_data3d0.setText("")
+#if QT_CONFIG(tooltip)
+        self.zoom_out_data3d0.setToolTip(QCoreApplication.translate("MainWindow", u"Zoom out", None))
+#endif // QT_CONFIG(tooltip)
+        self.zoom_out_data3d0.setText("")
+        self.textEdit_12.setHtml(QCoreApplication.translate("MainWindow", u"<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
+"<html><head><meta name=\"qrichtext\" content=\"1\" /><meta charset=\"utf-8\" /><style type=\"text/css\">\n"
+"p, li { white-space: pre-wrap; }\n"
+"hr { height: 1px; border-width: 0; }\n"
+"li.unchecked::marker { content: \"\\2610\"; }\n"
+"li.checked::marker { content: \"\\2612\"; }\n"
+"</style></head><body style=\" font-family:'Ubuntu Sans'; font-size:11pt; font-weight:400; font-style:normal;\">\n"
+"<p align=\"center\" style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-family:'Sans'; font-size:16pt;\">SAGITTAL</span></p></body></html>", None))
+#if QT_CONFIG(tooltip)
+        self.go_down_data3d1_2.setToolTip(QCoreApplication.translate("MainWindow", u"Pan down", None))
+#endif // QT_CONFIG(tooltip)
+        self.go_down_data3d1_2.setText(QCoreApplication.translate("MainWindow", u"<", None))
+#if QT_CONFIG(tooltip)
+        self.go_up_data3d1_2.setToolTip(QCoreApplication.translate("MainWindow", u"Pan up", None))
+#endif // QT_CONFIG(tooltip)
+        self.go_up_data3d1_2.setText(QCoreApplication.translate("MainWindow", u">", None))
+#if QT_CONFIG(tooltip)
+        self.go_left_data3d1_2.setToolTip(QCoreApplication.translate("MainWindow", u"Pan left", None))
+#endif // QT_CONFIG(tooltip)
+        self.go_left_data3d1_2.setText(QCoreApplication.translate("MainWindow", u"<", None))
+#if QT_CONFIG(tooltip)
+        self.go_right_data3d1_2.setToolTip(QCoreApplication.translate("MainWindow", u"Pan right", None))
+#endif // QT_CONFIG(tooltip)
+        self.go_right_data3d1_2.setText(QCoreApplication.translate("MainWindow", u">", None))
+#if QT_CONFIG(tooltip)
+        self.zoom_in_data3d1_2.setToolTip(QCoreApplication.translate("MainWindow", u"Zoom in", None))
+#endif // QT_CONFIG(tooltip)
+        self.zoom_in_data3d1_2.setText(QCoreApplication.translate("MainWindow", u"+", None))
+#if QT_CONFIG(tooltip)
+        self.zoom_out_data3d1_2.setToolTip(QCoreApplication.translate("MainWindow", u"Zoom out", None))
+#endif // QT_CONFIG(tooltip)
+        self.zoom_out_data3d1_2.setText(QCoreApplication.translate("MainWindow", u"-", None))
+#if QT_CONFIG(tooltip)
+        self.fit_to_zoom_data3d1_2.setToolTip(QCoreApplication.translate("MainWindow", u"Fit the image to the window", None))
+#endif // QT_CONFIG(tooltip)
+        self.fit_to_zoom_data3d1_2.setText(QCoreApplication.translate("MainWindow", u"Fit-to-Zoom", None))
+#if QT_CONFIG(tooltip)
+        self.pushButton_resetAxial.setToolTip(QCoreApplication.translate("MainWindow", u"Reset this view's zoom/pan to default", None))
+#endif // QT_CONFIG(tooltip)
+        self.pushButton_resetAxial.setText(QCoreApplication.translate("MainWindow", u"Reset Camera", None))
+        self.lineEdit_59.setText(QCoreApplication.translate("MainWindow", u"Change Depth of Slicing", None))
+#if QT_CONFIG(tooltip)
+        self.horizontalSlider_axial3D.setToolTip(QCoreApplication.translate("MainWindow", u"Change which axial slice depth is shown", None))
+#endif // QT_CONFIG(tooltip)
+        self.textEdit_13.setHtml(QCoreApplication.translate("MainWindow", u"<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
+"<html><head><meta name=\"qrichtext\" content=\"1\" /><meta charset=\"utf-8\" /><style type=\"text/css\">\n"
+"p, li { white-space: pre-wrap; }\n"
+"hr { height: 1px; border-width: 0; }\n"
+"li.unchecked::marker { content: \"\\2610\"; }\n"
+"li.checked::marker { content: \"\\2612\"; }\n"
+"</style></head><body style=\" font-family:'Ubuntu Sans'; font-size:11pt; font-weight:400; font-style:normal;\">\n"
+"<p align=\"center\" style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-family:'Sans'; font-size:16pt;\">3D View (Axial)</span></p></body></html>", None))
+#if QT_CONFIG(tooltip)
+        self.groupBox_68.setToolTip(QCoreApplication.translate("MainWindow", u"Live cursor position in this view, reported separately for the coronal, sagittal, and axial planes.", None))
+#endif // QT_CONFIG(tooltip)
         self.groupBox_68.setTitle(QCoreApplication.translate("MainWindow", u"Cursor Position (x,y,z)", None))
         self.lineEdit_68.setText(QCoreApplication.translate("MainWindow", u"coronal", None))
+#if QT_CONFIG(tooltip)
+        self.spinBox_y_data3d.setToolTip(QCoreApplication.translate("MainWindow", u"Cursor position (voxel index)", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.spinBox_z_data3d.setToolTip(QCoreApplication.translate("MainWindow", u"Cursor position (voxel index)", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.spinBox_x_data3d.setToolTip(QCoreApplication.translate("MainWindow", u"Cursor position (voxel index)", None))
+#endif // QT_CONFIG(tooltip)
         self.lineEdit_67.setText(QCoreApplication.translate("MainWindow", u"sagittal", None))
         self.lineEdit_77.setText(QCoreApplication.translate("MainWindow", u"axial", None))
+#if QT_CONFIG(tooltip)
+        self.groupBox_contrast.setToolTip(QCoreApplication.translate("MainWindow", u"Adjust this 3D view's window/level (contrast/brightness) with the sliders, or use Auto/Reset.", None))
+#endif // QT_CONFIG(tooltip)
         self.groupBox_contrast.setTitle(QCoreApplication.translate("MainWindow", u"Contrast Adjustments", None))
+#if QT_CONFIG(tooltip)
+        self.changeContrast_data3d.setToolTip(QCoreApplication.translate("MainWindow", u"Adjust contrast (window width)", None))
+#endif // QT_CONFIG(tooltip)
         self.label_35.setText(QCoreApplication.translate("MainWindow", u"Brightness / Level", None))
+#if QT_CONFIG(tooltip)
+        self.display_window_data3d.setToolTip(QCoreApplication.translate("MainWindow", u"Current contrast (window width) value", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.changeBrightness_data3d.setToolTip(QCoreApplication.translate("MainWindow", u"Adjust brightness (window level)", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.pushButton_auto_data3d.setToolTip(QCoreApplication.translate("MainWindow", u"Auto-adjust contrast/brightness", None))
+#endif // QT_CONFIG(tooltip)
         self.pushButton_auto_data3d.setText(QCoreApplication.translate("MainWindow", u"Auto", None))
+#if QT_CONFIG(tooltip)
+        self.pushButton_reset_data3d.setToolTip(QCoreApplication.translate("MainWindow", u"Reset contrast/brightness to default", None))
+#endif // QT_CONFIG(tooltip)
         self.pushButton_reset_data3d.setText(QCoreApplication.translate("MainWindow", u"Reset", None))
+#if QT_CONFIG(tooltip)
+        self.display_level_data3d.setToolTip(QCoreApplication.translate("MainWindow", u"Current brightness (window level) value", None))
+#endif // QT_CONFIG(tooltip)
         self.label_36.setText(QCoreApplication.translate("MainWindow", u"Contrast / Window", None))
+#if QT_CONFIG(tooltip)
+        self.comboBox_Contrastimage.setToolTip(QCoreApplication.translate("MainWindow", u"Select which loaded layer these contrast controls adjust", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.groupBox_40.setToolTip(QCoreApplication.translate("MainWindow", u"Live voxel intensity value at the current cursor position.", None))
+#endif // QT_CONFIG(tooltip)
         self.groupBox_40.setTitle(QCoreApplication.translate("MainWindow", u"Intensity under cursor", None))
-        ___qtablewidgetitem3 = self.tableintensity_data3d.horizontalHeaderItem(1)
-        ___qtablewidgetitem3.setText(QCoreApplication.translate("MainWindow", u"Layer", None));
-        ___qtablewidgetitem4 = self.tableintensity_data3d.horizontalHeaderItem(2)
-        ___qtablewidgetitem4.setText(QCoreApplication.translate("MainWindow", u"Intensity", None));
-        ___qtablewidgetitem5 = self.tableintensity_data3d.horizontalHeaderItem(3)
-        ___qtablewidgetitem5.setText(QCoreApplication.translate("MainWindow", u"Opacity", None));
-        self.groupBox_70.setTitle(QCoreApplication.translate("MainWindow", u"Cursor Position (x,y,z)", None))
-        self.lineEdit_78.setText(QCoreApplication.translate("MainWindow", u"coronal", None))
-        self.lineEdit_79.setText(QCoreApplication.translate("MainWindow", u"sagittal", None))
-        self.lineEdit_80.setText(QCoreApplication.translate("MainWindow", u"axial", None))
-        self.groupBox_75.setTitle(QCoreApplication.translate("MainWindow", u"Insertion Point", None))
-        self.pushButton_tp_insert.setText(QCoreApplication.translate("MainWindow", u"Save Edge Point vertically \n"
-" above Cursor Position \n"
-" as Insert-Point", None))
-        self.groupBox_74.setTitle(QCoreApplication.translate("MainWindow", u"Deepest Point", None))
-        self.pushButton_tp_deep.setText(QCoreApplication.translate("MainWindow", u"Save Cursor Position \n"
-" as Deepest-Point", None))
-        self.pushButton_coronalView.setText(QCoreApplication.translate("MainWindow", u"Change \n"
-" Coronal View", None))
-        self.pushButton_sagittalView.setText(QCoreApplication.translate("MainWindow", u"Change \n"
-" Sagittal View", None))
+        ___qtablewidgetitem6 = self.tableintensity_data3d.horizontalHeaderItem(1)
+        ___qtablewidgetitem6.setText(QCoreApplication.translate("MainWindow", u"Layer", None));
+        ___qtablewidgetitem7 = self.tableintensity_data3d.horizontalHeaderItem(2)
+        ___qtablewidgetitem7.setText(QCoreApplication.translate("MainWindow", u"Intensity", None));
+        ___qtablewidgetitem8 = self.tableintensity_data3d.horizontalHeaderItem(3)
+        ___qtablewidgetitem8.setText(QCoreApplication.translate("MainWindow", u"Opacity", None));
+#if QT_CONFIG(tooltip)
+        self.tableintensity_data3d.setToolTip(QCoreApplication.translate("MainWindow", u"Loaded layers: toggle visibility, view name/intensity, adjust opacity", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.pushButton_axialView.setToolTip(QCoreApplication.translate("MainWindow", u"Switch this panel between the 2D slice and a 3D view clipped along the trajectory", None))
+#endif // QT_CONFIG(tooltip)
         self.pushButton_axialView.setText(QCoreApplication.translate("MainWindow", u"Change \n"
 " Axial View", None))
-        self.pushButton_edgemask.setText(QCoreApplication.translate("MainWindow", u"Highlight Points \n"
-" on Brain Edge", None))
-        self.checkBox_brain_region.setText(QCoreApplication.translate("MainWindow", u"Show Brain Region \n"
-" while Hovering", None))
-        self.groupBox_71.setTitle(QCoreApplication.translate("MainWindow", u"Intensity under cursor", None))
-        ___qtablewidgetitem6 = self.tableintensity_data3d_2.horizontalHeaderItem(1)
-        ___qtablewidgetitem6.setText(QCoreApplication.translate("MainWindow", u"Layer", None));
-        ___qtablewidgetitem7 = self.tableintensity_data3d_2.horizontalHeaderItem(2)
-        ___qtablewidgetitem7.setText(QCoreApplication.translate("MainWindow", u"Intensity", None));
-        ___qtablewidgetitem8 = self.tableintensity_data3d_2.horizontalHeaderItem(3)
-        ___qtablewidgetitem8.setText(QCoreApplication.translate("MainWindow", u"Opacity", None));
+#if QT_CONFIG(tooltip)
+        self.pushButton_sagittalView.setToolTip(QCoreApplication.translate("MainWindow", u"Switch this panel between the 2D slice and a 3D view clipped along the trajectory", None))
+#endif // QT_CONFIG(tooltip)
+        self.pushButton_sagittalView.setText(QCoreApplication.translate("MainWindow", u"Change \n"
+" Sagittal View", None))
+#if QT_CONFIG(tooltip)
+        self.pushButton_coronalView.setToolTip(QCoreApplication.translate("MainWindow", u"Switch this panel between the 2D slice and a 3D view clipped along the trajectory", None))
+#endif // QT_CONFIG(tooltip)
+        self.pushButton_coronalView.setText(QCoreApplication.translate("MainWindow", u"Change \n"
+" Coronal View", None))
+#if QT_CONFIG(tooltip)
+        self.groupBox_70.setToolTip(QCoreApplication.translate("MainWindow", u"Live cursor position in this view, reported separately for the coronal, sagittal, and axial planes.", None))
+#endif // QT_CONFIG(tooltip)
+        self.groupBox_70.setTitle(QCoreApplication.translate("MainWindow", u"Cursor Position (x,y,z)", None))
+#if QT_CONFIG(tooltip)
+        self.spinBox_x_data3d_2.setToolTip(QCoreApplication.translate("MainWindow", u"Cursor position (voxel index)", None))
+#endif // QT_CONFIG(tooltip)
+        self.lineEdit_80.setText(QCoreApplication.translate("MainWindow", u"axial", None))
+#if QT_CONFIG(tooltip)
+        self.spinBox_z_data3d_2.setToolTip(QCoreApplication.translate("MainWindow", u"Cursor position (voxel index)", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.spinBox_y_data3d_2.setToolTip(QCoreApplication.translate("MainWindow", u"Cursor position (voxel index)", None))
+#endif // QT_CONFIG(tooltip)
+        self.lineEdit_78.setText(QCoreApplication.translate("MainWindow", u"coronal", None))
+        self.lineEdit_79.setText(QCoreApplication.translate("MainWindow", u"sagittal", None))
         self.groupBox_72.setTitle("")
+#if QT_CONFIG(tooltip)
+        self.doubleSpinBox_distance_shank.setToolTip(QCoreApplication.translate("MainWindow", u"Length of this shank's trajectory", None))
+#endif // QT_CONFIG(tooltip)
         self.doubleSpinBox_distance_shank.setSuffix(QCoreApplication.translate("MainWindow", u"mm", None))
         self.textEdit_distance_shank.setHtml(QCoreApplication.translate("MainWindow", u"<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
 "<html><head><meta name=\"qrichtext\" content=\"1\" /><meta charset=\"utf-8\" /><style type=\"text/css\">\n"
@@ -8191,11 +9391,102 @@ class Ui_MainWindow(object):
 "li.checked::marker { content: \"\\2612\"; }\n"
 "</style></head><body style=\" font-family:'Ubuntu Sans'; font-size:11pt; font-weight:400; font-style:normal;\">\n"
 "<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\">Distance between Insertion Point and Deepest Point  in MRI space</p></body></html>", None))
+#if QT_CONFIG(tooltip)
+        self.groupBox_74.setToolTip(QCoreApplication.translate("MainWindow", u"Marks the electrode's deepest point at the current cursor position for the selected shank.", None))
+#endif // QT_CONFIG(tooltip)
+        self.groupBox_74.setTitle(QCoreApplication.translate("MainWindow", u"Deepest Point", None))
+#if QT_CONFIG(tooltip)
+        self.pushButton_tp_deep.setToolTip(QCoreApplication.translate("MainWindow", u"Pick this shank's deepest point by clicking it in the MRI view", None))
+#endif // QT_CONFIG(tooltip)
+        self.pushButton_tp_deep.setText(QCoreApplication.translate("MainWindow", u"Save Cursor Position \n"
+" as Deepest-Point", None))
+#if QT_CONFIG(tooltip)
+        self.spinBox_tp_deep_z.setToolTip(QCoreApplication.translate("MainWindow", u"Deepest point coordinate (atlas voxel index)", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.spinBox_tp_deep_x.setToolTip(QCoreApplication.translate("MainWindow", u"Deepest point coordinate (atlas voxel index)", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.spinBox_tp_deep_y.setToolTip(QCoreApplication.translate("MainWindow", u"Deepest point coordinate (atlas voxel index)", None))
+#endif // QT_CONFIG(tooltip)
+        self.lineEdit_89.setText(QCoreApplication.translate("MainWindow", u"sagittal", None))
+        self.lineEdit_90.setText(QCoreApplication.translate("MainWindow", u"coronal", None))
+        self.lineEdit_91.setText(QCoreApplication.translate("MainWindow", u"axial", None))
+#if QT_CONFIG(tooltip)
+        self.groupBox_71.setToolTip(QCoreApplication.translate("MainWindow", u"Live voxel intensity value at the current cursor position.", None))
+#endif // QT_CONFIG(tooltip)
+        self.groupBox_71.setTitle(QCoreApplication.translate("MainWindow", u"Intensity under cursor", None))
+        ___qtablewidgetitem9 = self.tableintensity_data3d_2.horizontalHeaderItem(1)
+        ___qtablewidgetitem9.setText(QCoreApplication.translate("MainWindow", u"Layer", None));
+        ___qtablewidgetitem10 = self.tableintensity_data3d_2.horizontalHeaderItem(2)
+        ___qtablewidgetitem10.setText(QCoreApplication.translate("MainWindow", u"Intensity", None));
+        ___qtablewidgetitem11 = self.tableintensity_data3d_2.horizontalHeaderItem(3)
+        ___qtablewidgetitem11.setText(QCoreApplication.translate("MainWindow", u"Opacity", None));
+#if QT_CONFIG(tooltip)
+        self.tableintensity_data3d_2.setToolTip(QCoreApplication.translate("MainWindow", u"Loaded layers (mirrors the table above during this step)", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.checkBox_brain_region.setToolTip(QCoreApplication.translate("MainWindow", u"Show the anatomical region name next to the shank line", None))
+#endif // QT_CONFIG(tooltip)
+        self.checkBox_brain_region.setText(QCoreApplication.translate("MainWindow", u"Show Brain Region while Hovering", None))
+#if QT_CONFIG(tooltip)
+        self.groupBox_75.setToolTip(QCoreApplication.translate("MainWindow", u"Marks the electrode's brain-surface insertion point, snapped to the nearest edge in the view you click, for the selected shank.", None))
+#endif // QT_CONFIG(tooltip)
+        self.groupBox_75.setTitle(QCoreApplication.translate("MainWindow", u"Insertion Point", None))
+#if QT_CONFIG(tooltip)
+        self.pushButton_tp_insert.setToolTip(QCoreApplication.translate("MainWindow", u"Pick this shank's insertion point by clicking it in the MRI view", None))
+#endif // QT_CONFIG(tooltip)
+        self.pushButton_tp_insert.setText(QCoreApplication.translate("MainWindow", u"Save Edge Point vertically above \n"
+" Cursor Position as Insert-Point", None))
+#if QT_CONFIG(tooltip)
+        self.spinBox_tp_insert_x.setToolTip(QCoreApplication.translate("MainWindow", u"Insertion point coordinate (atlas voxel index)", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.spinBox_tp_insert_y.setToolTip(QCoreApplication.translate("MainWindow", u"Insertion point coordinate (atlas voxel index)", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.spinBox_tp_insert_z.setToolTip(QCoreApplication.translate("MainWindow", u"Insertion point coordinate (atlas voxel index)", None))
+#endif // QT_CONFIG(tooltip)
+        self.lineEdit_19.setText(QCoreApplication.translate("MainWindow", u"sagittal", None))
+        self.lineEdit_30.setText(QCoreApplication.translate("MainWindow", u"coronal", None))
+        self.lineEdit_88.setText(QCoreApplication.translate("MainWindow", u"axial", None))
+        self.groupBox_73.setTitle("")
+#if QT_CONFIG(tooltip)
+        self.pushButton_removeShank.setToolTip(QCoreApplication.translate("MainWindow", u"Remove the currently selected shank", None))
+#endif // QT_CONFIG(tooltip)
+        self.pushButton_removeShank.setText(QCoreApplication.translate("MainWindow", u"Remove  \n"
+" Shank", None))
+#if QT_CONFIG(tooltip)
+        self.comboBox_Shanks.setToolTip(QCoreApplication.translate("MainWindow", u"Select which shank to edit", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.comboBox_tpColor.setToolTip(QCoreApplication.translate("MainWindow", u"Change the selected shank's display color", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.pushButton_addShank.setToolTip(QCoreApplication.translate("MainWindow", u"Add a new shank", None))
+#endif // QT_CONFIG(tooltip)
+        self.pushButton_addShank.setText(QCoreApplication.translate("MainWindow", u"Add Another \n"
+" Shank", None))
+#if QT_CONFIG(tooltip)
+        self.pushButton_dfx_ok.setToolTip(QCoreApplication.translate("MainWindow", u"Close this panel", None))
+#endif // QT_CONFIG(tooltip)
         self.pushButton_dfx_ok.setText(QCoreApplication.translate("MainWindow", u"OK", None))
+#if QT_CONFIG(tooltip)
+        self.pushButton_plot_probe.setToolTip(QCoreApplication.translate("MainWindow", u"Add a new shank using the geometry computed above", None))
+#endif // QT_CONFIG(tooltip)
         self.pushButton_plot_probe.setText(QCoreApplication.translate("MainWindow", u"Add current \n"
 " run as shank", None))
         self.groupBox_69.setTitle("")
+#if QT_CONFIG(tooltip)
+        self.doubleSpinBox_bundle_ratio.setToolTip(QCoreApplication.translate("MainWindow", u"Fraction of the probe's channels bundled together at the base (0-1)", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.pushButton_xml.setToolTip(QCoreApplication.translate("MainWindow", u"Browse for a Neuroscope XML file to read this probe's channel groups", None))
+#endif // QT_CONFIG(tooltip)
         self.pushButton_xml.setText(QCoreApplication.translate("MainWindow", u"Please load xml File", None))
+#if QT_CONFIG(tooltip)
+        self.pushButton_dfx_run.setToolTip(QCoreApplication.translate("MainWindow", u"Compute the bent shank geometry from the loaded DXF file", None))
+#endif // QT_CONFIG(tooltip)
         self.pushButton_dfx_run.setText(QCoreApplication.translate("MainWindow", u"Run bending model", None))
         self.lineEdit_76.setText(QCoreApplication.translate("MainWindow", u"Max bend angle (deg)", None))
         self.lineEdit_73.setText(QCoreApplication.translate("MainWindow", u"Artificial extension (um)", None))
@@ -8207,163 +9498,335 @@ class Ui_MainWindow(object):
 "li.checked::marker { content: \"\\2612\"; }\n"
 "</style></head><body style=\" font-family:'Ubuntu Sans'; font-size:11pt; font-weight:400; font-style:normal;\">\n"
 "<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-size:14pt;\">Please load dxf file to see channel list</span></p></body></html>", None))
+#if QT_CONFIG(tooltip)
+        self.spinBox_max_bend_angle.setToolTip(QCoreApplication.translate("MainWindow", u"Maximum angle allowed for a single bend", None))
+#endif // QT_CONFIG(tooltip)
         self.lineEdit_74.setText(QCoreApplication.translate("MainWindow", u"Bundle ratio (0-1)", None))
         self.lineEdit_72.setText(QCoreApplication.translate("MainWindow", u"Bend radius 1 (um)", None))
         self.lineEdit_70.setText(QCoreApplication.translate("MainWindow", u"Arc points", None))
         self.lineEdit_69.setText(QCoreApplication.translate("MainWindow", u"Um per DFX unit", None))
+#if QT_CONFIG(tooltip)
+        self.spinBox_bend_r1.setToolTip(QCoreApplication.translate("MainWindow", u"Radius of the first bend", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.spinBox_first_bend_distance.setToolTip(QCoreApplication.translate("MainWindow", u"Distance from the tip to where the first bend starts", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.pushButton_export.setToolTip(QCoreApplication.translate("MainWindow", u"Export this shank's bent geometry to a JSON file", None))
+#endif // QT_CONFIG(tooltip)
         self.pushButton_export.setText(QCoreApplication.translate("MainWindow", u"Export as \n"
 " .json", None))
+#if QT_CONFIG(tooltip)
+        self.spinBox_um_per_unit.setToolTip(QCoreApplication.translate("MainWindow", u"Scale: micrometers per unit in the DXF drawing", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.spinBox_bend_r2.setToolTip(QCoreApplication.translate("MainWindow", u"Radius of the second bend", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.checkBox_defaultchannels.setToolTip(QCoreApplication.translate("MainWindow", u"Use sequential channel numbering (0..N-1) instead of a custom list", None))
+#endif // QT_CONFIG(tooltip)
         self.checkBox_defaultchannels.setText(QCoreApplication.translate("MainWindow", u"Use default Channel IDs", None))
+#if QT_CONFIG(tooltip)
+        self.spinBox_arc_points.setToolTip(QCoreApplication.translate("MainWindow", u"Number of points used to approximate each curved bend", None))
+#endif // QT_CONFIG(tooltip)
         self.lineEdit_71.setText(QCoreApplication.translate("MainWindow", u"Bend radius 2 (um)", None))
+#if QT_CONFIG(tooltip)
+        self.spinBox_artificial_extension.setToolTip(QCoreApplication.translate("MainWindow", u"Extra shank length added beyond the DXF geometry's own end", None))
+#endif // QT_CONFIG(tooltip)
         self.lineEdit_75.setText(QCoreApplication.translate("MainWindow", u"First bend distance (um)", None))
+#if QT_CONFIG(tooltip)
+        self.pushButton_dfx.setToolTip(QCoreApplication.translate("MainWindow", u"Browse for a DXF file describing this probe's custom (bent) geometry", None))
+#endif // QT_CONFIG(tooltip)
         self.pushButton_dfx.setText(QCoreApplication.translate("MainWindow", u"Please load dxf File", None))
-        self.groupBox_data2.setTitle(QCoreApplication.translate("MainWindow", u"View AXIAL", None))
-        self.groupBox_32.setTitle(QCoreApplication.translate("MainWindow", u"Curosr 2", None))
-        self.groupBox_time20.setTitle(QCoreApplication.translate("MainWindow", u"Timestamp t=0", None))
-        self.fit_to_zoom_data20.setText(QCoreApplication.translate("MainWindow", u"Fit-to-Zoom", None))
-        self.go_down_data20.setText(QCoreApplication.translate("MainWindow", u"<", None))
-        self.go_up_data20.setText(QCoreApplication.translate("MainWindow", u">", None))
-        self.go_left_data20.setText(QCoreApplication.translate("MainWindow", u"<", None))
-        self.go_right_data20.setText(QCoreApplication.translate("MainWindow", u">", None))
-        self.zoom_in_data20.setText(QCoreApplication.translate("MainWindow", u"+", None))
-        self.zoom_out_data20.setText(QCoreApplication.translate("MainWindow", u"-", None))
-        self.groupBox_57.setTitle(QCoreApplication.translate("MainWindow", u"Timestamp Slider", None))
-        self.groupBox_58.setTitle(QCoreApplication.translate("MainWindow", u"Contrast Adjustment", None))
-        self.pushButton_reset_data20.setText(QCoreApplication.translate("MainWindow", u"Reset", None))
-        self.pushButton_auto_data20.setText(QCoreApplication.translate("MainWindow", u"Auto", None))
-        self.tabWidget_time2.setTabText(self.tabWidget_time2.indexOf(self.tabWidget_time20), QCoreApplication.translate("MainWindow", u"Timestamp 1", None))
-        self.groupBox_59.setTitle(QCoreApplication.translate("MainWindow", u"Timestamp Slider", None))
-        self.groupBox_60.setTitle(QCoreApplication.translate("MainWindow", u"Contrast Adjustment", None))
-        self.pushButton_auto_data21.setText(QCoreApplication.translate("MainWindow", u"Auto", None))
-        self.pushButton_reset_data21.setText(QCoreApplication.translate("MainWindow", u"Reset", None))
-        self.tabWidget_time2.setTabText(self.tabWidget_time2.indexOf(self.tabWidget_time21), QCoreApplication.translate("MainWindow", u"Timestamp 2", None))
-        self.groupBox_61.setTitle(QCoreApplication.translate("MainWindow", u"Timestamp Slider", None))
-        self.groupBox_62.setTitle(QCoreApplication.translate("MainWindow", u"Contrast Adjustment", None))
-        self.pushButton_reset_data22.setText(QCoreApplication.translate("MainWindow", u"Reset", None))
-        self.pushButton_auto_data22.setText(QCoreApplication.translate("MainWindow", u"Auto", None))
-        self.tabWidget_time2.setTabText(self.tabWidget_time2.indexOf(self.tabWidget_time22), QCoreApplication.translate("MainWindow", u"Timestamp 3", None))
-        self.heatmap_data2.setTitle(QCoreApplication.translate("MainWindow", u"Heatmap", None))
-        self.go_down_data23.setText(QCoreApplication.translate("MainWindow", u"<", None))
-        self.go_up_data23.setText(QCoreApplication.translate("MainWindow", u">", None))
-        self.go_left_data23.setText(QCoreApplication.translate("MainWindow", u"<", None))
-        self.go_right_data23.setText(QCoreApplication.translate("MainWindow", u">", None))
-        self.fit_to_zoom_data23.setText(QCoreApplication.translate("MainWindow", u"Fit-to-Zoom", None))
-        self.zoom_in_data23.setText(QCoreApplication.translate("MainWindow", u"+", None))
-        self.zoom_out_data23.setText(QCoreApplication.translate("MainWindow", u"-", None))
-        self.groupBox_39.setTitle(QCoreApplication.translate("MainWindow", u"Intensity under cursor", None))
-        ___qtablewidgetitem9 = self.tableintensity_data2.horizontalHeaderItem(1)
-        ___qtablewidgetitem9.setText(QCoreApplication.translate("MainWindow", u"Layer", None));
-        ___qtablewidgetitem10 = self.tableintensity_data2.horizontalHeaderItem(2)
-        ___qtablewidgetitem10.setText(QCoreApplication.translate("MainWindow", u"Intensity", None));
-        ___qtablewidgetitem11 = self.tableintensity_data2.horizontalHeaderItem(3)
-        ___qtablewidgetitem11.setText(QCoreApplication.translate("MainWindow", u"Opacity", None));
-        self.groupBox_time21.setTitle(QCoreApplication.translate("MainWindow", u"Timestamp t=4", None))
-        self.fit_to_zoom_data21.setText(QCoreApplication.translate("MainWindow", u"Fit-to-Zoom", None))
-        self.go_down_data21.setText(QCoreApplication.translate("MainWindow", u"<", None))
-        self.go_up_data21.setText(QCoreApplication.translate("MainWindow", u">", None))
-        self.go_left_data21.setText(QCoreApplication.translate("MainWindow", u"<", None))
-        self.go_right_data21.setText(QCoreApplication.translate("MainWindow", u">", None))
-        self.zoom_in_data21.setText(QCoreApplication.translate("MainWindow", u"+", None))
-        self.zoom_out_data21.setText(QCoreApplication.translate("MainWindow", u"-", None))
-        self.groupBox_time22.setTitle(QCoreApplication.translate("MainWindow", u"Timestamp t=8", None))
-        self.fit_to_zoom_data22.setText(QCoreApplication.translate("MainWindow", u"Fit-to-Zoom", None))
-        self.go_down_data22.setText(QCoreApplication.translate("MainWindow", u"<", None))
-        self.go_up_data22.setText(QCoreApplication.translate("MainWindow", u">", None))
-        self.go_left_data22.setText(QCoreApplication.translate("MainWindow", u"<", None))
-        self.go_right_data22.setText(QCoreApplication.translate("MainWindow", u">", None))
-        self.zoom_in_data22.setText(QCoreApplication.translate("MainWindow", u"+", None))
-        self.zoom_out_data22.setText(QCoreApplication.translate("MainWindow", u"-", None))
-        self.groupbox_legend2.setTitle(QCoreApplication.translate("MainWindow", u"Heatmap Intensities", None))
-        self.groupBox_barcode.setTitle(QCoreApplication.translate("MainWindow", u"MRID Barcode", None))
-        self.groupbox_barcode0.setTitle(QCoreApplication.translate("MainWindow", u"Barcode detected", None))
-        ___qtablewidgetitem12 = self.tableWidget_barcode.horizontalHeaderItem(0)
-        ___qtablewidgetitem12.setText(QCoreApplication.translate("MainWindow", u"Duo", None));
-        ___qtablewidgetitem13 = self.tableWidget_barcode.horizontalHeaderItem(1)
-        ___qtablewidgetitem13.setText(QCoreApplication.translate("MainWindow", u"Trio", None));
-        ___qtablewidgetitem14 = self.tableWidget_barcode.horizontalHeaderItem(2)
-        ___qtablewidgetitem14.setText(QCoreApplication.translate("MainWindow", u"Quad", None));
-        ___qtablewidgetitem15 = self.tableWidget_barcode.horizontalHeaderItem(3)
-        ___qtablewidgetitem15.setText(QCoreApplication.translate("MainWindow", u"Penta", None));
-        ___qtablewidgetitem16 = self.tableWidget_barcode.verticalHeaderItem(0)
-        ___qtablewidgetitem16.setText(QCoreApplication.translate("MainWindow", u"Probabilities", None));
-        ___qtablewidgetitem17 = self.tableWidget_barcode.verticalHeaderItem(1)
-        ___qtablewidgetitem17.setText(QCoreApplication.translate("MainWindow", u"Similarities", None));
-        self.groupBox_4.setTitle(QCoreApplication.translate("MainWindow", u"CA1 Signal", None))
-        self.groupbox_barcode1.setTitle(QCoreApplication.translate("MainWindow", u"Barcode reconstructed", None))
+#if QT_CONFIG(tooltip)
+        self.comboBox_geometry_shanks.setToolTip(QCoreApplication.translate("MainWindow", u"Select which shank's custom geometry to edit", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.pushButton_metadata.setToolTip(QCoreApplication.translate("MainWindow", u"Metadata of Files", None))
+#endif // QT_CONFIG(tooltip)
+        self.pushButton_metadata.setText("")
+#if QT_CONFIG(tooltip)
+        self.groupBox_data1.setToolTip(QCoreApplication.translate("MainWindow", u"This dataset's coronal/sagittal/axial panels, each with its own timepoint, contrast, and cursor controls.", None))
+#endif // QT_CONFIG(tooltip)
         self.groupBox_data1.setTitle(QCoreApplication.translate("MainWindow", u"View", None))
+#if QT_CONFIG(tooltip)
+        self.groupbox_legend1.setToolTip(QCoreApplication.translate("MainWindow", u"Color scale (colorbar) for interpreting the heatmap's intensity values.", None))
+#endif // QT_CONFIG(tooltip)
         self.groupbox_legend1.setTitle(QCoreApplication.translate("MainWindow", u"Heatmap Intensities", None))
+#if QT_CONFIG(tooltip)
+        self.groupBox_time11.setToolTip(QCoreApplication.translate("MainWindow", u"Coronal/sagittal/axial panel currently showing timepoint 4 of the 4D scan, with its own pan/zoom controls.", None))
+#endif // QT_CONFIG(tooltip)
         self.groupBox_time11.setTitle(QCoreApplication.translate("MainWindow", u"Timestamp t=4", None))
+#if QT_CONFIG(tooltip)
+        self.fit_to_zoom_data11.setToolTip(QCoreApplication.translate("MainWindow", u"Fit this view to the window, resetting pan and zoom.", None))
+#endif // QT_CONFIG(tooltip)
         self.fit_to_zoom_data11.setText(QCoreApplication.translate("MainWindow", u"Fit-to-Zoom", None))
+#if QT_CONFIG(tooltip)
+        self.go_down_data11.setToolTip(QCoreApplication.translate("MainWindow", u"Pan the view down.", None))
+#endif // QT_CONFIG(tooltip)
         self.go_down_data11.setText(QCoreApplication.translate("MainWindow", u"<", None))
+#if QT_CONFIG(tooltip)
+        self.go_up_data11.setToolTip(QCoreApplication.translate("MainWindow", u"Pan the view up.", None))
+#endif // QT_CONFIG(tooltip)
         self.go_up_data11.setText(QCoreApplication.translate("MainWindow", u">", None))
+#if QT_CONFIG(tooltip)
+        self.go_left_data11.setToolTip(QCoreApplication.translate("MainWindow", u"Pan the view left.", None))
+#endif // QT_CONFIG(tooltip)
         self.go_left_data11.setText(QCoreApplication.translate("MainWindow", u"<", None))
+#if QT_CONFIG(tooltip)
+        self.go_right_data11.setToolTip(QCoreApplication.translate("MainWindow", u"Pan the view right.", None))
+#endif // QT_CONFIG(tooltip)
         self.go_right_data11.setText(QCoreApplication.translate("MainWindow", u">", None))
+#if QT_CONFIG(tooltip)
+        self.zoom_in_data11.setToolTip(QCoreApplication.translate("MainWindow", u"Zoom in on this view.", None))
+#endif // QT_CONFIG(tooltip)
         self.zoom_in_data11.setText(QCoreApplication.translate("MainWindow", u"+", None))
+#if QT_CONFIG(tooltip)
+        self.zoom_out_data11.setToolTip(QCoreApplication.translate("MainWindow", u"Zoom out on this view.", None))
+#endif // QT_CONFIG(tooltip)
         self.zoom_out_data11.setText(QCoreApplication.translate("MainWindow", u"-", None))
+#if QT_CONFIG(tooltip)
+        self.groupBox_38.setToolTip(QCoreApplication.translate("MainWindow", u"Live voxel intensity value at the current cursor position.", None))
+#endif // QT_CONFIG(tooltip)
         self.groupBox_38.setTitle(QCoreApplication.translate("MainWindow", u"Intensity under cursor", None))
-        ___qtablewidgetitem18 = self.tableintensity_data1.horizontalHeaderItem(1)
-        ___qtablewidgetitem18.setText(QCoreApplication.translate("MainWindow", u"Layer", None));
-        ___qtablewidgetitem19 = self.tableintensity_data1.horizontalHeaderItem(2)
-        ___qtablewidgetitem19.setText(QCoreApplication.translate("MainWindow", u"Intensity", None));
-        ___qtablewidgetitem20 = self.tableintensity_data1.horizontalHeaderItem(3)
-        ___qtablewidgetitem20.setText(QCoreApplication.translate("MainWindow", u"Opacity", None));
+        ___qtablewidgetitem12 = self.tableintensity_data1.horizontalHeaderItem(1)
+        ___qtablewidgetitem12.setText(QCoreApplication.translate("MainWindow", u"Layer", None));
+        ___qtablewidgetitem13 = self.tableintensity_data1.horizontalHeaderItem(2)
+        ___qtablewidgetitem13.setText(QCoreApplication.translate("MainWindow", u"Intensity", None));
+        ___qtablewidgetitem14 = self.tableintensity_data1.horizontalHeaderItem(3)
+        ___qtablewidgetitem14.setText(QCoreApplication.translate("MainWindow", u"Opacity", None));
+#if QT_CONFIG(tooltip)
+        self.heatmap_data1.setToolTip(QCoreApplication.translate("MainWindow", u"Computed MRID-tag heatmap for this dataset; appears once the heatmap/segmentation analysis has been run.", None))
+#endif // QT_CONFIG(tooltip)
         self.heatmap_data1.setTitle(QCoreApplication.translate("MainWindow", u"Heatmap", None))
+#if QT_CONFIG(tooltip)
+        self.fit_to_zoom_data13.setToolTip(QCoreApplication.translate("MainWindow", u"Fit this view to the window, resetting pan and zoom.", None))
+#endif // QT_CONFIG(tooltip)
         self.fit_to_zoom_data13.setText(QCoreApplication.translate("MainWindow", u"Fit-to-Zoom", None))
+#if QT_CONFIG(tooltip)
+        self.go_down_data13.setToolTip(QCoreApplication.translate("MainWindow", u"Pan the view down.", None))
+#endif // QT_CONFIG(tooltip)
         self.go_down_data13.setText(QCoreApplication.translate("MainWindow", u"<", None))
+#if QT_CONFIG(tooltip)
+        self.go_up_data13.setToolTip(QCoreApplication.translate("MainWindow", u"Pan the view up.", None))
+#endif // QT_CONFIG(tooltip)
         self.go_up_data13.setText(QCoreApplication.translate("MainWindow", u">", None))
+#if QT_CONFIG(tooltip)
+        self.go_left_data13.setToolTip(QCoreApplication.translate("MainWindow", u"Pan the view left.", None))
+#endif // QT_CONFIG(tooltip)
         self.go_left_data13.setText(QCoreApplication.translate("MainWindow", u"<", None))
+#if QT_CONFIG(tooltip)
+        self.go_right_data13.setToolTip(QCoreApplication.translate("MainWindow", u"Pan the view right.", None))
+#endif // QT_CONFIG(tooltip)
         self.go_right_data13.setText(QCoreApplication.translate("MainWindow", u">", None))
+#if QT_CONFIG(tooltip)
+        self.zoom_in_data13.setToolTip(QCoreApplication.translate("MainWindow", u"Zoom in on this view.", None))
+#endif // QT_CONFIG(tooltip)
         self.zoom_in_data13.setText(QCoreApplication.translate("MainWindow", u"+", None))
+#if QT_CONFIG(tooltip)
+        self.zoom_out_data13.setToolTip(QCoreApplication.translate("MainWindow", u"Zoom out on this view.", None))
+#endif // QT_CONFIG(tooltip)
         self.zoom_out_data13.setText(QCoreApplication.translate("MainWindow", u"-", None))
+#if QT_CONFIG(tooltip)
+        self.groupBox_24.setToolTip(QCoreApplication.translate("MainWindow", u"Live crosshair cursor position for this dataset, in voxel coordinates.", None))
+#endif // QT_CONFIG(tooltip)
         self.groupBox_24.setTitle(QCoreApplication.translate("MainWindow", u"Cursor position (x,y,z)", None))
+#if QT_CONFIG(tooltip)
+        self.spinBox_y_data1.setToolTip(QCoreApplication.translate("MainWindow", u"Y voxel coordinate of the cursor for this comparison panel; type a value to move the crosshair there.", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.spinBox_x_data1.setToolTip(QCoreApplication.translate("MainWindow", u"X voxel coordinate of the cursor for this comparison panel; type a value to move the crosshair there.", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.spinBox_z_data1.setToolTip(QCoreApplication.translate("MainWindow", u"Z voxel coordinate of the cursor for this comparison panel; type a value to move the crosshair there.", None))
+#endif // QT_CONFIG(tooltip)
+        self.lineEdit_101.setText(QCoreApplication.translate("MainWindow", u"sagittal", None))
+        self.lineEdit_102.setText(QCoreApplication.translate("MainWindow", u"coronal", None))
+        self.lineEdit_103.setText(QCoreApplication.translate("MainWindow", u"axial", None))
+#if QT_CONFIG(tooltip)
+        self.groupBox_time12.setToolTip(QCoreApplication.translate("MainWindow", u"Timestamp panel for one 4D frame: the title updates to the frame's actual timestamp, and it holds this frame's own pan/zoom controls.", None))
+#endif // QT_CONFIG(tooltip)
         self.groupBox_time12.setTitle(QCoreApplication.translate("MainWindow", u"Timestamp t=8", None))
+#if QT_CONFIG(tooltip)
+        self.fit_to_zoom_data12.setToolTip(QCoreApplication.translate("MainWindow", u"Fit the image to the window.", None))
+#endif // QT_CONFIG(tooltip)
         self.fit_to_zoom_data12.setText(QCoreApplication.translate("MainWindow", u"Fit-to-Zoom", None))
+#if QT_CONFIG(tooltip)
+        self.go_down_data12.setToolTip(QCoreApplication.translate("MainWindow", u"Pan the view down.", None))
+#endif // QT_CONFIG(tooltip)
         self.go_down_data12.setText(QCoreApplication.translate("MainWindow", u"<", None))
+#if QT_CONFIG(tooltip)
+        self.go_up_data12.setToolTip(QCoreApplication.translate("MainWindow", u"Pan the view up.", None))
+#endif // QT_CONFIG(tooltip)
         self.go_up_data12.setText(QCoreApplication.translate("MainWindow", u">", None))
+#if QT_CONFIG(tooltip)
+        self.go_left_data12.setToolTip(QCoreApplication.translate("MainWindow", u"Pan the view left.", None))
+#endif // QT_CONFIG(tooltip)
         self.go_left_data12.setText(QCoreApplication.translate("MainWindow", u"<", None))
+#if QT_CONFIG(tooltip)
+        self.go_right_data12.setToolTip(QCoreApplication.translate("MainWindow", u"Pan the view right.", None))
+#endif // QT_CONFIG(tooltip)
         self.go_right_data12.setText(QCoreApplication.translate("MainWindow", u">", None))
+#if QT_CONFIG(tooltip)
+        self.zoom_in_data12.setToolTip(QCoreApplication.translate("MainWindow", u"Zoom in on this view.", None))
+#endif // QT_CONFIG(tooltip)
         self.zoom_in_data12.setText(QCoreApplication.translate("MainWindow", u"+", None))
+#if QT_CONFIG(tooltip)
+        self.zoom_out_data12.setToolTip(QCoreApplication.translate("MainWindow", u"Zoom out on this view.", None))
+#endif // QT_CONFIG(tooltip)
         self.zoom_out_data12.setText(QCoreApplication.translate("MainWindow", u"-", None))
+#if QT_CONFIG(tooltip)
+        self.groupBox_51.setToolTip(QCoreApplication.translate("MainWindow", u"Choose which 4D timestamp (frame) is displayed in this panel.", None))
+#endif // QT_CONFIG(tooltip)
         self.groupBox_51.setTitle(QCoreApplication.translate("MainWindow", u"Timestamp Slider", None))
+#if QT_CONFIG(tooltip)
+        self.changetimestamp_data10.setToolTip(QCoreApplication.translate("MainWindow", u"Slide to choose which 4D timestamp (frame) is displayed in this panel.", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.displaytimestamp_data10.setToolTip(QCoreApplication.translate("MainWindow", u"Index of the 4D timestamp (frame) currently displayed in this panel; type a value to jump to it.", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.groupBox_53.setToolTip(QCoreApplication.translate("MainWindow", u"Auto-compute or reset the window/level (brightness/contrast) for this panel's image.", None))
+#endif // QT_CONFIG(tooltip)
         self.groupBox_53.setTitle(QCoreApplication.translate("MainWindow", u"Contrast Adjustment", None))
+#if QT_CONFIG(tooltip)
+        self.pushButton_reset_data10.setToolTip(QCoreApplication.translate("MainWindow", u"Reset the window/level (brightness/contrast) to its initial values.", None))
+#endif // QT_CONFIG(tooltip)
         self.pushButton_reset_data10.setText(QCoreApplication.translate("MainWindow", u"Reset", None))
+#if QT_CONFIG(tooltip)
+        self.pushButton_auto_data10.setToolTip(QCoreApplication.translate("MainWindow", u"Automatically compute the window/level (brightness/contrast) from the image data.", None))
+#endif // QT_CONFIG(tooltip)
         self.pushButton_auto_data10.setText(QCoreApplication.translate("MainWindow", u"Auto", None))
         self.tabWidget_time1.setTabText(self.tabWidget_time1.indexOf(self.tabWidget_time12), QCoreApplication.translate("MainWindow", u"Timestamp 1", None))
+#if QT_CONFIG(tooltip)
+        self.groupBox_45.setToolTip(QCoreApplication.translate("MainWindow", u"Choose which 4D timestamp (frame) is displayed in this panel.", None))
+#endif // QT_CONFIG(tooltip)
         self.groupBox_45.setTitle(QCoreApplication.translate("MainWindow", u"Timestamp Slider", None))
+#if QT_CONFIG(tooltip)
+        self.changetimestamp_data11.setToolTip(QCoreApplication.translate("MainWindow", u"Slide to choose which 4D timestamp (frame) is displayed in this panel.", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.displaytimestamp_data11.setToolTip(QCoreApplication.translate("MainWindow", u"Index of the 4D timestamp (frame) currently displayed in this panel; type a value to jump to it.", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.groupBox_54.setToolTip(QCoreApplication.translate("MainWindow", u"Auto-compute or reset the window/level (brightness/contrast) for this panel's image.", None))
+#endif // QT_CONFIG(tooltip)
         self.groupBox_54.setTitle(QCoreApplication.translate("MainWindow", u"Contrast Adjustment", None))
+#if QT_CONFIG(tooltip)
+        self.pushButton_auto_data11.setToolTip(QCoreApplication.translate("MainWindow", u"Automatically compute the window/level (brightness/contrast) from the image data.", None))
+#endif // QT_CONFIG(tooltip)
         self.pushButton_auto_data11.setText(QCoreApplication.translate("MainWindow", u"Auto", None))
+#if QT_CONFIG(tooltip)
+        self.pushButton_reset_data11.setToolTip(QCoreApplication.translate("MainWindow", u"Reset the window/level (brightness/contrast) to its initial values.", None))
+#endif // QT_CONFIG(tooltip)
         self.pushButton_reset_data11.setText(QCoreApplication.translate("MainWindow", u"Reset", None))
         self.tabWidget_time1.setTabText(self.tabWidget_time1.indexOf(self.tabWidget_time10), QCoreApplication.translate("MainWindow", u"Timestamp 2", None))
+#if QT_CONFIG(tooltip)
+        self.groupBox_55.setToolTip(QCoreApplication.translate("MainWindow", u"Choose which 4D timestamp (frame) is displayed in this panel.", None))
+#endif // QT_CONFIG(tooltip)
         self.groupBox_55.setTitle(QCoreApplication.translate("MainWindow", u"Timestamp Slider", None))
+#if QT_CONFIG(tooltip)
+        self.changetimestamp_data12.setToolTip(QCoreApplication.translate("MainWindow", u"Slide to choose which 4D timestamp (frame) is displayed in this panel.", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.displaytimestamp_data12.setToolTip(QCoreApplication.translate("MainWindow", u"Index of the 4D timestamp (frame) currently displayed in this panel; type a value to jump to it.", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.groupBox_56.setToolTip(QCoreApplication.translate("MainWindow", u"Auto-compute or reset the window/level (brightness/contrast) for this panel's image.", None))
+#endif // QT_CONFIG(tooltip)
         self.groupBox_56.setTitle(QCoreApplication.translate("MainWindow", u"Contrast Adjustment", None))
+#if QT_CONFIG(tooltip)
+        self.pushButton_reset_data12.setToolTip(QCoreApplication.translate("MainWindow", u"Reset the window/level (brightness/contrast) to its initial values.", None))
+#endif // QT_CONFIG(tooltip)
         self.pushButton_reset_data12.setText(QCoreApplication.translate("MainWindow", u"Reset", None))
+#if QT_CONFIG(tooltip)
+        self.pushButton_auto_data12.setToolTip(QCoreApplication.translate("MainWindow", u"Automatically compute the window/level (brightness/contrast) from the image data.", None))
+#endif // QT_CONFIG(tooltip)
         self.pushButton_auto_data12.setText(QCoreApplication.translate("MainWindow", u"Auto", None))
         self.tabWidget_time1.setTabText(self.tabWidget_time1.indexOf(self.tabWidget_time11), QCoreApplication.translate("MainWindow", u"Timestamp 3", None))
+#if QT_CONFIG(tooltip)
+        self.groupBox_time10.setToolTip(QCoreApplication.translate("MainWindow", u"Timestamp panel for one 4D frame: the title updates to the frame's actual timestamp, and it holds this frame's own pan/zoom controls.", None))
+#endif // QT_CONFIG(tooltip)
         self.groupBox_time10.setTitle(QCoreApplication.translate("MainWindow", u"Timestamp t=0", None))
+#if QT_CONFIG(tooltip)
+        self.zoom_in_data10.setToolTip(QCoreApplication.translate("MainWindow", u"Zoom in on this view.", None))
+#endif // QT_CONFIG(tooltip)
         self.zoom_in_data10.setText(QCoreApplication.translate("MainWindow", u"+", None))
+#if QT_CONFIG(tooltip)
+        self.zoom_out_data10.setToolTip(QCoreApplication.translate("MainWindow", u"Zoom out on this view.", None))
+#endif // QT_CONFIG(tooltip)
         self.zoom_out_data10.setText(QCoreApplication.translate("MainWindow", u"-", None))
+#if QT_CONFIG(tooltip)
+        self.fit_to_zoom_data10.setToolTip(QCoreApplication.translate("MainWindow", u"Fit the image to the window.", None))
+#endif // QT_CONFIG(tooltip)
         self.fit_to_zoom_data10.setText(QCoreApplication.translate("MainWindow", u"Fit-to-Zoom", None))
+#if QT_CONFIG(tooltip)
+        self.go_down_data10.setToolTip(QCoreApplication.translate("MainWindow", u"Pan the view down.", None))
+#endif // QT_CONFIG(tooltip)
         self.go_down_data10.setText(QCoreApplication.translate("MainWindow", u"<", None))
+#if QT_CONFIG(tooltip)
+        self.go_up_data10.setToolTip(QCoreApplication.translate("MainWindow", u"Pan the view up.", None))
+#endif // QT_CONFIG(tooltip)
         self.go_up_data10.setText(QCoreApplication.translate("MainWindow", u">", None))
+#if QT_CONFIG(tooltip)
+        self.go_left_data10.setToolTip(QCoreApplication.translate("MainWindow", u"Pan the view left.", None))
+#endif // QT_CONFIG(tooltip)
         self.go_left_data10.setText(QCoreApplication.translate("MainWindow", u"<", None))
+#if QT_CONFIG(tooltip)
+        self.go_right_data10.setToolTip(QCoreApplication.translate("MainWindow", u"Pan the view right.", None))
+#endif // QT_CONFIG(tooltip)
         self.go_right_data10.setText(QCoreApplication.translate("MainWindow", u">", None))
+        self.file_name_displayed.setText(QCoreApplication.translate("MainWindow", u"TextLabel", None))
+        self.groupBox_barcode.setTitle(QCoreApplication.translate("MainWindow", u"MRID Barcode", None))
+#if QT_CONFIG(tooltip)
+        self.comboBox_mridBarcodes.setToolTip(QCoreApplication.translate("MainWindow", u"Select which shank/tag's barcode and CA1 signal to display below.", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.groupbox_barcode0.setToolTip(QCoreApplication.translate("MainWindow", u"The raw MRID barcode pattern as detected directly from the scan.", None))
+#endif // QT_CONFIG(tooltip)
+        self.groupbox_barcode0.setTitle(QCoreApplication.translate("MainWindow", u"Barcode detected", None))
+        ___qtablewidgetitem15 = self.tableWidget_barcode.horizontalHeaderItem(0)
+        ___qtablewidgetitem15.setText(QCoreApplication.translate("MainWindow", u"Duo", None));
+        ___qtablewidgetitem16 = self.tableWidget_barcode.horizontalHeaderItem(1)
+        ___qtablewidgetitem16.setText(QCoreApplication.translate("MainWindow", u"Trio", None));
+        ___qtablewidgetitem17 = self.tableWidget_barcode.horizontalHeaderItem(2)
+        ___qtablewidgetitem17.setText(QCoreApplication.translate("MainWindow", u"Quad", None));
+        ___qtablewidgetitem18 = self.tableWidget_barcode.horizontalHeaderItem(3)
+        ___qtablewidgetitem18.setText(QCoreApplication.translate("MainWindow", u"Penta", None));
+        ___qtablewidgetitem19 = self.tableWidget_barcode.verticalHeaderItem(0)
+        ___qtablewidgetitem19.setText(QCoreApplication.translate("MainWindow", u"Probabilities", None));
+        ___qtablewidgetitem20 = self.tableWidget_barcode.verticalHeaderItem(1)
+        ___qtablewidgetitem20.setText(QCoreApplication.translate("MainWindow", u"Similarities", None));
+#if QT_CONFIG(tooltip)
+        self.groupBox_4.setToolTip(QCoreApplication.translate("MainWindow", u"1D intensity profile along the selected shank's channels, colored by anatomical region with the pyramidal layer marked; shown only for shanks that cross CA1.", None))
+#endif // QT_CONFIG(tooltip)
+        self.groupBox_4.setTitle(QCoreApplication.translate("MainWindow", u"CA1 Signal", None))
+#if QT_CONFIG(tooltip)
+        self.groupbox_barcode1.setToolTip(QCoreApplication.translate("MainWindow", u"The barcode re-derived from the assigned MRID tag, for comparison against the detected barcode above.", None))
+#endif // QT_CONFIG(tooltip)
+        self.groupbox_barcode1.setTitle(QCoreApplication.translate("MainWindow", u"Barcode reconstructed", None))
+#if QT_CONFIG(tooltip)
+        self.pushButton_questionmark.setToolTip(QCoreApplication.translate("MainWindow", u"Re-show the current workflow's step-by-step instructions.", None))
+#endif // QT_CONFIG(tooltip)
         self.pushButton_questionmark.setText("")
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.PostSurgery), QCoreApplication.translate("MainWindow", u"4D Data", None))
+#if QT_CONFIG(tooltip)
+        self.groupBox_register.setToolTip(QCoreApplication.translate("MainWindow", u"Rigidly register another image onto the currently loaded MRI so both share the same space.", None))
+#endif // QT_CONFIG(tooltip)
         self.groupBox_register.setTitle(QCoreApplication.translate("MainWindow", u"Registration (Rigid Transformation)", None))
-        self.groupBox_26.setTitle(QCoreApplication.translate("MainWindow", u"Finest Level", None))
-        self.comboBox_finest.setItemText(0, QCoreApplication.translate("MainWindow", u"1x", None))
-        self.comboBox_finest.setItemText(1, QCoreApplication.translate("MainWindow", u"2x", None))
-        self.comboBox_finest.setItemText(2, QCoreApplication.translate("MainWindow", u"4x", None))
+        self.groupBox_17.setTitle(QCoreApplication.translate("MainWindow", u"Coarsest Level", None))
+        self.comboBox_coarest.setItemText(0, QCoreApplication.translate("MainWindow", u"8x", None))
+        self.comboBox_coarest.setItemText(1, QCoreApplication.translate("MainWindow", u"4x", None))
+        self.comboBox_coarest.setItemText(2, QCoreApplication.translate("MainWindow", u"2x", None))
+        self.comboBox_coarest.setItemText(3, QCoreApplication.translate("MainWindow", u"1x", None))
 
+#if QT_CONFIG(tooltip)
+        self.comboBox_coarest.setToolTip(QCoreApplication.translate("MainWindow", u"Coarsest pyramid level to start registration from. For already well-aligned images, coarse levels can converge to a wrong result -- try a lower coarsest/finest setting (closer to 1x) if registration looks wrong.", None))
+#endif // QT_CONFIG(tooltip)
         self.groupBox_27.setTitle(QCoreApplication.translate("MainWindow", u"Moving Image", None))
-        self.textEdit_6.setHtml(QCoreApplication.translate("MainWindow", u"<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
-"<html><head><meta name=\"qrichtext\" content=\"1\" /><meta charset=\"utf-8\" /><style type=\"text/css\">\n"
-"p, li { white-space: pre-wrap; }\n"
-"hr { height: 1px; border-width: 0; }\n"
-"li.unchecked::marker { content: \"\\2610\"; }\n"
-"li.checked::marker { content: \"\\2612\"; }\n"
-"</style></head><body style=\" font-family:'Ubuntu Sans'; font-size:11pt; font-weight:400; font-style:normal;\">\n"
-"<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-family:'Segoe UI'; font-size:9pt;\">If none is selectable, please load Another Image!</span></p></body></html>", None))
+#if QT_CONFIG(tooltip)
+        self.comboBox_movingimg.setToolTip(QCoreApplication.translate("MainWindow", u"Select which loaded image to register onto the main file as the moving image.", None))
+#endif // QT_CONFIG(tooltip)
         self.textEdit_pixels.setHtml(QCoreApplication.translate("MainWindow", u"<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
 "<html><head><meta name=\"qrichtext\" content=\"1\" /><meta charset=\"utf-8\" /><style type=\"text/css\">\n"
 "p, li { white-space: pre-wrap; }\n"
@@ -8372,21 +9835,62 @@ class Ui_MainWindow(object):
 "li.checked::marker { content: \"\\2612\"; }\n"
 "</style></head><body style=\" font-family:'Ubuntu Sans'; font-size:11pt; font-weight:400; font-style:normal;\">\n"
 "<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-family:'Segoe UI'; font-size:9pt; font-weight:700;\">Please select other file. The MRI Scan needs at least 4pixels in each direction.</span></p></body></html>", None))
+        self.textEdit_6.setHtml(QCoreApplication.translate("MainWindow", u"<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
+"<html><head><meta name=\"qrichtext\" content=\"1\" /><meta charset=\"utf-8\" /><style type=\"text/css\">\n"
+"p, li { white-space: pre-wrap; }\n"
+"hr { height: 1px; border-width: 0; }\n"
+"li.unchecked::marker { content: \"\\2610\"; }\n"
+"li.checked::marker { content: \"\\2612\"; }\n"
+"</style></head><body style=\" font-family:'Ubuntu Sans'; font-size:11pt; font-weight:400; font-style:normal;\">\n"
+"<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-family:'Segoe UI'; font-size:9pt;\">If none is selectable, please load Another Image!</span></p></body></html>", None))
+#if QT_CONFIG(tooltip)
+        self.pushButton_loadOtherImage.setToolTip(QCoreApplication.translate("MainWindow", u"Add another image file to register against the main file.", None))
+#endif // QT_CONFIG(tooltip)
         self.pushButton_loadOtherImage.setText(QCoreApplication.translate("MainWindow", u"Load Another Image", None))
+#if QT_CONFIG(tooltip)
+        self.pushButton_registration.setToolTip(QCoreApplication.translate("MainWindow", u"Runs rigid registration of the selected moving image onto the main image. If the result looks wrong, retry with a coarser finest level when prompted.", None))
+#endif // QT_CONFIG(tooltip)
         self.pushButton_registration.setText(QCoreApplication.translate("MainWindow", u"Run Registration", None))
+#if QT_CONFIG(tooltip)
+        self.pushButton_regCancel.setToolTip(QCoreApplication.translate("MainWindow", u"Close the registration dialog without registering.", None))
+#endif // QT_CONFIG(tooltip)
         self.pushButton_regCancel.setText(QCoreApplication.translate("MainWindow", u"Cancel", None))
-        self.groupBox_17.setTitle(QCoreApplication.translate("MainWindow", u"Coarsest Level", None))
-        self.comboBox_coarest.setItemText(0, QCoreApplication.translate("MainWindow", u"8x", None))
-        self.comboBox_coarest.setItemText(1, QCoreApplication.translate("MainWindow", u"4x", None))
-        self.comboBox_coarest.setItemText(2, QCoreApplication.translate("MainWindow", u"2x", None))
-        self.comboBox_coarest.setItemText(3, QCoreApplication.translate("MainWindow", u"1x", None))
+        self.groupBox_26.setTitle(QCoreApplication.translate("MainWindow", u"Finest Level", None))
+        self.comboBox_finest.setItemText(0, QCoreApplication.translate("MainWindow", u"1x", None))
+        self.comboBox_finest.setItemText(1, QCoreApplication.translate("MainWindow", u"2x", None))
+        self.comboBox_finest.setItemText(2, QCoreApplication.translate("MainWindow", u"4x", None))
 
+#if QT_CONFIG(tooltip)
+        self.comboBox_finest.setToolTip(QCoreApplication.translate("MainWindow", u"Finest pyramid level to end registration at. Must not be coarser than the coarsest-level setting. Stopping before 1x (full resolution) can help if registration converges to a wrong result on already well-aligned images.", None))
+#endif // QT_CONFIG(tooltip)
+        self.comboBox_regitstration_metric.setItemText(0, QCoreApplication.translate("MainWindow", u"NMI", None))
+        self.comboBox_regitstration_metric.setItemText(1, QCoreApplication.translate("MainWindow", u"NCC", None))
+        self.comboBox_regitstration_metric.setItemText(2, QCoreApplication.translate("MainWindow", u"SSD", None))
+
+#if QT_CONFIG(tooltip)
+        self.comboBox_regitstration_metric.setToolTip(QCoreApplication.translate("MainWindow", u"Image similarity metric: NMI (Normalised Mutual Information, works across different contrasts/modalities), NCC (Normalised Cross-Correlation, radius 4x4x4), or SSD (Sum of Squared Differences, same-contrast images only).", None))
+#endif // QT_CONFIG(tooltip)
         self.groupBox_resample.setTitle(QCoreApplication.translate("MainWindow", u"Resample", None))
+#if QT_CONFIG(tooltip)
+        self.pushButton_resample100um.setToolTip(QCoreApplication.translate("MainWindow", u"Resample the selected file to 100\u00b5m isotropic spacing.", None))
+#endif // QT_CONFIG(tooltip)
         self.pushButton_resample100um.setText(QCoreApplication.translate("MainWindow", u"Resample 100um", None))
+#if QT_CONFIG(tooltip)
+        self.pushButton_openfile100um.setToolTip(QCoreApplication.translate("MainWindow", u"Open the resampled 100\u00b5m file as the new main image.", None))
+#endif // QT_CONFIG(tooltip)
         self.pushButton_openfile100um.setText(QCoreApplication.translate("MainWindow", u"Done, open \n"
 "resampled 100um file", None))
+#if QT_CONFIG(tooltip)
+        self.pushButton_done.setToolTip(QCoreApplication.translate("MainWindow", u"Close this dialog.", None))
+#endif // QT_CONFIG(tooltip)
         self.pushButton_done.setText(QCoreApplication.translate("MainWindow", u"Done", None))
+#if QT_CONFIG(tooltip)
+        self.pushButton_resample25um.setToolTip(QCoreApplication.translate("MainWindow", u"Resample the selected file to 25\u00b5m isotropic spacing.", None))
+#endif // QT_CONFIG(tooltip)
         self.pushButton_resample25um.setText(QCoreApplication.translate("MainWindow", u"Resample 25um", None))
+#if QT_CONFIG(tooltip)
+        self.comboBox_resamplefiles.setToolTip(QCoreApplication.translate("MainWindow", u"Choose which loaded file to resample.", None))
+#endif // QT_CONFIG(tooltip)
         self.textBrowser_4.setHtml(QCoreApplication.translate("MainWindow", u"<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
 "<html><head><meta name=\"qrichtext\" content=\"1\" /><meta charset=\"utf-8\" /><style type=\"text/css\">\n"
 "p, li { white-space: pre-wrap; }\n"
@@ -8397,14 +9901,38 @@ class Ui_MainWindow(object):
 "<p align=\"center\" style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-family:'Segoe UI'; font-size:9pt;\">Please select the file to resample!<br />Click on the buttons below to resample the data, after it is directly saved in the directory.</span></p></body></html>", None))
         self.groupBox_paintbrush_3d.setTitle(QCoreApplication.translate("MainWindow", u"Paintbrush", None))
         self.groupBox_14.setTitle(QCoreApplication.translate("MainWindow", u"Brush Style", None))
+#if QT_CONFIG(tooltip)
+        self.paint_square.setToolTip(QCoreApplication.translate("MainWindow", u"Use a square brush.", None))
+#endif // QT_CONFIG(tooltip)
         self.paint_square.setText("")
+#if QT_CONFIG(tooltip)
+        self.paint_round.setToolTip(QCoreApplication.translate("MainWindow", u"Use a round brush.", None))
+#endif // QT_CONFIG(tooltip)
         self.paint_round.setText("")
         self.groupBox_20.setTitle(QCoreApplication.translate("MainWindow", u"Overall label opacity", None))
+#if QT_CONFIG(tooltip)
+        self.doubleSpinBox_labelOcc3d.setToolTip(QCoreApplication.translate("MainWindow", u"Opacity of the segmentation label overlay (0 = invisible, 1 = fully opaque); linked to the slider below.", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.sizeSlider_labelOcc3d.setToolTip(QCoreApplication.translate("MainWindow", u"Drag to adjust the segmentation label overlay's opacity; linked to the spin box above.", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.pushButton_paint_done.setToolTip(QCoreApplication.translate("MainWindow", u"Finish painting and continue on to trajectory planning.", None))
+#endif // QT_CONFIG(tooltip)
         self.pushButton_paint_done.setText(QCoreApplication.translate("MainWindow", u"Continue with Trajectory Planning", None))
         self.groupBox_15.setTitle(QCoreApplication.translate("MainWindow", u"Brush Size", None))
+#if QT_CONFIG(tooltip)
+        self.brush_size3d.setToolTip(QCoreApplication.translate("MainWindow", u"Diameter of the paintbrush, in pixels; linked to the slider below.", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.brush_sizeSlider3d.setToolTip(QCoreApplication.translate("MainWindow", u"Drag to adjust the paintbrush diameter; linked to the spin box above.", None))
+#endif // QT_CONFIG(tooltip)
         self.checkBox_Brush.setText(QCoreApplication.translate("MainWindow", u"Brush ON", None))
         self.groupBox_18.setTitle(QCoreApplication.translate("MainWindow", u"Segmentation Labels", None))
         self.groupBox_19.setTitle(QCoreApplication.translate("MainWindow", u"Paint over", None))
+#if QT_CONFIG(tooltip)
+        self.comboBox_paintOver.setToolTip(QCoreApplication.translate("MainWindow", u"Restrict new brush strokes to only overwrite pixels currently assigned to this label (or paint over all/none).", None))
+#endif // QT_CONFIG(tooltip)
         self.groupBox_50.setTitle(QCoreApplication.translate("MainWindow", u"Active Label", None))
         ___qtablewidgetitem21 = self.tableWidget_labels3D.horizontalHeaderItem(0)
         ___qtablewidgetitem21.setText(QCoreApplication.translate("MainWindow", u"Idx", None));
@@ -8413,6 +9941,9 @@ class Ui_MainWindow(object):
         ___qtablewidgetitem23 = self.tableWidget_labels3D.horizontalHeaderItem(2)
         ___qtablewidgetitem23.setText(QCoreApplication.translate("MainWindow", u"Label", None));
         self.groupBox_measurement.setTitle(QCoreApplication.translate("MainWindow", u"Measurement", None))
+#if QT_CONFIG(tooltip)
+        self.checkBox_measurement.setToolTip(QCoreApplication.translate("MainWindow", u"Toggle the distance-measurement tool for this view.", None))
+#endif // QT_CONFIG(tooltip)
         self.checkBox_measurement.setText(QCoreApplication.translate("MainWindow", u" OFF", None))
         self.groupBox_.setTitle(QCoreApplication.translate("MainWindow", u"Measurement Table", None))
         self.comboBox_measurementColors.setItemText(0, QCoreApplication.translate("MainWindow", u"Red", None))
@@ -8421,48 +9952,201 @@ class Ui_MainWindow(object):
         self.comboBox_measurementColors.setItemText(3, QCoreApplication.translate("MainWindow", u"Yellow", None))
         self.comboBox_measurementColors.setItemText(4, QCoreApplication.translate("MainWindow", u"Magenta", None))
 
+#if QT_CONFIG(tooltip)
+        self.comboBox_measurementColors.setToolTip(QCoreApplication.translate("MainWindow", u"Color to use for the next measurement line you draw.", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.pushButton_deleteMeasurement.setToolTip(QCoreApplication.translate("MainWindow", u"Delete the selected measurement.", None))
+#endif // QT_CONFIG(tooltip)
         self.pushButton_deleteMeasurement.setText(QCoreApplication.translate("MainWindow", u"Delete Measurement", None))
         self.groupBox_23.setTitle(QCoreApplication.translate("MainWindow", u"Manual Contrast Adjustments", None))
+#if QT_CONFIG(tooltip)
+        self.display_level_data3d0.setToolTip(QCoreApplication.translate("MainWindow", u"Current brightness (level) value for this view; synced with the brightness slider below.", None))
+#endif // QT_CONFIG(tooltip)
         self.label_30.setText(QCoreApplication.translate("MainWindow", u"Contrast / Window", None))
+#if QT_CONFIG(tooltip)
+        self.display_window_data3d0.setToolTip(QCoreApplication.translate("MainWindow", u"Current contrast (window) value for this view; synced with the contrast slider below.", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.changeContrast_data3d0.setToolTip(QCoreApplication.translate("MainWindow", u"Drag to adjust this view's contrast (display window) \u2014 the intensity range mapped across the grayscale.", None))
+#endif // QT_CONFIG(tooltip)
         self.label_29.setText(QCoreApplication.translate("MainWindow", u"Brightness / Level", None))
+#if QT_CONFIG(tooltip)
+        self.changeBrightness_data3d0.setToolTip(QCoreApplication.translate("MainWindow", u"Drag to adjust this view's brightness (display level) \u2014 the intensity value centered in the grayscale range.", None))
+#endif // QT_CONFIG(tooltip)
         self.tabWidget_4.setTabText(self.tabWidget_4.indexOf(self.tab_28), QCoreApplication.translate("MainWindow", u"Coronal", None))
+#if QT_CONFIG(tooltip)
+        self.display_level_data3d1.setToolTip(QCoreApplication.translate("MainWindow", u"Current brightness (level) value for this view; synced with the brightness slider below.", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.changeContrast_data3d1.setToolTip(QCoreApplication.translate("MainWindow", u"Drag to adjust this view's contrast (display window) \u2014 the intensity range mapped across the grayscale.", None))
+#endif // QT_CONFIG(tooltip)
         self.label_31.setText(QCoreApplication.translate("MainWindow", u"Contrast / Window", None))
+#if QT_CONFIG(tooltip)
+        self.display_window_data3d1.setToolTip(QCoreApplication.translate("MainWindow", u"Current contrast (window) value for this view; synced with the contrast slider below.", None))
+#endif // QT_CONFIG(tooltip)
         self.label_32.setText(QCoreApplication.translate("MainWindow", u"Brightness / Level", None))
+#if QT_CONFIG(tooltip)
+        self.changeBrightness_data3d1.setToolTip(QCoreApplication.translate("MainWindow", u"Drag to adjust this view's brightness (display level) \u2014 the intensity value centered in the grayscale range.", None))
+#endif // QT_CONFIG(tooltip)
         self.tabWidget_4.setTabText(self.tabWidget_4.indexOf(self.tab_29), QCoreApplication.translate("MainWindow", u"Sagittal", None))
+#if QT_CONFIG(tooltip)
+        self.display_window_data3d2.setToolTip(QCoreApplication.translate("MainWindow", u"Current contrast (window) value for this view; synced with the contrast slider below.", None))
+#endif // QT_CONFIG(tooltip)
         self.label_34.setText(QCoreApplication.translate("MainWindow", u"Brightness / Level", None))
         self.label_33.setText(QCoreApplication.translate("MainWindow", u"Contrast / Window", None))
+#if QT_CONFIG(tooltip)
+        self.changeBrightness_data3d2.setToolTip(QCoreApplication.translate("MainWindow", u"Drag to adjust this view's brightness (display level) \u2014 the intensity value centered in the grayscale range.", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.display_level_data3d2.setToolTip(QCoreApplication.translate("MainWindow", u"Current brightness (level) value for this view; synced with the brightness slider below.", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.changeContrast_data3d2.setToolTip(QCoreApplication.translate("MainWindow", u"Drag to adjust this view's contrast (display window) \u2014 the intensity range mapped across the grayscale.", None))
+#endif // QT_CONFIG(tooltip)
         self.tabWidget_4.setTabText(self.tabWidget_4.indexOf(self.tab_30), QCoreApplication.translate("MainWindow", u"Axial", None))
         self.ManualContrastAdjustments.setTitle(QCoreApplication.translate("MainWindow", u"Manual Contrast Adjustement", None))
+#if QT_CONFIG(tooltip)
+        self.changeBrightness_data00.setToolTip(QCoreApplication.translate("MainWindow", u"Drag to adjust this view's brightness (display level) \u2014 the intensity value centered in the grayscale range.", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.display_level_data00.setToolTip(QCoreApplication.translate("MainWindow", u"Current brightness (level) value for this view; synced with the brightness slider below.", None))
+#endif // QT_CONFIG(tooltip)
         self.label_11.setText(QCoreApplication.translate("MainWindow", u"Brightness / Level", None))
+#if QT_CONFIG(tooltip)
+        self.display_window_data00.setToolTip(QCoreApplication.translate("MainWindow", u"Current contrast (window) value for this view; synced with the contrast slider below.", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.changeContrast_data00.setToolTip(QCoreApplication.translate("MainWindow", u"Drag to adjust this view's contrast (display window) \u2014 the intensity range mapped across the grayscale.", None))
+#endif // QT_CONFIG(tooltip)
         self.label_12.setText(QCoreApplication.translate("MainWindow", u"Contrast / Window", None))
         self.tabWidget_3.setTabText(self.tabWidget_3.indexOf(self.tab_10), QCoreApplication.translate("MainWindow", u"Timest 1", None))
         self.label_17.setText(QCoreApplication.translate("MainWindow", u"Contrast / Window", None))
+#if QT_CONFIG(tooltip)
+        self.display_window_data01.setToolTip(QCoreApplication.translate("MainWindow", u"Current contrast (window) value for this view; synced with the contrast slider below.", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.changeContrast_data01.setToolTip(QCoreApplication.translate("MainWindow", u"Drag to adjust this view's contrast (display window) \u2014 the intensity range mapped across the grayscale.", None))
+#endif // QT_CONFIG(tooltip)
         self.label_18.setText(QCoreApplication.translate("MainWindow", u"Brightness / Level", None))
+#if QT_CONFIG(tooltip)
+        self.display_level_data01.setToolTip(QCoreApplication.translate("MainWindow", u"Current brightness (level) value for this view; synced with the brightness slider below.", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.changeBrightness_data01.setToolTip(QCoreApplication.translate("MainWindow", u"Drag to adjust this view's brightness (display level) \u2014 the intensity value centered in the grayscale range.", None))
+#endif // QT_CONFIG(tooltip)
         self.tabWidget_3.setTabText(self.tabWidget_3.indexOf(self.tab_11), QCoreApplication.translate("MainWindow", u"Timest 2", None))
         self.label_19.setText(QCoreApplication.translate("MainWindow", u"Contrast / Window", None))
+#if QT_CONFIG(tooltip)
+        self.display_window_data02.setToolTip(QCoreApplication.translate("MainWindow", u"Current contrast (window) value for this view; synced with the contrast slider below.", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.changeContrast_data02.setToolTip(QCoreApplication.translate("MainWindow", u"Drag to adjust this view's contrast (display window) \u2014 the intensity range mapped across the grayscale.", None))
+#endif // QT_CONFIG(tooltip)
         self.label_20.setText(QCoreApplication.translate("MainWindow", u"Brightness / Level", None))
+#if QT_CONFIG(tooltip)
+        self.display_level_data02.setToolTip(QCoreApplication.translate("MainWindow", u"Current brightness (level) value for this view; synced with the brightness slider below.", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.changeBrightness_data02.setToolTip(QCoreApplication.translate("MainWindow", u"Drag to adjust this view's brightness (display level) \u2014 the intensity value centered in the grayscale range.", None))
+#endif // QT_CONFIG(tooltip)
         self.tabWidget_3.setTabText(self.tabWidget_3.indexOf(self.tab_12), QCoreApplication.translate("MainWindow", u"Timest 3", None))
         self.contrast_data.setItemText(self.contrast_data.indexOf(self.contrast_data0), QCoreApplication.translate("MainWindow", u"Data 0", None))
+#if QT_CONFIG(tooltip)
+        self.changeBrightness_data10.setToolTip(QCoreApplication.translate("MainWindow", u"Drag to adjust this view's brightness (display level) \u2014 the intensity value centered in the grayscale range.", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.display_level_data10.setToolTip(QCoreApplication.translate("MainWindow", u"Current brightness (level) value for this view; synced with the brightness slider below.", None))
+#endif // QT_CONFIG(tooltip)
         self.label_13.setText(QCoreApplication.translate("MainWindow", u"Brightness / Level", None))
+#if QT_CONFIG(tooltip)
+        self.display_window_data10.setToolTip(QCoreApplication.translate("MainWindow", u"Current contrast (window) value for this view; synced with the contrast slider below.", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.changeContrast_data10.setToolTip(QCoreApplication.translate("MainWindow", u"Drag to adjust this view's contrast (display window) \u2014 the intensity range mapped across the grayscale.", None))
+#endif // QT_CONFIG(tooltip)
         self.label_14.setText(QCoreApplication.translate("MainWindow", u"Contrast / Window", None))
         self.tabWidget_5.setTabText(self.tabWidget_5.indexOf(self.tab_16), QCoreApplication.translate("MainWindow", u"Timest 1", None))
         self.label_21.setText(QCoreApplication.translate("MainWindow", u"Contrast / Window", None))
+#if QT_CONFIG(tooltip)
+        self.display_window_data11.setToolTip(QCoreApplication.translate("MainWindow", u"Type the contrast (window width) value directly; mirrors the slider next to it.", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.changeContrast_data11.setToolTip(QCoreApplication.translate("MainWindow", u"Adjusts the contrast (intensity window width) for this view.", None))
+#endif // QT_CONFIG(tooltip)
         self.label_22.setText(QCoreApplication.translate("MainWindow", u"Brightness / Level", None))
+#if QT_CONFIG(tooltip)
+        self.display_level_data11.setToolTip(QCoreApplication.translate("MainWindow", u"Type the brightness (window level) value directly; mirrors the slider next to it.", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.changeBrightness_data11.setToolTip(QCoreApplication.translate("MainWindow", u"Adjusts the brightness (intensity window level) for this view.", None))
+#endif // QT_CONFIG(tooltip)
         self.tabWidget_5.setTabText(self.tabWidget_5.indexOf(self.tab_17), QCoreApplication.translate("MainWindow", u"Timest 2", None))
         self.label_23.setText(QCoreApplication.translate("MainWindow", u"Contrast / Window", None))
+#if QT_CONFIG(tooltip)
+        self.display_window_data12.setToolTip(QCoreApplication.translate("MainWindow", u"Type the contrast (window width) value directly; mirrors the slider next to it.", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.changeContrast_data12.setToolTip(QCoreApplication.translate("MainWindow", u"Adjusts the contrast (intensity window width) for this view.", None))
+#endif // QT_CONFIG(tooltip)
         self.label_24.setText(QCoreApplication.translate("MainWindow", u"Brightness / Level", None))
+#if QT_CONFIG(tooltip)
+        self.display_level_data12.setToolTip(QCoreApplication.translate("MainWindow", u"Type the brightness (window level) value directly; mirrors the slider next to it.", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.changeBrightness_data12.setToolTip(QCoreApplication.translate("MainWindow", u"Adjusts the brightness (intensity window level) for this view.", None))
+#endif // QT_CONFIG(tooltip)
         self.tabWidget_5.setTabText(self.tabWidget_5.indexOf(self.tab_18), QCoreApplication.translate("MainWindow", u"Timest 3", None))
         self.contrast_data.setItemText(self.contrast_data.indexOf(self.contrast_data1), QCoreApplication.translate("MainWindow", u"Data 1", None))
+#if QT_CONFIG(tooltip)
+        self.changeBrightness_data20.setToolTip(QCoreApplication.translate("MainWindow", u"Adjusts the brightness (intensity window level) for this view.", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.display_level_data20.setToolTip(QCoreApplication.translate("MainWindow", u"Type the brightness (window level) value directly; mirrors the slider next to it.", None))
+#endif // QT_CONFIG(tooltip)
         self.label_15.setText(QCoreApplication.translate("MainWindow", u"Brightness / Level", None))
+#if QT_CONFIG(tooltip)
+        self.display_window_data20.setToolTip(QCoreApplication.translate("MainWindow", u"Type the contrast (window width) value directly; mirrors the slider next to it.", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.changeContrast_data20.setToolTip(QCoreApplication.translate("MainWindow", u"Adjusts the contrast (intensity window width) for this view.", None))
+#endif // QT_CONFIG(tooltip)
         self.label_16.setText(QCoreApplication.translate("MainWindow", u"Contrast / Window", None))
         self.tabWidget_6.setTabText(self.tabWidget_6.indexOf(self.tab_19), QCoreApplication.translate("MainWindow", u"Timest 1", None))
         self.label_25.setText(QCoreApplication.translate("MainWindow", u"Contrast / Window", None))
+#if QT_CONFIG(tooltip)
+        self.display_window_data21.setToolTip(QCoreApplication.translate("MainWindow", u"Type the contrast (window width) value directly; mirrors the slider next to it.", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.changeContrast_data21.setToolTip(QCoreApplication.translate("MainWindow", u"Adjusts the contrast (intensity window width) for this view.", None))
+#endif // QT_CONFIG(tooltip)
         self.label_26.setText(QCoreApplication.translate("MainWindow", u"Brightness / Level", None))
+#if QT_CONFIG(tooltip)
+        self.display_level_data21.setToolTip(QCoreApplication.translate("MainWindow", u"Type the brightness (window level) value directly; mirrors the slider next to it.", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.changeBrightness_data21.setToolTip(QCoreApplication.translate("MainWindow", u"Adjusts the brightness (intensity window level) for this view.", None))
+#endif // QT_CONFIG(tooltip)
         self.tabWidget_6.setTabText(self.tabWidget_6.indexOf(self.tab_20), QCoreApplication.translate("MainWindow", u"Timest 2", None))
         self.label_27.setText(QCoreApplication.translate("MainWindow", u"Contrast / Window", None))
+#if QT_CONFIG(tooltip)
+        self.display_window_data22.setToolTip(QCoreApplication.translate("MainWindow", u"Type the contrast (window width) value directly; mirrors the slider next to it.", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.changeContrast_data22.setToolTip(QCoreApplication.translate("MainWindow", u"Adjusts the contrast (intensity window width) for this view.", None))
+#endif // QT_CONFIG(tooltip)
         self.label_28.setText(QCoreApplication.translate("MainWindow", u"Brightness / Level", None))
+#if QT_CONFIG(tooltip)
+        self.display_level_data22.setToolTip(QCoreApplication.translate("MainWindow", u"Type the brightness (window level) value directly; mirrors the slider next to it.", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.changeBrightness_data22.setToolTip(QCoreApplication.translate("MainWindow", u"Adjusts the brightness (intensity window level) for this view.", None))
+#endif // QT_CONFIG(tooltip)
         self.tabWidget_6.setTabText(self.tabWidget_6.indexOf(self.tab_21), QCoreApplication.translate("MainWindow", u"Timest 3", None))
         self.contrast_data.setItemText(self.contrast_data.indexOf(self.contrast_data2), QCoreApplication.translate("MainWindow", u"Data 2", None))
+#if QT_CONFIG(tooltip)
+        self.groupBox_segmentation.setToolTip(QCoreApplication.translate("MainWindow", u"Threshold, seed, and grow a 3D segmentation mask (threshold \u2192 bubble seeding \u2192 level-set evolution).", None))
+#endif // QT_CONFIG(tooltip)
         self.groupBox_segmentation.setTitle(QCoreApplication.translate("MainWindow", u"Segmentation", None))
         self.textEdit_SAMRI_reg.setHtml(QCoreApplication.translate("MainWindow", u"<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
 "<html><head><meta name=\"qrichtext\" content=\"1\" /><meta charset=\"utf-8\" /><style type=\"text/css\">\n"
@@ -8475,12 +10159,18 @@ class Ui_MainWindow(object):
 "<p style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:'Sans'; font-size:10pt;\"><br /></p>\n"
 "<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-in"
                         "dent:0px;\"><span style=\" font-family:'Sans'; font-size:10pt;\">Click on FINISH (at the end) to return to SAMRI registration.</span></p></body></html>", None))
-        self.groupBox_7.setTitle(QCoreApplication.translate("MainWindow", u"THRESHOLD", None))
-        self.radioButton_bounded.setText(QCoreApplication.translate("MainWindow", u"Bounded", None))
-        self.radioButton_lower.setText(QCoreApplication.translate("MainWindow", u"Lower-Only", None))
-        self.radioButton_upper.setText(QCoreApplication.translate("MainWindow", u"Upper-Only", None))
-        self.groupBox_13.setTitle(QCoreApplication.translate("MainWindow", u"Lower Threshold", None))
-        self.groupBox_63.setTitle(QCoreApplication.translate("MainWindow", u"Upper Threshold", None))
+#if QT_CONFIG(tooltip)
+        self.pushButton_Next1.setToolTip(QCoreApplication.translate("MainWindow", u"Confirm the current threshold and continue to placing seed bubbles (in skull-segmentation mode this instead finishes the mask).", None))
+#endif // QT_CONFIG(tooltip)
+        self.pushButton_Next1.setText(QCoreApplication.translate("MainWindow", u"Next", None))
+#if QT_CONFIG(tooltip)
+        self.pushButton_Back1.setToolTip(QCoreApplication.translate("MainWindow", u"Close the segmentation panel and exit the workflow (this is the first page, so there is no earlier step to return to).", None))
+#endif // QT_CONFIG(tooltip)
+        self.pushButton_Back1.setText(QCoreApplication.translate("MainWindow", u"Back", None))
+#if QT_CONFIG(tooltip)
+        self.checkBox_threshold.setToolTip(QCoreApplication.translate("MainWindow", u"Toggle whether the threshold mask is shown as a live preview on the current view.", None))
+#endif // QT_CONFIG(tooltip)
+        self.checkBox_threshold.setText(QCoreApplication.translate("MainWindow", u"Threshold ON", None))
         self.textBrowser_5.setHtml(QCoreApplication.translate("MainWindow", u"<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
 "<html><head><meta name=\"qrichtext\" content=\"1\" /><meta charset=\"utf-8\" /><style type=\"text/css\">\n"
 "p, li { white-space: pre-wrap; }\n"
@@ -8489,10 +10179,42 @@ class Ui_MainWindow(object):
 "li.checked::marker { content: \"\\2612\"; }\n"
 "</style></head><body style=\" font-family:'Ubuntu Sans'; font-size:11pt; font-weight:400; font-style:normal;\">\n"
 "<p align=\"center\" style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-family:'Segoe UI'; font-size:10pt;\">Step 1/3<br /></span><span style=\" font-family:'Segoe UI'; font-size:10pt; font-weight:700;\">Presegmentation</span></p></body></html>", None))
-        self.pushButton_Next1.setText(QCoreApplication.translate("MainWindow", u"Next", None))
-        self.checkBox_threshold.setText(QCoreApplication.translate("MainWindow", u"Threshold ON", None))
-        self.groupBox_skull_radius.setTitle(QCoreApplication.translate("MainWindow", u"Radius around Skull [mm]", None))
-        self.pushButton_Back1.setText(QCoreApplication.translate("MainWindow", u"Back", None))
+#if QT_CONFIG(tooltip)
+        self.groupBox_7.setToolTip(QCoreApplication.translate("MainWindow", u"Choose which side of the intensity range counts as inside the segmented region.", None))
+#endif // QT_CONFIG(tooltip)
+        self.groupBox_7.setTitle(QCoreApplication.translate("MainWindow", u"THRESHOLD", None))
+#if QT_CONFIG(tooltip)
+        self.radioButton_bounded.setToolTip(QCoreApplication.translate("MainWindow", u"Keep only voxels between the lower and upper threshold.", None))
+#endif // QT_CONFIG(tooltip)
+        self.radioButton_bounded.setText(QCoreApplication.translate("MainWindow", u"Bandpass", None))
+#if QT_CONFIG(tooltip)
+        self.radioButton_lower.setToolTip(QCoreApplication.translate("MainWindow", u"Keep only voxels above the lower threshold.", None))
+#endif // QT_CONFIG(tooltip)
+        self.radioButton_lower.setText(QCoreApplication.translate("MainWindow", u"Highpass", None))
+#if QT_CONFIG(tooltip)
+        self.radioButton_upper.setToolTip(QCoreApplication.translate("MainWindow", u"Keep only voxels below the upper threshold.", None))
+#endif // QT_CONFIG(tooltip)
+        self.radioButton_upper.setText(QCoreApplication.translate("MainWindow", u"Lowpass", None))
+#if QT_CONFIG(tooltip)
+        self.groupBox_13.setToolTip(QCoreApplication.translate("MainWindow", u"Sets the lower intensity bound used to build the segmentation mask.", None))
+#endif // QT_CONFIG(tooltip)
+        self.groupBox_13.setTitle(QCoreApplication.translate("MainWindow", u"Lower Threshold", None))
+#if QT_CONFIG(tooltip)
+        self.ScrollBar_lower.setToolTip(QCoreApplication.translate("MainWindow", u"Sets the lower intensity threshold; drag while thresholding is enabled to preview the mask live.", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.doubleSpinBox_lower.setToolTip(QCoreApplication.translate("MainWindow", u"Type the lower intensity threshold directly; mirrors the slider next to it.", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.groupBox_63.setToolTip(QCoreApplication.translate("MainWindow", u"Sets the upper intensity bound used to build the segmentation mask.", None))
+#endif // QT_CONFIG(tooltip)
+        self.groupBox_63.setTitle(QCoreApplication.translate("MainWindow", u"Upper Threshold", None))
+#if QT_CONFIG(tooltip)
+        self.ScrollBar_upper.setToolTip(QCoreApplication.translate("MainWindow", u"Sets the upper intensity threshold; drag while thresholding is enabled to preview the mask live.", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.doubleSpinBox_upper.setToolTip(QCoreApplication.translate("MainWindow", u"Type the upper intensity threshold directly; mirrors the slider next to it.", None))
+#endif // QT_CONFIG(tooltip)
         self.textBrowser_6.setHtml(QCoreApplication.translate("MainWindow", u"<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
 "<html><head><meta name=\"qrichtext\" content=\"1\" /><meta charset=\"utf-8\" /><style type=\"text/css\">\n"
 "p, li { white-space: pre-wrap; }\n"
@@ -8501,13 +10223,43 @@ class Ui_MainWindow(object):
 "li.checked::marker { content: \"\\2612\"; }\n"
 "</style></head><body style=\" font-family:'Ubuntu Sans'; font-size:11pt; font-weight:400; font-style:normal;\">\n"
 "<p align=\"center\" style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-family:'Segoe UI'; font-size:10pt;\">Step 2/3<br /></span><span style=\" font-family:'Segoe UI'; font-size:10pt; font-weight:700;\">Initialization</span></p></body></html>", None))
+#if QT_CONFIG(tooltip)
+        self.pushButton_Next2.setToolTip(QCoreApplication.translate("MainWindow", u"Confirm the seed bubbles and start the level-set evolution step.", None))
+#endif // QT_CONFIG(tooltip)
         self.pushButton_Next2.setText(QCoreApplication.translate("MainWindow", u"Next", None))
+#if QT_CONFIG(tooltip)
+        self.pushButton_Back2.setToolTip(QCoreApplication.translate("MainWindow", u"Return to the threshold page to adjust the intensity bounds.", None))
+#endif // QT_CONFIG(tooltip)
         self.pushButton_Back2.setText(QCoreApplication.translate("MainWindow", u"Back", None))
+#if QT_CONFIG(tooltip)
+        self.groupBox_16.setToolTip(QCoreApplication.translate("MainWindow", u"Lists the seed bubbles placed so far; select one to delete it.", None))
+#endif // QT_CONFIG(tooltip)
         self.groupBox_16.setTitle(QCoreApplication.translate("MainWindow", u"Active Bubbles", None))
+#if QT_CONFIG(tooltip)
+        self.pushButton_delete.setToolTip(QCoreApplication.translate("MainWindow", u"Delete the currently selected seed bubble.", None))
+#endif // QT_CONFIG(tooltip)
         self.pushButton_delete.setText(QCoreApplication.translate("MainWindow", u"Delete Active Bubble", None))
+#if QT_CONFIG(tooltip)
+        self.groupBox_10.setToolTip(QCoreApplication.translate("MainWindow", u"Sets the radius of the next seed bubble to be placed.", None))
+#endif // QT_CONFIG(tooltip)
         self.groupBox_10.setTitle(QCoreApplication.translate("MainWindow", u"Bubble Radius", None))
+#if QT_CONFIG(tooltip)
+        self.doubleSpinBox_Bubradius.setToolTip(QCoreApplication.translate("MainWindow", u"Type the seed bubble radius directly; mirrors the slider next to it.", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.horizontalSlider_Bubradius.setToolTip(QCoreApplication.translate("MainWindow", u"Adjusts the seed bubble radius; mirrors the spin box next to it.", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.pushButton_addBubbles.setToolTip(QCoreApplication.translate("MainWindow", u"Place a new seed bubble at the current cursor position.", None))
+#endif // QT_CONFIG(tooltip)
         self.pushButton_addBubbles.setText(QCoreApplication.translate("MainWindow", u"Add Bubble at Cursor", None))
+#if QT_CONFIG(tooltip)
+        self.pushButton_Back3.setToolTip(QCoreApplication.translate("MainWindow", u"Return to the bubble-seeding page.", None))
+#endif // QT_CONFIG(tooltip)
         self.pushButton_Back3.setText(QCoreApplication.translate("MainWindow", u"Back", None))
+#if QT_CONFIG(tooltip)
+        self.pushButton_Finish.setToolTip(QCoreApplication.translate("MainWindow", u"Finish segmentation and close this panel, keeping the current mask.", None))
+#endif // QT_CONFIG(tooltip)
         self.pushButton_Finish.setText(QCoreApplication.translate("MainWindow", u"Finish", None))
         self.textBrowser_7.setHtml(QCoreApplication.translate("MainWindow", u"<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
 "<html><head><meta name=\"qrichtext\" content=\"1\" /><meta charset=\"utf-8\" /><style type=\"text/css\">\n"
@@ -8517,8 +10269,23 @@ class Ui_MainWindow(object):
 "li.checked::marker { content: \"\\2612\"; }\n"
 "</style></head><body style=\" font-family:'Ubuntu Sans'; font-size:11pt; font-weight:400; font-style:normal;\">\n"
 "<p align=\"center\" style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-family:'Segoe UI'; font-size:10pt;\">Step 3/3<br /></span><span style=\" font-family:'Segoe UI'; font-size:10pt; font-weight:700;\">Evolution</span></p></body></html>", None))
+#if QT_CONFIG(tooltip)
+        self.groupBox_64.setToolTip(QCoreApplication.translate("MainWindow", u"Number of level-set iterations to run per step (used by both continuous play and single-stepping).", None))
+#endif // QT_CONFIG(tooltip)
         self.groupBox_64.setTitle(QCoreApplication.translate("MainWindow", u"Step Size", None))
+#if QT_CONFIG(tooltip)
+        self.doubleSpinBox_SegStep.setToolTip(QCoreApplication.translate("MainWindow", u"Number of level-set iterations to run per step (used by both continuous play and single-stepping).", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.groupBox_66.setToolTip(QCoreApplication.translate("MainWindow", u"Shows how many level-set iterations have run so far.", None))
+#endif // QT_CONFIG(tooltip)
         self.groupBox_66.setTitle(QCoreApplication.translate("MainWindow", u"Iteration", None))
+#if QT_CONFIG(tooltip)
+        self.doubleSpinBox_Segiter.setToolTip(QCoreApplication.translate("MainWindow", u"Running count of level-set iterations completed so far; updates automatically as the evolution plays.", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.groupBox_65.setToolTip(QCoreApplication.translate("MainWindow", u"Controls for running, single-stepping, and resetting the level-set evolution.", None))
+#endif // QT_CONFIG(tooltip)
         self.groupBox_65.setTitle(QCoreApplication.translate("MainWindow", u"Start / Pause", None))
 #if QT_CONFIG(tooltip)
         self.toolButton_backwardEvo.setToolTip(QCoreApplication.translate("MainWindow", u"Reset to start", None))
@@ -8528,23 +10295,80 @@ class Ui_MainWindow(object):
         self.toolButton_forwardEvo.setToolTip(QCoreApplication.translate("MainWindow", u"One iteration of step size", None))
 #endif // QT_CONFIG(tooltip)
         self.toolButton_forwardEvo.setText(QCoreApplication.translate("MainWindow", u"...", None))
+#if QT_CONFIG(tooltip)
+        self.toolButton_runEvo.setToolTip(QCoreApplication.translate("MainWindow", u"Play or pause the level-set evolution; it runs in chunks of the configured step size.", None))
+#endif // QT_CONFIG(tooltip)
         self.toolButton_runEvo.setText(QCoreApplication.translate("MainWindow", u"...", None))
         self.lineEdit_evolution_status.setText(QCoreApplication.translate("MainWindow", u"Currently: Pause", None))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_15), QCoreApplication.translate("MainWindow", u"Popups for 4D Data", None))
+#if QT_CONFIG(tooltip)
+        self.groupBox_paintbrush.setToolTip(QCoreApplication.translate("MainWindow", u"Manually paint or erase segmentation labels on the current slice.", None))
+#endif // QT_CONFIG(tooltip)
         self.groupBox_paintbrush.setTitle(QCoreApplication.translate("MainWindow", u"Paintbrush", None))
+#if QT_CONFIG(tooltip)
+        self.pushButton_anatOK.setToolTip(QCoreApplication.translate("MainWindow", u"Disabled until every anatomical region has been painted in all views", None))
+#endif // QT_CONFIG(tooltip)
         self.pushButton_anatOK.setText(QCoreApplication.translate("MainWindow", u"NEXT", None))
         self.plainTextEdit_MRID_2.setPlainText(QCoreApplication.translate("MainWindow", u"Please paint all anatomical structures around the tags with the Paintbrush. Once this is done, please click NEXT", None))
+#if QT_CONFIG(tooltip)
+        self.pushButton_segOK.setToolTip(QCoreApplication.translate("MainWindow", u"Finalizes MRID-tag/segmentation painting and generates the contrast heatmap. Unpainted tags are skipped rather than causing an error.", None))
+#endif // QT_CONFIG(tooltip)
         self.pushButton_segOK.setText(QCoreApplication.translate("MainWindow", u"DONE", None))
         self.plainTextEdit_MRID_4.setPlainText(QCoreApplication.translate("MainWindow", u"Please paint all MRID tags with the Paintbrush. Once this is done, please click DONE", None))
+#if QT_CONFIG(tooltip)
+        self.checkBox_Brush_MRID.setToolTip(QCoreApplication.translate("MainWindow", u"Toggle the paintbrush tool for manually painting regions on the current view (e.g. forbidden areas).", None))
+#endif // QT_CONFIG(tooltip)
         self.checkBox_Brush_MRID.setText(QCoreApplication.translate("MainWindow", u"Brush ON", None))
+#if QT_CONFIG(tooltip)
+        self.groupBox_28.setToolTip(QCoreApplication.translate("MainWindow", u"Fine-tune the paintbrush: stroke shape, label opacity, and brush size.", None))
+#endif // QT_CONFIG(tooltip)
         self.groupBox_28.setTitle(QCoreApplication.translate("MainWindow", u"Paintbrush Inspector", None))
+#if QT_CONFIG(tooltip)
+        self.groupBox_29.setToolTip(QCoreApplication.translate("MainWindow", u"Choose whether the paintbrush stroke is square or round.", None))
+#endif // QT_CONFIG(tooltip)
         self.groupBox_29.setTitle(QCoreApplication.translate("MainWindow", u"Brush Style", None))
+#if QT_CONFIG(tooltip)
+        self.paint_square_Post.setToolTip(QCoreApplication.translate("MainWindow", u"Use a square paintbrush stroke.", None))
+#endif // QT_CONFIG(tooltip)
         self.paint_square_Post.setText("")
+#if QT_CONFIG(tooltip)
+        self.paint_round_Post.setToolTip(QCoreApplication.translate("MainWindow", u"Use a round paintbrush stroke.", None))
+#endif // QT_CONFIG(tooltip)
         self.paint_round_Post.setText("")
+#if QT_CONFIG(tooltip)
+        self.groupBox_31.setToolTip(QCoreApplication.translate("MainWindow", u"Sets how opaque the painted label overlay appears on top of the MRI.", None))
+#endif // QT_CONFIG(tooltip)
         self.groupBox_31.setTitle(QCoreApplication.translate("MainWindow", u"Label Opacity", None))
+#if QT_CONFIG(tooltip)
+        self.sizeSlider_labelOcc.setToolTip(QCoreApplication.translate("MainWindow", u"Adjusts the painted label overlay's opacity; mirrors the spin box next to it.", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.doubleSpinBox_labelOcc.setToolTip(QCoreApplication.translate("MainWindow", u"Type the label overlay opacity directly (0 = invisible, 1 = fully opaque).", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.groupBox_30.setToolTip(QCoreApplication.translate("MainWindow", u"Sets the paintbrush stroke size, in voxels (1-20).", None))
+#endif // QT_CONFIG(tooltip)
         self.groupBox_30.setTitle(QCoreApplication.translate("MainWindow", u"Brush Size", None))
+#if QT_CONFIG(tooltip)
+        self.brush_size4d.setToolTip(QCoreApplication.translate("MainWindow", u"Type the paintbrush size directly, in voxels (1-20); mirrors the slider next to it.", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.brush_sizeSlider4d.setToolTip(QCoreApplication.translate("MainWindow", u"Adjusts the paintbrush size, in voxels (1-20); mirrors the spin box next to it.", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.groupBox_33.setToolTip(QCoreApplication.translate("MainWindow", u"Choose which label the paintbrush paints, and which existing label it's allowed to paint over.", None))
+#endif // QT_CONFIG(tooltip)
         self.groupBox_33.setTitle(QCoreApplication.translate("MainWindow", u"Segmentation Labels", None))
+#if QT_CONFIG(tooltip)
+        self.groupBox_35.setToolTip(QCoreApplication.translate("MainWindow", u"Restrict painting to only overwrite this existing label (protects other labels from being painted over).", None))
+#endif // QT_CONFIG(tooltip)
         self.groupBox_35.setTitle(QCoreApplication.translate("MainWindow", u"Paint over", None))
+#if QT_CONFIG(tooltip)
+        self.comboBox_paintOver_Post.setToolTip(QCoreApplication.translate("MainWindow", u"Restrict painting to only overwrite this existing label, or choose all labels to overwrite anything the brush passes over.", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.groupBox_47.setToolTip(QCoreApplication.translate("MainWindow", u"Click a row to choose which label the paintbrush currently paints with.", None))
+#endif // QT_CONFIG(tooltip)
         self.groupBox_47.setTitle(QCoreApplication.translate("MainWindow", u"Active Label", None))
         ___qtablewidgetitem24 = self.tableWidget_labels.horizontalHeaderItem(0)
         ___qtablewidgetitem24.setText(QCoreApplication.translate("MainWindow", u"Idx", None));
@@ -8552,14 +10376,41 @@ class Ui_MainWindow(object):
         ___qtablewidgetitem25.setText(QCoreApplication.translate("MainWindow", u"Color", None));
         ___qtablewidgetitem26 = self.tableWidget_labels.horizontalHeaderItem(2)
         ___qtablewidgetitem26.setText(QCoreApplication.translate("MainWindow", u"Label", None));
+#if QT_CONFIG(tooltip)
+        self.groupBox_36.setToolTip(QCoreApplication.translate("MainWindow", u"Shows the intensity histogram for the selected label's voxels.", None))
+#endif // QT_CONFIG(tooltip)
         self.groupBox_36.setTitle(QCoreApplication.translate("MainWindow", u"Histogram", None))
+#if QT_CONFIG(tooltip)
+        self.groupBox_48.setToolTip(QCoreApplication.translate("MainWindow", u"Choose which label (and which loaded data layer) the histogram above is computed from.", None))
+#endif // QT_CONFIG(tooltip)
         self.groupBox_48.setTitle(QCoreApplication.translate("MainWindow", u"Label", None))
+#if QT_CONFIG(tooltip)
+        self.histogram_label.setToolTip(QCoreApplication.translate("MainWindow", u"Choose which label's voxel intensities the histogram above shows (or 'All anat Regions').", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.paintbrush_dataview.setToolTip(QCoreApplication.translate("MainWindow", u"Choose which loaded data layer the histogram above is computed from.", None))
+#endif // QT_CONFIG(tooltip)
         self.lineEdit_52.setText(QCoreApplication.translate("MainWindow", u"y", None))
+#if QT_CONFIG(tooltip)
+        self.doubleSpinBox_fovy.setToolTip(QCoreApplication.translate("MainWindow", u"Field of view along Y, in mm \u2014 editing this rescales the Y voxel spacing to match (voxel count stays fixed).", None))
+#endif // QT_CONFIG(tooltip)
         self.doubleSpinBox_fovy.setSuffix(QCoreApplication.translate("MainWindow", u"mm", None))
         self.lineEdit_56.setText(QCoreApplication.translate("MainWindow", u"z", None))
+#if QT_CONFIG(tooltip)
+        self.doubleSpinBox_spay.setToolTip(QCoreApplication.translate("MainWindow", u"Voxel spacing along Y, in mm \u2014 editing this rescales the Y field of view to match (voxel count stays fixed).", None))
+#endif // QT_CONFIG(tooltip)
         self.doubleSpinBox_spay.setSuffix(QCoreApplication.translate("MainWindow", u"mm", None))
+#if QT_CONFIG(tooltip)
+        self.spinBox_dimey.setToolTip(QCoreApplication.translate("MainWindow", u"Number of voxels along Y in the loaded volume (read-only).", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.pushButton_SaveSpacing.setToolTip(QCoreApplication.translate("MainWindow", u"Apply the edited spacing/field-of-view values to the volume's metadata.", None))
+#endif // QT_CONFIG(tooltip)
         self.pushButton_SaveSpacing.setText(QCoreApplication.translate("MainWindow", u"Save new Metadata", None))
         self.lineEdit_55.setText(QCoreApplication.translate("MainWindow", u"z", None))
+#if QT_CONFIG(tooltip)
+        self.spinBox_dimez.setToolTip(QCoreApplication.translate("MainWindow", u"Number of voxels along Z in the loaded volume (read-only).", None))
+#endif // QT_CONFIG(tooltip)
         self.lineEdit_50.setText(QCoreApplication.translate("MainWindow", u"x", None))
         self.lineEdit_47.setText(QCoreApplication.translate("MainWindow", u"Spacing", None))
         self.lineEdit_54.setText(QCoreApplication.translate("MainWindow", u"y", None))
@@ -8567,39 +10418,116 @@ class Ui_MainWindow(object):
         self.lineEdit_48.setText(QCoreApplication.translate("MainWindow", u"Field of View", None))
         self.lineEdit_51.setText(QCoreApplication.translate("MainWindow", u"x", None))
         self.lineEdit_46.setText(QCoreApplication.translate("MainWindow", u"Image Size", None))
+#if QT_CONFIG(tooltip)
+        self.doubleSpinBox_fovz.setToolTip(QCoreApplication.translate("MainWindow", u"Field of view along Z, in mm \u2014 editing this rescales the Z voxel spacing to match (voxel count stays fixed).", None))
+#endif // QT_CONFIG(tooltip)
         self.doubleSpinBox_fovz.setSuffix(QCoreApplication.translate("MainWindow", u"mm", None))
+#if QT_CONFIG(tooltip)
+        self.doubleSpinBox_spax.setToolTip(QCoreApplication.translate("MainWindow", u"Voxel spacing along X, in mm \u2014 editing this rescales the X field of view to match (voxel count stays fixed).", None))
+#endif // QT_CONFIG(tooltip)
         self.doubleSpinBox_spax.setSuffix(QCoreApplication.translate("MainWindow", u"mm", None))
+#if QT_CONFIG(tooltip)
+        self.spinBox_dimex.setToolTip(QCoreApplication.translate("MainWindow", u"Number of voxels along X in the loaded volume (read-only).", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.pushButton_cancel_spacing.setToolTip(QCoreApplication.translate("MainWindow", u"Close this dialog without applying the spacing/field-of-view changes.", None))
+#endif // QT_CONFIG(tooltip)
         self.pushButton_cancel_spacing.setText(QCoreApplication.translate("MainWindow", u"Cancel", None))
+#if QT_CONFIG(tooltip)
+        self.doubleSpinBox_fovx.setToolTip(QCoreApplication.translate("MainWindow", u"Field of view (mm) along this axis in the Change Spacing popup \u2014 editing it recalculates the matching spacing value.", None))
+#endif // QT_CONFIG(tooltip)
         self.doubleSpinBox_fovx.setSuffix(QCoreApplication.translate("MainWindow", u"mm", None))
         self.lineEdit_49.setText(QCoreApplication.translate("MainWindow", u"x", None))
         self.lineEdit_57.setText(QCoreApplication.translate("MainWindow", u"z", None))
+#if QT_CONFIG(tooltip)
+        self.doubleSpinBox_spaz.setToolTip(QCoreApplication.translate("MainWindow", u"New voxel spacing (mm) along the z axis to stage before saving \u2014 editing it recalculates the matching field of view.", None))
+#endif // QT_CONFIG(tooltip)
         self.doubleSpinBox_spaz.setSuffix(QCoreApplication.translate("MainWindow", u"mm", None))
+#if QT_CONFIG(tooltip)
+        self.spinBox_dimz.setToolTip(QCoreApplication.translate("MainWindow", u"Number of voxels along the z axis of the loaded volume (read-only).", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.doubleSpinBox_originx.setToolTip(QCoreApplication.translate("MainWindow", u"Volume origin coordinate (mm) along the x axis, read from the file header (read-only).", None))
+#endif // QT_CONFIG(tooltip)
         self.lineEdit_42.setText(QCoreApplication.translate("MainWindow", u"z:", None))
-        self.lineEdit_28.setText(QCoreApplication.translate("MainWindow", u"Intensity Range", None))
-        self.lineEdit_34.setText(QCoreApplication.translate("MainWindow", u"x:", None))
+#if QT_CONFIG(tooltip)
+        self.doubleSpinBox_originy.setToolTip(QCoreApplication.translate("MainWindow", u"Volume origin coordinate (mm) along the y axis, read from the file header (read-only).", None))
+#endif // QT_CONFIG(tooltip)
+        self.lineEdit_25.setText(QCoreApplication.translate("MainWindow", u"Spacing", None))
+#if QT_CONFIG(tooltip)
+        self.pushButton_SaveMetadata.setToolTip(QCoreApplication.translate("MainWindow", u"Writes the edited voxel spacing to the NIfTI file on disk and reloads the volume; shows 'OK' instead when nothing has changed.", None))
+#endif // QT_CONFIG(tooltip)
         self.pushButton_SaveMetadata.setText(QCoreApplication.translate("MainWindow", u"Save New Settings \n"
 " and Reload Image", None))
+        self.lineEdit_26.setText(QCoreApplication.translate("MainWindow", u"Origin", None))
+        self.lineEdit_35.setText(QCoreApplication.translate("MainWindow", u"x:", None))
+#if QT_CONFIG(tooltip)
+        self.spinBox_dimy.setToolTip(QCoreApplication.translate("MainWindow", u"Number of voxels along the y axis of the loaded volume (read-only).", None))
+#endif // QT_CONFIG(tooltip)
+        self.lineEdit_44.setText(QCoreApplication.translate("MainWindow", u"min", None))
+        self.lineEdit_27.setText(QCoreApplication.translate("MainWindow", u"Orientation", None))
+        self.lineEdit_34.setText(QCoreApplication.translate("MainWindow", u"x:", None))
+        self.lineEdit_28.setText(QCoreApplication.translate("MainWindow", u"Intensity Range", None))
+        self.lineEdit_41.setText(QCoreApplication.translate("MainWindow", u"z:", None))
+        self.doubleSpinBox_spacingy.setSuffix(QCoreApplication.translate("MainWindow", u"mm", None))
+#if QT_CONFIG(tooltip)
+        self.pushButton_cancel_metadata.setToolTip(QCoreApplication.translate("MainWindow", u"Close this metadata panel without changing anything.", None))
+#endif // QT_CONFIG(tooltip)
+        self.pushButton_cancel_metadata.setText(QCoreApplication.translate("MainWindow", u"Cancel", None))
+        self.lineEdit_38.setText(QCoreApplication.translate("MainWindow", u"y:", None))
+#if QT_CONFIG(tooltip)
+        self.doubleSpinBox_maxIntensity.setToolTip(QCoreApplication.translate("MainWindow", u"Highest voxel intensity value in the loaded volume (read-only).", None))
+#endif // QT_CONFIG(tooltip)
         self.lineEdit_23.setText(QCoreApplication.translate("MainWindow", u"Dimensions", None))
         self.lineEdit_37.setText(QCoreApplication.translate("MainWindow", u"y:", None))
-        self.pushButton_changeSpacing.setText(QCoreApplication.translate("MainWindow", u"Change Spacing", None))
-        self.lineEdit_40.setText(QCoreApplication.translate("MainWindow", u"z:", None))
         self.lineEdit_39.setText(QCoreApplication.translate("MainWindow", u"y:", None))
-        self.lineEdit_35.setText(QCoreApplication.translate("MainWindow", u"x:", None))
-        self.pushButton_cancel_metadata.setText(QCoreApplication.translate("MainWindow", u"Cancel", None))
-        self.lineEdit_26.setText(QCoreApplication.translate("MainWindow", u"Origin", None))
-        self.doubleSpinBox_spacingy.setSuffix(QCoreApplication.translate("MainWindow", u"mm", None))
-        self.lineEdit_44.setText(QCoreApplication.translate("MainWindow", u"min", None))
-        self.pushButton_reorient.setText(QCoreApplication.translate("MainWindow", u"Reorient to RAS", None))
+#if QT_CONFIG(tooltip)
+        self.spinBox_dimx.setToolTip(QCoreApplication.translate("MainWindow", u"Number of voxels along the x axis of the loaded volume (read-only).", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.doubleSpinBox_originz.setToolTip(QCoreApplication.translate("MainWindow", u"Volume origin coordinate (mm) along the z axis, read from the file header (read-only).", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.doubleSpinBox_minIntensity.setToolTip(QCoreApplication.translate("MainWindow", u"Lowest voxel intensity value in the loaded volume (read-only).", None))
+#endif // QT_CONFIG(tooltip)
         self.lineEdit_36.setText(QCoreApplication.translate("MainWindow", u"x:", None))
-        self.lineEdit_41.setText(QCoreApplication.translate("MainWindow", u"z:", None))
-        self.doubleSpinBox_spacingx.setSuffix(QCoreApplication.translate("MainWindow", u"mm", None))
-        self.lineEdit_32.setText(QCoreApplication.translate("MainWindow", u"Direction", None))
-        self.lineEdit_27.setText(QCoreApplication.translate("MainWindow", u"Orientation", None))
-        self.lineEdit_25.setText(QCoreApplication.translate("MainWindow", u"Spacing", None))
-        self.lineEdit_38.setText(QCoreApplication.translate("MainWindow", u"y:", None))
         self.lineEdit_45.setText(QCoreApplication.translate("MainWindow", u"max", None))
+        self.lineEdit_40.setText(QCoreApplication.translate("MainWindow", u"z:", None))
+        self.doubleSpinBox_spacingx.setSuffix(QCoreApplication.translate("MainWindow", u"mm", None))
         self.doubleSpinBox_spacingz.setSuffix(QCoreApplication.translate("MainWindow", u"mm", None))
+        self.lineEdit_32.setText(QCoreApplication.translate("MainWindow", u"Direction", None))
+#if QT_CONFIG(tooltip)
+        self.pushButton_reorient.setToolTip(QCoreApplication.translate("MainWindow", u"Reloads the volume mirrored between RAS and LAS convention (flips left/right). Does not affect the underlying registration or trajectory-planning data, which always stay in RAS.", None))
+#endif // QT_CONFIG(tooltip)
+        self.pushButton_reorient.setText(QCoreApplication.translate("MainWindow", u"Reorient to RAS", None))
+#if QT_CONFIG(tooltip)
+        self.pushButton_changeSpacing.setToolTip(QCoreApplication.translate("MainWindow", u"Open a popup to stage a new voxel spacing before saving it to the file.", None))
+#endif // QT_CONFIG(tooltip)
+        self.pushButton_changeSpacing.setText(QCoreApplication.translate("MainWindow", u"Change Spacing", None))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_6), QCoreApplication.translate("MainWindow", u"Popups for 4D Data II", None))
+#if QT_CONFIG(tooltip)
+        self.pushButton_deselectAll.setToolTip(QCoreApplication.translate("MainWindow", u"Uncheck every channel, hiding them all from the 3D view.", None))
+#endif // QT_CONFIG(tooltip)
+        self.pushButton_deselectAll.setText(QCoreApplication.translate("MainWindow", u"Deselect All", None))
+#if QT_CONFIG(tooltip)
+        self.pushButton_selectAll.setToolTip(QCoreApplication.translate("MainWindow", u"Check every channel, showing them all in the 3D view.", None))
+#endif // QT_CONFIG(tooltip)
+        self.pushButton_selectAll.setText(QCoreApplication.translate("MainWindow", u"Select All", None))
+#if QT_CONFIG(tooltip)
+        self.pushButton_showChannels.setToolTip(QCoreApplication.translate("MainWindow", u"Show only the checked channels in the 3D view; unchecked channels stay hidden.", None))
+#endif // QT_CONFIG(tooltip)
+        self.pushButton_showChannels.setText(QCoreApplication.translate("MainWindow", u"Show only selected Channels", None))
+#if QT_CONFIG(tooltip)
+        self.pushButton_anatRegion.setToolTip(QCoreApplication.translate("MainWindow", u"Manually reassign the anatomical region label of the currently selected channel (opens a picker of nearby atlas regions).", None))
+#endif // QT_CONFIG(tooltip)
+        self.pushButton_anatRegion.setText(QCoreApplication.translate("MainWindow", u"CHANGE ANAT REGION", None))
+        self.groupBox_5.setTitle("")
+#if QT_CONFIG(tooltip)
+        self.comboBox_mridTag.setToolTip(QCoreApplication.translate("MainWindow", u"Select which channel group / MRID tag to display in the 3D view.", None))
+#endif // QT_CONFIG(tooltip)
+        self.comboBox_mridTag.setCurrentText("")
+        self.lineEdit_60.setText(QCoreApplication.translate("MainWindow", u"Selected Shank", None))
+        self.textEdit_ephys.setText(QCoreApplication.translate("MainWindow", u"TextLabel", None))
 #if QT_CONFIG(tooltip)
         self.pushButton_slicex.setToolTip(QCoreApplication.translate("MainWindow", u"Sagittal Slicing", None))
 #endif // QT_CONFIG(tooltip)
@@ -8616,10 +10544,31 @@ class Ui_MainWindow(object):
         self.pushButton_slicey.setToolTip(QCoreApplication.translate("MainWindow", u"Coronal Slicing", None))
 #endif // QT_CONFIG(tooltip)
         self.pushButton_slicey.setText("")
+#if QT_CONFIG(tooltip)
+        self.groupBox_6.setToolTip(QCoreApplication.translate("MainWindow", u"Opacity sliders for the region meshes shown in the 3D view.", None))
+#endif // QT_CONFIG(tooltip)
         self.groupBox_6.setTitle(QCoreApplication.translate("MainWindow", u"Change Opacity of Meshes", None))
+#if QT_CONFIG(tooltip)
+        self.groupBox_8.setToolTip(QCoreApplication.translate("MainWindow", u"Opacity of the atlas regions the selected shank(s) traverse.", None))
+#endif // QT_CONFIG(tooltip)
         self.groupBox_8.setTitle(QCoreApplication.translate("MainWindow", u"Regions of Shank", None))
+#if QT_CONFIG(tooltip)
+        self.horizontalSlider_OtherRegions.setToolTip(QCoreApplication.translate("MainWindow", u"Opacity of the atlas regions the selected shank(s) traverse, from transparent to fully opaque.", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.groupBox_9.setToolTip(QCoreApplication.translate("MainWindow", u"Opacity of the background brain mesh.", None))
+#endif // QT_CONFIG(tooltip)
         self.groupBox_9.setTitle(QCoreApplication.translate("MainWindow", u"Background", None))
+#if QT_CONFIG(tooltip)
+        self.horizontalSlider_Background.setToolTip(QCoreApplication.translate("MainWindow", u"Opacity of the background brain mesh, from transparent to fully opaque.", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.groupBox_11.setToolTip(QCoreApplication.translate("MainWindow", u"Opacity of the atlas region highlighted for the currently selected channel.", None))
+#endif // QT_CONFIG(tooltip)
         self.groupBox_11.setTitle(QCoreApplication.translate("MainWindow", u"Region of Selected Electrode", None))
+#if QT_CONFIG(tooltip)
+        self.horizontalSlider_ElectrodeRegion.setToolTip(QCoreApplication.translate("MainWindow", u"Opacity of the atlas region highlighted for the currently selected channel, from transparent to fully opaque.", None))
+#endif // QT_CONFIG(tooltip)
 #if QT_CONFIG(tooltip)
         self.resetCamera_ephys.setToolTip(QCoreApplication.translate("MainWindow", u"Reset Camera View", None))
 #endif // QT_CONFIG(tooltip)
@@ -8628,51 +10577,105 @@ class Ui_MainWindow(object):
         self.change_perspective_ephys.setToolTip(QCoreApplication.translate("MainWindow", u"Change Perspective", None))
 #endif // QT_CONFIG(tooltip)
         self.change_perspective_ephys.setText("")
+#if QT_CONFIG(tooltip)
+        self.groupBox_37.setToolTip(QCoreApplication.translate("MainWindow", u"Voxel coordinates of the selected channel's electrode \u2014 updates automatically when you click a channel in the table.", None))
+#endif // QT_CONFIG(tooltip)
         self.groupBox_37.setTitle(QCoreApplication.translate("MainWindow", u"Coordinates of selected Channel", None))
+#if QT_CONFIG(tooltip)
+        self.spinBox_y_ephys.setToolTip(QCoreApplication.translate("MainWindow", u"Y voxel coordinate of the selected channel's electrode position.", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.spinBox_x_ephys.setToolTip(QCoreApplication.translate("MainWindow", u"X voxel coordinate of the selected channel's electrode position.", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.spinBox_z_ephys.setToolTip(QCoreApplication.translate("MainWindow", u"Z voxel coordinate of the selected channel's electrode position.", None))
+#endif // QT_CONFIG(tooltip)
         self.tabWidget_ephys.setTabText(self.tabWidget_ephys.indexOf(self.tab_4), QCoreApplication.translate("MainWindow", u"Anatomy", None))
         self.lineEdit_3.setText(QCoreApplication.translate("MainWindow", u"Jump to Frame", None))
+#if QT_CONFIG(tooltip)
+        self.pushButton_videoPlay.setToolTip(QCoreApplication.translate("MainWindow", u"Play or pause the loaded behavior video.", None))
+#endif // QT_CONFIG(tooltip)
         self.pushButton_videoPlay.setText("")
+#if QT_CONFIG(tooltip)
+        self.spinBox_frame.setToolTip(QCoreApplication.translate("MainWindow", u"Jump to this video frame.", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.pushButton_AddVideo.setToolTip(QCoreApplication.translate("MainWindow", u"Load a behavior video file to sync alongside the ephys recording.", None))
+#endif // QT_CONFIG(tooltip)
         self.pushButton_AddVideo.setText(QCoreApplication.translate("MainWindow", u"OPEN VIDEO", None))
         self.tabWidget_ephys.setTabText(self.tabWidget_ephys.indexOf(self.tab_5), QCoreApplication.translate("MainWindow", u"Video", None))
+#if QT_CONFIG(tooltip)
+        self.pushButton_filterpopup.setToolTip(QCoreApplication.translate("MainWindow", u"Open the channel-filtering panel (band/low-pass filter design and preview).", None))
+#endif // QT_CONFIG(tooltip)
         self.pushButton_filterpopup.setText(QCoreApplication.translate("MainWindow", u"Filter Channels", None))
         self.lineEdit_13.setText(QCoreApplication.translate("MainWindow", u"Spike Ruster Plot Unit/Neurons over Time [min:sec:msec] - Skipped Channels are not shown", None))
         self.lineEdit_61.setText(QCoreApplication.translate("MainWindow", u"Pairwise Neuronal Spike-Count Correlation", None))
         self.lineEdit_62.setText(QCoreApplication.translate("MainWindow", u"Colour-axis Limits", None))
+#if QT_CONFIG(tooltip)
+        self.doubleSpinBox_ClusterLimits.setToolTip(QCoreApplication.translate("MainWindow", u"Symmetric color-scale limit (\u00b1value) for the hierarchical correlation heatmap.", None))
+#endif // QT_CONFIG(tooltip)
         self.tabWidget_LFP.setTabText(self.tabWidget_LFP.indexOf(self.tab_13), QCoreApplication.translate("MainWindow", u"Hierarchical Correlation", None))
         self.lineEdit_64.setText(QCoreApplication.translate("MainWindow", u"Spectogram of selected Channel in same time window as ephys data displayed", None))
+#if QT_CONFIG(tooltip)
+        self.pushButton_axisLog.setToolTip(QCoreApplication.translate("MainWindow", u"Toggle the spectrogram's frequency axis between linear and logarithmic scale.", None))
+#endif // QT_CONFIG(tooltip)
         self.pushButton_axisLog.setText(QCoreApplication.translate("MainWindow", u"Change Axis", None))
+#if QT_CONFIG(tooltip)
+        self.pushButton_colorMap.setToolTip(QCoreApplication.translate("MainWindow", u"Cycle through the available spectrogram colormaps.", None))
+#endif // QT_CONFIG(tooltip)
         self.pushButton_colorMap.setText(QCoreApplication.translate("MainWindow", u"ColorMap", None))
         self.tabWidget_LFP.setTabText(self.tabWidget_LFP.indexOf(self.tab_14), QCoreApplication.translate("MainWindow", u"Spectogram", None))
         self.lineEdit_65.setText(QCoreApplication.translate("MainWindow", u"Current source density estimation ", None))
+#if QT_CONFIG(tooltip)
+        self.pushButton_exportCSD.setToolTip(QCoreApplication.translate("MainWindow", u"Export the current CSD (current source density) data as a binary file with a JSON sidecar.", None))
+#endif // QT_CONFIG(tooltip)
         self.pushButton_exportCSD.setText(QCoreApplication.translate("MainWindow", u"Export as Binary", None))
         self.tabWidget_LFP.setTabText(self.tabWidget_LFP.indexOf(self.tab_8), QCoreApplication.translate("MainWindow", u"CSD", None))
+#if QT_CONFIG(tooltip)
+        self.pushButton_allChannels_axis.setToolTip(QCoreApplication.translate("MainWindow", u"Toggle the all-channels spectrogram's frequency axis between linear and logarithmic scale.", None))
+#endif // QT_CONFIG(tooltip)
         self.pushButton_allChannels_axis.setText(QCoreApplication.translate("MainWindow", u"Change Axis", None))
+#if QT_CONFIG(tooltip)
+        self.pushButton_Timeframe_spectogram.setToolTip(QCoreApplication.translate("MainWindow", u"Switch the all-channels spectrogram between the full recording and a window centered on a detected ripple.", None))
+#endif // QT_CONFIG(tooltip)
         self.pushButton_Timeframe_spectogram.setText(QCoreApplication.translate("MainWindow", u"Entire Frame / Around Ripple", None))
         self.lineEdit_66.setText(QCoreApplication.translate("MainWindow", u"Spectogram at selected time over all channels", None))
         self.tabWidget_LFP.setTabText(self.tabWidget_LFP.indexOf(self.tab_9), QCoreApplication.translate("MainWindow", u"Spectogram all Channels", None))
         self.tabWidget_ephys.setTabText(self.tabWidget_ephys.indexOf(self.tab_7), QCoreApplication.translate("MainWindow", u"Analysis", None))
-        self.pushButton_deselectAll.setText(QCoreApplication.translate("MainWindow", u"Deselect All", None))
-        self.pushButton_selectAll.setText(QCoreApplication.translate("MainWindow", u"Select All", None))
-        self.pushButton_showChannels.setText(QCoreApplication.translate("MainWindow", u"Show only selected Channels", None))
-        self.pushButton_anatRegion.setText(QCoreApplication.translate("MainWindow", u"CHANGE ANAT REGION", None))
-        self.groupBox_5.setTitle("")
-        self.comboBox_mridTag.setCurrentText("")
-        self.lineEdit_60.setText(QCoreApplication.translate("MainWindow", u"Selected Shank", None))
-        self.textEdit_ephys.setHtml(QCoreApplication.translate("MainWindow", u"<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
-"<html><head><meta name=\"qrichtext\" content=\"1\" /><meta charset=\"utf-8\" /><style type=\"text/css\">\n"
-"p, li { white-space: pre-wrap; }\n"
-"hr { height: 1px; border-width: 0; }\n"
-"li.unchecked::marker { content: \"\\2610\"; }\n"
-"li.checked::marker { content: \"\\2612\"; }\n"
-"</style></head><body style=\" font-family:'Ubuntu Sans'; font-size:11pt; font-weight:400; font-style:normal;\">\n"
-"<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-family:'Segoe UI'; font-size:20pt; color:#ffffff;\">Atlas 3D Visualisation</span></p></body></html>", None))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_ephys), QCoreApplication.translate("MainWindow", u"ephys", None))
         self.groupBox_ChangeanatRegion.setTitle("")
+#if QT_CONFIG(tooltip)
+        self.groupBox_2.setToolTip(QCoreApplication.translate("MainWindow", u"Candidate atlas regions near this channel, ranked by distance \u2014 pick the correct one.", None))
+#endif // QT_CONFIG(tooltip)
         self.groupBox_2.setTitle(QCoreApplication.translate("MainWindow", u"Anatomical Region", None))
+#if QT_CONFIG(tooltip)
+        self.comboBox_ChangeanatRegion.setToolTip(QCoreApplication.translate("MainWindow", u"Candidate atlas regions near this channel's electrode, sorted by distance; select the correct one.", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.groupBox.setToolTip(QCoreApplication.translate("MainWindow", u"The ephys channel whose region assignment you're changing (read-only).", None))
+#endif // QT_CONFIG(tooltip)
         self.groupBox.setTitle(QCoreApplication.translate("MainWindow", u"Channel ID", None))
+#if QT_CONFIG(tooltip)
+        self.spinBox_ChangechannelID.setToolTip(QCoreApplication.translate("MainWindow", u"The ephys channel whose region assignment you're changing (read-only).", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.groupBox_52.setToolTip(QCoreApplication.translate("MainWindow", u"Lower cutoff frequency (Hz) \u2014 the low-pass cutoff, or the band's lower edge in band-pass mode.", None))
+#endif // QT_CONFIG(tooltip)
         self.groupBox_52.setTitle(QCoreApplication.translate("MainWindow", u"Lower Frequency", None))
+#if QT_CONFIG(tooltip)
+        self.doubleSpinBox_lowerFreq.setToolTip(QCoreApplication.translate("MainWindow", u"Lower cutoff frequency (Hz) \u2014 the low-pass cutoff, or the band's lower edge in band-pass mode.", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.radioButton_lowPass.setToolTip(QCoreApplication.translate("MainWindow", u"Design a low-pass filter using only the lower cutoff frequency.", None))
+#endif // QT_CONFIG(tooltip)
         self.radioButton_lowPass.setText(QCoreApplication.translate("MainWindow", u"Low Pass Filter", None))
+#if QT_CONFIG(tooltip)
+        self.radioButton_bandPass.setToolTip(QCoreApplication.translate("MainWindow", u"Design a band-pass filter using both the lower and upper cutoff frequencies.", None))
+#endif // QT_CONFIG(tooltip)
         self.radioButton_bandPass.setText(QCoreApplication.translate("MainWindow", u"Band Pass Filter", None))
+#if QT_CONFIG(tooltip)
+        self.lineEdit_selectedChannels.setToolTip(QCoreApplication.translate("MainWindow", u"Comma-separated channel numbers to filter \u2014 auto-filled when a CA1 channel is detected, but editable to target other channels.", None))
+#endif // QT_CONFIG(tooltip)
         self.comboBox_FilterType.setItemText(0, QCoreApplication.translate("MainWindow", u"IIR - Butterworth", None))
         self.comboBox_FilterType.setItemText(1, QCoreApplication.translate("MainWindow", u"IIR - Chebyshev I", None))
         self.comboBox_FilterType.setItemText(2, QCoreApplication.translate("MainWindow", u"IIR - Chebyshev II", None))
@@ -8681,10 +10684,28 @@ class Ui_MainWindow(object):
         self.comboBox_FilterType.setItemText(5, QCoreApplication.translate("MainWindow", u"FIR - Hann", None))
         self.comboBox_FilterType.setItemText(6, QCoreApplication.translate("MainWindow", u"FIR - Blackman", None))
 
+#if QT_CONFIG(tooltip)
+        self.comboBox_FilterType.setToolTip(QCoreApplication.translate("MainWindow", u"Filter implementation to use: IIR (Butterworth) or FIR.", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.pushButton_Filter.setToolTip(QCoreApplication.translate("MainWindow", u"Apply the designed filter to the selected channels' data.", None))
+#endif // QT_CONFIG(tooltip)
         self.pushButton_Filter.setText(QCoreApplication.translate("MainWindow", u"Filter Selected Channels", None))
+#if QT_CONFIG(tooltip)
+        self.pushButton_FrequencyResponse.setToolTip(QCoreApplication.translate("MainWindow", u"Preview the designed filter's frequency response before applying it.", None))
+#endif // QT_CONFIG(tooltip)
         self.pushButton_FrequencyResponse.setText(QCoreApplication.translate("MainWindow", u"Show Frequency Response", None))
+#if QT_CONFIG(tooltip)
+        self.pushButton_detectFreq.setToolTip(QCoreApplication.translate("MainWindow", u"Estimate a cutoff frequency from the selected channels' power spectrum.", None))
+#endif // QT_CONFIG(tooltip)
         self.pushButton_detectFreq.setText(QCoreApplication.translate("MainWindow", u"Auto detect Frequency cut-off", None))
+#if QT_CONFIG(tooltip)
+        self.groupBox_upperFreq.setToolTip(QCoreApplication.translate("MainWindow", u"Only used for band-pass filtering \u2014 sets the upper cutoff frequency (Hz); disabled in low-pass mode.", None))
+#endif // QT_CONFIG(tooltip)
         self.groupBox_upperFreq.setTitle(QCoreApplication.translate("MainWindow", u"Upper Frequency", None))
+#if QT_CONFIG(tooltip)
+        self.doubleSpinBox_upperFreq.setToolTip(QCoreApplication.translate("MainWindow", u"Upper cutoff frequency (Hz) for band-pass filtering; disabled in low-pass mode.", None))
+#endif // QT_CONFIG(tooltip)
         self.textEdit_3.setHtml(QCoreApplication.translate("MainWindow", u"<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
 "<html><head><meta name=\"qrichtext\" content=\"1\" /><meta charset=\"utf-8\" /><style type=\"text/css\">\n"
 "p, li { white-space: pre-wrap; }\n"
@@ -8694,40 +10715,170 @@ class Ui_MainWindow(object):
 "</style></head><body style=\" font-family:'Ubuntu Sans'; font-size:11pt; font-weight:400; font-style:normal;\">\n"
 "<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\">Selected Channels IDs to be filtered (Please seperate with comma)</p></body></html>", None))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab), QCoreApplication.translate("MainWindow", u"Popups for ephys", None))
-        self.lineEdit_16.setText(QCoreApplication.translate("MainWindow", u"Register Key", None))
-        self.pushButton_createMovMask.setText(QCoreApplication.translate("MainWindow", u"Create \n"
-" Moving  Mask", None))
-        self.pushButton_browseMov.setText(QCoreApplication.translate("MainWindow", u"Browse", None))
+#if QT_CONFIG(tooltip)
+        self.pushButton_register.setToolTip(QCoreApplication.translate("MainWindow", u"Run registration using the settings configured on this tab.", None))
+#endif // QT_CONFIG(tooltip)
+        self.pushButton_register.setText(QCoreApplication.translate("MainWindow", u"Register", None))
+#if QT_CONFIG(tooltip)
+        self.pushButton_browseAtlas.setToolTip(QCoreApplication.translate("MainWindow", u"Browse for the atlas folder to register against.", None))
+#endif // QT_CONFIG(tooltip)
+        self.pushButton_browseAtlas.setText(QCoreApplication.translate("MainWindow", u"Browse", None))
+#if QT_CONFIG(tooltip)
+        self.pushButton_browseBru2.setToolTip(QCoreApplication.translate("MainWindow", u"Browse for the raw Bruker2Bids data folder.", None))
+#endif // QT_CONFIG(tooltip)
         self.pushButton_browseBru2.setText(QCoreApplication.translate("MainWindow", u"Browse", None))
         self.lineEdit_7.setText(QCoreApplication.translate("MainWindow", u"Base path", None))
-        self.checkBox_elastic.setText(QCoreApplication.translate("MainWindow", u"Elastic", None))
-        self.lineEdit_animalID.setText(QCoreApplication.translate("MainWindow", u"Animal ID", None))
-        self.lineEdit_11.setText(QCoreApplication.translate("MainWindow", u"Moving Mask", None))
-        self.pushButton_browseBase.setText(QCoreApplication.translate("MainWindow", u"Browse", None))
-        self.lineEdit_14.setText(QCoreApplication.translate("MainWindow", u"Num Threads", None))
-        self.lineEdit_17.setText(QCoreApplication.translate("MainWindow", u"Tasks", None))
-        self.pushButton_browseAtlas.setText(QCoreApplication.translate("MainWindow", u"Browse", None))
-        self.lineEdit_15.setText(QCoreApplication.translate("MainWindow", u"Working Session", None))
+#if QT_CONFIG(tooltip)
+        self.checkBox_presurgery.setToolTip(QCoreApplication.translate("MainWindow", u"Mark this session as the pre-surgery scan (affects how it's registered).", None))
+#endif // QT_CONFIG(tooltip)
         self.checkBox_presurgery.setText(QCoreApplication.translate("MainWindow", u"Presurgery", None))
+#if QT_CONFIG(tooltip)
+        self.comboBox_working_session.setToolTip(QCoreApplication.translate("MainWindow", u"Which session (ses-*) of this animal to register.", None))
+#endif // QT_CONFIG(tooltip)
         self.lineEdit_5.setText(QCoreApplication.translate("MainWindow", u"Bru2 path", None))
         self.lineEdit_10.setText(QCoreApplication.translate("MainWindow", u"Atlas Files", None))
+#if QT_CONFIG(tooltip)
+        self.pushButton_browseBase.setToolTip(QCoreApplication.translate("MainWindow", u"Browse for the base (reference) data folder.", None))
+#endif // QT_CONFIG(tooltip)
+        self.pushButton_browseBase.setText(QCoreApplication.translate("MainWindow", u"Browse", None))
+#if QT_CONFIG(tooltip)
+        self.checkBox_atlasmask.setToolTip(QCoreApplication.translate("MainWindow", u"Restrict the registration metric to the atlas mask region instead of the whole brain volume.", None))
+#endif // QT_CONFIG(tooltip)
         self.checkBox_atlasmask.setText(QCoreApplication.translate("MainWindow", u"Use Atlas Mask", None))
-        self.checkBox_mov_mask.setText(QCoreApplication.translate("MainWindow", u"Use moving mask", None))
+        self.lineEdit_14.setText(QCoreApplication.translate("MainWindow", u"Num Threads", None))
+#if QT_CONFIG(tooltip)
+        self.pushButton_createMovMask.setToolTip(QCoreApplication.translate("MainWindow", u"Create a moving mask for registration by segmenting the working-session anatomical scan.", None))
+#endif // QT_CONFIG(tooltip)
+        self.pushButton_createMovMask.setText(QCoreApplication.translate("MainWindow", u"Create \n"
+" Moving  Mask", None))
+#if QT_CONFIG(tooltip)
+        self.pushButton_browseMov.setToolTip(QCoreApplication.translate("MainWindow", u"Browse for an existing moving-mask NIfTI file.", None))
+#endif // QT_CONFIG(tooltip)
+        self.pushButton_browseMov.setText(QCoreApplication.translate("MainWindow", u"Browse", None))
+#if QT_CONFIG(tooltip)
+        self.pushButton_biascorrection.setToolTip(QCoreApplication.translate("MainWindow", u"Run bias-field correction only, without registration.", None))
+#endif // QT_CONFIG(tooltip)
         self.pushButton_biascorrection.setText(QCoreApplication.translate("MainWindow", u"Biascorrection ONLY", None))
-        self.pushButton_register.setText(QCoreApplication.translate("MainWindow", u"Register", None))
+#if QT_CONFIG(tooltip)
+        self.spinBox_num_threads.setToolTip(QCoreApplication.translate("MainWindow", u"Number of CPU threads to use for registration (1\u20138).", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.checkBox_mov_mask.setToolTip(QCoreApplication.translate("MainWindow", u"Use a moving-image mask during registration; enables the mask path field and the button to create one.", None))
+#endif // QT_CONFIG(tooltip)
+        self.checkBox_mov_mask.setText(QCoreApplication.translate("MainWindow", u"Use moving mask", None))
+        self.lineEdit_11.setText(QCoreApplication.translate("MainWindow", u"Moving Mask", None))
+        self.lineEdit_17.setText(QCoreApplication.translate("MainWindow", u"Tasks", None))
+        self.lineEdit_16.setText(QCoreApplication.translate("MainWindow", u"Register Key", None))
+#if QT_CONFIG(tooltip)
+        self.checkBox_elastic.setToolTip(QCoreApplication.translate("MainWindow", u"Use elastic (deformable) registration instead of rigid/affine.", None))
+#endif // QT_CONFIG(tooltip)
+        self.checkBox_elastic.setText(QCoreApplication.translate("MainWindow", u"Elastic", None))
+#if QT_CONFIG(tooltip)
+        self.comboBox_register_key.setToolTip(QCoreApplication.translate("MainWindow", u"Which scan sequence (protocol name) to use for registration.", None))
+#endif // QT_CONFIG(tooltip)
+        self.lineEdit_animalID.setText(QCoreApplication.translate("MainWindow", u"Animal ID", None))
+        self.lineEdit_15.setText(QCoreApplication.translate("MainWindow", u"Working Session", None))
+#if QT_CONFIG(tooltip)
+        self.comboBox_tasks.setToolTip(QCoreApplication.translate("MainWindow", u"Anatomical view/orientation (coronal, sagittal, or axial) of the acquired scan to register.", None))
+#endif // QT_CONFIG(tooltip)
+        self.pushButton_paths.setText(QCoreApplication.translate("MainWindow", u"Save  all paths", None))
+#if QT_CONFIG(tooltip)
+        self.pushButton_questionmark_samri.setToolTip(QCoreApplication.translate("MainWindow", u"Re-show the current step's instructions (fetch, then select session).", None))
+#endif // QT_CONFIG(tooltip)
+        self.pushButton_questionmark_samri.setText("")
         self.lineEdit_8.setText(QCoreApplication.translate("MainWindow", u"Server", None))
+#if QT_CONFIG(tooltip)
+        self.pushButton_fetch.setToolTip(QCoreApplication.translate("MainWindow", u"Download this animal's data from the Bruker server before continuing.", None))
+#endif // QT_CONFIG(tooltip)
         self.pushButton_fetch.setText(QCoreApplication.translate("MainWindow", u"Fetch Data from Server", None))
+#if QT_CONFIG(tooltip)
+        self.lineEdit_server.setToolTip(QCoreApplication.translate("MainWindow", u"Hostname/address of the Bruker MRI server to fetch data from.", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.lineEdit_animalid.setToolTip(QCoreApplication.translate("MainWindow", u"Animal ID used to locate this subject's data on the server and in the local raw-data folder.", None))
+#endif // QT_CONFIG(tooltip)
         self.lineEdit_9.setText(QCoreApplication.translate("MainWindow", u"Password", None))
-        self.checkBox_bidsflag.setText(QCoreApplication.translate("MainWindow", u"Enable bids_flag", None))
+#if QT_CONFIG(tooltip)
+        self.lineEdit_rawBase.setToolTip(QCoreApplication.translate("MainWindow", u"Local base folder for raw/fetched data; combined with the Animal ID to detect whether this session was already fetched.", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.lineEdit_password.setToolTip(QCoreApplication.translate("MainWindow", u"Password for the Bruker server. Entering it here only affects this run \u2014 it is not currently saved back to disk.", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.pushButton_browse.setToolTip(QCoreApplication.translate("MainWindow", u"Browse for the local raw-data base folder.", None))
+#endif // QT_CONFIG(tooltip)
         self.pushButton_browse.setText(QCoreApplication.translate("MainWindow", u"Browse", None))
         self.lineEdit_6.setText(QCoreApplication.translate("MainWindow", u"Raw Base", None))
         self.lineEdit_12.setText(QCoreApplication.translate("MainWindow", u"Animal ID", None))
+#if QT_CONFIG(tooltip)
+        self.pushButton_continue.setToolTip(QCoreApplication.translate("MainWindow", u"Skip fetching and continue directly with data already present at the raw-data path (enabled once that path exists).", None))
+#endif // QT_CONFIG(tooltip)
         self.pushButton_continue.setText(QCoreApplication.translate("MainWindow", u"Continue without Data-Fetch", None))
+#if QT_CONFIG(tooltip)
+        self.pushButton_re_fetch.setToolTip(QCoreApplication.translate("MainWindow", u"Re-download all sessions for this animal, including ones already fetched.", None))
+#endif // QT_CONFIG(tooltip)
         self.pushButton_re_fetch.setText(QCoreApplication.translate("MainWindow", u"Re-Fetch All Sessions", None))
+#if QT_CONFIG(tooltip)
+        self.checkBox_bidsflag.setToolTip(QCoreApplication.translate("MainWindow", u"Convert the fetched data into BIDS format.", None))
+#endif // QT_CONFIG(tooltip)
+        self.checkBox_bidsflag.setText(QCoreApplication.translate("MainWindow", u"Enable bids_flag", None))
+        self.pushButton_credentials.setText(QCoreApplication.translate("MainWindow", u"Save Credentials", None))
         self.lineEdit_4.setText(QCoreApplication.translate("MainWindow", u"SAMRI - Logging Output", None))
-        self.pushButton_questionmark_samri.setText("")
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_samri), QCoreApplication.translate("MainWindow", u"SAMRI", None))
+        self.groupBox_76.setTitle(QCoreApplication.translate("MainWindow", u"Bregma Position (x,y,z)", None))
+        self.lineEdit_82.setText(QCoreApplication.translate("MainWindow", u"sagittal", None))
+        self.lineEdit_81.setText(QCoreApplication.translate("MainWindow", u"coronal", None))
+        self.lineEdit_83.setText(QCoreApplication.translate("MainWindow", u"axial", None))
+        self.groupBox_77.setTitle(QCoreApplication.translate("MainWindow", u"Lambda Position (x,y,z)", None))
+        self.lineEdit_84.setText(QCoreApplication.translate("MainWindow", u"coronal", None))
+        self.lineEdit_86.setText(QCoreApplication.translate("MainWindow", u"axial", None))
+        self.lineEdit_85.setText(QCoreApplication.translate("MainWindow", u"sagittal", None))
+        self.label.setText(QCoreApplication.translate("MainWindow", u"TextLabel", None))
+        self.pushButton_questionmark_2.setText("")
+        self.label_2.setText(QCoreApplication.translate("MainWindow", u"Axial view", None))
+#if QT_CONFIG(tooltip)
+        self.zoom_in_surgery.setToolTip(QCoreApplication.translate("MainWindow", u"Zoom in", None))
+#endif // QT_CONFIG(tooltip)
+        self.zoom_in_surgery.setText("")
+#if QT_CONFIG(tooltip)
+        self.zoom_out_surgery.setToolTip(QCoreApplication.translate("MainWindow", u"Zoom out", None))
+#endif // QT_CONFIG(tooltip)
+        self.zoom_out_surgery.setText("")
+#if QT_CONFIG(tooltip)
+        self.go_down_surgery.setToolTip(QCoreApplication.translate("MainWindow", u"Pan down", None))
+#endif // QT_CONFIG(tooltip)
+        self.go_down_surgery.setText(QCoreApplication.translate("MainWindow", u"<", None))
+#if QT_CONFIG(tooltip)
+        self.go_up_surgery.setToolTip(QCoreApplication.translate("MainWindow", u"Pan up", None))
+#endif // QT_CONFIG(tooltip)
+        self.go_up_surgery.setText(QCoreApplication.translate("MainWindow", u">", None))
+#if QT_CONFIG(tooltip)
+        self.go_left_surgery.setToolTip(QCoreApplication.translate("MainWindow", u"Pan left", None))
+#endif // QT_CONFIG(tooltip)
+        self.go_left_surgery.setText(QCoreApplication.translate("MainWindow", u"<", None))
+#if QT_CONFIG(tooltip)
+        self.go_right_surgery.setToolTip(QCoreApplication.translate("MainWindow", u"Pan right", None))
+#endif // QT_CONFIG(tooltip)
+        self.go_right_surgery.setText(QCoreApplication.translate("MainWindow", u">", None))
+#if QT_CONFIG(tooltip)
+        self.fit_to_zoom_surgery.setToolTip(QCoreApplication.translate("MainWindow", u"Fit the image to the window", None))
+#endif // QT_CONFIG(tooltip)
+        self.fit_to_zoom_surgery.setText(QCoreApplication.translate("MainWindow", u"Fit-to-Zoom", None))
+        self.pushButton_switchCS.setText(QCoreApplication.translate("MainWindow", u"Switch to Bregma-Lambda based CS", None))
+        self.groupBox_78.setTitle("")
+#if QT_CONFIG(tooltip)
+        self.resetCamera_vis3D_2.setToolTip(QCoreApplication.translate("MainWindow", u"Reset Camera View", None))
+#endif // QT_CONFIG(tooltip)
+        self.resetCamera_vis3D_2.setText("")
+#if QT_CONFIG(tooltip)
+        self.change_perspective_vis3D_2.setToolTip(QCoreApplication.translate("MainWindow", u"Change Perspective", None))
+#endif // QT_CONFIG(tooltip)
+        self.change_perspective_vis3D_2.setText("")
+        self.tabWidget.setTabText(self.tabWidget.indexOf(self.surgery), QCoreApplication.translate("MainWindow", u"Surgery", None))
         self.tabWidget_visualisation.setTabText(self.tabWidget_visualisation.indexOf(self.tab_2), QCoreApplication.translate("MainWindow", u" MRID Location", None))
+#if QT_CONFIG(tooltip)
+        self.comboBox_mridTag_vis3D.setToolTip(QCoreApplication.translate("MainWindow", u"Switch which MRID timepoint tag is shown in this 3D view.", None))
+#endif // QT_CONFIG(tooltip)
 #if QT_CONFIG(tooltip)
         self.pushButton_slicey_vis3D.setToolTip(QCoreApplication.translate("MainWindow", u"Slicing in Coronal Direction", None))
 #endif // QT_CONFIG(tooltip)
@@ -8753,22 +10904,28 @@ class Ui_MainWindow(object):
 #endif // QT_CONFIG(tooltip)
         self.pushButton_Noslicing_vis3D.setText("")
         self.tabWidget_visualisation.setTabText(self.tabWidget_visualisation.indexOf(self.tab_3), QCoreApplication.translate("MainWindow", u"3D Visualisation", None))
-        self.menuGUI.setTitle(QCoreApplication.translate("MainWindow", u"File", None))
-        self.menuTools.setTitle(QCoreApplication.translate("MainWindow", u"3D Tools", None))
-        self.menu4D_Tools.setTitle(QCoreApplication.translate("MainWindow", u"4D Tools", None))
-        self.menuElectrode_Localization.setTitle(QCoreApplication.translate("MainWindow", u"Electrode Localization", None))
-        self.menuEphys_Analysis.setTitle(QCoreApplication.translate("MainWindow", u"Ephys Analysis", None))
-        self.menuSurgery.setTitle(QCoreApplication.translate("MainWindow", u"Surgery", None))
 #if QT_CONFIG(tooltip)
         self.pushButton_lfp.setToolTip(QCoreApplication.translate("MainWindow", u"Jump half duration forward", None))
 #endif // QT_CONFIG(tooltip)
         self.pushButton_lfp.setText(QCoreApplication.translate("MainWindow", u"Display LFP-filtered Data", None))
         self.groupBox_3.setTitle("")
+#if QT_CONFIG(tooltip)
+        self.spinBox_startMs.setToolTip(QCoreApplication.translate("MainWindow", u"Milliseconds component of the visible window's start time.", None))
+#endif // QT_CONFIG(tooltip)
         self.spinBox_startMs.setSuffix(QCoreApplication.translate("MainWindow", u"ms", None))
+#if QT_CONFIG(tooltip)
+        self.spinBox_startS.setToolTip(QCoreApplication.translate("MainWindow", u"Seconds component of the visible window's start time.", None))
+#endif // QT_CONFIG(tooltip)
         self.spinBox_startS.setSuffix(QCoreApplication.translate("MainWindow", u"s", None))
         self.lineEdit_2.setText(QCoreApplication.translate("MainWindow", u"Duration (ms)", None))
         self.lineEdit.setText(QCoreApplication.translate("MainWindow", u"Start Time", None))
+#if QT_CONFIG(tooltip)
+        self.spinBox_startMin.setToolTip(QCoreApplication.translate("MainWindow", u"Minutes component of the visible window's start time.", None))
+#endif // QT_CONFIG(tooltip)
         self.spinBox_startMin.setSuffix(QCoreApplication.translate("MainWindow", u"min", None))
+#if QT_CONFIG(tooltip)
+        self.spinBox_duration.setToolTip(QCoreApplication.translate("MainWindow", u"Length of the visible time window, in milliseconds.", None))
+#endif // QT_CONFIG(tooltip)
 #if QT_CONFIG(tooltip)
         self.pushButton_selectTime.setToolTip(QCoreApplication.translate("MainWindow", u"Select Time", None))
 #endif // QT_CONFIG(tooltip)
@@ -8785,17 +10942,50 @@ class Ui_MainWindow(object):
         self.pushButton_measurement.setToolTip(QCoreApplication.translate("MainWindow", u"Measure", None))
 #endif // QT_CONFIG(tooltip)
         self.pushButton_measurement.setText("")
+#if QT_CONFIG(tooltip)
+        self.groupBox_1.setToolTip(QCoreApplication.translate("MainWindow", u"Step through detected theta events, add one manually, and toggle event/cycle-boundary visibility.", None))
+#endif // QT_CONFIG(tooltip)
         self.groupBox_1.setTitle(QCoreApplication.translate("MainWindow", u"Theta Detection", None))
+#if QT_CONFIG(tooltip)
+        self.pushButton_next_theta.setToolTip(QCoreApplication.translate("MainWindow", u"Jump the view to the next detected theta event.", None))
+#endif // QT_CONFIG(tooltip)
         self.pushButton_next_theta.setText(QCoreApplication.translate("MainWindow", u"Next Theta", None))
+#if QT_CONFIG(tooltip)
+        self.checkBox_thetaCycles.setToolTip(QCoreApplication.translate("MainWindow", u"Show or hide the dotted theta-cycle boundary lines.", None))
+#endif // QT_CONFIG(tooltip)
         self.checkBox_thetaCycles.setText(QCoreApplication.translate("MainWindow", u"Visible Phase Cycles", None))
+#if QT_CONFIG(tooltip)
+        self.pushButton_add_theta.setToolTip(QCoreApplication.translate("MainWindow", u"Add a theta event centered on the current view, then drag its edges into place.", None))
+#endif // QT_CONFIG(tooltip)
         self.pushButton_add_theta.setText(QCoreApplication.translate("MainWindow", u"Add", None))
+#if QT_CONFIG(tooltip)
+        self.checkBox_theta.setToolTip(QCoreApplication.translate("MainWindow", u"Show or hide theta event markers on the trace.", None))
+#endif // QT_CONFIG(tooltip)
         self.checkBox_theta.setText(QCoreApplication.translate("MainWindow", u"Visible", None))
+#if QT_CONFIG(tooltip)
+        self.pushButton_prev_theta.setToolTip(QCoreApplication.translate("MainWindow", u"Jump the view to the previous detected theta event.", None))
+#endif // QT_CONFIG(tooltip)
         self.pushButton_prev_theta.setText(QCoreApplication.translate("MainWindow", u"Previous Theta", None))
         self.lineEdit_63.setText(QCoreApplication.translate("MainWindow", u"No File found. Please first do Ephys Analysis -> Theta Detection", None))
+#if QT_CONFIG(tooltip)
+        self.groupBox_67.setToolTip(QCoreApplication.translate("MainWindow", u"Step through detected ripple (SWR) events, add one manually, and toggle their visibility.", None))
+#endif // QT_CONFIG(tooltip)
         self.groupBox_67.setTitle(QCoreApplication.translate("MainWindow", u"Rippl-AI", None))
+#if QT_CONFIG(tooltip)
+        self.pushButton_addRipple.setToolTip(QCoreApplication.translate("MainWindow", u"Add a ripple (SWR) event centered on the current view, then drag its edges into place.", None))
+#endif // QT_CONFIG(tooltip)
         self.pushButton_addRipple.setText(QCoreApplication.translate("MainWindow", u"Add", None))
+#if QT_CONFIG(tooltip)
+        self.pushButton_next_rippl.setToolTip(QCoreApplication.translate("MainWindow", u"Jump the view to the next detected ripple (SWR).", None))
+#endif // QT_CONFIG(tooltip)
         self.pushButton_next_rippl.setText(QCoreApplication.translate("MainWindow", u"Next SWR", None))
+#if QT_CONFIG(tooltip)
+        self.checkBox_ripplAI.setToolTip(QCoreApplication.translate("MainWindow", u"Show or hide ripple (SWR) event markers on the trace.", None))
+#endif // QT_CONFIG(tooltip)
         self.checkBox_ripplAI.setText(QCoreApplication.translate("MainWindow", u"Visible", None))
+#if QT_CONFIG(tooltip)
+        self.pushButton_prev_rippl.setToolTip(QCoreApplication.translate("MainWindow", u"Jump the view to the previous detected ripple (SWR).", None))
+#endif // QT_CONFIG(tooltip)
         self.pushButton_prev_rippl.setText(QCoreApplication.translate("MainWindow", u"Previous SWR", None))
         self.lineEdit_18.setText(QCoreApplication.translate("MainWindow", u"No File found. Please first do Ephys Analysis -> Rippl AI", None))
 #if QT_CONFIG(tooltip)
@@ -8806,12 +10996,21 @@ class Ui_MainWindow(object):
         self.pushButtonAmp_minus.setToolTip(QCoreApplication.translate("MainWindow", u"Decrease Amplitude", None))
 #endif // QT_CONFIG(tooltip)
         self.pushButtonAmp_minus.setText("")
+#if QT_CONFIG(tooltip)
+        self.pushButton_zoomIn.setToolTip(QCoreApplication.translate("MainWindow", u"Left-drag mode: draw a rubber-band box to zoom into that time/channel range.", None))
+#endif // QT_CONFIG(tooltip)
         self.pushButton_zoomIn.setText("")
 #if QT_CONFIG(tooltip)
         self.pushButton_zoomOut.setToolTip(QCoreApplication.translate("MainWindow", u"Zoom Out", None))
 #endif // QT_CONFIG(tooltip)
         self.pushButton_zoomOut.setText("")
+#if QT_CONFIG(tooltip)
+        self.pushButton_broadband.setToolTip(QCoreApplication.translate("MainWindow", u"Show the raw broadband trace instead of the filtered LFP.", None))
+#endif // QT_CONFIG(tooltip)
         self.pushButton_broadband.setText(QCoreApplication.translate("MainWindow", u"Display raw Data", None))
+#if QT_CONFIG(tooltip)
+        self.horizontalSlider_ephys.setToolTip(QCoreApplication.translate("MainWindow", u"Scrub through the recording; position corresponds to the start of the visible time window.", None))
+#endif // QT_CONFIG(tooltip)
 #if QT_CONFIG(tooltip)
         self.pushButton_Timeprev.setToolTip(QCoreApplication.translate("MainWindow", u"Jump half duration backwards", None))
 #endif // QT_CONFIG(tooltip)
@@ -8820,5 +11019,11 @@ class Ui_MainWindow(object):
         self.pushButton_Timenext.setToolTip(QCoreApplication.translate("MainWindow", u"Jump half duration forward", None))
 #endif // QT_CONFIG(tooltip)
         self.pushButton_Timenext.setText("")
+        self.menuGUI.setTitle(QCoreApplication.translate("MainWindow", u"File", None))
+        self.menuTrajectory_Planning.setTitle(QCoreApplication.translate("MainWindow", u"Trajectory Planning", None))
+        self.menuTools.setTitle(QCoreApplication.translate("MainWindow", u"3D Tools", None))
+        self.menu4D_Tools.setTitle(QCoreApplication.translate("MainWindow", u"4D Tools", None))
+        self.menuElectrode_Localization.setTitle(QCoreApplication.translate("MainWindow", u"Electrode Localization", None))
+        self.menuEphys_Analysis.setTitle(QCoreApplication.translate("MainWindow", u"Ephys Analysis", None))
     # retranslateUi
 

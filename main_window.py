@@ -11,13 +11,7 @@ warnings.filterwarnings(
     category=DeprecationWarning,
 )
 import json as _json
-_base_dir = getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__)))
-_exe_dir = os.path.dirname(sys.executable) if getattr(sys, 'frozen', False) else _base_dir
-_config_path = os.path.join(_exe_dir, 'paths_config.json')
-if not os.path.exists(_config_path):
-    _config_path = os.path.join(_base_dir, 'paths_config.example.json')
-with open(_config_path) as _f:
-    _paths = _json.load(_f)
+from paths_config import _base_dir, _exe_dir, _paths
 _session_state_path = os.path.join(_exe_dir, 'last_session.json')
 from PySide6.QtWidgets import QApplication, QMainWindow
 from ui_form import Ui_MainWindow
@@ -29,7 +23,7 @@ import SimpleITK as sitk
 from gui_utils.busy_overlay import BusyOverlay
 from PySide6 import QtWidgets
 from ephys.init_ephys import InitEphys
-from PySide6.QtCore import Qt, QCoreApplication, QResource
+from PySide6.QtCore import Qt, QCoreApplication, QResource, QSize
 from PySide6.QtWidgets import QLayout
 import qdarkstyle
 from utils.zoom import Zoom
@@ -40,6 +34,9 @@ import logging
 from PySide6.QtWidgets import QWidget
 from trajectory_planning.trajectory_planning import TrajectoryPlanning
 from trajectory_planning.file_input_output import FileInput
+from mrid_utils.atlas_fetch import ensure_atlas_available
+from during_surgery.load_surgery_plan import LoadSurgeryPlan
+from during_surgery.surgery_controller import SurgeryController
 import vtk
 import pandas as pd
 from file_handling.loader import FileLoader
@@ -48,6 +45,15 @@ from PySide6.QtGui import QIcon
 import subprocess
 from PySide6.QtCore import QTimer
 import datetime
+from PySide6.QtWidgets import QProxyStyle, QStyle
+
+
+class QuickTooltipStyle(QProxyStyle):
+    """Shortens the hover delay before any tooltip appears, app-wide."""
+    def styleHint(self, hint, option=None, widget=None, returnData=None):
+        if hint == QStyle.SH_ToolTip_WakeUpDelay:
+            return 150
+        return super().styleHint(hint, option, widget, returnData)
 
 class MainWindow(QMainWindow):
     """
@@ -67,8 +73,18 @@ class MainWindow(QMainWindow):
         self._ephys_session_view_cache = {}
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
+        # nothing cached yet at startup -- hide until there's another file/recording to switch to
+        #self.ui.comboBox_cache.setVisible(False)
+        #self.ui.comboBox_cache_2.setVisible(False)
+        #self.ui.comboBox_cache.activated.connect(self._switch_mri_from_cache)
+        #self.ui.comboBox_cache_2.activated.connect(self._switch_ephys_from_cache)
         self.setWindowTitle("IMPLAnT")
         self.setWindowIcon(QIcon(os.path.join(_base_dir, "Icons/Github/IMPLAnT_quad.png")))
+        # Lives for the whole app session (unlike TrajectoryPlanning, which
+        # only exists while an MRI is loaded) -- see during_surgery/
+        # surgery_controller.py for why the Surgery tab has no MRI/
+        # TrajectoryPlanning dependency at all.
+        self.surgery = SurgeryController(self)
         self.add_actions()
         self.ui.tabWidget.setCurrentIndex(0)
 
@@ -107,6 +123,8 @@ class MainWindow(QMainWindow):
         self.ui.stackedWidget_sagittal.setCurrentIndex(0)
         self.ui.stackedWidget_dfx.setCurrentIndex(0)
         self.ui.stackedWidget_3d_tp.setCurrentIndex(0)
+        self.ui.stackedWidget_3d_tp.currentChanged.connect(self._update_3d_tp_height_cap)
+        self._update_3d_tp_height_cap(0)
 
         #resize to inital size
         self.resize(1600, 900)
@@ -118,9 +136,27 @@ class MainWindow(QMainWindow):
         self.ui.actionQuit.triggered.connect(self.quit)
         self.ui.actionNew_Window.triggered.connect(self.open_new_window)
         self.ui.actionStart_SAMRI_process.triggered.connect(self.initialize_samri)
-        self.ui.actionTrajectory_Planning.triggered.connect(self.initialize_trajectory_planning)
+        self.ui.actionTrajectory_Planning_2.triggered.connect(self.initialize_trajectory_planning)
+        self.ui.actionDuring_Surgery.triggered.connect(self.initialize_surgery)
+        # Surgery tab's measured-mm bregma/lambda fields: "sag"/"cor"/"ax"
+        # match the same sagittal/coronal/axial slice-index convention as
+        # the voxel-cursor spinboxes elsewhere (x=sag=ML, y=cor=AP,
+        # z=ax=DV) -- ax/DV must stay last, since reproject_target_to_null
+        # (during_surgery/reprojection.py) assumes index 2 of the vector
+        # it's given is the vertical axis.
+        for sb in (self.ui.doubleSpinBox_sag_b, self.ui.doubleSpinBox_cor_b, self.ui.doubleSpinBox_ax_b,
+                   self.ui.doubleSpinBox_sag_l, self.ui.doubleSpinBox_cor_l, self.ui.doubleSpinBox_ax_l):
+            sb.valueChanged.connect(self.surgery.on_bregma_lambda_changed)
+        # Same reset/perspective controls as the docked pre-op 3D view's own
+        # resetCamera_vis3D/change_perspective_vis3D -- lambdas re-fetch
+        # self.surgery.mri_preview each click rather than binding a method
+        # reference now, since that property can rebuild its QtInteractor
+        # after a full restart (see SurgeryController.mri_preview).
+        self.ui.resetCamera_vis3D_2.clicked.connect(lambda: self.surgery.mri_preview.plotter.reset_camera())
+        self.ui.change_perspective_vis3D_2.clicked.connect(lambda: self.surgery.mri_preview.toggle_perspective())
         self.ui.pushButton_questionmark.clicked.connect(self.show_step_instructions)
         self.ui.pushButton_questionmark_samri.clicked.connect(self.show_step_instructions)
+        self.ui.pushButton_questionmark_2.clicked.connect(self.surgery.show_step_popup)
         self.ui.actionLoad_Prev_Session.triggered.connect(self.load_previous_session)
         # per-tab "Open Session" placeholders: 3D/4D Tools -> mri (filtered by
         # dimensionality), Ephys Analysis -> ephys, Surgery -> samri
@@ -306,6 +342,8 @@ class MainWindow(QMainWindow):
                 return
             if not self._confirm_replace_session('ephys'):
                 return
+            if not ensure_atlas_available(self):
+                return
             self.ui.dockWidget_ephys.setVisible(True)
             self.ui.stackedWidget_video.setCurrentIndex(1)
             self.ui.textEdit_ephys.setText(f"File loaded: {path}")
@@ -359,6 +397,8 @@ class MainWindow(QMainWindow):
 
         if not self._confirm_replace_session('ephys'):
             return
+        if not ensure_atlas_available(self):
+            return
 
         self.ui.dockWidget_ephys.setVisible(True)
         self.ui.stackedWidget_video.setCurrentIndex(1)
@@ -373,6 +413,7 @@ class MainWindow(QMainWindow):
         self.Ephys.open_dat(file_name)
         self.reapply_ephys_view_state(file_name)
         self._save_session_state('ephys', path=file_name)
+        #self.refresh_ephys_cache_combo()
         #ask about the spike cluster plot once the busy overlay is gone
         QTimer.singleShot(0, self.Ephys.prompt_spike_sorting)
 
@@ -435,6 +476,30 @@ class MainWindow(QMainWindow):
         ch_idx = state['ch_highlight']
         if ch_idx is not None and ch_idx in ve.ephys_lines:
             ve.highlight_channel(ch_idx)
+
+    def refresh_ephys_cache_combo(self):
+        """
+        Repopulate comboBox_cache_2 with the ephys recordings that have a
+        cached view state (i.e. every recording visited this session other
+        than the one currently open). Hidden when there's nothing to switch
+        to -- either no other recording was ever opened, or none has been
+        left yet (nothing gets cached until you switch away from it).
+        """
+        #combo = self.ui.comboBox_cache_2
+        current_path = self.Ephys.ephys_data.file_path if getattr(self, 'Ephys', None) else None
+        combo.blockSignals(True)
+        combo.clear()
+        for path in self._ephys_session_view_cache:
+            if path == current_path:
+                continue
+            combo.addItem(os.path.basename(path), path)
+        combo.blockSignals(False)
+        combo.setVisible(combo.count() > 0)
+
+    def _switch_ephys_from_cache(self, index):
+        path = self.ui.comboBox_cache_2.itemData(index)
+        if path:
+            self._restore_session_entry('ephys', {'path': path})
 
 
     def resizeEvent(self, event):
@@ -558,6 +623,22 @@ class MainWindow(QMainWindow):
 
 
 
+    def initialize_surgery(self):
+        # Unlike initialize_samri below, this only switches tabs AFTER the
+        # PDF picker is actually accepted -- clicking the menu action then
+        # hitting Cancel should leave you wherever you were, not dropped
+        # onto an empty Surgery tab with nothing loaded.
+        #
+        # Deliberately independent of LoadMRI/TrajectoryPlanning -- see
+        # during_surgery/surgery_controller.py -- so no MRI/registration
+        # state is required or touched here.
+        dlg = LoadSurgeryPlan(self, parent=self)
+        if dlg.exec() == QtWidgets.QDialog.DialogCode.Accepted:
+            # indexOf rather than a hardcoded index -- the Surgery tab
+            # currently sits at index 6, but that would silently go stale if
+            # tabWidget's pages are ever reordered/added to in Designer.
+            self.ui.tabWidget.setCurrentIndex(self.ui.tabWidget.indexOf(self.ui.surgery))
+
     def initialize_samri(self):
         #Pop up for bruker2bids
         if not self._confirm_replace_session('samri'):
@@ -639,6 +720,8 @@ class MainWindow(QMainWindow):
 
 
     def start_registration(self,samri_input):
+        if not ensure_atlas_available(self):
+            return
         def work_registration():
             self.ui.dockWidget_ephys.setEnabled(False)
             self.Samri.output_filepath =  self.Samri.start_registration(samri_input)
@@ -702,10 +785,7 @@ class MainWindow(QMainWindow):
             overlay.raise_()
             overlay.show()
             self.worker.done.connect(overlay.close)
-            self.worker.done.connect(
-                lambda: self.Samri.visualize_results(self, logging)
-            )
-            self.worker.done.connect(self._on_registration_done)
+            self.worker.done.connect(lambda: self._on_registration_done(samri_input))
             self.worker.failed.connect(overlay.close)
             self.worker.failed.connect(
                 lambda tb: on_registration_failed(tb, samri_input['num_threads'])
@@ -768,14 +848,48 @@ class MainWindow(QMainWindow):
         except Exception as e:
             logging.error(f"Failed to copy sub folder to DATA: {e}")
 
-    def _on_registration_done(self):
+    def _on_registration_done(self, samri_input):
         self._copy_sub_to_data()
+
+        verify_overlay = BusyOverlay(self, message="Verifying atlas registration…")
+        verify_overlay.setGeometry(self.rect())
+        verify_overlay.raise_()
+        verify_overlay.show()
+        QApplication.processEvents()
+
+        transform_path = (
+            f"{self.Samri.bids_base}/bids/sub-{self.Samri.animal_id}"
+            f"/ses-{samri_input['working_session'][0]}/registration/output_Composite.h5"
+        )
+        success = os.path.exists(transform_path) and os.path.getsize(transform_path) > 0
+
+        verify_overlay.close()
+
         msg = QMessageBox(self)
-        msg.setWindowTitle("Registration complete")
-        msg.setText("Done with Registration")
+        if success:
+            msg.setWindowTitle("Registration complete")
+            msg.setText("Atlas registration was successful.")
+        else:
+            msg.setIcon(QMessageBox.Warning)
+            msg.setWindowTitle("Registration verification failed")
+            msg.setText(
+                "SAMRI finished but no transformation file was found — "
+                "atlas registration may not have completed correctly."
+            )
         btn_ok = msg.addButton("OK", QMessageBox.ActionRole)
         btn_ok.setMinimumWidth(200)
         msg.exec()
+
+        if success:
+            # visualize_results() -> restart_gui() (VTK teardown/rebuild) ->
+            # initialize_file() -> resample_tofit() (a real sitk BSpline
+            # resample) all run synchronously on this (GUI) thread -- unlike
+            # the registration itself, none of this is on a worker thread,
+            # so without an overlay here the UI just silently freezes for
+            # however long that takes, right after telling the user
+            # registration already finished.
+            self.overlay = BusyOverlay(self, message="Loading registered image…")
+            self.overlay.run(self.Samri.visualize_results, self, logging)
 
 
     def _on_biascorrection_done(self):
@@ -787,6 +901,8 @@ class MainWindow(QMainWindow):
         msg.exec()
 
     def initialize_trajectory_planning(self):
+        if not ensure_atlas_available(self):
+            return
         dlg = FileInput(self)
         if dlg.exec() == QtWidgets.QDialog.DialogCode.Accepted:
             data = dlg.get_values()
@@ -885,6 +1001,17 @@ class MainWindow(QMainWindow):
         subprocess.Popen([sys.executable] + sys.argv)
 
 
+    def _update_3d_tp_height_cap(self, index):
+        """stackedWidget_3d_tp's two pages need very different heights --
+        page_29 (just the 3D-view toggle buttons) is compact, page_30
+        (Cursor Position/Deepest Point/Insertion Point/Intensity group
+        boxes) needs much more room. A single static maximumSize left
+        enough headroom for page_30 that page_29 showed a lot of dead
+        white space, but too little for page_30 let its content's minimum
+        height exceed the cap, which Qt showed as real widget overlap
+        rather than a clean shrink."""
+        self.ui.stackedWidget_3d_tp.setMaximumSize(QSize(16777215, 200 if index == 0 else 350))
+
     def restart_gui(self, file_name, full_restart=True, label_file=False, data_view='coronal'):
         """
         Restart GUI if new main image is loaded.
@@ -975,12 +1102,25 @@ class MainWindow(QMainWindow):
                 except RuntimeError:
                     pass
 
-        for dock_name in "dock_paintbrush4d","dock_segmentation","dockWidget_ephys":
+        for dock_name in ("dock_paintbrush4d", "dock_segmentation", "dockWidget_ephys",
+                          "dock_paintbrush", "dock_measurement"):
             dock = self.findChild(QDockWidget, dock_name)
             if dock:
                 dock.close()
                 if full_restart:
                     dock.deleteLater()
+
+        # TrajectoryPlanning3DWindow (trajectory_planning_3d/window.py) sets
+        # no objectName -- just a window title -- so it can't be found via
+        # findChild(QDockWidget, name) like the docks above; go through
+        # TrajPlanning.tp3d_window directly instead (None if the 3D window
+        # was never opened this session).
+        tp = getattr(self.LoadMRI, 'TrajPlanning', None) if hasattr(self, 'LoadMRI') and self.LoadMRI is not None else None
+        tp3d_window = getattr(tp, 'tp3d_window', None)
+        if tp3d_window is not None:
+            tp3d_window.close()
+            if full_restart:
+                tp3d_window.deleteLater()
 
         if full_restart:
             # only tear down widget_pgEphys's plot when self.ui is about to be
@@ -1001,6 +1141,11 @@ class MainWindow(QMainWindow):
             self.ui.setupUi(self)
             self.add_actions()
             self.show()
+            # setupUi() creates a brand new stackedWidget_3d_tp with none of
+            # __init__'s signal connections -- reconnect this one or its
+            # height cap silently reverts to the .ui's static default.
+            self.ui.stackedWidget_3d_tp.currentChanged.connect(self._update_3d_tp_height_cap)
+            self._update_3d_tp_height_cap(self.ui.stackedWidget_3d_tp.currentIndex())
 
         QApplication.processEvents()
         self.resize_bool=True
@@ -1016,6 +1161,7 @@ class MainWindow(QMainWindow):
             self.FileLoader.is_4d = False #3d file
         self.FileLoader.initialize_file(file_name,0,data_view,0,full_restart=full_restart,label_file=label_file)
         self.ui.data_4d_3d.setCurrentIndex(0 if self.FileLoader.is_4d else 1)
+        self.ui.tabWidget.setCurrentIndex(0)
 
         zoom_notifier.factorChanged.connect(self.LoadMRI.minimap.create_small_rectangle)
         Zoom.fit_to_window(self.LoadMRI.vtk_widgets[0][data_view], self.LoadMRI.vtk_widgets.values(), self.LoadMRI.scale_bar, self.LoadMRI.vtk_widgets,0,data_3d=True)
@@ -1036,6 +1182,7 @@ class MainWindow(QMainWindow):
         self._session_view_cache[file_path] = {
             'slice_indices': {idx: list(val) for idx, val in self.LoadMRI.slice_indices.items()},
             'zoom_factor': Zoom.global_zoom_factor,
+            'tab_index': self.ui.tabWidget.currentIndex(),
         }
 
     def reapply_view_state(self, file_path):
@@ -1058,6 +1205,30 @@ class MainWindow(QMainWindow):
             relative_factor = state['zoom_factor'] / Zoom.global_zoom_factor
             Zoom.zoom(relative_factor, self.LoadMRI.scale_bar, self.LoadMRI.vtk_widgets, 0, data_3d=True)
 
+    def refresh_mri_cache_combo(self):
+        """
+        Repopulate comboBox_cache with the MRI files that have a cached view
+        state (i.e. every file visited this session other than the one
+        currently open). Hidden when there's nothing to switch to -- either
+        no other file was ever opened, or none has been left yet (nothing
+        gets cached until you switch away from it).
+        """
+        combo = self.ui.comboBox_cache
+        current_path = self.LoadMRI.volumes[0].file_path if getattr(self, 'LoadMRI', None) else None
+        combo.blockSignals(True)
+        combo.clear()
+        for path in self._session_view_cache:
+            if path == current_path:
+                continue
+            combo.addItem(os.path.basename(path), path)
+        combo.blockSignals(False)
+        combo.setVisible(combo.count() > 0)
+
+    def _switch_mri_from_cache(self, index):
+        path = self.ui.comboBox_cache.itemData(index)
+        if path:
+            self._restore_session_entry('mri', {'path': path})
+
     def quit(self):
         QtWidgets.QApplication.quit()
 
@@ -1073,6 +1244,7 @@ if __name__ == "__main__":
     #to mix vtk and QtQuick3D
     QCoreApplication.setAttribute(Qt.AA_ShareOpenGLContexts)
     app = QApplication(sys.argv)
+    app.setStyle(QuickTooltipStyle(app.style()))
     #dark mode
     app.setStyleSheet(qdarkstyle.load_stylesheet_pyside6() + """
         QLineEdit:!read-only:enabled, QTextEdit[readOnly="false"]:enabled, QPlainTextEdit[readOnly="false"]:enabled,

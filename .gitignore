@@ -14,6 +14,7 @@ venv/
 
 # User-specific config
 paths_config.json
+last_session.json
 
 # SAMRI Infos
 samri/bruker_info.json
@@ -21,3 +22,6 @@ samri_bindata/
 
 #Ants
 ants/
+
+#Atlas bundle
+atlas_bundle/
