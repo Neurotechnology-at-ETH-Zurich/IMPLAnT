@@ -100,6 +100,9 @@ class CustomInteractorStyle(vtk.vtkInteractorStyleImage):
                 self.cursor.update_cursor_from_interactor(interactor, self.interactor_view_name,self.interactor_data_index)
         if hasattr(self.LoadMRI,'TrajPlanning'):
             self.LoadMRI.TrajPlanning.clicked_viewname = self.interactor_view_name
+            if (self.measurement is None and not self.LoadMRI.brush_on
+                    and getattr(self.LoadMRI, 'picking_insertion_point', False)):
+                self.LoadMRI.TrajPlanning.pick_insertion_point_from_click()
 
     def on_left_button_up(self, obj, event):
         """
@@ -374,7 +377,15 @@ class CustomInteractorStyle(vtk.vtkInteractorStyleImage):
                     self.measurement.draw_line(self.interactor_view_name, temporary=True)
                 #else:
                 #    return
-        if hasattr(self.LoadMRI,'TrajPlanning') and self.LoadMRI.TrajPlanning.show_label:
+        if (hasattr(self.LoadMRI,'TrajPlanning') and self.LoadMRI.TrajPlanning.show_label
+                and hasattr(self.LoadMRI.TrajPlanning, 'tp_labels')
+                and not getattr(self.LoadMRI, 'picking_insertion_point', False)):
+            # tp_labels (the atlas region-label lookup, cached on TrajPlanning
+            # so it survives LoadMRI being replaced wholesale by restart_gui)
+            # is keyed by atlas label index -- meaningless, and possibly not
+            # even a valid key, for whatever's actually displayed while the
+            # insertion-refinement page has swapped in the subject's own MRI
+            # (raw intensity values, not atlas indices) instead of the atlas.
             old_indices = self.LoadMRI.slice_indices[0]
             picker = vtk.vtkPropPicker()
             renderer = interactor.GetRenderWindow().GetRenderers().GetFirstRenderer()
@@ -402,7 +413,7 @@ class CustomInteractorStyle(vtk.vtkInteractorStyleImage):
                 x = max(0, min(xi, shape[2]-1))
 
                 value = self.LoadMRI.volumes[0].slices[0][int(z),int(y),int(x)]
-                region_name = self.LoadMRI.tp_labels[value][4]
+                region_name = self.LoadMRI.TrajPlanning.tp_labels[value][4]
                 self.LoadMRI.TrajPlanning.visualize_regionname(region_name,self.interactor_view_name,[int(z),int(y),int(x)])
 
         if not self.zooming:
