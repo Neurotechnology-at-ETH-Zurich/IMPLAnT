@@ -1,15 +1,8 @@
 # This Python file uses the following encoding: utf-8
 import os
 import sys
-import json as _json
 import SimpleITK as sitk
-_base_dir = getattr(sys, '_MEIPASS', os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-_exe_dir = os.path.dirname(sys.executable) if getattr(sys, 'frozen', False) else _base_dir
-_config_path = os.path.join(_exe_dir, 'paths_config.json')
-if not os.path.exists(_config_path):
-    _config_path = os.path.join(_base_dir, 'paths_config.example.json')
-with open(_config_path) as _f:
-    _paths = _json.load(_f)
+from paths_config import _paths
 import pyvista as pv
 from pyvistaqt import QtInteractor
 from pathlib import Path
@@ -659,7 +652,7 @@ class Visualisation3D:
         # Re-bake mesh colors so the sliced view also picks up the new colormap.
         # Must restore active scalar to 'NIFTI' afterwards — threshold calls in
         # manually_pick_point rely on it.
-        if hasattr(self, 'mesh_atlas'):
+        if hasattr(self, 'mesh_atlas') and self.mesh_atlas.n_cells > 0:
             nifti_vals = np.round(self.mesh_atlas.cell_data['NIFTI']).astype(int)
             colors = np.array([self.cmap.colors[int(v)] for v in nifti_vals])
             self.mesh_atlas.cell_data['colors'] = (colors[:, :3] * 255).astype(np.uint8)
@@ -1301,7 +1294,7 @@ class Visualisation3D:
             self.MW.ui.pushButton_showChannels.setText('Show with deselected Channels')
             self.MW.ui.widget_pgEphys.yMax = len(self.Ephys.VisEphys.displayed_channels) * self.MW.ui.widget_pgEphys.slot_height
 
-        self.MW.ui.widget_pgEphys.yMin = -self.MW.ui.widget_pgEphys.slot_height
+        self.MW.ui.widget_pgEphys.yMin = self.MW.ui.widget_pgEphys.base_ymin()
         self.Ephys.VisEphys.visualize_data(self.Ephys.VisEphys.displayed_channels)
 
 
