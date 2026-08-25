@@ -1,0 +1,383 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>Form</class>
+ <widget class="QWidget" name="Form">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>655</width>
+    <height>736</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Form</string>
+  </property>
+  <layout class="QGridLayout" name="gridLayout" rowstretch="0,1,0,0,0,0,0" columnstretch="0,0,0,0">
+   <item row="6" column="1">
+    <widget class="QPushButton" name="pushButton_deselectAll">
+     <property name="minimumSize">
+      <size>
+       <width>0</width>
+       <height>50</height>
+      </size>
+     </property>
+     <property name="toolTip">
+      <string>Uncheck every shank, hiding the regions they traverse (unless another checked shank still needs one)</string>
+     </property>
+     <property name="styleSheet">
+      <string notr="true"> QPushButton { background-color: #e67e22; color: white; } QPushButton:disabled { background-color: #a9713f; color: #cccccc; }</string>
+     </property>
+     <property name="text">
+      <string>Deselect All Shanks</string>
+     </property>
+    </widget>
+   </item>
+   <item row="0" column="0" colspan="4">
+    <widget class="QComboBox" name="comboBox_Shanks_tp3d">
+     <property name="minimumSize">
+      <size>
+       <width>0</width>
+       <height>50</height>
+      </size>
+     </property>
+     <property name="toolTip">
+      <string>Select which shank is highlighted (bolder) in the 3D view</string>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="0" colspan="4">
+    <widget class="QFrame" name="frame_axisNav_vis3D">
+     <layout class="QHBoxLayout" name="horizontalLayout_axisNav_vis3D">
+      <item>
+       <widget class="QPushButton" name="pushButton_stepBack10_vis3D">
+        <property name="toolTip">
+         <string>Move 10 voxels back along the selected axis</string>
+        </property>
+        <property name="text">
+         <string>&lt;&lt;</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="pushButton_stepBack1_vis3D">
+        <property name="toolTip">
+         <string>Move 1 voxel back along the selected axis</string>
+        </property>
+        <property name="text">
+         <string>&lt;</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="label_selectedAxis_vis3D">
+        <property name="text">
+         <string>no axis selected</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignCenter</set>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="pushButton_stepFwd1_vis3D">
+        <property name="toolTip">
+         <string>Move 1 voxel forward along the selected axis</string>
+        </property>
+        <property name="text">
+         <string>&gt;</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="pushButton_stepFwd10_vis3D">
+        <property name="toolTip">
+         <string>Move 10 voxels forward along the selected axis</string>
+        </property>
+        <property name="text">
+         <string>&gt;&gt;</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item row="6" column="0">
+    <widget class="QPushButton" name="pushButton_selectAll">
+     <property name="minimumSize">
+      <size>
+       <width>0</width>
+       <height>50</height>
+      </size>
+     </property>
+     <property name="toolTip">
+      <string>Check every shank, showing all the regions each one traverses</string>
+     </property>
+     <property name="styleSheet">
+      <string notr="true"> QPushButton { background-color: #e67e22; color: white; } QPushButton:disabled { background-color: #a9713f; color: #cccccc; }</string>
+     </property>
+     <property name="text">
+      <string>Select All Shanks</string>
+     </property>
+    </widget>
+   </item>
+   <item row="6" column="2" colspan="2">
+    <widget class="QPushButton" name="pushButton_add_region">
+     <property name="minimumSize">
+      <size>
+       <width>0</width>
+       <height>50</height>
+      </size>
+     </property>
+     <property name="toolTip">
+      <string>Manually add a specific atlas region to the 3D view, by name</string>
+     </property>
+     <property name="styleSheet">
+      <string notr="true"> QPushButton { background-color: #e67e22; color: white; } QPushButton:disabled { background-color: #a9713f; color: #cccccc; }</string>
+     </property>
+     <property name="text">
+      <string>Show Another Region</string>
+     </property>
+    </widget>
+   </item>
+   <item row="3" column="0" colspan="2">
+    <widget class="QTableWidget" name="tableWidgetshank_legend">
+     <property name="toolTip">
+      <string>Each shank's color and visibility -- click a row to select that shank (bolder in 3D); check its box to show the regions it passes through</string>
+     </property>
+     <property name="sizeAdjustPolicy">
+      <enum>QAbstractScrollArea::AdjustToContents</enum>
+     </property>
+    </widget>
+   </item>
+   <item row="1" column="0" colspan="4">
+    <widget class="QFrame" name="frame_33">
+     <property name="enabled">
+      <bool>true</bool>
+     </property>
+     <property name="minimumSize">
+      <size>
+       <width>0</width>
+       <height>200</height>
+      </size>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">border-color: rgb(170, 170, 170);
+background-color: rgb(131, 131, 131);
+</string>
+     </property>
+     <property name="frameShape">
+      <enum>QFrame::NoFrame</enum>
+     </property>
+     <layout class="QGridLayout" name="gridLayout_2" rowminimumheight="1,0,0,0" columnminimumwidth="1,1,1,1,1,1,0,0,0">
+      <item row="2" column="3">
+       <widget class="QPushButton" name="pushButton_slicex_vis3D">
+        <property name="toolTip">
+         <string>Select the sagittal (x) axis -- the step buttons below then move the selected shank along it</string>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+        <property name="icon">
+         <iconset>
+          <normaloff>Icons/mri/axis_x.png</normaloff>Icons/mri/axis_x.png</iconset>
+        </property>
+        <property name="iconSize">
+         <size>
+          <width>40</width>
+          <height>40</height>
+         </size>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="5">
+       <widget class="QPushButton" name="pushButton_slicez_vis3D">
+        <property name="toolTip">
+         <string>Select the axial (z) axis -- the step buttons below then move the selected shank along it</string>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+        <property name="icon">
+         <iconset>
+          <normaloff>Icons/mri/axis_z.png</normaloff>Icons/mri/axis_z.png</iconset>
+        </property>
+        <property name="iconSize">
+         <size>
+          <width>40</width>
+          <height>40</height>
+         </size>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="4">
+       <widget class="QPushButton" name="pushButton_slicey_vis3D">
+        <property name="toolTip">
+         <string>Select the coronal (y) axis -- the step buttons below then move the selected shank along it</string>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+        <property name="icon">
+         <iconset>
+          <normaloff>Icons/mri/axis_y.png</normaloff>Icons/mri/axis_y.png</iconset>
+        </property>
+        <property name="iconSize">
+         <size>
+          <width>40</width>
+          <height>40</height>
+         </size>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="2">
+       <widget class="QPushButton" name="pushButton_space">
+        <property name="minimumSize">
+         <size>
+          <width>0</width>
+          <height>50</height>
+         </size>
+        </property>
+        <property name="toolTip">
+         <string>Cycle the background shell: atlas template / subject MRI intensity / no shell (XYZ space) -- the current mode is also shown as a legend in the 3D view's top-left corner</string>
+        </property>
+        <property name="text">
+         <string>Space
+ switch</string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="0">
+       <widget class="QPushButton" name="resetCamera_vis3D">
+        <property name="enabled">
+         <bool>true</bool>
+        </property>
+        <property name="toolTip">
+         <string>Reset Camera View</string>
+        </property>
+        <property name="styleSheet">
+         <string notr="true"/>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+        <property name="icon">
+         <iconset theme="go-home"/>
+        </property>
+        <property name="iconSize">
+         <size>
+          <width>40</width>
+          <height>40</height>
+         </size>
+        </property>
+        <property name="autoDefault">
+         <bool>false</bool>
+        </property>
+        <property name="default">
+         <bool>false</bool>
+        </property>
+        <property name="flat">
+         <bool>false</bool>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="1">
+       <widget class="QPushButton" name="change_perspective_vis3D">
+        <property name="toolTip">
+         <string>Change Perspective</string>
+        </property>
+        <property name="styleSheet">
+         <string notr="true"/>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+        <property name="icon">
+         <iconset>
+          <normaloff>Icons/ephys/projection_parallel.png</normaloff>Icons/ephys/projection_parallel.png</iconset>
+        </property>
+        <property name="iconSize">
+         <size>
+          <width>40</width>
+          <height>40</height>
+         </size>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="6">
+       <widget class="QPushButton" name="pushButton_alongTraj">
+        <property name="toolTip">
+         <string>Select the shank's own insert-to-deep axis -- the step buttons below then move it deeper/shallower along its own trajectory</string>
+        </property>
+        <property name="text">
+         <string>Along
+ Trajectory</string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="8">
+       <widget class="QPushButton" name="pushButton_pitch">
+        <property name="text">
+         <string>pitch</string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="7">
+       <widget class="QPushButton" name="pushButton_roll">
+        <property name="text">
+         <string>roll</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="0" colspan="9">
+       <widget class="QVTKRenderWindowInteractor" name="vtkWidget_vis3D">
+        <property name="enabled">
+         <bool>true</bool>
+        </property>
+        <property name="minimumSize">
+         <size>
+          <width>500</width>
+          <height>0</height>
+         </size>
+        </property>
+        <property name="styleSheet">
+         <string notr="true">background-color: rgb(200, 177, 176);</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item row="3" column="2" rowspan="2" colspan="2">
+    <widget class="QListWidget" name="listWidget_visible_regions">
+     <property name="toolTip">
+      <string>Atlas regions currently shown in the 3D view -- check or uncheck to toggle</string>
+     </property>
+    </widget>
+   </item>
+   <item row="4" column="0">
+    <widget class="QCheckBox" name="checkBox_forbiddenareas">
+     <property name="text">
+      <string>Hide Forbidden Areas</string>
+     </property>
+    </widget>
+   </item>
+   <item row="4" column="1">
+    <widget class="QCheckBox" name="checkBox_hideplanes">
+     <property name="text">
+      <string>Hide planes</string>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>QVTKRenderWindowInteractor</class>
+   <extends>QGraphicsView</extends>
+   <header>vtkmodules.qt.QVTKRenderWindowInteractor</header>
+  </customwidget>
+ </customwidgets>
+ <resources/>
+ <connections/>
+</ui>

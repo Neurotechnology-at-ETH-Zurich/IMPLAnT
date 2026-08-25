@@ -1,7 +1,7 @@
 # This Python file uses the following encoding: utf-8
 import os
 import sys
-import json as _json
+import colorsys
 import SimpleITK as sitk
 import pyvista as pv
 from pyvistaqt import QtInteractor
@@ -14,13 +14,7 @@ from PySide6.QtCore import Qt
 import nibabel as nib
 import vtk
 from concurrent.futures import ThreadPoolExecutor
-_base_dir = getattr(sys, '_MEIPASS', os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-_exe_dir = os.path.dirname(sys.executable) if getattr(sys, 'frozen', False) else _base_dir
-_config_path = os.path.join(_exe_dir, 'paths_config.json')
-if not os.path.exists(_config_path):
-    _config_path = os.path.join(_base_dir, 'paths_config.example.json')
-with open(_config_path) as _f:
-    _paths = _json.load(_f)
+from paths_config import _paths
 
 
 class Visualisation3D:
@@ -304,20 +298,44 @@ class Visualisation3D:
 
         self.cmap = ListedColormap(self.rgba)
         self.cmap_background = ListedColormap(rgba_background)
-        # pre-built numpy arrays for fast vectorised colour lookup
-        self.cmap_bg_colors = (np.array(self.cmap_background.colors)[:, :3] * 255).astype(np.uint8)
 
         self.plotter_co.add_axes()
         self.plotter_sa.add_axes()
         self.plotter_ax.add_axes()
 
+    @staticmethod
+    def _desaturate(rgb, factor):
+        h, s, v = colorsys.rgb_to_hsv(*rgb)
+        return colorsys.hsv_to_rgb(h, s * factor, v)
 
-    def render_clipped(self,normal,view,shank_number,depth=0):
+    def _bg_colors_for_shank(self, shank_number):
+        """Per-region background colours for this shank's clipped view:
+        full-saturation native atlas colour for regions the shank actually
+        passes through, desaturated (paled) for every other region -- same
+        convention (HSV saturation *0.25) the ephys 3D atlas viewer
+        (ephys/visualisation3D.py's _rebuild_colormap/desaturate) uses to
+        highlight a channel's own regions against the rest of the brain.
+        Clear Label (0) needs no special-casing to stay black: its native
+        colour in the atlas label file is already (0,0,0), and
+        desaturating black stays black."""
+        tp = self.MW.LoadMRI.TrajPlanning
+        channel_points = tp.channel_points.get(shank_number, [])
+        regions = tp.compute_shank_regions(shank_number, channel_points) if len(channel_points) else []
+        crossed = {r['val'] for r in regions}
+
+        colors = np.array(self.cmap_background.colors)[:, :3].copy()
+        for idx in range(colors.shape[0]):
+            if idx not in crossed:
+                colors[idx] = self._desaturate(colors[idx], 0.25)
+        return (colors * 255).astype(np.uint8)
+
+    def render_clipped(self,normal,view,shank_number,depth=0,recenter=True):
         p = self.MW.LoadMRI.TrajPlanning.coords_insert_point[shank_number]
         self.insertion_point = np.array(p)
         p = self.MW.LoadMRI.TrajPlanning.coords_deepest_point[shank_number]
         self.deepest_point = np.array(p)
         self.coords_list = [np.array(p) for p in self.MW.LoadMRI.TrajPlanning.channel_points[shank_number]]
+        bg_colors = self._bg_colors_for_shank(shank_number)
 
         x0 = (self.coords_list[0][0])*self.spacing[0]
         y0 = (self.coords_list[0][1])*self.spacing[1]
@@ -331,25 +349,33 @@ class Visualisation3D:
         elif view == 'axial':
             plotter = self.plotter_ax
 
-        up = up_vectors[view]
-        focal_point = tuple(self.coords_list[0] * self.spacing)
-        distance = 60
-        position = tuple(np.array(focal_point) + np.array(normal) * distance)
+        # recenter=False (e.g. an automatic refresh after nudging a shank,
+        # rather than the user explicitly switching to/resetting this view)
+        # only updates the clip geometry below and leaves the camera -- and
+        # camera_params, the pose "Reset Camera" restores -- exactly where
+        # the user last left it, instead of snapping back to centered every
+        # time a point is edited.
+        if recenter:
+            up = up_vectors[view]
+            focal_point = tuple(self.coords_list[0] * self.spacing)
+            distance = 60
+            position = tuple(np.array(focal_point) + np.array(normal) * distance)
 
-        self.camera_params[view] = {
-            'up': up,
-            'focal': focal_point,
-            'position': position,
-        }
+            self.camera_params[view] = {
+                'up': up,
+                'focal': focal_point,
+                'position': position,
+            }
 
-        plotter.camera.up = up
-        plotter.camera.focal_point = focal_point
-        plotter.camera.clipping_range = (1e-5, 1e5)
-        if self.parallel_projection:
-            plotter.disable_parallel_projection()
-        plotter.set_position(position)
-        if self.parallel_projection:
-            plotter.enable_parallel_projection()
+        if recenter:
+            plotter.camera.up = up
+            plotter.camera.focal_point = focal_point
+            plotter.camera.clipping_range = (1e-5, 1e5)
+            if self.parallel_projection:
+                plotter.disable_parallel_projection()
+            plotter.set_position(position)
+            if self.parallel_projection:
+                plotter.enable_parallel_projection()
 
         # --- Front slab: clip from both sides to get a 1-voxel-thick strip ---
         # clip(normal) keeps the NEGATIVE side, so clip(normal) gives brain at origin,
@@ -362,8 +388,8 @@ class Visualisation3D:
 
         if slab.n_cells == 0:
             return
-        nifti_vals = np.clip(np.round(slab.cell_data['NIFTI']).astype(int), 0, len(self.cmap_bg_colors) - 1)
-        slab.cell_data['colors'] = self.cmap_bg_colors[nifti_vals]
+        nifti_vals = np.clip(np.round(slab.cell_data['NIFTI']).astype(int), 0, len(bg_colors) - 1)
+        slab.cell_data['colors'] = bg_colors[nifti_vals]
 
         plotter.add_mesh(
             slab,
@@ -384,8 +410,8 @@ class Visualisation3D:
 
         if shell.n_cells > 0:
             if 'NIFTI' in shell.cell_data:
-                nifti_sh = np.clip(np.round(shell.cell_data['NIFTI']).astype(int), 0, len(self.cmap_bg_colors) - 1)
-                shell.cell_data['colors'] = self.cmap_bg_colors[nifti_sh]
+                nifti_sh = np.clip(np.round(shell.cell_data['NIFTI']).astype(int), 0, len(bg_colors) - 1)
+                shell.cell_data['colors'] = bg_colors[nifti_sh]
                 plotter.add_mesh(
                     shell,
                     scalars='colors',
@@ -536,6 +562,25 @@ class Visualisation3D:
             name=name, render=False, reset_camera=False,
         )
 
+    @staticmethod
+    def _dashed_line_mesh(p1, p2, n_dashes=16):
+        """A dashed/dotted line from p1 to p2, built as alternating 'on'/
+        'off' segments -- same technique (and same reason: VTK's own line
+        stippling doesn't render reliably on this OpenGL2 backend) as the
+        identical helpers in trajectory_planning_3d/window.py and
+        trajectory_planning/file_input_output.py."""
+        p1 = np.asarray(p1, dtype=float)
+        p2 = np.asarray(p2, dtype=float)
+        t = np.linspace(0.0, 1.0, n_dashes * 2 + 1)
+        points = p1[None, :] + t[:, None] * (p2 - p1)[None, :]
+        lines = []
+        for i in range(0, len(points) - 1, 2):
+            lines.extend([2, i, i + 1])
+        poly = pv.PolyData()
+        poly.points = points
+        poly.lines = np.array(lines)
+        return poly
+
     def _draw_shank_angle_indicator(self, plotter, view, shank_number=None):
         """3D counterpart of TrajectoryPlanning._update_shank_angle_display_
         view: the same shank-vs-atlas-reference angle (caption + arc) shown
@@ -556,6 +601,8 @@ class Visualisation3D:
         names = (f'shank_angle_label_{view}',)
         if not hasattr(self, 'shank_angle_arc2d_actors'):
             self.shank_angle_arc2d_actors = {}
+        if not hasattr(self, 'shank_angle_refline2d_actors'):
+            self.shank_angle_refline2d_actors = {}
 
         def _clear():
             for nm in names:
@@ -564,6 +611,9 @@ class Visualisation3D:
             old_arc2d = self.shank_angle_arc2d_actors.pop(view, None)
             if old_arc2d is not None:
                 plotter.renderer.RemoveActor2D(old_arc2d)
+            old_refline2d = self.shank_angle_refline2d_actors.pop(view, None)
+            if old_refline2d is not None:
+                plotter.renderer.RemoveActor2D(old_refline2d)
 
         tp = self.MW.LoadMRI.TrajPlanning
         result = tp.compute_shank_reference_angle(view, shank_number)
@@ -623,50 +673,67 @@ class Visualisation3D:
         radius = max(np.linalg.norm(p1_vec_2d), 1e-6)
         point1_dir_2d = p1_vec_2d / radius
 
-        # pointb = Point1 rotated by EXACTLY `angle` degrees -- matching
-        # TrajectoryPlanning._update_shank_angle_display_view's (2D) arc
-        # construction exactly, instead of using ref_dir directly (whose
-        # own true angle from point1_dir can be `angle` or `180-angle`
-        # depending on which side of the shank's midpoint the arc center
-        # falls on, silently mismatching the caption on one side). The 2D
-        # indicator picks its rotation_sign from a cross product computed
-        # in ITS OWN mirrored display frame; this function works in the
-        # raw (unflipped) frame throughout, and the display-mirror's own
-        # reversal of rotation direction exactly cancels the sign flip the
-        # mirror itself introduces -- so the same rule, applied here to the
-        # raw (un-mirrored) vectors with no flip step at all, reproduces
-        # the identical arc.
+        # pointb = ref_dir_2d itself -- NOT point1_dir rotated by `angle`
+        # (the old approach here, matching what TrajectoryPlanning.
+        # _update_shank_angle_display_view used to do). `angle` is
+        # compute_shank_roll_pitch_mri's MRI-space number, which since
+        # that function switched to a true line-to-plane angle (see its
+        # docstring) can be a completely different, much larger value than
+        # the geometric angle between point1_dir_2d/ref_dir_2d actually
+        # drawn in this atlas-space picture -- forcing the sweep to equal
+        # it (via a rotation-sign heuristic) produced arcs that opened the
+        # wrong way or didn't visually reach the reference line at all.
+        # Drawing directly between the two real vectors is unambiguous and
+        # always geometrically correct; the (possibly quite different)
+        # true MRI-space number is still shown in the label, not
+        # abandoned -- see the identical fix in TrajectoryPlanning.
+        # _update_shank_angle_display_view.
         ref_dir_2d = ref_2d / ref_norm
         if view == 'sagittal':
             # compute_shank_reference_angle reports 180-minus-the-raw
             # angle for sagittal; keep ref_dir_2d consistent with that
             # supplement (see its docstring).
             ref_dir_2d = -ref_dir_2d
-        cross_z = point1_dir_2d[0] * ref_dir_2d[1] - point1_dir_2d[1] * ref_dir_2d[0]
-        rotation_sign = -1.0 if cross_z >= 0 else 1.0
-
-        # Coronal only: if the deepest point sits BETWEEN the
-        # reference-plane crossing (center) and the insertion point --
-        # i.e. center is on the opposite side of deep_mm_2d from
-        # insert_mm_2d along the shank line -- the cross-product rule
-        # above picks the wrong side; negate rotation_sign in that case
-        # (matching the identical fix in TrajectoryPlanning.
-        # _update_shank_angle_display_view).
-        if view == 'coronal':
-            shank_dir_2d = shank_2d / shank_norm
-            t_center = np.dot(center[list(proj)] - deep_mm_2d, shank_dir_2d)
-            if t_center < 0:
-                rotation_sign = -rotation_sign
-
-        theta = rotation_sign * np.radians(angle)
-        c, s = np.cos(theta), np.sin(theta)
-        point2_dir_2d = np.array([
-            c * point1_dir_2d[0] - s * point1_dir_2d[1],
-            s * point1_dir_2d[0] + c * point1_dir_2d[1],
-        ])
 
         point1_dir = _embed(point1_dir_2d)
-        point2_dir = _embed(point2_dir_2d)
+        point2_dir = _embed(ref_dir_2d)
+        view_angle = float(np.degrees(np.arccos(np.clip(np.dot(point1_dir_2d, ref_dir_2d), -1.0, 1.0))))
+        if view_angle > 90.0:
+            # the reference is a LINE, not a directed ray -- see the
+            # identical fix in TrajectoryPlanning._update_shank_angle_
+            # display_view -- so draw the shank's acute angle to it rather
+            # than whichever of the two supplementary angles the arbitrary
+            # "toward lambda" sign convention happened to pick.
+            view_angle = 180.0 - view_angle
+            point2_dir = -point2_dir
+
+        # Dotted reference line through center along point2_dir (the
+        # reference-plane crossing direction the angle is measured
+        # against) -- point1_dir (the shank's own side) already has a
+        # persistent solid line via draw_electrode_lines (center sits ON
+        # that line by construction, see above), but nothing else in this
+        # view draws the reference direction itself, so the arc's far end
+        # had nothing to visually anchor to. Same dashed-segment technique,
+        # and the same always-on-top vtkActor2D/world-coordinate approach,
+        # as the arc immediately below -- see its own comment for why a
+        # plain add_mesh actor isn't enough here (depth-tested against the
+        # clipped brain surface).
+        refline_poly = self._dashed_line_mesh(center - point2_dir * radius * 1.2, center + point2_dir * radius * 1.2)
+        old_refline2d = self.shank_angle_refline2d_actors.pop(view, None)
+        if old_refline2d is not None:
+            plotter.renderer.RemoveActor2D(old_refline2d)
+        refline_coordinate = vtk.vtkCoordinate()
+        refline_coordinate.SetCoordinateSystemToWorld()
+        refline_mapper2d = vtk.vtkPolyDataMapper2D()
+        refline_mapper2d.SetInputData(refline_poly)
+        refline_mapper2d.SetTransformCoordinate(refline_coordinate)
+        refline_mapper2d.ScalarVisibilityOff()
+        refline_actor2d = vtk.vtkActor2D()
+        refline_actor2d.SetMapper(refline_mapper2d)
+        refline_actor2d.GetProperty().SetColor(1, 1, 1)
+        refline_actor2d.GetProperty().SetLineWidth(2)
+        plotter.renderer.AddActor2D(refline_actor2d)
+        self.shank_angle_refline2d_actors[view] = refline_actor2d
 
         arc = pv.CircularArc(pointa=center + point1_dir * radius, pointb=center + point2_dir * radius, center=center)
         old_arc2d = self.shank_angle_arc2d_actors.pop(view, None)
@@ -717,8 +784,9 @@ class Visualisation3D:
             held_axis_vec[held_axis] = 1.0
             bisector_dir = np.cross(held_axis_vec, point1_dir)
         label_pt = pv.PolyData((center + bisector_dir * radius).reshape(1, 3))
+        label_text = f"{angle:.1f}°(MRI)"
         plotter.add_point_labels(
-            label_pt, [f"{angle:.1f}°"],
+            label_pt, [label_text],
             text_color='white', font_size=16, shape=None, bold=True, shadow=False,
             show_points=False, always_visible=True,
             name=f'shank_angle_label_{view}', render=False, reset_camera=False,

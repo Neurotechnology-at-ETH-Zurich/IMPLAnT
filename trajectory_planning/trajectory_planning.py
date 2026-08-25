@@ -7,16 +7,10 @@ import vtk
 import SimpleITK as sitk
 from PySide6 import QtWidgets
 import os
-import json as _json
 from PySide6.QtWidgets import QWidget,QVBoxLayout, QMessageBox
+from PySide6.QtCore import Qt
 import sys
-_base_dir = getattr(sys, '_MEIPASS', os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-_exe_dir = os.path.dirname(sys.executable) if getattr(sys, 'frozen', False) else _base_dir
-_config_path = os.path.join(_exe_dir, 'paths_config.json')
-if not os.path.exists(_config_path):
-    _config_path = os.path.join(_base_dir, 'paths_config.example.json')
-with open(_config_path) as _f:
-    _paths = _json.load(_f)
+from paths_config import _paths
 import ants
 from PySide6.QtWidgets import QTableWidgetItem
 from trajectory_planning.visualisation3D import Visualisation3D
@@ -29,7 +23,6 @@ from PySide6.QtWidgets import QDockWidget
 from PySide6.QtGui import QPixmap, QIcon, QColor
 from gui_utils.busy_overlay import BusyOverlay
 from itertools import groupby
-from trajectory_planning.file_input_output import FileOutput
 from trajectory_planning.coord_transform import CoordTransform
 from trajectory_planning.rendering import Rendering
 from trajectory_planning.registration import TpRegistration
@@ -37,6 +30,7 @@ from trajectory_planning.electrode import ElecGeometry
 from trajectory_planning.shank import ShankRendering, NEON_COLORS, _make_color_icon
 from trajectory_planning.dfx_geometry import DfxGeometry
 from trajectory_planning.shank_sidebar import ShankSidebarWidget
+from trajectory_planning_3d.window import TrajectoryPlanning3DWindow
 
 ## EVERYTHING IS WRITTEN WRT XYZ (not zyx)
 
@@ -64,6 +58,9 @@ class TrajectoryPlanning(CoordTransform, Rendering, TpRegistration, ElecGeometry
         self.ui.pushButton_coronalView.clicked.connect(lambda checked: self.change_view_coronal(checked))
         self.ui.pushButton_sagittalView.clicked.connect(lambda checked: self.change_view_sagittal(checked))
         self.ui.pushButton_axialView.clicked.connect(lambda checked: self.change_view_axial(checked))
+
+        self.tp3d_window = None
+        self.ui.pushButton_tp_3d.clicked.connect(self.open_3d_window)
 
         self.selecting_point = False
         self.show_label = False
@@ -97,8 +94,25 @@ class TrajectoryPlanning(CoordTransform, Rendering, TpRegistration, ElecGeometry
         self.transform_path = transformPath
         self.skull_mask_native_path = None
 
+        # insertion-point refinement page (page_31, stackedWidget_
+        # trajectoryplanning index 2) state -- see electrode.py.
+        # self.LoadMRI.volumes[0] is still the resampled MRI working volume
+        # here (get_atlas_coords below builds movingImg_resampled from this
+        # exact same volume) -- captured now, before do_get_shank_line's
+        # atlas swap, since MW.data_pre_resampled is a DIFFERENT file (the
+        # original, non-resampled scan, only ever used elsewhere for
+        # filename display) and loading that instead would silently put
+        # mri_insert/mri_deep on the wrong voxel grid.
+        self._mri_working_volume_path = self.LoadMRI.volumes[0].file_path
+        self._insertion_confirmed = set()
+        self._insertion_guide_actor = {}
+        self._insertion_guide_t_max = {}
+        self._insertion_direction_mri = {}
+        self._mri_marker_actor = {'deep': {}, 'insert': {}}
+        self._overlay_layers_reloaded = False
+        self.LoadMRI.picking_insertion_point = False
+
         self.LoadMRI.tp_imgvtk = {}
-        self.LoadMRI.show_edge_mask = False
 
         self.movingidx_bregma, self.movingidx_lambda, atlas_distance = self.get_atlas_coords(self.LoadMRI.volumes[0],transformPath)
         self.ui.spinBox_atlas_bregma_x.setValue(self.movingidx_bregma[0]+1)
@@ -116,7 +130,9 @@ class TrajectoryPlanning(CoordTransform, Rendering, TpRegistration, ElecGeometry
         self.ui.spinBox_tp_lambda_z.valueChanged.connect(self.change_lambda)
 
         self.ui.pushButton_tp_next0.clicked.connect(lambda _: self.ask_paint_forbidden_areas())
-        self.ui.pushButton_paint_done.clicked.connect(lambda _: self.segment_skull(transformPath))
+        self.ui.pushButton_paint_done.clicked.connect(lambda _: self.get_shank_line(transformPath))
+        self.ui.pushButton_paint_done.setToolTip(
+            "Finish marking forbidden regions and continue to shank geometry")
         #spinBox.setKeyboardTracking(False)
         self.ui.spinBox_tp_insert_x.setKeyboardTracking(False)
         self.ui.spinBox_tp_insert_y.setKeyboardTracking(False)
@@ -155,7 +171,36 @@ class TrajectoryPlanning(CoordTransform, Rendering, TpRegistration, ElecGeometry
         self.ui.pushButton_addShank.clicked.connect(self.add_shank)
         self.ui.comboBox_Shanks.currentIndexChanged.connect(self.select_shank)
         self.ui.pushButton_removeShank.clicked.connect(self.remove_shank)
-        self.ui.pushButton_SaveTraj.clicked.connect(lambda _: FileOutput(self.MW, self.MW.data_pre_resampled,parent=self.MW).exec())
+        self.ui.pushButton_SaveTraj.clicked.connect(lambda _: self.enter_insertion_refinement_page())
+
+        # page_31 (insertion-point refinement) setup -- comboBox_insertion_shank
+        # mirrors comboBox_Shanks/comboBox_geometry_shanks, but drives shank
+        # switching itself (_switch_insertion_shank_mri) rather than
+        # select_shank, since this page displays the MRI, not the atlas.
+        # spinBox_insertion_* are read-only displays kept in sync by
+        # pick_insertion_point_from_click/_switch_insertion_shank_mri.
+        self.ui.comboBox_insertion_shank.clear()
+        self.ui.comboBox_insertion_shank.addItem("Shank 1")
+        self.ui.comboBox_insertion_shank.setItemData(0, 0)
+        self.ui.comboBox_insertion_shank.setItemIcon(0, _make_color_icon(0))
+        self.ui.comboBox_insertion_shank.currentIndexChanged.connect(self._switch_insertion_shank_mri)
+        # spinBox_insertion_x/y/z always display native-MRI-space voxel
+        # indices (see electrode.py's insertion-refinement page), unlike the
+        # atlas-ranged spinBox_tp_insert_* -- self.LoadMRI.volumes[0] is
+        # still the subject's own MRI at this point in __init__, before the
+        # atlas swap below, so its shape is the right one to range against.
+        mri_shape = self.LoadMRI.volumes[0].slices[0].shape  # zyx
+        for sb, maximum in ((self.ui.spinBox_insertion_x, mri_shape[2]),
+                             (self.ui.spinBox_insertion_y, mri_shape[1]),
+                             (self.ui.spinBox_insertion_z, mri_shape[0])):
+            sb.setMaximum(maximum)
+            sb.setReadOnly(True)
+            sb.setButtonSymbols(QtWidgets.QAbstractSpinBox.NoButtons)
+        self.ui.textEdit_5.setPlainText(
+            "Click directly in the 2D views to set each shank's insertion "
+            "point -- it will snap onto that shank's own trajectory line. "
+            "Use NEXT (or the dropdown above) to move to the next shank.")
+        self.ui.pushButton_nextShank.clicked.connect(self.on_next_shank_clicked)
 
         # widget_tp_sidebar is an empty placeholder in the .ui (native
         # QWidget, no layout) -- populate it the same way widget_dfx is
@@ -197,6 +242,24 @@ class TrajectoryPlanning(CoordTransform, Rendering, TpRegistration, ElecGeometry
         for sb in (self.ui.spinBox_tp_bregma_z, self.ui.spinBox_tp_lambda_z,
                    self.ui.spinBox_tp_insert_z, self.ui.spinBox_tp_deep_z):
             sb.setMaximum(max_z)
+
+    def open_3d_window(self):
+        """Opens (or resurfaces) the standalone 3D atlas/shank view -- kept as a
+        single persistent instance so its region/shank visibility stays put
+        between opens. It's a QDockWidget added to MW once, appended into
+        MW's own dock area (not floating) the first time, so it starts
+        docked alongside the main window rather than as a separate floating
+        window -- the user can still drag it out to float it afterwards."""
+        if self.tp3d_window is None:
+            self.tp3d_window = TrajectoryPlanning3DWindow(self.MW)
+            self.MW.addDockWidget(Qt.RightDockWidgetArea, self.tp3d_window)
+            # addDockWidget alone can leave it docked but squeezed to near
+            # nothing if MW's central widget claims all the space -- give it
+            # a sane starting width instead of just hoping there's room.
+            self.MW.resizeDocks([self.tp3d_window], [500], Qt.Horizontal)
+        self.tp3d_window.show()
+        self.tp3d_window.raise_()
+        self.tp3d_window.activateWindow()
 
     def show_step_popup(self, title, steps):
         msg_box = QMessageBox(self.MW)

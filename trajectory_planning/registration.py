@@ -2,7 +2,6 @@
 import os
 import re
 import sys
-import json as _json
 import numpy as np
 import SimpleITK as sitk
 import ants
@@ -14,14 +13,7 @@ from gui_utils.busy_overlay import BusyOverlay
 from trajectory_planning.visualisation3D import Visualisation3D
 from trajectory_planning.shank_setup_dialog import ShankSetupDialog
 from core.registration import Registration
-
-_base_dir = getattr(sys, '_MEIPASS', os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-_exe_dir = os.path.dirname(sys.executable) if getattr(sys, 'frozen', False) else _base_dir
-_config_path = os.path.join(_exe_dir, 'paths_config.json')
-if not os.path.exists(_config_path):
-    _config_path = os.path.join(_base_dir, 'paths_config.example.json')
-with open(_config_path) as _f:
-    _paths = _json.load(_f)
+from paths_config import _paths
 
 class TpRegistration:
     def register_to_main_img(self,filename):
@@ -93,6 +85,7 @@ class TpRegistration:
         self.select_shank(0)  # setCurrentIndex above is a no-op (no signal fires) when it's already 0
 
         def proceed():
+            self.refresh_atlas_bregma_lambda_from_user_points()
             if self.skull_mask_native_path is not None:
                 # optional overlay -- a failure here (e.g. a warping bug)
                 # must not take the whole next step down with it: without
@@ -105,8 +98,6 @@ class TpRegistration:
                 except Exception:
                     import traceback
                     traceback.print_exc()
-                    print("[skull_mask] warp_skull_mask failed -- "
-                          "continuing without the skull overlay", flush=True)
             if transformPath is not None:
                 self.warp_red_areas(transformPath)
             else:
@@ -154,7 +145,13 @@ class TpRegistration:
 
         self.LoadMRI = self.MW.LoadMRI
         self.LoadMRI.TrajPlanning = self
-        self.LoadMRI.show_edge_mask = False
+        # tp_labels (the atlas region-label lookup, built by Contrast.
+        # build_label_lut when label_file=True) lives on LoadMRI, which gets
+        # replaced wholesale on every restart_gui call -- cache it here, on
+        # self (which survives those swaps), since the insertion-refinement
+        # page's own restart_gui round-trip (electrode.py) briefly displays
+        # the subject's own MRI (no atlas labels at all) in between.
+        self.tp_labels = self.LoadMRI.tp_labels
         # bregma/lambda/insert/deepest-point spinboxes were last ranged
         # against the subject's own MRI (see TrajectoryPlanning.__init__)
         # -- re-range them against the atlas now that it's the active
@@ -180,7 +177,6 @@ class TpRegistration:
 
         self.ui.pushButton_tp_deep.clicked.connect(self.get_deepest_point)
         self.ui.pushButton_tp_insert.clicked.connect(self.get_insert_point)
-        self.ui.pushButton_edgemask.clicked.connect(self.show_edge_mask) #checkable
         self.ui.spinBox_tp_channels.valueChanged.connect(self.change_shank_parameters)
         self.ui.spinBox_tp_separation.valueChanged.connect(self.change_shank_parameters)
         self.show_label = True #is checked
@@ -271,7 +267,10 @@ class TpRegistration:
 
         for row in range(src_table.rowCount()):
             # columns 1 (Layer) and 2 (Intensity) are plain QTableWidgetItems
-            # on the real table -- mirror their text directly.
+            # on the real table -- mirror their text directly, and their
+            # tooltip too (the real table's layer-name column shows the full
+            # name on hover when the column is too narrow to fit it -- the
+            # mirror never got that, since only .text() was ever copied).
             for col in (1, 2):
                 src_item = src_table.item(row, col)
                 text = src_item.text() if src_item is not None else ""
@@ -282,6 +281,7 @@ class TpRegistration:
                     dst_table.setItem(row, col, dst_item)
                 if dst_item.text() != text:
                     dst_item.setText(text)
+                dst_item.setToolTip(text)
 
             # columns 0 (visibility toggle) and 3 (opacity) are cell WIDGETS
             # on the real table (QToolButton / QDoubleSpinBox), not items --
@@ -325,7 +325,7 @@ class TpRegistration:
         if msg_box.clickedButton() == btn_yes:
             self.paint_red_areas()
         else:
-            self.segment_skull(None)
+            self.get_shank_line(None)
 
     def segment_skull(self, transformPath):
         # segment_skull runs right after Step 1 (bregma/lambda picked on the

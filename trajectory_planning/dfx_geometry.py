@@ -83,6 +83,15 @@ class DfxGeometry:
         layout.setColumnStretch(2, 2)
         layout.setColumnStretch(3, 1)
 
+        # user-defined geometry is set up per-shank via the dropdown above,
+        # so whichever shank was last being bent/reviewed here is likely
+        # not shank 1 -- land back on shank 1 (same convention as
+        # get_shank_line's own post-setup reset in registration.py) instead
+        # of leaving insertion/deepest-point picking pointed at whatever
+        # shank happened to be selected when "OK" was clicked.
+        self.ui.comboBox_Shanks.setCurrentIndex(0)
+        self.select_shank(0)
+
     def browse_dfx_file(self):
         path, _ = QFileDialog.getOpenFileName(
             self.MW, "Select the DXF file", "",

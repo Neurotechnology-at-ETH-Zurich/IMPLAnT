@@ -7,15 +7,8 @@ from vtkmodules.vtkFiltersSources import vtkRegularPolygonSource
 from vtkmodules.vtkRenderingCore import vtkActor, vtkPolyDataMapper
 from scipy import ndimage
 import sys
-import json as _json
 from core.image_layer import ImageLayer
-_base_dir = getattr(sys, '_MEIPASS', os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-_exe_dir = os.path.dirname(sys.executable) if getattr(sys, 'frozen', False) else _base_dir
-_config_path = os.path.join(_exe_dir, 'paths_config.json')
-if not os.path.exists(_config_path):
-    _config_path = os.path.join(_base_dir, 'paths_config.example.json')
-with open(_config_path) as _f:
-    _paths = _json.load(_f)
+from paths_config import _paths
 
 class Rendering:
     def render(self):
@@ -24,6 +17,15 @@ class Rendering:
                 widget.GetRenderWindow().Render()
 
     def check_points_in_slice(self):
+        # runs unconditionally on every cursor move (core/load_MRI_file.py's
+        # update_slices) -- while the insertion-refinement page has swapped
+        # the displayed volume to the subject's own MRI, coords_insert_point/
+        # coords_deepest_point (atlas voxel coordinates) would get redrawn
+        # onto that MRI-space renderer, at nonsensical positions.
+        # pick_insertion_point_from_click/_draw_mri_shank_markers already
+        # keep that page's own markers/guide line up to date.
+        if getattr(self.LoadMRI, 'picking_insertion_point', False):
+            return
         for view_name in 'axial','sagittal','coronal':
             renderer = self.LoadMRI.renderers[0][view_name]
 
@@ -137,7 +139,9 @@ class Rendering:
         spacing = self.LoadMRI.volumes[0].spacing
         shape = self.LoadMRI.volumes[0].slices[0].shape
         point = list(point_xyz)[::-1]  # xyz -> zyx
-        if view_name == "coronal":   # y fixed -> (z,x)
+        if view_name == "axial":     # z fixed -> (x,y)
+            return (shape[2]-1-point[2])*spacing[2], point[1]*spacing[1]
+        elif view_name == "coronal":   # y fixed -> (z,x)
             return (shape[2]-1-point[2])*spacing[2], point[0]*spacing[0]
         else:                        # sagittal, x fixed -> (y,z)
             return (shape[1]-1-point[1])*spacing[1], point[0]*spacing[0]
@@ -252,25 +256,26 @@ class Rendering:
             color=(1, 1, 0))
 
         self.atlas_plane_actors = {}
-        cc_voxels = np.argwhere(self.atlas_vol == 67)
-        if cc_voxels.size:
-            cc_centroid_zyx = cc_voxels.mean(axis=0)
-            self.atlas_cc_centroid = tuple(cc_centroid_zyx[::-1])  # zyx -> xyz
-            self.atlas_ref_actor['corpus_callosum'] = {
-                'coronal': self._draw_atlas_marker('coronal', self.atlas_cc_centroid, (1, 1, 0))
-            }
-            self._draw_legend_text('coronal', "● Corpus Callosum", (1, 1, 0), 0.90)
-            # coronal's reference line is the bregma-lambda-CC PLANE's own
-            # crossing of the current coronal slice (update_atlas_plane_line/
-            # update_coronal_plane_line), not a naive bregma-CC chord -- a
-            # straight line between just two of the three points defining
-            # the plane isn't the plane's cross-section at all. That
-            # function used to bail until a shank existed (see the removed
-            # guard in update_atlas_plane_line); now it draws immediately,
-            # same as sagittal's bregma-lambda line above.
-            self.update_coronal_plane_line()
-        else:
-            self.atlas_cc_centroid = None
+        # bregma/lambda/cc are all the same kind of value here: MRI-derived,
+        # warped into atlas space purely for this display (get_cc_mri_mean
+        # forward-transforms the atlas's own CC voxels into this subject's
+        # MRI space, averages, then converts that mean back to atlas space
+        # via the same lookup as bregma/lambda -- not the atlas's own native
+        # CC centroid computed directly from atlas_vol).
+        self.atlas_cc_centroid = tuple(self.get_cc_mri_mean())
+        self.atlas_ref_actor['corpus_callosum'] = {
+            'coronal': self._draw_atlas_marker('coronal', self.atlas_cc_centroid, (1, 1, 0))
+        }
+        self._draw_legend_text('coronal', "● Corpus Callosum", (1, 1, 0), 0.90)
+        # coronal's reference line is the bregma-lambda-CC PLANE's own
+        # crossing of the current coronal slice (update_atlas_plane_line/
+        # update_coronal_plane_line), not a naive bregma-CC chord -- a
+        # straight line between just two of the three points defining
+        # the plane isn't the plane's cross-section at all. That
+        # function used to bail until a shank existed (see the removed
+        # guard in update_atlas_plane_line); now it draws immediately,
+        # same as sagittal's bregma-lambda line above.
+        self.update_coronal_plane_line()
 
         self.render()
 
@@ -543,6 +548,20 @@ class Rendering:
             # ambiguity this whole computation was written to avoid).
             angle = 180 - angle
 
+        # The angle actually DISPLAYED/labelled is the MRI-space roll/pitch
+        # (shank's angle to the bregma-lambda-CC-anchored planes -- same
+        # source as the PDF report, see compute_shank_roll_pitch_mri),
+        # not the atlas-space angle just computed above: insertion happens
+        # into the real animal, not the atlas, and the nonlinear SyN
+        # registration between the two spaces does not preserve angles, so
+        # the atlas-space number would not match the physically meaningful
+        # one. ref_2d/shank_2d/deep_vox/insert_vox/ref_point_vox stay in
+        # atlas-voxel terms below regardless, since those still drive the
+        # arc/line actually drawn onto this (atlas-space) view.
+        roll_pitch = self.compute_shank_roll_pitch_mri(shank_number)
+        if roll_pitch is not None:
+            angle = roll_pitch[1] if view_name == 'sagittal' else roll_pitch[0]
+
         return {
             'angle': angle, 'proj': proj, 'spacing': spacing,
             'ref_2d': ref_2d, 'shank_2d': shank_2d,
@@ -617,6 +636,7 @@ class Rendering:
         flip = np.array([-1.0, 1.0])
         shank_dir, ref_dir = shank_2d * flip, ref_2d * flip
         shank_norm, ref_norm = np.linalg.norm(shank_dir), np.linalg.norm(ref_dir)
+        view_angle = None  # this view's own (atlas-space) angle, set below if computable
         if shank_norm > 1e-9 and ref_norm > 1e-9 and ref_point_vox is not None:
             shank_dir, ref_dir = shank_dir / shank_norm, ref_dir / ref_norm
             if view_name == 'sagittal':
@@ -640,43 +660,41 @@ class Rendering:
             # (equivalently: Point1 IS that midpoint). radius is just this
             # vector's own length -- one real, concrete point, no separate
             # "toward deep" direction plus an independently-averaged
-            # distance. Point2 = Point1 rotated by exactly `angle` degrees.
+            # distance.
             i_vec = insert_disp - arc_center
             d_vec = deep_disp - arc_center
             p1_vec = i_vec - (i_vec - d_vec) / 2
             radius = max(np.linalg.norm(p1_vec), 1e-6)
             point1_dir = p1_vec / radius
 
-            # Point2 = Point1 rotated by EXACTLY `angle` degrees -- the
-            # swept arc must always equal the displayed number, by
-            # construction, not by coincidence. rotation_sign (which side
-            # to rotate toward) comes from the TRUE relationship between
-            # point1_dir and ref_dir (their 2D cross product), so the arc
-            # still opens toward wherever the yellow reference line/plane
-            # actually is -- but the MAGNITUDE is always `angle`, never
-            # ref_dir's own true angle from point1_dir (which can be
-            # `angle` or `180-angle` depending on which side of the
-            # shank's midpoint arc_center falls -- using ref_dir directly
-            # as Point2 let that mismatch the caption).
-            cross_z = point1_dir[0] * ref_dir[1] - point1_dir[1] * ref_dir[0]
-            rotation_sign = -1.0 if cross_z >= 0 else 1.0
-
-            # Coronal only: if the deepest point sits BETWEEN the
-            # reference-plane crossing (arc_center) and the insertion point
-            # -- i.e. arc_center is on the opposite side of deep_disp from
-            # insert_disp along the shank line -- the cross-product rule
-            # above picks the wrong side; negate rotation_sign in that case.
-            if view_name == 'coronal':
-                t_center = np.dot(arc_center - deep_disp, shank_dir)
-                if t_center < 0:
-                    rotation_sign = -rotation_sign
-
-            theta = rotation_sign * np.radians(angle)
-            c, s = np.cos(theta), np.sin(theta)
-            point2_dir = np.array([
-                c * point1_dir[0] - s * point1_dir[1],
-                s * point1_dir[0] + c * point1_dir[1],
-            ])
+            # Point2 = ref_dir itself (already a unit vector, already
+            # oriented consistently -- see the sagittal/coronal sign
+            # handling above) -- NOT point1_dir rotated by the displayed
+            # `angle`. `angle` is compute_shank_roll_pitch_mri's MRI-space
+            # number, which since that function switched to a true line-
+            # to-plane angle (see its docstring) can be a completely
+            # different, much larger value than the geometric angle
+            # between point1_dir/ref_dir actually drawn in this atlas-
+            # space picture -- forcing the sweep to equal it (previously
+            # via a rotation-sign heuristic here) produced arcs that
+            # opened the wrong way or didn't visually reach the reference
+            # line at all. Drawing directly between the two real vectors
+            # is unambiguous and always geometrically correct; the
+            # (possibly quite different) true MRI-space number is still
+            # shown in the caption text below, not abandoned.
+            point2_dir = ref_dir
+            view_angle = float(np.degrees(np.arccos(np.clip(np.dot(point1_dir, ref_dir), -1.0, 1.0))))
+            if view_angle > 90.0:
+                # the reference is a LINE, not a directed ray (its "toward
+                # lambda" sign above is just a cross-view convention) -- so
+                # the angle actually worth showing/drawing is the shank's
+                # acute angle to that line, not whichever of the two
+                # supplementary angles the arbitrary sign happened to pick.
+                # Flipping point2_dir to the opposite ray keeps the arc
+                # anchored on the same real reference line while sweeping
+                # through the acute wedge instead of the obtuse one.
+                view_angle = 180.0 - view_angle
+                point2_dir = -point2_dir
 
             arc = vtk.vtkArcSource()
             arc.SetCenter(arc_center[0], arc_center[1], 1.13)
@@ -707,13 +725,22 @@ class Rendering:
                 bisector_dir = np.array([-point1_dir[1], point1_dir[0]])
             pos = arc_center + bisector_dir * radius
 
+        caption_text = f"{angle:.1f}°(MRI)"
+        #if view_angle is not None:
+        #    # angle (MRI space, true value) and view_angle (this atlas-
+        #    # space picture's own geometric angle) can legitimately differ
+        #    # -- the atlas<->MRI registration is a nonlinear warp that
+        #    # doesn't preserve angles -- so show both rather than letting
+        #    # the arc's own visible span silently contradict one hidden
+        #    # number.
+        #    caption_text += f" ({view_angle:.1f}° Atlas)"
         caption = vtk.vtkCaptionActor2D()
-        caption.SetCaption(f"{angle:.1f}°")
+        caption.SetCaption(caption_text)
         caption.SetAttachmentPoint(pos[0], pos[1], 1.15)
         caption.BorderOff()
         caption.LeaderOff()
         caption.GetCaptionTextProperty().SetColor(1, 1, 1)
-        caption.GetCaptionTextProperty().SetFontSize(10)
+        caption.GetCaptionTextProperty().SetFontSize(30)
         caption.GetCaptionTextProperty().SetBold(True)
         caption.GetCaptionTextProperty().ShadowOff()
         caption.GetCaptionTextProperty().BoldOff()
@@ -868,15 +895,6 @@ class Rendering:
                     tp_renderer = self.LoadMRI.tp_renderer[vn]
                     tp_renderer.RemoveActor(self.text_actor[vn])
 
-    def show_edge_mask(self):
-        checked = self.ui.pushButton_edgemask.isChecked()
-        self.LoadMRI.MW.Layers[0][self.layer_index].toggle_visibility(checked,None)
-        if checked:
-            self.ui.pushButton_edgemask.setText('Hide \n highlighted Points')
-        else:
-            self.ui.pushButton_edgemask.setText('Highlight Points \n on Brain Edge')
-
-
     def create_edge_mask(self):
         if getattr(self, 'skull_mask_img', None) is not None:
             # the electrode enters through the skull, not through wherever
@@ -922,23 +940,20 @@ class Rendering:
             lut = lut_vtk,
         )
         self.LoadMRI.setup_layer('coronal', 0, layer_index,visibility_at_start=False)
-        self.layer_index = layer_index
 
-        # register it in the intensity table too (visibility_enabled=False
-        # since it already has its own dedicated toggle -- pushButton_
-        # edgemask/show_edge_mask -- not a redundant second one here).
-        # Skipping this used to silently desync every layer added
-        # afterward (region-to-avoid, skull mask): their layer_index (=
-        # len(Layers[0]) at creation time) kept counting this layer, but
-        # the table's own row counter never did, so each later row's
-        # visibility/opacity controls ended up wired to the WRONG actual
-        # layer, one off from the row they were sitting in.
+        # register it in the intensity table too. Skipping this used to
+        # silently desync every layer added afterward (region-to-avoid,
+        # skull mask): their layer_index (= len(Layers[0]) at creation
+        # time) kept counting this layer, but the table's own row counter
+        # never did, so each later row's visibility/opacity controls ended
+        # up wired to the WRONG actual layer, one off from the row they
+        # were sitting in.
         self.LoadMRI.MW.Layers[0][layer_index].visibility_btn = self.LoadMRI.intensity_table[0].update_table(
             "Brain Edge", edge_mask, 0, layer_index, visibility_enabled=False)
 
 
 
-    def change_view_coronal(self,checked):
+    def change_view_coronal(self,checked,recenter=True):
         if checked:
             # coronal view
             self.ui.stackedWidget_coronal.setCurrentIndex(0) #coronal
@@ -952,10 +967,10 @@ class Rendering:
             if normal[1]<0:
                 normal *= -1
 
-            self.Vis3D.render_clipped(normal,'coronal',self.shank_number)
+            self.Vis3D.render_clipped(normal,'coronal',self.shank_number,recenter=recenter)
 
 
-    def change_view_sagittal(self,checked):
+    def change_view_sagittal(self,checked,recenter=True):
         if checked:
             # sagittal view
             self.ui.stackedWidget_sagittal.setCurrentIndex(0) #sagittal
@@ -968,7 +983,7 @@ class Rendering:
             if normal[0]>0:
                 normal *= -1
 
-            self.Vis3D.render_clipped(normal,'sagittal',self.shank_number)
+            self.Vis3D.render_clipped(normal,'sagittal',self.shank_number,recenter=recenter)
 
     def change_view_axial(self,checked):
         if checked:

@@ -8,6 +8,8 @@ NEON_COLORS = [
     ("Neon Pink",   (255,  20, 147), (1.0,   20/255, 147/255)),
     ("Neon Blue",   (0,   191, 255), (0.0,  191/255,     1.0)),
     ("Neon Yellow", (255, 255,   0), (1.0,        1.0,     0.0)),
+    ("Neon Purple",   (138,  0, 196), (138/255, 0.0, 196/255)),
+    ("Neon Orange",   (255,  92, 0), (1.0,   92/255, 0.0)),
     ("White",       (255, 255, 255), (1.0,        1.0,     1.0)),
 ]
 
@@ -30,7 +32,7 @@ class ShankRendering:
         self.line_actor[n] = {}
         self.label_actor[n] = {}
         self.channel_points[n] = []
-        for combo in (self.ui.comboBox_Shanks, self.ui.comboBox_geometry_shanks):
+        for combo in (self.ui.comboBox_Shanks, self.ui.comboBox_geometry_shanks, self.ui.comboBox_insertion_shank):
             combo.addItem(f"Shank {n+1}")
             combo.setItemData(n, n)
             combo.setItemIcon(n, _make_color_icon(color_idx))
@@ -55,6 +57,9 @@ class ShankRendering:
             self._geometry_popup_shown = False
             self._insertion_popup_shown = False
 
+        if self.tp3d_window is not None:
+            self.tp3d_window.refresh_shanks()
+
     def remove_shank(self):
         if self.ui.comboBox_Shanks.count() <= 1:
             return  # always keep at least one
@@ -65,27 +70,64 @@ class ShankRendering:
                     self.LoadMRI.renderers[0][view_name].RemoveActor(a)
                 self.LoadMRI.renderers[0][view_name].RemoveActor(self.label_actor[shank_idx][view_name])
                 self.LoadMRI.vtk_widgets[0][view_name].GetRenderWindow().Render()
-        del self.line_actor[shank_idx]
-        del self.label_actor[shank_idx]
-        del self.channel_points[shank_idx]
-        self.dfx_shank_data.pop(shank_idx, None)
+
+        per_shank_dicts = (
+            self.line_actor, self.label_actor, self.channel_points, self.dfx_shank_data,
+            self.point_actor_deep, self.point_actor_insert, self.mri_deep, self.mri_insert,
+            self.coords_deepest_point, self.coords_insert_point, self.direction_atlas,
+            self.atlas_shank_end, self.shank_colors,
+        )
+        for d in per_shank_dicts:
+            d.pop(shank_idx, None)
+
         # block signals to avoid select_shank firing mid-cleanup
         current_pos = self.ui.comboBox_Shanks.currentIndex()
-        for combo in (self.ui.comboBox_Shanks, self.ui.comboBox_geometry_shanks):
+        for combo in (self.ui.comboBox_Shanks, self.ui.comboBox_geometry_shanks, self.ui.comboBox_insertion_shank):
             combo.blockSignals(True)
             combo.removeItem(current_pos)
             combo.blockSignals(False)
-        self.shank_number = self.ui.comboBox_Shanks.currentIndex()
+
+        # ids are assigned 0..count-1 in creation order (add_shank) and
+        # never reused -- removing one leaves a gap, so every higher id
+        # shifts down by 1 here to restore "id == combo position", which
+        # comboBox_Shanks.currentIndexChanged -> select_shank (and several
+        # other spots) rely on. Left unrenumbered, every shank after the
+        # removed one keeps its old (now too-high) id while still sitting
+        # at a combo position one lower -- selecting it then looks up the
+        # per-shank dicts under the wrong key (e.g. check_points_in_slice's
+        # KeyError). Combo item order is always ascending by id (add_shank
+        # only ever appends), so walking positions in order visits old ids
+        # in ascending order too -- each dict slot a shank moves OUT of is
+        # therefore always freed before anything moves INTO it.
+        for pos in range(self.ui.comboBox_Shanks.count()):
+            old_id = self.ui.comboBox_Shanks.itemData(pos)
+            new_id = pos
+            if old_id == new_id:
+                continue
+            for combo in (self.ui.comboBox_Shanks, self.ui.comboBox_geometry_shanks, self.ui.comboBox_insertion_shank):
+                combo.setItemData(pos, new_id)
+                combo.setItemText(pos, f"Shank {new_id + 1}")
+            for d in per_shank_dicts:
+                if old_id in d:
+                    d[new_id] = d.pop(old_id)
+
+        self.shank_number = self.ui.comboBox_Shanks.currentData()
+        # removing a shank shifts every higher id down by one (see above),
+        # which would otherwise leave stale/mismatched indices in here
+        self._insertion_confirmed = set()
         self.select_shank(self.shank_number)
+
+        if self.tp3d_window is not None:
+            self.tp3d_window.refresh_shanks()
 
 
 
     def select_shank(self, index):
         self.shank_number = index
-        # comboBox_Shanks and comboBox_geometry_shanks always show the same
-        # shank; whichever one the user just changed drives, the other
-        # follows (blocked so it doesn't re-enter this method).
-        for combo in (self.ui.comboBox_Shanks, self.ui.comboBox_geometry_shanks):
+        # comboBox_Shanks, comboBox_geometry_shanks and comboBox_insertion_shank
+        # always show the same shank; whichever one the user just changed
+        # drives, the others follow (blocked so they don't re-enter this method).
+        for combo in (self.ui.comboBox_Shanks, self.ui.comboBox_geometry_shanks, self.ui.comboBox_insertion_shank):
             if combo.currentIndex() != index:
                 combo.blockSignals(True)
                 combo.setCurrentIndex(index)
@@ -166,6 +208,15 @@ class ShankRendering:
             else:
                 self.Vis3D.refresh_clipped_views(index)
 
+        if self.tp3d_window is not None:
+            # just the selection/bold-highlight, not a full refresh --
+            # switching which shank is selected happens often (e.g.
+            # clicking through them to review) and doesn't itself change
+            # any shank's geometry, so recomputing compute_shank_regions
+            # for every shank here would reintroduce the exact per-click
+            # lag that caching it in refresh_shanks was meant to avoid.
+            self.tp3d_window._select_shank(index, sync_combo=True, sync_table=True)
+
     def compute_shank_regions(self, shank_idx, points):
         """List of dicts, one per brain region the shank physically passes
         through, ordered shallow/insertion-end first to deep/tip-end last:
@@ -238,7 +289,7 @@ class ShankRendering:
 
         regions = []
         for i, (val, d_start, d_end) in enumerate(segs):
-            label = self.LoadMRI.tp_labels.get(val)
+            label = self.tp_labels.get(val)
             if val == 0:
                 # atlas index 0 is the conventional "Clear Label"/background
                 # value -- build_label_lut() already force-hides it (alpha 0)
@@ -319,6 +370,8 @@ class ShankRendering:
             self.draw_dfx_probe_overview()
         if hasattr(self, 'shank_sidebar'):
             self.shank_sidebar.refresh()
+        if self.tp3d_window is not None:
+            self.tp3d_window.refresh_shanks()
 
     def reset_shank_gui(self):
         for sb in (self.ui.spinBox_tp_insert_x, self.ui.spinBox_tp_insert_y, self.ui.spinBox_tp_insert_z,

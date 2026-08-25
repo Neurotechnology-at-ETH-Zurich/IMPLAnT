@@ -101,13 +101,33 @@ class ShankSidebarWidget(QWidget):
         while regions and regions[-1]['val'] == 0 and regions[-1]['count'] == 0:
             regions = regions[:-1]
 
+        contact_depths_mm = self._contact_depths(shank_idx, points)
+
+        # Never let column content (bands, dashed markers, dots) paint above
+        # `top` -- that's the legend/label header's territory ("# Ch",
+        # "Region", "mm", the shank number), and it becomes unreadable if
+        # anything bleeds into it.
+        painter.save()
+        painter.setClipRect(QRectF(x, top, col_width, max(self.height() - top, 0)))
+
         if not regions:
             painter.setPen(QPen(QColor(90, 90, 90)))
             painter.setBrush(QColor(45, 45, 45))
             painter.drawRoundedRect(rect, 3, 3)
         else:
-            depth_min = regions[0]['d_start']
-            depth_max = regions[-1]['d_end']
+            # Anchor the column on the actual recording span (first contact
+            # to deepest contact) rather than the insertion point/shank-end
+            # reference compute_shank_regions samples from -- there's usually
+            # inert shank material between the insertion point and the first
+            # active contact that isn't useful to show as if it were part of
+            # the recorded depth range. Falls back to the full sampled line
+            # if there are no contacts yet (e.g. shank just added).
+            if contact_depths_mm is not None and len(contact_depths_mm):
+                depth_min = float(contact_depths_mm.min())
+                depth_max = float(contact_depths_mm.max())
+            else:
+                depth_min = regions[0]['d_start']
+                depth_max = regions[-1]['d_end']
             depth_span = max(depth_max - depth_min, 1e-9)
 
             def y_for_depth(d):
@@ -158,13 +178,28 @@ class ShankSidebarWidget(QWidget):
                 painter.restore()
 
             # electrode contacts as dots, on top of the bands
-            contact_depths_mm = self._contact_depths(shank_idx, points)
-            if contact_depths_mm is not None:
+            if contact_depths_mm is not None and len(contact_depths_mm):
+                # dashed markers at the first/deepest contact -- with depth_min
+                # /depth_max now anchored on the contacts themselves these sit
+                # right at the top/bottom edge, but still make explicit which
+                # edge is "first contact" vs. "deepest contact" rather than
+                # relying on that being implicit from the column's border.
+                first_idx = int(np.argmin(contact_depths_mm))
+                first_y = y_for_depth(float(contact_depths_mm[first_idx]))
+                last_y = y_for_depth(float(contact_depths_mm.max()))
+
+                dash_pen = QPen(QColor(255, 255, 255, 180), 1, Qt.DashLine)
+                painter.setPen(dash_pen)
+                for y in (first_y, last_y):
+                    painter.drawLine(QPointF(x, y), QPointF(x + col_width, y))
+
                 painter.setPen(QPen(QColor(0, 0, 0), 1))
                 painter.setBrush(QColor(255, 255, 255))
                 for d in contact_depths_mm:
                     y = y_for_depth(d)
                     painter.drawEllipse(QPointF(x + col_width / 2, y), self.DOT_RADIUS, self.DOT_RADIUS)
+
+        painter.restore()
 
         color = NEON_COLORS[self.tp.shank_colors.get(shank_idx, 0)][1]
         painter.setBrush(Qt.NoBrush)
