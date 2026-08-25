@@ -445,6 +445,23 @@ class PgWidget(QWidget):
         self.slot_height = 1.0
         self.amplitude = 1.5
 
+        # digitalin (camera/LED TTL) rows drawn below the channel stack, one
+        # slot each -- 0 when the loaded recording has no digitalin.dat.
+        self.n_digitalin_rows = 0
+        self._channel_yticks = []
+        self._digitalin_yticks = []
+        self._digitalin_lines = []
+        self._digitalin_separator = None
+
+    def base_ymin(self):
+        """yMin with room for the digitalin rows (if any) below channel 0 --
+        use this instead of a bare -self.slot_height wherever yMin gets reset,
+        or the digitalin traces get clipped off the bottom of the plot.
+        The extra +1 (only when there are digitalin rows at all) accounts
+        for plot_digitalin's own one-channel-space gap before its separator."""
+        extra_gap = 1 if self.n_digitalin_rows else 0
+        return -(1 + self.n_digitalin_rows + extra_gap) * self.slot_height
+
 
     def init_PgWidget_class(self, VisEphys,MW):
         self.MW = MW
@@ -465,7 +482,8 @@ class PgWidget(QWidget):
 
         self.xMin = self.VisEphys.time_start
         self.xMax = self.VisEphys.time_end
-        self.yMin = -self.slot_height
+        self.n_digitalin_rows = 2 if self.MW.Ephys.ephys_data.digitalin is not None else 0
+        self.yMin = self.base_ymin()
         self.yMax = len(self.MW.Ephys.ephys_data.all_channels) * self.slot_height
 
     def on_dock_floating_changed(self, floating):
@@ -492,6 +510,13 @@ class PgWidget(QWidget):
         """
         if clear:
             self.plot.clear()
+            # plot.clear() already destroyed the actual digitalin line items --
+            # drop the stale references/ticks too, so a caller that redraws
+            # without a follow-up plot_digitalin() (e.g. filter_data.py's
+            # preview) doesn't leave "Camera"/"LED" tick labels with nothing
+            # plotted next to them.
+            self._digitalin_lines = []
+            self._digitalin_yticks = []
         else:
             #remove all lines
             for line in self.lines.values():
@@ -550,12 +575,62 @@ class PgWidget(QWidget):
             yticks = [((len(channels)-1-index) * self.slot_height, str(ch)) for index, ch in enumerate(channels)]
             self.yMax = len(self.displayed_channels) * self.slot_height
 
-        self.plot.getAxis('left').setTicks([yticks])
+        self._channel_yticks = yticks
+        self._apply_yticks()
         self.plot.setLimits(yMin=self.yMin, yMax=self.yMax,xMin=self.xMin,xMax=self.xMax)
         self.plot.setXRange(self.xMin,self.xMax)
         self.plot.setYRange(self.yMin,self.yMax)
 
         return self.displayed_channels,self.lines
+
+    def _apply_yticks(self):
+        self.plot.getAxis('left').setTicks([self._channel_yticks + self._digitalin_yticks])
+
+    def plot_digitalin(self, times, camera_state, led_state):
+        """Draws the camera-shutter and LED TTL lines (see ephys/digitalin.py)
+        as two extra rows below channel 0 -- call right after plot_ephys()
+        each time the plot redraws for a new time window (plot_ephys's own
+        clear() already dropped any previous digitalin lines/ticks)."""
+        for line in self._digitalin_lines:
+            self.plot.removeItem(line)
+        self._digitalin_lines = []
+        self._digitalin_yticks = []
+        if self._digitalin_separator is not None:
+            self.plot.removeItem(self._digitalin_separator)
+            self._digitalin_separator = None
+
+        if times.size == 0:
+            self._apply_yticks()
+            return
+
+        # one extra channel-space of empty gap between the channel stack and
+        # the digitalin rows, so the separator/rows below don't crowd channel 0
+        gap = self.slot_height
+
+        # separator sits in the middle of the empty gap between channel 0's
+        # slot and the digitalin rows' slots.
+        self._digitalin_separator = pg.InfiniteLine(
+            pos=-0.5 * self.slot_height - gap / 2, angle=0, movable=False,
+            pen=pg.mkPen(color=(120, 120, 120), width=1, style=Qt.DashLine))
+        self.plot.addItem(self._digitalin_separator)
+
+        # occupies most (not all) of its slot's height, centered on the slot,
+        # same visual language as the channel traces above it
+        margin = 0.1 * self.slot_height
+        span = self.slot_height - 2 * margin
+        for row, (label, state, color) in enumerate((
+            ('Camera', camera_state, (200, 200, 200)),
+            ('LED', led_state, (255, 165, 0)),
+        )):
+            # slot centers sit at integer multiples of slot_height, same
+            # convention plot_ephys uses above zero for the channel stack
+            offset = -(row + 1) * self.slot_height - gap
+            pen = pg.mkPen(color=color, width=1.0)
+            line = self.plot.plot(times, (state - 0.5) * span + offset, pen=pen)
+            self._digitalin_lines.append(line)
+            self._digitalin_yticks.append((offset, label))
+
+        self._apply_yticks()
 
 
     def find_closest_line(self, x_click, y_click):
@@ -588,7 +663,7 @@ class PgWidget(QWidget):
     def zoomReset(self):
         self.xMin = self.VisEphys.time_start
         self.xMax = self.VisEphys.time_end
-        self.yMin = -self.slot_height
+        self.yMin = self.base_ymin()
         self.yMax = len(self.MW.Ephys.ephys_data.all_channels) * self.slot_height
 
         self.plot.setLimits(yMin=self.yMin, yMax=self.yMax,xMin=self.xMin,xMax=self.xMax)
