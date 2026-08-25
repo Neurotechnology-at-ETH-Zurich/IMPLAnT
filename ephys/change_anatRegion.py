@@ -7,15 +7,7 @@ from PySide6.QtWidgets import QHBoxLayout,QPushButton,QDialog
 from PySide6 import QtWidgets
 import numpy as np
 import os
-import json as _json
-import sys
-_base_dir = getattr(sys, '_MEIPASS', os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-_exe_dir = os.path.dirname(sys.executable) if getattr(sys, 'frozen', False) else _base_dir
-_config_path = os.path.join(_exe_dir, 'paths_config.json')
-if not os.path.exists(_config_path):
-    _config_path = os.path.join(_base_dir, 'paths_config.example.json')
-with open(_config_path) as _f:
-    _paths = _json.load(_f)
+from paths_config import _paths
 
 class Change_AnatRegion(QDialog):
     def __init__(self, MW,parent=None):
