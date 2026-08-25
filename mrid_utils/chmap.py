@@ -10,7 +10,7 @@ import pandas as pd
 #def main(mrid, savepath, sessionpath, root, weighted_loss_f="density", bundle_start=0, map_channels_boolean=True, px_size=25):
 
 
-def main(mrid_dict,mrid, savepath, sessionpath,atlas,atlaslabelsdf,dwi,t2s,mask,fixed_coordinates,moving_coordinates,channel_separation, total_ch, chMap_file,weighted_loss_f="density", bundle_start=0, map_channels_boolean=True, px_size=25):
+def main(mrid_dict,mrid, savepath, sessionpath,atlas,atlaslabelsdf,dwi,t2s,mask,fixed_coordinates,moving_coordinates,channel_separation, total_ch, chMap_file,weighted_loss_f="density", bundle_start=0, map_channels_boolean=True, px_size=25, channel_depths_um=None):
     """
     Localizes the electrode channels. Takes input;
     mrid_dict: from pkl file
@@ -38,7 +38,13 @@ def main(mrid_dict,mrid, savepath, sessionpath,atlas,atlaslabelsdf,dwi,t2s,mask,
 
     if map_channels_boolean:
         # Mapping the channels to physical coordinate indeces (integers) in MRI space
-        ch_coords = channel_mapper.map_electrodes_main(fitted_points, mrid_dict[mrid],px_size,channel_separation,total_ch)
+        if channel_depths_um is not None:
+            # User-defined (DXF-bent) per-channel absolute depths from the
+            # probe tip, instead of channel_separation/total_ch's uniform
+            # spacing -- see channel_mapper.map_electrodes_from_depths.
+            ch_coords = channel_mapper.map_electrodes_from_depths(fitted_points, mrid_dict[mrid], channel_depths_um, px_size)
+        else:
+            ch_coords = channel_mapper.map_electrodes_main(fitted_points, mrid_dict[mrid],px_size,channel_separation,total_ch)
         np.save(os.path.join(savepath, "channel_mri_coordinates.npy"), ch_coords)
 
         #moving_coordinates = np.load(moving_idx_path)

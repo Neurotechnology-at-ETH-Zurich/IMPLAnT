@@ -72,6 +72,39 @@ def map_electrodes_main(fitted_points, mrid_dict, px_size = 25, channel_separati
     return ch_coords
 
 
+def map_electrodes_from_depths(fitted_points, mrid_dict, depth_um, px_size=25):
+    """
+    Places channels at absolute depths-from-tip (depth_um, micrometres,
+    0 = deepest contact) along the FULL multi-segment fitted path, e.g.
+    from a DXF-bent bundle's Bent_Stop[:, 1] column (electrode2geometry.
+    python.geometry_core.bend_dxf_probe_geometry). Unlike
+    map_electrodes_main (whose offset/remainder handling only carries
+    across the first segment boundary), this walks one continuous
+    cumulative arc length across every segment, so depth-from-tip stays
+    correct everywhere.
+    """
+    last_ch_dist = com.get_dist_to_deepest_ch(mrid_dict)
+
+    deepest, second_deepest = fitted_points[-1], fitted_points[-2]
+    tip_unitvec = deepest - second_deepest
+    tip_unitvec = tip_unitvec / np.linalg.norm(tip_unitvec)
+    tip_point = deepest + (last_ch_dist / px_size) * tip_unitvec
+
+    walk_points = np.vstack([tip_point[None, :], fitted_points[::-1]])
+    seg_lengths_um = np.linalg.norm(np.diff(walk_points, axis=0), axis=1) * px_size
+    cum_um = np.concatenate([[0.0], np.cumsum(seg_lengths_um)])
+
+    depth_um = np.sort(np.asarray(depth_um, dtype=float))
+    ch_coords = np.zeros((depth_um.shape[0], 3))
+    for i, d in enumerate(depth_um):
+        seg_idx = int(np.clip(np.searchsorted(cum_um, d, side='right') - 1, 0, len(walk_points) - 2))
+        seg_len_um = seg_lengths_um[seg_idx]
+        frac = 0.0 if seg_len_um == 0 else (d - cum_um[seg_idx]) / seg_len_um
+        ch_coords[i, :] = walk_points[seg_idx] + frac * (walk_points[seg_idx + 1] - walk_points[seg_idx])
+
+    return np.round(ch_coords).astype(int)
+
+
 def interpolate_channels(bottom_coord, top_coord, nchannels, offset, channel_separation, px_size=25):
     """
     Interpolate channels with a fixed channel_separation between a bottom_coord (ventral) and a top_coord (dorsal)

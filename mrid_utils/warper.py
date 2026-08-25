@@ -27,6 +27,12 @@ def heatmap_warp(filename, mrid, savepath, sessionpath, fixed_ind, tx):
     # Warping the segmentation image
     segmentation_filename = ".".join((filename + "-segmentation", "nii", "gz"))
     segmentation_path = os.path.join(sessionpath, "anat", segmentation_filename)
+    if not os.path.exists(segmentation_path):
+        raise FileNotFoundError(
+            f"Segmentation file not found:\n{segmentation_path}\n\n"
+            "Create the MRID-tag segmentation for this image first "
+            "(menu: MRID-tag label creation), then try again."
+        )
     segmentation_newfilename = ".".join((filename + "-" + mrid + "-heatmap-segmentation-warped", "nii", "gz"))
     segmentation_newpath = os.path.join(savepath, segmentation_newfilename)
     warp(segmentation_path, fixed_path, tx, segmentation_newpath, segmentation=True)
