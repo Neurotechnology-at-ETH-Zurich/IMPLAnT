@@ -1,5 +1,6 @@
 # This Python file uses the following encoding: utf-8
 from PySide6.QtWidgets import QDialog, QVBoxLayout
+import numpy as np
 import SimpleITK as sitk
 from file_handling.mri_volume import MRIVolume
 
@@ -25,6 +26,23 @@ class Metadata:
         self._reconnect(self.ui.doubleSpinBox_fovx.valueChanged, lambda val: self.changed_parameters_fov(val,'x'))
         self._reconnect(self.ui.doubleSpinBox_fovy.valueChanged, lambda val: self.changed_parameters_fov(val,'y'))
         self._reconnect(self.ui.doubleSpinBox_fovz.valueChanged, lambda val: self.changed_parameters_fov(val,'z'))
+
+    @staticmethod
+    def _orientation_axis_permutation(from_code, to_code):
+        """
+        perm such that [values_in_from_code[perm[i]] for i in range(3)] gives
+        values in to_code's axis order -- i.e. axis i of to_code corresponds
+        to axis perm[i] of from_code. Needed because DICOMOrient can permute
+        axes, not just flip signs (e.g. a raw scan natively in "LSA" order
+        has its Y/Z axes swapped relative to "RAS" -- confirmed empirically:
+        raw spacing (0.102, 0.100, 0.450) becomes (0.102, 0.450, 0.100) once
+        oriented to RAS). Spacing edited in the displayed orientation must be
+        permuted back through this before being applied to the raw file.
+        """
+        pair = {'L': 'LR', 'R': 'LR', 'A': 'AP', 'P': 'AP', 'S': 'SI', 'I': 'SI'}
+        from_pairs = [pair[c] for c in from_code]
+        to_pairs = [pair[c] for c in to_code]
+        return [from_pairs.index(p) for p in to_pairs]
 
     @staticmethod
     def _reconnect(signal,slot):
@@ -85,12 +103,21 @@ class Metadata:
         self.ui.doubleSpinBox_maxIntensity.setValue(self.volume.slices[0].max())
         self.ui.doubleSpinBox_minIntensity.setValue(self.volume.slices[0].min())
 
+        self.ui.pushButton_SaveMetadata.setText("OK")
+
 
 
     def save_new_spacing(self):
         self.ui.doubleSpinBox_spacingx.setValue(self.ui.doubleSpinBox_spax.value())
         self.ui.doubleSpinBox_spacingy.setValue(self.ui.doubleSpinBox_spay.value())
         self.ui.doubleSpinBox_spacingz.setValue(self.ui.doubleSpinBox_spaz.value())
+
+        current_spacing = [self.volume.spacing[2], self.volume.spacing[1], self.volume.spacing[0]]
+        new_spacing = [self.ui.doubleSpinBox_spacingx.value(), self.ui.doubleSpinBox_spacingy.value(), self.ui.doubleSpinBox_spacingz.value()]
+        if all(abs(a - b) < 1e-6 for a, b in zip(new_spacing, current_spacing)):
+            self.ui.pushButton_SaveMetadata.setText("OK")
+        else:
+            self.ui.pushButton_SaveMetadata.setText("Save Metadata")
 
         self.spacing_popup.close()
 
@@ -161,12 +188,29 @@ class Metadata:
         self.ui.doubleSpinBox_fovz.blockSignals(False)
 
     def set_metadata(self):
-        new_spacing = [self.ui.doubleSpinBox_spacingz.value(),self.ui.doubleSpinBox_spacingy.value(),self.ui.doubleSpinBox_spacingx.value()]
+        if self.ui.pushButton_SaveMetadata.text() == "OK":
+            if hasattr(self, "popup"):
+                self.popup.close()
+            return
+
+        displayed_spacing = [self.ui.doubleSpinBox_spacingx.value(),self.ui.doubleSpinBox_spacingy.value(),self.ui.doubleSpinBox_spacingz.value()]
+
+        # displayed_spacing is in the CURRENTLY DISPLAYED orientation's axis
+        # order (volumes[0].DICOMOrient, e.g. "RAS"), but img below is read
+        # fresh from the raw file (its own native orientation, volumes[0].
+        # raw_DICOMOrient) -- these can differ by an axis PERMUTATION, not
+        # just sign flips, so displayed_spacing must be permuted back into
+        # the raw file's own axis order before being applied to it.
+        volume = self.LoadMRI.volumes[0]
+        perm = self._orientation_axis_permutation(volume.DICOMOrient, volume.raw_DICOMOrient)
+        new_spacing = [displayed_spacing[i] for i in perm]
 
         img = sitk.ReadImage(self.LoadMRI.volumes[0].file_path)
         img.SetSpacing(new_spacing)
         sitk.WriteImage(img, self.LoadMRI.volumes[0].file_path)
 
+        if hasattr(self, "popup"):
+            self.popup.close()
         self.MW.restart_gui(self.LoadMRI.volumes[0].file_path,True,False)
 
 
@@ -182,6 +226,41 @@ class Metadata:
             file_name = self.LoadMRI.volumes[data_index].file_path
             self.LoadMRI.volumes[data_index] = MRIVolume.from_file(file_name,DICOMOrient)
             self.ui.pushButton_reorient.setText('Reorient to LAS')
+
+        # ImageLayer captures vol.slices/spacing by reference at construction
+        # time (file_handling/loader.py:208-215) -- replacing volumes[data_index]
+        # above leaves the already-built base layer pointing at the old, stale
+        # array unless it's resynced here too.
+        base_layer = self.MW.Layers[data_index][0]
+        base_layer.volume = self.LoadMRI.volumes[data_index].slices
+        base_layer.spacing = self.LoadMRI.volumes[data_index].spacing
+
+        # same stale-reference issue for the intensity/cursor-value readout and
+        # the contrast/windowing LUT, which are also built once at load time
+        # instead of re-reading LoadMRI.volumes each use.
+        self.LoadMRI.intensity_table[data_index].intensity_volumes[0] = self.LoadMRI.volumes[data_index].slices[0]
+        self.LoadMRI.intensity_table[data_index].update_intensity_values(data_index)
+        if data_index in self.LoadMRI.contrast:
+            self.LoadMRI.contrast[data_index].recompute_luttable(0, data_index)
+
+        # Overlay/label layers (segmentation masks, Forbidden Regions, paintbrush
+        # strokes, ...) were built/resampled against the pre-reorient base grid
+        # and are otherwise left unmirrored, so they'd show up spatially flipped
+        # relative to the now-reoriented base image. Flip in place rather than
+        # reassigning, since e.g. Paintbrush.label_volume shares the same array
+        # object with its ImageLayer -- dedupe by identity in case a layer
+        # aliases the same array under multiple keys (e.g. 4D paintbrush).
+        slice_indices = self.LoadMRI.slice_indices[data_index]
+        flipped_ids = set()
+        for layer_index, layer in self.MW.Layers[data_index].items():
+            if layer_index == 0:
+                continue
+            for arr in layer.volume.values():
+                if id(arr) not in flipped_ids:
+                    arr[:] = np.flip(arr, axis=2).copy()
+                    flipped_ids.add(id(arr))
+            layer.update_vtk(slice_indices)
+
         #orientation
         orient_filter = sitk.DICOMOrientImageFilter()
         current_orient = orient_filter.GetOrientationFromDirectionCosines(self.LoadMRI.volumes[data_index].oriented_ref_image.GetDirection())

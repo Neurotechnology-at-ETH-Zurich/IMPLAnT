@@ -1,17 +1,10 @@
 # This Python file uses the following encoding: utf-8
 import os
-import json as _json
 import SimpleITK as sitk
 import numpy as np
 from PySide6.QtWidgets import QFileDialog
 import sys
-_base_dir = getattr(sys, '_MEIPASS', os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-_exe_dir = os.path.dirname(sys.executable) if getattr(sys, 'frozen', False) else _base_dir
-_config_path = os.path.join(_exe_dir, 'paths_config.json')
-if not os.path.exists(_config_path):
-    _config_path = os.path.join(_base_dir, 'paths_config.example.json')
-with open(_config_path) as _f:
-    _paths = _json.load(_f)
+from paths_config import _paths
 from core.mrid_tags import MRID_tags
 from collections import Counter
 from core.load_MRI_file import LoadMRI
@@ -104,6 +97,7 @@ class FileLoader:
             self.MW.snapshot_view_state()
             self.MW.restart_gui(file_name,data_view=data_view)
             self.MW.reapply_view_state(file_name)
+        #self.MW.refresh_mri_cache_combo()
 
         return file_name,data_view
 
@@ -138,6 +132,7 @@ class FileLoader:
             self.MW.snapshot_view_state()
             self.MW.restart_gui(file_name,data_view=data_view)
             self.MW.reapply_view_state(file_name)
+        #self.MW.refresh_mri_cache_combo()
 
         return file_name,data_view
 
