@@ -150,6 +150,11 @@ class VisualisationEphys:
             self.displayed_channels, self.ephys_lines = self.MW.ui.widget_pgEphys.plot_ephys(
                 signal.times, signal.magnitude, channels)
 
+        if self.Ephys.ephys_data.digitalin is not None:
+            dtimes, camera_state, led_state = self.Ephys.ephys_data.digitalin.time_slice(
+                self.time_start, self.time_end)
+            self.MW.ui.widget_pgEphys.plot_digitalin(dtimes, camera_state, led_state)
+
         # highlight channel, even after time scrolling
         if self.Vis3D.table_excel.currentRow() != -1:
             self.highlight_channel(ch_idx=self.Vis3D.table_excel.currentRow())

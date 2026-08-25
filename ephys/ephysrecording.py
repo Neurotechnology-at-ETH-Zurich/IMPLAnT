@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 import xml.etree.ElementTree as ET
 import os
 import numpy as np
+from ephys.digitalin import DigitalInFile
 
 @dataclass
 class EphysRecording:
@@ -20,6 +21,8 @@ class EphysRecording:
     lfp_sample_rate: int = 2000
     lfp_path: str = None
     lfp_memmap: object = None
+    digitalin_path: str = None
+    digitalin: object = None
 
 
     @classmethod
@@ -31,6 +34,9 @@ class EphysRecording:
 
         lfp_path = cls._compute_lfp_path(file_path)
         lfp_memmap = cls._load_lfp_memmap(lfp_path, n_channels) if os.path.exists(lfp_path) else None
+
+        digitalin_path = cls._compute_digitalin_path(file_path)
+        digitalin = DigitalInFile(digitalin_path) if os.path.exists(digitalin_path) else None
 
         return cls(
             file_path=file_path,
@@ -46,6 +52,8 @@ class EphysRecording:
             lfp_sample_rate=lfp_sample_rate,
             lfp_path=lfp_path,
             lfp_memmap=lfp_memmap,
+            digitalin_path=digitalin_path,
+            digitalin=digitalin,
         )
 
     @staticmethod
@@ -107,6 +115,14 @@ class EphysRecording:
     def _compute_lfp_path(dat_path: str) -> str:
         stem = os.path.splitext(dat_path)[0]
         return stem + '.lfp'
+
+    @staticmethod
+    def _compute_digitalin_path(dat_path: str) -> str:
+        """digitalin.dat is a fixed filename (standard Intan RHD2000 output,
+        same convention as auxiliary.dat/analogin.dat/time.dat) sitting
+        alongside the recording's own .dat/.xml in the same session folder --
+        NOT derived from the recording's own filename, unlike .lfp."""
+        return os.path.join(os.path.dirname(dat_path), 'digitalin.dat')
 
     @staticmethod
     def _load_lfp_memmap(lfp_path: str, n_channels: int):
