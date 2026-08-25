@@ -86,10 +86,28 @@ class BusyOverlay(QWidget):
         self.raise_()
         self.show()
         QApplication.processEvents()
+        # fn() can itself call QApplication.processEvents()/spin a nested
+        # event-loop turn partway through (e.g. restart_gui rebuilding VTK
+        # render widgets) -- a freshly (re)painted VTK/OpenGL native window
+        # isn't reliably kept behind an ordinary Qt widget by a one-off
+        # raise_() the way two normal Qt widgets would be, so it can slip in
+        # front the moment it repaints. Re-assert on every nested turn we
+        # get a chance to run in, not just once up front.
+        self._keepalive_timer = QTimer(self)
+        self._keepalive_timer.timeout.connect(self._keep_on_top)
+        self._keepalive_timer.start(100)
         QTimer.singleShot(50, lambda: self._execute(fn, args, kwargs))
+
+    def _keep_on_top(self):
+        self.raise_()
+        self.repaint()
+        for companion in self._companions:
+            companion.raise_()
+            companion.repaint()
 
     def _execute(self, fn, args, kwargs):
         try:
             fn(*args, **kwargs)
         finally:
+            self._keepalive_timer.stop()
             self.close()
