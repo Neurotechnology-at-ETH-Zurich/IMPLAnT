@@ -1,8 +1,12 @@
 # This Python file uses the following encoding: utf-8
 # Important: You need to run the following command to generate the ui_form.py file: pyside6-uic form.ui -o ui_form.py
 import os
-os.environ.setdefault('QT_QPA_PLATFORM', 'xcb')
 import sys
+# xcb (X11) is Linux-only -- forcing it unconditionally crashed PySide6 on
+# macOS/Windows, which don't ship that plugin at all (they use their own
+# native cocoa/windows plugins by default and don't need this override).
+if sys.platform.startswith('linux'):
+    os.environ.setdefault('QT_QPA_PLATFORM', 'xcb')
 import warnings
 # pandas 1.5.x calls np.find_common_type internally, which numpy 1.25+ deprecated.
 # It's cosmetic (nothing breaks); silence just that one message, not all warnings.
@@ -41,7 +45,8 @@ import vtk
 import pandas as pd
 from file_handling.loader import FileLoader
 from file_handling.resample_data import ResampleData
-from PySide6.QtGui import QIcon
+from PySide6.QtGui import QIcon, QAction, QFont
+from mrid_utils import atlas_switch
 import subprocess
 from PySide6.QtCore import QTimer
 import datetime
@@ -130,13 +135,16 @@ class MainWindow(QMainWindow):
         self.resize(1600, 900)
         self.setMinimumSize(1500,800)
 
-        # Connect all buttons to open file
-        self.ui.actionOpen.triggered.connect(self.initialize_mri_session)
-        self.ui.actionOpen_ephys_Data.triggered.connect(self.open_ephys_data)
+        # Connect all buttons to open file. Like the per-tab "Open Session"
+        # actions below, these go through load_previous_session() first so
+        # any of them can also reopen a recently-used file/session instead of
+        # always starting a brand-new one.
+        self.ui.actionOpen.triggered.connect(lambda: self.load_previous_session(['mri']))
+        self.ui.actionOpen_ephys_Data.triggered.connect(lambda: self.load_previous_session(['ephys']))
         self.ui.actionQuit.triggered.connect(self.quit)
         self.ui.actionNew_Window.triggered.connect(self.open_new_window)
-        self.ui.actionStart_SAMRI_process.triggered.connect(self.initialize_samri)
-        self.ui.actionTrajectory_Planning_2.triggered.connect(self.initialize_trajectory_planning)
+        self.ui.actionStart_SAMRI_process.triggered.connect(lambda: self.load_previous_session(['samri']))
+        self.ui.actionTrajectory_Planning_2.triggered.connect(lambda: self.load_previous_session(['trajectory']))
         self.ui.actionDuring_Surgery.triggered.connect(self.initialize_surgery)
         # Surgery tab's measured-mm bregma/lambda fields: "sag"/"cor"/"ax"
         # match the same sagittal/coronal/axial slice-index convention as
@@ -158,6 +166,14 @@ class MainWindow(QMainWindow):
         self.ui.pushButton_questionmark_samri.clicked.connect(self.show_step_instructions)
         self.ui.pushButton_questionmark_2.clicked.connect(self.surgery.show_step_popup)
         self.ui.actionLoad_Prev_Session.triggered.connect(self.load_previous_session)
+        # Not defined in form.ui -- created here rather than hand-editing
+        # that generated file for one menu entry. Lets the user pick the
+        # active reference atlas (see mrid_utils/atlas_registry.py) before
+        # opening ephys/electrode localization; trajectory planning gets its
+        # own live in-view switcher instead (TpRegistration.reload_atlas_view).
+        self.ui.actionAtlas = QAction("Atlas…", self)
+        self.ui.menuGUI.insertAction(self.ui.actionLoad_Prev_Session, self.ui.actionAtlas)
+        self.ui.actionAtlas.triggered.connect(self.show_atlas_selector)
         # per-tab "Open Session" placeholders: 3D/4D Tools -> mri (filtered by
         # dimensionality), Ephys Analysis -> ephys, Surgery -> samri
         self.ui.actionOpen_Session_2.triggered.connect(lambda: self.load_previous_session(['mri'], is_4d=False))
@@ -189,7 +205,10 @@ class MainWindow(QMainWindow):
         except (OSError, ValueError):
             return {}
 
-    _SESSION_KIND_LABELS = {'mri': 'MRI', 'ephys': 'Ephys', 'samri': 'SAMRI'}
+    _SESSION_KIND_LABELS = {
+        'mri': 'MRI', 'ephys': 'Ephys', 'samri': 'SAMRI',
+        'trajectory': 'Trajectory Planning', 'overlay': 'Overlay Image',
+    }
     _SESSION_HISTORY_LIMIT = 10
 
     def _confirm_replace_session(self, kind):
@@ -234,7 +253,12 @@ class MainWindow(QMainWindow):
     def _open_new_session(self, kind):
         {'mri': self.initialize_mri_session,
          'ephys': self.open_ephys_data,
-         'samri': self.initialize_samri}[kind]()
+         'samri': self.initialize_samri,
+         'trajectory': self.initialize_trajectory_planning,
+         'overlay': self.add_another_file}[kind]()
+
+    def show_atlas_selector(self):
+        atlas_switch.show_atlas_selector(self)
 
     def load_previous_session(self, kinds=None, is_4d=None):
         """
@@ -346,7 +370,7 @@ class MainWindow(QMainWindow):
                 return
             self.ui.dockWidget_ephys.setVisible(True)
             self.ui.stackedWidget_video.setCurrentIndex(1)
-            self.ui.textEdit_ephys.setText(f"File loaded: {path}")
+            self.ui.textEdit_ephys.setText(f"File loaded: \n {path}")
             self.ui.tabWidget.setCurrentIndex(3)
             self.overlay = BusyOverlay(self, message="Loading ephys data, please wait…")
             self.overlay.run(self.do_ephys_heavy, path)
@@ -357,6 +381,36 @@ class MainWindow(QMainWindow):
             if entry.get('raw_base_samri'):
                 self.ui.lineEdit_rawBase.setText(entry['raw_base_samri'])
             self.ui.lineEdit_animalid.setText(entry.get('animal_id', ''))
+
+        elif kind == 'overlay':
+            path = entry.get('path')
+            if not path or not os.path.exists(path):
+                QMessageBox.warning(self, "File not found", f"Overlay image no longer exists:\n{path}")
+                return
+            if not hasattr(self, 'LoadMRI') or not hasattr(self, 'FileLoader'):
+                QMessageBox.information(
+                    self, "No MRI loaded",
+                    "Load a main MRI image before adding an overlay image.")
+                return
+            self.add_another_file(path=path, skip_dialog=True)
+
+        elif kind == 'trajectory':
+            path = entry.get('path')
+            transform_path = entry.get('transform_path')
+            if not path or not os.path.exists(path):
+                QMessageBox.warning(self, "File not found", f"Trajectory planning image no longer exists:\n{path}")
+                return
+            if not transform_path or not os.path.exists(transform_path):
+                QMessageBox.warning(
+                    self, "File not found",
+                    f"Registration transform no longer exists:\n{transform_path}\n\n"
+                    "Please first do SAMRI Registration again.")
+                return
+            if not ensure_atlas_available(self):
+                return
+            data = (path, entry.get('another') or [], entry.get('spacing', 0.05))
+            self.overlay = BusyOverlay(self, message="Initializing trajectory planning, please wait…")
+            self.overlay.run(self.finish_trajectory_work, data, transform_path)
 
     def open_ephys_data(self):
         file_name, _ = QFileDialog.getOpenFileName(
@@ -596,15 +650,18 @@ class MainWindow(QMainWindow):
                             self.LoadMRI.minimap.add_minimap(view_name,img_vtk,image_index,vtk_widget_image[view_name],data_index)
 
 
-    def add_another_file(self,path=None):
+    def add_another_file(self,path=None,skip_dialog=False):
         """
         Triggered if another file is uploaded by the user, saves it as highest layer.
+        skip_dialog=True re-adds `path` directly with no file picker/confirmation,
+        for restoring a previously-added overlay via load_previous_session().
         """
         self.FileLoader.layer_index += 1
         print("path",path,flush=True)
-        file_name, data_view = self.FileLoader.open_user_dialog(layer_index=self.FileLoader.layer_index,add_another_file=True,path=path)
+        file_name, data_view = self.FileLoader.open_user_dialog(layer_index=self.FileLoader.layer_index,add_another_file=True,path=path,skip_dialog=skip_dialog)
         if file_name is None:
             return
+        self._save_session_state('overlay', path=file_name)
 
         if not self.LoadMRI.volumes[0].is_4d:
             #add to registration combobox
@@ -918,6 +975,9 @@ class MainWindow(QMainWindow):
                 self.initialize_samri()
                 return
 
+            self._save_session_state(
+                'trajectory', path=data[0], another=data[1], spacing=data[2],
+                transform_path=transformPath)
             self.overlay = BusyOverlay(self, message="Initializing trajectory planning, please wait…")
             self.overlay.run(self.finish_trajectory_work,data, transformPath)
 
@@ -1245,6 +1305,13 @@ if __name__ == "__main__":
     QCoreApplication.setAttribute(Qt.AA_ShareOpenGLContexts)
     app = QApplication(sys.argv)
     app.setStyle(QuickTooltipStyle(app.style()))
+    # app-wide default text size -- widgets with their own explicit QFont
+    # (various setFont(...) calls in ui_form.py, from Qt Designer) keep
+    # whatever size they were set to; this only raises the baseline for
+    # everything else.
+    default_font = app.font()
+    default_font.setPointSize(12)
+    app.setFont(default_font)
     #dark mode
     app.setStyleSheet(qdarkstyle.load_stylesheet_pyside6() + """
         QLineEdit:!read-only:enabled, QTextEdit[readOnly="false"]:enabled, QPlainTextEdit[readOnly="false"]:enabled,
