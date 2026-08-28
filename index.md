@@ -11,7 +11,7 @@ Integrated Multimodal Planning, Localisation, Analysis Toolbox
 {: .fs-6 .fw-300 }
 
 [Get started](installation){: .btn .btn-primary .fs-5 .mb-4 .mb-md-0 .mr-2 }
-[Direct Download](https://github.com/Neurotechnology-at-ETH-Zurich/IMPLAnT/releases/download/v0.1.0/IMPLAnT){: .btn .fs-5 .mb-4 .mb-md-0 .mr-2 }
+[Direct Download](download){: .btn .fs-5 .mb-4 .mb-md-0 .mr-2 }
 [Download on GitHub](https://github.com/Neurotechnology-at-ETH-Zurich/IMPLAnT/releases){: .btn .fs-5 .mb-4 .mb-md-0 }
 
 ![IMPLAnT](assets/images/IMPLAnT.png)
