@@ -132,12 +132,6 @@ class Ui_Form(object):
 
         self.gridLayout_2.addWidget(self.pushButton_slicey_vis3D, 2, 4, 1, 1)
 
-        self.pushButton_space = QPushButton(self.frame_33)
-        self.pushButton_space.setObjectName(u"pushButton_space")
-        self.pushButton_space.setMinimumSize(QSize(0, 50))
-
-        self.gridLayout_2.addWidget(self.pushButton_space, 2, 2, 1, 1)
-
         self.resetCamera_vis3D = QPushButton(self.frame_33)
         self.resetCamera_vis3D.setObjectName(u"resetCamera_vis3D")
         self.resetCamera_vis3D.setEnabled(True)
@@ -267,11 +261,6 @@ class Ui_Form(object):
         self.pushButton_slicey_vis3D.setToolTip(QCoreApplication.translate("Form", u"Select the coronal (y) axis -- the step buttons below then move the selected shank along it", None))
 #endif // QT_CONFIG(tooltip)
         self.pushButton_slicey_vis3D.setText("")
-#if QT_CONFIG(tooltip)
-        self.pushButton_space.setToolTip(QCoreApplication.translate("Form", u"Cycle the background shell: atlas template / subject MRI intensity / no shell (XYZ space) -- the current mode is also shown as a legend in the 3D view's top-left corner", None))
-#endif // QT_CONFIG(tooltip)
-        self.pushButton_space.setText(QCoreApplication.translate("Form", u"Space\n"
-" switch", None))
 #if QT_CONFIG(tooltip)
         self.resetCamera_vis3D.setToolTip(QCoreApplication.translate("Form", u"Reset Camera View", None))
 #endif // QT_CONFIG(tooltip)

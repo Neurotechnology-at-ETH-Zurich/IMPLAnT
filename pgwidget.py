@@ -135,10 +135,10 @@ class ClickablePlotWidget(pg.PlotWidget):
 
                 if not self.PgWidget.MW.ui.pushButton_selectTime.isChecked():
                     if pos.y() > self.pos_original.y():
-                        self.PgWidget.yMin = max(self.pos_original.y(),-self.PgWidget.slot_height)
+                        self.PgWidget.yMin = max(self.pos_original.y(),self.PgWidget.base_ymin())
                         self.PgWidget.yMax = min(pos.y(), (len(self.PgWidget.MW.Ephys.ephys_data.all_channels)-1) * self.PgWidget.slot_height)
                     else:
-                        self.PgWidget.yMin = max(pos.y(),-self.PgWidget.slot_height)
+                        self.PgWidget.yMin = max(pos.y(),self.PgWidget.base_ymin())
                         self.PgWidget.yMax = min(self.pos_original.y(), (len(self.PgWidget.MW.Ephys.ephys_data.all_channels)-1) * self.PgWidget.slot_height)
                 self.PgWidget.plot.setLimits(yMin=self.PgWidget.yMin, yMax=self.PgWidget.yMax,xMin=self.PgWidget.xMin,xMax=self.PgWidget.xMax)
                 self.PgWidget.plot.setXRange(self.PgWidget.xMin,self.PgWidget.xMax)
@@ -674,7 +674,7 @@ class PgWidget(QWidget):
     def zoomOut(self):
         self.xMin = max(self.xMin-0.1,self.VisEphys.time_start)
         self.xMax = min(self.xMax+0.1,self.VisEphys.time_end)
-        self.yMin = max(self.yMin-self.slot_height,-self.slot_height)
+        self.yMin = max(self.yMin-self.slot_height,self.base_ymin())
         self.yMax = min(self.yMax+self.slot_height, len(self.MW.Ephys.ephys_data.all_channels) * self.slot_height)
 
         self.plot.setLimits(yMin=self.yMin, yMax=self.yMax,xMin=self.xMin,xMax=self.xMax)

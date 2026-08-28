@@ -32,15 +32,19 @@ from PySide6.QtWidgets import QLayout
 import qdarkstyle
 from utils.zoom import Zoom
 import shutil
-from samri.samri_main import InitSAMRI,SAMRI_InputDialog,SAMRI_InputDock
+from samri.samri_main import InitSAMRI,SAMRI_InputDialog,SAMRI_InputDock,_ShimLoadMRI
 from samri.samri_logging import LogAdapter,SamriWorker
+import nibabel as nib
+from file_handling.mri_volume import MRIVolume
 import logging
 from PySide6.QtWidgets import QWidget
 from trajectory_planning.trajectory_planning import TrajectoryPlanning
+from trajectory_planning.trajectory_planning_mri import TrajectoryPlanningMri
 from trajectory_planning.file_input_output import FileInput
 from mrid_utils.atlas_fetch import ensure_atlas_available
 from during_surgery.load_surgery_plan import LoadSurgeryPlan
 from during_surgery.surgery_controller import SurgeryController
+from pypdf import PdfReader
 import vtk
 import pandas as pd
 from file_handling.loader import FileLoader
@@ -145,15 +149,15 @@ class MainWindow(QMainWindow):
         self.ui.actionNew_Window.triggered.connect(self.open_new_window)
         self.ui.actionStart_SAMRI_process.triggered.connect(lambda: self.load_previous_session(['samri']))
         self.ui.actionTrajectory_Planning_2.triggered.connect(lambda: self.load_previous_session(['trajectory']))
-        self.ui.actionDuring_Surgery.triggered.connect(self.initialize_surgery)
-        # Surgery tab's measured-mm bregma/lambda fields: "sag"/"cor"/"ax"
-        # match the same sagittal/coronal/axial slice-index convention as
-        # the voxel-cursor spinboxes elsewhere (x=sag=ML, y=cor=AP,
-        # z=ax=DV) -- ax/DV must stay last, since reproject_target_to_null
-        # (during_surgery/reprojection.py) assumes index 2 of the vector
-        # it's given is the vertical axis.
-        for sb in (self.ui.doubleSpinBox_sag_b, self.ui.doubleSpinBox_cor_b, self.ui.doubleSpinBox_ax_b,
-                   self.ui.doubleSpinBox_sag_l, self.ui.doubleSpinBox_cor_l, self.ui.doubleSpinBox_ax_l):
+        self.ui.actionDuring_Surgery.triggered.connect(lambda: self.load_previous_session(['surgery']))
+        # Surgery tab's measured-mm bregma/lambda fields: "sag"/"cor" match
+        # the same sagittal/coronal slice-index convention as the voxel-
+        # cursor spinboxes elsewhere (x=sag=ML/RL, y=cor=AP) -- DV/"ax" was
+        # dropped entirely (no longer measured), so reproject_target_to_null
+        # (during_surgery/reprojection.py) is now a pure 2D (ML/RL, AP)
+        # reprojection with no vertical/leveling component.
+        for sb in (self.ui.doubleSpinBox_sag_b, self.ui.doubleSpinBox_cor_b,
+                   self.ui.doubleSpinBox_sag_l, self.ui.doubleSpinBox_cor_l):
             sb.valueChanged.connect(self.surgery.on_bregma_lambda_changed)
         # Same reset/perspective controls as the docked pre-op 3D view's own
         # resetCamera_vis3D/change_perspective_vis3D -- lambdas re-fetch
@@ -208,6 +212,7 @@ class MainWindow(QMainWindow):
     _SESSION_KIND_LABELS = {
         'mri': 'MRI', 'ephys': 'Ephys', 'samri': 'SAMRI',
         'trajectory': 'Trajectory Planning', 'overlay': 'Overlay Image',
+        'surgery': 'Surgery',
     }
     _SESSION_HISTORY_LIMIT = 10
 
@@ -255,7 +260,8 @@ class MainWindow(QMainWindow):
          'ephys': self.open_ephys_data,
          'samri': self.initialize_samri,
          'trajectory': self.initialize_trajectory_planning,
-         'overlay': self.add_another_file}[kind]()
+         'overlay': self.add_another_file,
+         'surgery': self.initialize_surgery}[kind]()
 
     def show_atlas_selector(self):
         atlas_switch.show_atlas_selector(self)
@@ -289,7 +295,7 @@ class MainWindow(QMainWindow):
         title = "Load Previous Session" if single_kind is None else \
             f"Load Previous {self._SESSION_KIND_LABELS[single_kind]} Session"
         dlg.setWindowTitle(title)
-        dlg.resize(500, 400)
+        dlg.resize(1000, 400)
         layout = QtWidgets.QVBoxLayout(dlg)
         if not entries:
             layout.addWidget(QtWidgets.QLabel("No previous sessions found.", dlg))
@@ -299,10 +305,13 @@ class MainWindow(QMainWindow):
             if kind == 'samri':
                 text = f"[{label}] Animal {entry.get('animal_id', '?')}"
             else:
-                text = f"[{label}] {os.path.basename(entry.get('path', '?'))}"
+                path = entry.get('path', '?')
+                folder = os.path.basename(os.path.dirname(path))
+                text = f"[{label}] {folder}/{os.path.basename(path)}"
             text += f"   —   {entry.get('timestamp', '')}"
             item = QtWidgets.QListWidgetItem(text)
             item.setData(Qt.UserRole, (kind, entry))
+            item.setToolTip(entry.get('path', ''))
             list_widget.addItem(item)
         if entries:
             list_widget.setCurrentRow(0)
@@ -314,7 +323,11 @@ class MainWindow(QMainWindow):
         open_btn.setEnabled(bool(entries))
         load_new = {'flag': False}
         if single_kind is not None:
-            new_btn = buttons.addButton("Load New File...", QtWidgets.QDialogButtonBox.ActionRole)
+            # SAMRI's "new" action (initialize_samri) doesn't load a file at
+            # all -- it starts a fresh registration session (raw data
+            # folder/animal ID) -- so "Load New File..." is misleading there.
+            new_btn_text = "Start New Session" if single_kind == 'samri' else "Load New File..."
+            new_btn = buttons.addButton(new_btn_text, QtWidgets.QDialogButtonBox.ActionRole)
             def _load_new():
                 load_new['flag'] = True
                 dlg.accept()
@@ -322,6 +335,8 @@ class MainWindow(QMainWindow):
         buttons.addButton("Cancel", QtWidgets.QDialogButtonBox.RejectRole)
         buttons.accepted.connect(dlg.accept)
         buttons.rejected.connect(dlg.reject)
+        for btn in buttons.buttons():
+            btn.setMinimumHeight(36)
         layout.addWidget(buttons)
 
         if dlg.exec() != QtWidgets.QDialog.DialogCode.Accepted:
@@ -411,6 +426,29 @@ class MainWindow(QMainWindow):
             data = (path, entry.get('another') or [], entry.get('spacing', 0.05))
             self.overlay = BusyOverlay(self, message="Initializing trajectory planning, please wait…")
             self.overlay.run(self.finish_trajectory_work, data, transform_path)
+
+        elif kind == 'surgery':
+            path = entry.get('path')
+            if not path or not os.path.exists(path):
+                QMessageBox.warning(self, "File not found", f"Surgery plan report no longer exists:\n{path}")
+                return
+            try:
+                reader = PdfReader(path)
+                attachment = reader.attachments["trajectory_planning_data.json"][0]
+            except (KeyError, IndexError, FileNotFoundError):
+                QMessageBox.critical(
+                    self, "No trajectory data found",
+                    "This PDF has no embedded trajectory data -- it may have "
+                    "been saved before this feature was added, or isn't a "
+                    "trajectory report.")
+                return
+            except Exception as exc:
+                QMessageBox.critical(self, "Could not read PDF", str(exc))
+                return
+            data = _json.loads(attachment)
+            self.ui.tabWidget.setCurrentIndex(self.ui.tabWidget.indexOf(self.ui.surgery))
+            self.overlay = BusyOverlay(self, message="Loading surgery plan, please wait…")
+            self.overlay.run(self.surgery.load_plan, data, pdf_path=path)
 
     def open_ephys_data(self):
         file_name, _ = QFileDialog.getOpenFileName(
@@ -1025,10 +1063,26 @@ class MainWindow(QMainWindow):
         msg_box.exec()
 
     def finish_trajectory_work(self, data, transformPath):
-        resampled_path = f"{data[0][:-7]}_resampled{data[2]*1000:.10g}um.nii.gz"
         self.data_pre_resampled = data[0]
-        if not os.path.exists(resampled_path):
-            ResampleData.resampling50um_trajectoryPlanning(data[0], new_spacing_mm=data[2])
+        if abs(data[2] - 0.025) < 1e-9:
+            # reuse the exact file/function samri_main.py's start_registration
+            # uses to build the atlas<->MRI correspondence (ResampleData.
+            # resampling25um, fixed "_resampled.nii.gz" name) instead of
+            # resampling50um_trajectoryPlanning's own separate implementation --
+            # two different resample functions at the same nominal spacing
+            # aren't guaranteed pixel/geometry-identical, and mri_label_overlay.
+            # py's reconciliation needs them to be exactly the same file.
+            resampled_path = f"{data[0][:-7]}_resampled.nii.gz"
+            if not os.path.exists(resampled_path):
+                raw_DICOMOrient = "".join(nib.aff2axcodes(nib.load(data[0]).affine))
+                _volume = MRIVolume(file_path=data[0], slices={}, DICOMOrient=raw_DICOMOrient,
+                                     raw_DICOMOrient=raw_DICOMOrient, view_names=[])
+                _shim_loadmri = _ShimLoadMRI(volumes={0: _volume}, session_path=os.path.dirname(data[0]))
+                ResampleData(_shim_loadmri).resampling25um(0)
+        else:
+            resampled_path = f"{data[0][:-7]}_resampled{data[2]*1000:.10g}um.nii.gz"
+            if not os.path.exists(resampled_path):
+                ResampleData.resampling50um_trajectoryPlanning(data[0], new_spacing_mm=data[2])
         if not hasattr(self,'LoadMRI'):
             self.FileLoader = FileLoader(self)
             self.FileLoader.is_4d = False #3d file
@@ -1044,7 +1098,7 @@ class MainWindow(QMainWindow):
         data = list(data)
         data[0] = resampled_path
 
-        self.LoadMRI.TrajPlanning = TrajectoryPlanning(self,self.ui,data,transformPath)
+        self.LoadMRI.TrajPlanning = TrajectoryPlanningMri(self,self.ui,data,transformPath)
 
         self.ui.stackedWidget_3d.setVisible(True)
         self.ui.stackedWidget_3d.setCurrentIndex(0)
