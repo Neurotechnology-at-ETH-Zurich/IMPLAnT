@@ -84,7 +84,7 @@ class ButtonsGUI_3D:
         }
 
 
-        self.ui.actionAddViewImage.triggered.connect(lambda val: self.MW.add_another_file())
+        self.ui.actionAddViewImage.triggered.connect(lambda val: self.MW.load_previous_session(['overlay']))
 
 
         #initialize everything
@@ -668,7 +668,7 @@ class ButtonsGUI_3D:
 
 
 
-    def initialize_segmentation(self,samri=False,mode=None,on_finish=None):
+    def initialize_segmentation(self,samri=False):
         """
         Initialize segmenation workflow.
         """
@@ -684,10 +684,10 @@ class ButtonsGUI_3D:
             dock.setObjectName(dock_name)
             dock.setWidget(self.ui.groupBox_segmentation)
             self.MW.addDockWidget(Qt.RightDockWidgetArea, dock)
-            self.LoadMRI.SegmentationGUI = SegmentationGUI(self.MW,samri,mode,on_finish)
+            self.LoadMRI.SegmentationGUI = SegmentationGUI(self.MW,samri)
         else:
-            if samri or mode is not None:
-                self.LoadMRI.SegmentationGUI = SegmentationGUI(self.MW,samri,mode,on_finish)
+            if samri:
+                self.LoadMRI.SegmentationGUI = SegmentationGUI(self.MW,samri)
             dock.show()
             dock.raise_()
 

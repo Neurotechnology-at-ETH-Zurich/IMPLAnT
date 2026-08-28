@@ -720,8 +720,16 @@ class ButtonsGUI_4D:
             data_view = list(self.LoadMRI.vtk_widgets[0].keys())[idx]
             self.LoadMRI.vtk_widgets[3][data_view]= getattr(self.ui,f"vtkWidget_data{idx}3")
 
-        result = self.LoadMRI.ElectrodeLoc.getCoordinates()
+        # Contact geometry (DXF bending, per tag) is now defined through the
+        # main GUI's geometry dock rather than a blocking dialog -- close
+        # this overlay so that dock stays clickable, ElectrodeLoc raises its
+        # own overlay once the user clicks Continue there and the actual
+        # (blocking) localisation work starts, and _finish_electrode_localisation
+        # picks up where this method used to continue synchronously.
+        self.overlay.close()
+        self.LoadMRI.ElectrodeLoc.getCoordinates(self._finish_electrode_localisation)
 
+    def _finish_electrode_localisation(self,result):
         if result is None:
             return
         else:
