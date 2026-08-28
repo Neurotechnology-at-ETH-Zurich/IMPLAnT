@@ -40,16 +40,37 @@ ATLASES = {
         },
         "has_dwi": False,
         "label_format": "itk_snap",
-        # Resampled into WHS's own coordinate grid at matching 39um resolution,
-        # so bregma/lambda land on the same voxel indices as WHS -- verified
-        # against the fetched volume's shape in atlas_fetch_brainglobe.py.
+        # BrainGlobeAtlas('whs_sd_swc_female_rat_39um').orientation reports
+        # "asr", same as BrainGlobeAtlas('whs_sd_rat_39um') -- but its
+        # annotation array is left-right MIRRORED relative to that plain WHS
+        # atlas despite the identical reported orientation (confirmed by
+        # comparing both atlases' native foreground masks directly: IoU is
+        # 0.706 unflipped vs 0.880 flipped along the native "r" axis, and by
+        # an exact voxel-for-voxel corpus-callosum-centroid match, to 8
+        # significant figures, between IMPLAnT's existing raw
+        # WHS_SD_rat_atlas_v4.nii.gz and this atlas once so flipped -- vs.
+        # only a coarse/approximate match without it). This looks like a
+        # packaging inconsistency specific to this one BrainGlobe atlas
+        # (whs_sd_rat_39um needs no such extra flip to match the same raw
+        # file exactly). atlas_fetch_brainglobe.py must map this atlas's
+        # annotation/reference to orientation "rpi" (not "lpi", which is
+        # what its own stated "asr" would naively imply) via
+        # brainglobe_space.AnatomicalSpace to land in IMPLAnT's existing
+        # voxel-index convention. Re-verify this if BrainGlobe ever
+        # re-publishes a corrected version of this atlas.
+        "brainglobe_target_orientation": "rpi",
+        # Resampled into WHS's own coordinate grid at matching 39um
+        # resolution (once correctly un-mirrored, see above), so bregma/
+        # lambda land on the same voxel indices as WHS.
         "bregma_coords": [245, 652, 439],
         "lambda_coords": [243, 441, 463],
-        # Corpus-callosum label id and the CA1 region's exact name string in
-        # this atlas's own structures list, looked up once against the
-        # fetched BrainGlobeAtlas (see mrid_utils/atlas_fetch_brainglobe.py).
-        "cc_label": 118,
-        "ca1_region_name": "Field CA1",
+        # Verified directly against this atlas's own structures list: its
+        # terminology reuses WHS's own ids for these two regions (id 67 =
+        # "corpus callosum and associated subcortical white matter", id 98 =
+        # "Cornu ammonis 1") -- identical to the plain WHS atlas already
+        # used, so no atlas-specific override was actually needed here.
+        "cc_label": 67,
+        "ca1_region_name": "Cornu ammonis 1",
     },
 }
 

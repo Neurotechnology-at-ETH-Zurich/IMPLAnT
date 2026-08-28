@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 import nibabel as nib
 import pandas as pd
 import numpy as np
@@ -203,6 +204,22 @@ def get_mrid_dimensions(mrid_dict, bundle_start):
     pattern_dist, pattern_points = com.get_centomass(pattern_dimensions, pattern_intersegment)
 
     return pattern_dist, pattern_points, pattern_lengths, ionp_amount
+
+
+def read_itk_snap_labels(path):
+    """
+    Reads a standard ITK-SNAP format .label file (IDX R G B A VIS MSH LABEL,
+    whitespace-separated, '#' comments) -- used for every atlas except WHS's
+    own bespoke .label format (see read_whs_labels below). Shared by
+    trajectory_planning/visualisation3D.py and ephys/visualisation3D.py's
+    load_labels(), and by core/electrode_localization.py for any active
+    atlas whose ATLASES[...]['label_format'] is "itk_snap" (see
+    mrid_utils/atlas_registry.py).
+    """
+    if not Path(path).is_file():
+        return None
+    return pd.read_csv(path, comment='#', sep=r'\s+',
+                        names=['IDX', 'R', 'G', 'B', 'A', 'VIS', 'MSH', 'LABEL'])
 
 
 def read_whs_labels(path):

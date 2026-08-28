@@ -1,5 +1,5 @@
 # This Python file uses the following encoding: utf-8
-from mrid_utils import handlers, gauss_aux, warper, chmap
+from mrid_utils import handlers, gauss_aux, warper, chmap, atlas_registry
 import numpy as np
 import nibabel as nib
 import os
@@ -14,9 +14,10 @@ from PySide6 import QtWidgets
 import sys
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from core.paintbrush import Paintbrush
-from core.dfx_geometry_panel import DfxGeometryPanel
+from core.dfx_geometry_4d import Dfx4DGeometry
 from file_handling.mri_volume import MRIVolume
 from utils.zoom import Zoom
+from gui_utils.busy_overlay import BusyOverlay
 
 
 def process_in_parallel(args):
@@ -28,9 +29,15 @@ def process_in_parallel(args):
     # Memory-mapped loading
     fixed_coordinates = np.load(fixed_coordinates_path, mmap_mode="r")
     moving_coordinates = np.load(moving_coordinates_path, mmap_mode="r")
-    nii_dwi=nib.load(dwi_path)
-    dwi=np.asanyarray(nii_dwi.dataobj)
-    dwi=dwi[:,:,:,0]
+    if dwi_path:
+        nii_dwi=nib.load(dwi_path)
+        dwi=np.asanyarray(nii_dwi.dataobj)
+        dwi=dwi[:,:,:,0]
+    else:
+        # active atlas has no DWI volume (see ATLASES[...]['has_dwi']) --
+        # channel_mapper.map_channels_to_atlas skips the pyramidal-layer/
+        # DWI-marker step gracefully when this is None.
+        dwi=None
     nii_t2s=nib.load(t2s_path)
     t2s=np.asanyarray(nii_t2s.dataobj)
     nii_mask=nib.load(mask_path)
@@ -120,68 +127,89 @@ class ElectrodeLoc:
                 continue
 
 
-    def getCoordinates(self):
+    def getCoordinates(self,on_done):
         """
         Loads a pickle file with MRID design parameters and the Gaussian centers found in self.get_gaussian_centers
 
         Finds best-fit to compute final  Gaussian centers and isualizes them in the warped MRI slice.
 
+        Contact geometry (DXF bending, per tag) is defined asynchronously in
+        the main GUI's "Electrode Contact Geometry" dock rather than blocking
+        here (see get_atlas_points), so the rest of this method runs inside
+        the on_done callback that dock hands back once every tag has
+        committed geometry; on_done(None) is passed through unchanged if the
+        file-selection dialog was cancelled.
         """
         roi_names = self.get_roinames(os.path.join(self.sessionpath, "anat", "labels.txt"))
-        result = self.get_atlas_points(roi_names)
-        if result is None:
-            return None
-        else:
-            pklfile_path,atlas,atlaslabelsdf,dwi_path,t2s_path,mask_path,moving_coordinates_path, fixed_coordinates_path,channel_separation, total_ch,chMap_file,channel_depths_um = result
 
-        with open(pklfile_path, 'rb') as f:
-            mrid_dict = pickle.load(f)
+        def _continue(result):
+            if result is None:
+                on_done(None)
+                return
+            pklfile_path,atlas,atlaslabelsdf,dwi_path,t2s_path,mask_path,moving_coordinates_path, fixed_coordinates_path,channel_separation,total_ch,chMap_file,channel_depths_um = result
 
-        #totalregionNumbers = []
-        totalmrid = []
-        totaldf = []
-        totalbarcode_d = []
-        totalbarcode_r = []
-        totalfitted_points = []
-        totalCA1 =  []
-        totaldwi1Dsignal = []
-        totalregionNames= []
-        totalpyrChIdx= []
-        totalchMap = []
-        totalatlasCoordinates_pkl = []
+            # buttons_gui4D closed its own overlay before this, to keep the
+            # geometry dock clickable -- raise a fresh one now that the
+            # (blocking) localisation work actually starts
+            overlay = BusyOverlay(self.MW, message="Localising Electrodes, please wait…")
+            overlay.raise_()
+            overlay.show()
+            overlay.repaint()
+            QtWidgets.QApplication.processEvents()
 
+            with open(pklfile_path, 'rb') as f:
+                mrid_dict = pickle.load(f)
 
-        #over all tags ->
-        args_list = [
-            (mrid, mrid_dict, self.sessionpath, atlas, atlaslabelsdf,
-             dwi_path,t2s_path,mask_path,fixed_coordinates_path, moving_coordinates_path,
-             channel_separation, total_ch[i],chMap_file,
-             channel_depths_um.get(mrid) if channel_depths_um else None)
-            for i, mrid in enumerate(roi_names)
-        ]
-
-
-        with ProcessPoolExecutor() as executor:
-            futures = [executor.submit(process_in_parallel, args) for args in args_list]
-            i=1
-
-            for future in as_completed(futures):
-                fitted_points,regionNames,regionNumbers,df,barcode_r,barcode_d,mrid,CA1,dwi1Dsignal,pyrChIdx,chMap,atlasCoordinates_pkl = future.result()
-                totalfitted_points.append(fitted_points)
-                totaldf.append(df)
-                totalbarcode_r.append(barcode_r)
-                totalbarcode_d.append(barcode_d)
-                totalmrid.append(mrid)
-                totalCA1.append(CA1)
-                totaldwi1Dsignal.append(dwi1Dsignal)
-                totalregionNames.append(regionNames)
-                totalpyrChIdx.append(pyrChIdx)
-                totalchMap.append(chMap)
-                totalatlasCoordinates_pkl.append(atlasCoordinates_pkl)
-                i+=1
+            #totalregionNumbers = []
+            totalmrid = []
+            totaldf = []
+            totalbarcode_d = []
+            totalbarcode_r = []
+            totalfitted_points = []
+            totalCA1 =  []
+            totaldwi1Dsignal = []
+            totalregionNames= []
+            totalpyrChIdx= []
+            totalchMap = []
+            totalatlasCoordinates_pkl = []
 
 
-        return roi_names,totaldf,totalbarcode_r,totalbarcode_d,totalmrid,totalCA1,totaldwi1Dsignal,totalregionNames,totalpyrChIdx,totalfitted_points,totalchMap,totalatlasCoordinates_pkl
+            #over all tags -> "Pre-defined" gives a per-tag total_ch list
+            #(equal-spacing path) and no channel_depths_um; "User-defined"
+            #gives committed DXF-bent depths and no total_ch (chmap.main
+            #only falls back to channel_separation/total_ch when
+            #channel_depths_um is None)
+            args_list = [
+                (mrid, mrid_dict, self.sessionpath, atlas, atlaslabelsdf,
+                 dwi_path,t2s_path,mask_path,fixed_coordinates_path, moving_coordinates_path,
+                 channel_separation, total_ch[i] if total_ch is not None else None,chMap_file,
+                 channel_depths_um.get(mrid) if channel_depths_um else None)
+                for i, mrid in enumerate(roi_names)
+            ]
+
+
+            with ProcessPoolExecutor() as executor:
+                futures = [executor.submit(process_in_parallel, args) for args in args_list]
+
+                for future in as_completed(futures):
+                    fitted_points,regionNames,regionNumbers,df,barcode_r,barcode_d,mrid,CA1,dwi1Dsignal,pyrChIdx,chMap,atlasCoordinates_pkl = future.result()
+                    totalfitted_points.append(fitted_points)
+                    totaldf.append(df)
+                    totalbarcode_r.append(barcode_r)
+                    totalbarcode_d.append(barcode_d)
+                    totalmrid.append(mrid)
+                    totalCA1.append(CA1)
+                    totaldwi1Dsignal.append(dwi1Dsignal)
+                    totalregionNames.append(regionNames)
+                    totalpyrChIdx.append(pyrChIdx)
+                    totalchMap.append(chMap)
+                    totalatlasCoordinates_pkl.append(atlasCoordinates_pkl)
+
+
+            overlay.close()
+            on_done((roi_names,totaldf,totalbarcode_r,totalbarcode_d,totalmrid,totalCA1,totaldwi1Dsignal,totalregionNames,totalpyrChIdx,totalfitted_points,totalchMap,totalatlasCoordinates_pkl))
+
+        self.get_atlas_points(roi_names, _continue)
 
     def get_roinames(self,filename):
         """
@@ -597,30 +625,144 @@ class ElectrodeLoc:
                                lm.scale_bar, lm.vtk_widgets, idx)
 
 
-    def get_atlas_points(self,roi_names):
-        #pop up asking for the view if 4D data used
+    def get_atlas_points(self,roi_names,on_done):
+        """
+        Pop-up asking for the pkl/coordinate files and the contact-geometry
+        mode (radio button: Pre-defined equal spacing, or User-defined DXF
+        bending). "Pre-defined" hands its values straight to on_done. For
+        "User-defined" the actual DXF-bending panel is no longer crammed
+        into this popup (that caused a sizing mismatch between the two
+        stacked pages, leaving an empty gap) -- it's instead the "Electrode
+        Contact Geometry" dock in the main GUI, same non-modal pattern as
+        trajectory planning's Shank Geometry panel. on_done is called with
+        the assembled result tuple once ready, or None if the dialog was
+        cancelled.
+        """
         dlg = ChannelVariablesInput(self.MW,roi_names)
-        if dlg.exec() == QtWidgets.QDialog.DialogCode.Accepted:
-            pklfile, channel_separation, total_ch,moving_coordinates_path, fixed_coordinates_path,chMap_file,channel_depths_um = dlg.get_values()
-            self.atlas_path=os.path.join(_paths['atlas_folder'], _paths['atlas_volume'])
-            nii_atlas=nib.load(self.atlas_path)
-            atlas=np.asanyarray(nii_atlas.dataobj)
+        if dlg.exec() != QtWidgets.QDialog.DialogCode.Accepted:
+            on_done(None)
+            return
 
-            labels_path=os.path.join(_paths['atlas_folder'], _paths['atlas_labels'])
+        pklfile, mode, channel_separation, total_ch, moving_coordinates_path, fixed_coordinates_path, chMap_file = dlg.get_values()
+        self.atlas_path=os.path.join(_paths['atlas_folder'], _paths['atlas_volume'])
+        nii_atlas=nib.load(self.atlas_path)
+        atlas=np.asanyarray(nii_atlas.dataobj)
+
+        labels_path=os.path.join(_paths['atlas_folder'], _paths['atlas_labels'])
+        active_atlas = atlas_registry.get_active_atlas(_paths)
+        if active_atlas['label_format'] == 'whs_legacy':
             atlaslabelsdf=handlers.read_whs_labels(labels_path)
+        else:
+            itk_labels = handlers.read_itk_snap_labels(labels_path)
+            atlaslabelsdf = itk_labels.rename(
+                columns={'IDX': 'Labels', 'LABEL': 'Anatomical Regions'}
+            )[['Labels', 'Anatomical Regions']]
 
-            dwi_path=os.path.join(_paths['atlas_folder'], _paths['atlas_dwi'])
-            t2s_path=os.path.join(_paths['atlas_folder'], _paths['atlas_template'])
-            mask_path=os.path.join(_paths['atlas_folder'], _paths['atlas_mask'])
+        # Not every atlas has a DWI volume (see ATLASES[...]['has_dwi']) --
+        # None here, rather than a path to a nonexistent file, so downstream
+        # consumers (channel_mapper.map_channels_to_atlas) can skip the
+        # DWI-marker step gracefully.
+        dwi_path=os.path.join(_paths['atlas_folder'], _paths['atlas_dwi']) if _paths.get('atlas_dwi') else None
+        t2s_path=os.path.join(_paths['atlas_folder'], _paths['atlas_template'])
+        mask_path=os.path.join(_paths['atlas_folder'], _paths['atlas_mask'])
 
-            return pklfile,atlas,atlaslabelsdf,dwi_path,t2s_path,mask_path,moving_coordinates_path, fixed_coordinates_path,channel_separation, total_ch,chMap_file,channel_depths_um
+        if mode == "uniform":
+            on_done((pklfile,atlas,atlaslabelsdf,dwi_path,t2s_path,mask_path,
+                      moving_coordinates_path, fixed_coordinates_path,channel_separation, total_ch,chMap_file,None))
+            return
 
-        return None
+        self._show_geometry_page(roi_names, pklfile,atlas,atlaslabelsdf,dwi_path,t2s_path,mask_path,
+                                  moving_coordinates_path, fixed_coordinates_path,chMap_file, on_done)
+
+    def _show_geometry_page(self, roi_names, pklfile,atlas,atlaslabelsdf,dwi_path,t2s_path,mask_path,
+                             moving_coordinates_path, fixed_coordinates_path,chMap_file, on_done):
+        """Reparents the real Shank Geometry widget (page_24, inside
+        stackedWidget_dfx/page_3D -- the same widget trajectory planning
+        uses for its own DXF-bending step) into data_4d_3d -- the top-level
+        stack that switches the whole central view between 3D mode and 4D
+        mode (main_window.py's restart_gui/is_4d switch) -- instead of
+        building a separate copy of that panel: 4D mode has no pre-built
+        spare page like 3D mode's page_3D to nest into, and stackedWidget_4D
+        lives inside the Paintbrush dock, which is already closed by this
+        point in the workflow, so stackedWidget_dfx itself is pulled out of
+        page_3D and swapped in one level up instead. Dfx4DGeometry rewires
+        its buttons to a tag-based flow for the duration; DfxGeometry.
+        reclaim_dfx_widget (trajectory_planning/dfx_geometry.py) restores
+        trajectory planning's own wiring once it's handed back below."""
+        stacked = self.MW.ui.data_4d_3d
+        origin_index = stacked.currentIndex()
+
+        ui = self.MW.ui
+        stacked_dfx = ui.stackedWidget_dfx
+        ui.gridLayout_106.removeWidget(stacked_dfx)
+
+        container = QtWidgets.QWidget()
+        layout = QtWidgets.QVBoxLayout(container)
+        info = QtWidgets.QLabel(
+            "Import each tag's contact geometry from its DXF drawing "
+            "(Shank Geometry / DXF bending). Once every tag below has "
+            "committed geometry, click Continue.")
+        info.setWordWrap(True)
+        layout.addWidget(info)
+        layout.addWidget(stacked_dfx)
+
+        stacked.addWidget(container)
+        stacked.setCurrentWidget(container)
+
+        dfx4d = Dfx4DGeometry(ui, roi_names)
+        ui.pushButton_dfx_ok.setText("Continue")
+        # pushButton_dfx_ok may already be wired to trajectory planning's
+        # hide_dfx_panel (if TrajPlanning was set up earlier this session) --
+        # blind-disconnect before taking it over, same pattern DfxGeometry.
+        # _connect_dfx_signals uses, so it doesn't fire alongside _on_continue.
+        try:
+            ui.pushButton_dfx_ok.clicked.disconnect()
+        except (TypeError, RuntimeError):
+            pass
+
+        def _restore_dfx_widget():
+            layout.removeWidget(stacked_dfx)
+            ui.gridLayout_106.addWidget(stacked_dfx, 1, 0, 1, 3)
+            stacked_dfx.setCurrentIndex(0)
+            ui.pushButton_dfx_ok.setText("OK")
+            try:
+                ui.pushButton_dfx_ok.clicked.disconnect()
+            except (TypeError, RuntimeError):
+                pass
+            traj = getattr(self.LoadMRI, 'TrajPlanning', None)
+            if traj is not None:
+                traj.reclaim_dfx_widget()
+            stacked.setCurrentIndex(origin_index)
+            stacked.removeWidget(container)
+            container.deleteLater()
+
+        def _on_continue():
+            depths = dfx4d.get_depths_um()
+            missing = [roi for roi, d in depths.items() if d is None]
+            if missing:
+                QtWidgets.QMessageBox.warning(
+                    self.MW, "Missing geometry",
+                    "Please run the bending model and commit geometry for "
+                    "every tag before continuing. Missing: " + ", ".join(missing))
+                return
+            _restore_dfx_widget()
+            on_done((pklfile,atlas,atlaslabelsdf,dwi_path,t2s_path,mask_path,
+                      moving_coordinates_path, fixed_coordinates_path,None,None,chMap_file, depths))
+
+        ui.pushButton_dfx_ok.clicked.connect(_on_continue)
 
 
 class ChannelVariablesInput(QtWidgets.QDialog):
     """
-    A dialog window that allows users to specify anatomical regions and MRID tags (for 4D data).
+    Dialog to select the mrid_library pkl, the fixed/moving atlas-coordinate
+    npy files, a chMap file (optional), and the contact-geometry mode. For
+    "User-defined" the actual DXF-bending panel is no longer shown inside
+    this popup -- it used to sit in a QStackedWidget page here, taller than
+    the "Pre-defined" page and leaving an empty gap whenever that one was
+    selected. It now happens afterwards as trajectory planning's own Shank
+    Geometry widget (stackedWidget_dfx, normally inside page_3D), reparented
+    into data_4d_3d for the duration (see ElectrodeLoc._show_geometry_page /
+    core/dfx_geometry_4d.py).
     """
     def __init__(self, MW, roi_names,parent=None):
         """
@@ -668,10 +810,12 @@ class ChannelVariablesInput(QtWidgets.QDialog):
         main_layout.addWidget(self.radio_uniform)
         main_layout.addWidget(self.radio_custom)
 
-        self.stack_geometry = QtWidgets.QStackedWidget()
-
-        uniform_page = QtWidgets.QWidget()
-        uniform_layout = QtWidgets.QVBoxLayout(uniform_page)
+        # Only "Pre-defined" values matter here -- "User-defined" geometry
+        # itself is edited afterwards in the main GUI's dock. Left always
+        # visible but disabled/enabled with the radio choice (rather than
+        # hidden), so the dialog never resizes/jumps as you switch modes.
+        self.uniform_page = QtWidgets.QWidget()
+        uniform_layout = QtWidgets.QVBoxLayout(self.uniform_page)
         self.channel_separation = QtWidgets.QSpinBox()
         self.channel_separation.setRange(1, 200)
         self.channel_separation.setValue(50)
@@ -688,18 +832,13 @@ class ChannelVariablesInput(QtWidgets.QDialog):
             group_layout.addWidget(QtWidgets.QLabel(f"{roi.capitalize()}"))
             group_layout.addWidget(self.total_channels[roi])
         uniform_layout.addWidget(group_box)
-        self.stack_geometry.addWidget(uniform_page)
-
-        self.dfx_panel = DfxGeometryPanel(self.roi_names)
-        self.stack_geometry.addWidget(self.dfx_panel)
-
-        main_layout.addWidget(self.stack_geometry)
+        main_layout.addWidget(self.uniform_page)
 
         def _on_geometry_mode_changed():
-            self.stack_geometry.setCurrentIndex(1 if self.radio_custom.isChecked() else 0)
-            self.adjustSize()
+            self.uniform_page.setEnabled(self.radio_uniform.isChecked())
         self.radio_uniform.toggled.connect(_on_geometry_mode_changed)
         self.radio_custom.toggled.connect(_on_geometry_mode_changed)
+        _on_geometry_mode_changed()
 
         # upload matrices
         file_layout = QtWidgets.QHBoxLayout()
@@ -708,6 +847,7 @@ class ChannelVariablesInput(QtWidgets.QDialog):
             self.file_name_fixed = os.path.join(self.MW.LoadMRI.session_path, 'registration','fixed_img-indeces.npy')
             self.file_line_fixed.setText(f"File for FIXED coordinates found: {self.file_name_fixed} \n Select another file if requested")
         else:
+            self.file_name_fixed = None
             self.file_line_fixed.setText("Please select the fixed coordinates. No such file found.")
         browse_button = QtWidgets.QPushButton("Browse")
         browse_button.clicked.connect(self.browse_file_fix)
@@ -721,6 +861,7 @@ class ChannelVariablesInput(QtWidgets.QDialog):
             self.file_name_moving = os.path.join(self.MW.LoadMRI.session_path, 'registration','moving_img_resampled25um-indeces.npy')
             self.file_line_mov.setText(f"File for MOVING coordinates found: {self.file_name_moving} \n Select another file if requested")
         else:
+            self.file_name_moving = None
             self.file_line_mov.setText("Please select the moving coordinates. No such file found.")
         browse_button = QtWidgets.QPushButton("Browse")
         browse_button.clicked.connect(self.browse_file_mov)
@@ -749,7 +890,7 @@ class ChannelVariablesInput(QtWidgets.QDialog):
             QtWidgets.QDialogButtonBox.StandardButton.Ok |
             QtWidgets.QDialogButtonBox.StandardButton.Cancel
         )
-        buttons.accepted.connect(self._try_accept)
+        buttons.accepted.connect(self.accept)
         buttons.rejected.connect(self.reject)
         # Add the buttons to the same layout
         button_layout.addWidget(buttons)
@@ -831,41 +972,25 @@ class ChannelVariablesInput(QtWidgets.QDialog):
         this dialog's in-memory self.file_name_pkl."""
         save_paths(mrid_library=self.file_name_pkl)
 
-    def _try_accept(self):
-        """Validates custom-geometry completeness before closing -- mirrors
-        DfxGeometry.add_dfx_shank's "Nothing to add" warning style
-        (trajectory_planning/dfx_geometry.py) -- since a tag left without
-        committed geometry has nothing to hand to channel_mapper.py."""
-        if self.radio_custom.isChecked():
-            depths = self.dfx_panel.get_depths_um()
-            missing = [roi for roi, d in depths.items() if d is None]
-            if missing:
-                QtWidgets.QMessageBox.warning(
-                    self, "Missing geometry",
-                    "Please run the bending model and commit geometry for "
-                    "every tag before continuing. Missing: " + ", ".join(missing))
-                return
-            self._channel_depths_um = depths
-        else:
-            self._channel_depths_um = None
-        self.accept()
-
     def get_values(self):
         """
-        Return structured data.
+        Return (pklfile, mode, channel_separation, total_channels,
+        moving_coordinates, fixed_coordinates, chMap_file). mode is
+        "uniform" or "custom"; channel_separation/total_channels are only
+        meaningful for "uniform" (None otherwise) -- "custom" geometry is
+        defined afterwards in the main GUI's geometry dock, not here.
         """
-        channel_separation = self.channel_separation.value()
-        total_channels = []
-        for roi in self.roi_names:
-            total_channels.append(self.total_channels[roi].value())
-        #root=self.root
-        moving_coordinates=  self.file_name_moving
+        mode = "uniform" if self.radio_uniform.isChecked() else "custom"
+        channel_separation = self.channel_separation.value() if mode == "uniform" else None
+        total_channels = None
+        if mode == "uniform":
+            total_channels = [self.total_channels[roi].value() for roi in self.roi_names]
+        moving_coordinates = self.file_name_moving
         fixed_coordinates = self.file_name_fixed
         pklfile = self.file_name_pkl
         chMap_file = self.file_chMap
-        channel_depths_um = getattr(self, '_channel_depths_um', None)
 
-        return pklfile, channel_separation, total_channels,moving_coordinates, fixed_coordinates,chMap_file,channel_depths_um
+        return pklfile, mode, channel_separation, total_channels, moving_coordinates, fixed_coordinates, chMap_file
 
 
 if __name__ == "__main__":

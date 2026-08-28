@@ -84,7 +84,12 @@ def _convert(atlas_id, progress_dialog):
     target_orientation = entry.get('brainglobe_target_orientation', 'lpi')
     src = AnatomicalSpace(atlas.orientation, shape=atlas.annotation.shape)
     annotation = src.map_stack_to(target_orientation, atlas.annotation)
-    reference = src.map_stack_to(target_orientation, atlas.template)
+    # atlas.reference (not .template) -- the pinned brainglobe-atlasapi==2.1.0
+    # (requirements.txt) only exposes .reference; .template was introduced in
+    # a later 3.x API generation, where .reference still works as a (merely
+    # deprecated, not removed) alias for it -- so .reference is the one
+    # attribute name that exists on both.
+    reference = src.map_stack_to(target_orientation, atlas.reference)
     mask = (annotation > 0).astype(np.uint8)
 
     target_dir = _target_dir(atlas_id)

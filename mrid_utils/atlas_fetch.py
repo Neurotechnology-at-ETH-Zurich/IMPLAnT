@@ -25,6 +25,7 @@ from PySide6.QtWidgets import (
 )
 
 from paths_config import _paths, save_paths
+from mrid_utils.atlas_registry import ATLASES
 
 # Published as a GitHub Release asset on Neurotechnology-at-ETH-Zurich/IMPLAnT
 # (public repo, so a plain URL works -- no token needs to ship inside the
@@ -40,8 +41,21 @@ _DOWNLOAD_CHUNK_BYTES = 1024 * 1024  # 1MB
 
 
 def _atlas_files_present():
+    """Whether the WHS bundle's own known files (fixed filenames, from the
+    atlas registry) are present under atlas_folder -- deliberately checked
+    against ATLASES['whs_sd_rat']['files'] rather than _paths[key], since
+    _paths reflects whichever atlas is CURRENTLY active (see
+    mrid_utils/atlas_registry.py) and can point at a completely different
+    atlas' files, or have _paths['atlas_dwi'] set to None (for an active
+    atlas with no DWI, e.g. the brainglobe microscopy atlas) -- neither of
+    which says anything about whether the WHS bundle itself is present.
+    This function's only job is gating/driving the WHS-bundle download
+    below, regardless of which atlas happens to be active right now (e.g.
+    mid-switch, via atlas_switch.py's switch_active_atlas, called before
+    _paths gets repointed to whs_sd_rat)."""
+    files = ATLASES['whs_sd_rat']['files']
     return all(
-        os.path.exists(os.path.join(_paths['atlas_folder'], _paths[key]))
+        os.path.exists(os.path.join(_paths['atlas_folder'], files[key]))
         for key in _ATLAS_FILE_KEYS
     )
 

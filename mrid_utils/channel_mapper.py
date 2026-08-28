@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 from mplwidget import MplWidget
 from scipy.spatial import cKDTree
 import pandas as pd
+from paths_config import _paths
 
 
 def map_electrodes_main(fitted_points, mrid_dict, px_size = 25, channel_separation = 50, total_ch = 64):
@@ -217,15 +218,16 @@ def map_channels_to_atlas(ch_coord, fitted_mrid_points,moving_coordinates, fixed
         df.to_excel(excel_path, index=False)
 
 
-        currPixVal = dwi[x, y, z]
-        dwi1Dsignal[idx] = currPixVal
-        if anat_region == "Cornu ammonis 1":
-            pyrLyExists = True
-            if currPixVal < minPixVal:
-                minPixVal = currPixVal
-                pyrChIdx = idx
-                pyr_coord = atlasCoord
-                #chMap.append(idx)
+        if dwi is not None:
+            currPixVal = dwi[x, y, z]
+            dwi1Dsignal[idx] = currPixVal
+            if anat_region == _paths.get('atlas_ca1_region_name', "Cornu ammonis 1"):
+                pyrLyExists = True
+                if currPixVal < minPixVal:
+                    minPixVal = currPixVal
+                    pyrChIdx = idx
+                    pyr_coord = atlasCoord
+                    #chMap.append(idx)
 
 
     atlasCoordinates_pkl = []
