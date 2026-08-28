@@ -11,7 +11,7 @@ Integrated Multimodal Planning, Localisation, Analysis Toolbox
 {: .fs-6 .fw-300 }
 
 [Get started](installation){: .btn .btn-primary .fs-5 .mb-4 .mb-md-0 .mr-2 }
-[Download the latest release](https://github.com/Neurotechnology-at-ETH-Zurich/IMPLAnT/releases){: .btn .fs-5 .mb-4 .mb-md-0 }
+[Download](download){: .btn .fs-5 .mb-4 .mb-md-0 }
 
 ![IMPLAnT](assets/images/IMPLAnT.png)
 
@@ -23,7 +23,7 @@ IMPLAnT is an open-source graphical user interface (GUI) that unifies all three 
 
 ## What it does
 
-- **Pre-surgical planning** — register subject MRI data to the WHS brain atlas, letting you plan and visualise electrode trajectories before surgery.
+- **Pre-surgical planning** — register subject MRI data to the WHS brain atlas, letting you plan and visualise electrode trajectories before surgery, with a switchable [MRI or microscopy atlas](configuration#atlas).
 - **Post-implant localisation** — a semi-supervised pipeline for MR identification tags localises electrodes after implantation and automatically assigns atlas-defined region labels to each channel.
 - **Electrophysiology data visualisation** — visualise and curate signal data channel-by-channel, directly linked to the anatomical labels from previous steps.
 

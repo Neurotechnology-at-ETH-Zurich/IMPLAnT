@@ -11,7 +11,7 @@ nav_order: 2
 
 ## Requirements
 
-- **OS**: Linux (tested on Ubuntu 24)
+- **OS**: Linux (tested on Ubuntu 24) or macOS (dependencies pinned for both; from source only for now — no macOS standalone build yet)
 - **Python**: 3.10 (from source only)
 - **ANTs**: required to build from source or to build the standalone executable yourself — **not** required just to run a pre-built release, its binaries are bundled in
 - **Internet connection**: needed the *first* time you open ephys data, start SAMRI registration, or start trajectory planning — IMPLAnT downloads and caches the ~1.3GB reference atlas automatically at that point (see [Configuration](configuration#atlas-files)). Not needed to just browse a 3D/4D MRI volume, and not needed again once the atlas is cached locally.

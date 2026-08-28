@@ -16,11 +16,6 @@ aux_links:
 
 aux_links_new_tab: true
 
-nav_external_links:
-  - title: Releases / Download
-    url: https://github.com/Neurotechnology-at-ETH-Zurich/IMPLAnT/releases
-    hide_icon: false
-
 footer_content: "Copyright &copy; 2026. Distributed under the <a href=\"https://github.com/Neurotechnology-at-ETH-Zurich/IMPLAnT/blob/main/LICENSE\">MIT License</a>."
 
 callouts:

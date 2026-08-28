@@ -49,6 +49,17 @@ cp paths_config.example.json paths_config.json
 - **From source**: place `paths_config.json` in the repository root.
 - **Standalone app**: place `paths_config.json` in the same folder as the `IMPLAnT` executable.
 
+## Atlas
+
+IMPLAnT can register and plan against either of two atlases:
+
+| Atlas | What it is | Source |
+|-------|------------|--------|
+| **WHS SD rat (MRI/DTI)** *(default)* | The bundled Waxholm Space atlas described above | Downloaded once, as above |
+| **WHS-aligned SWC female rat (microscopy)** | A higher-resolution microscopy atlas, resampled onto the same WHS coordinate grid | Fetched automatically via [BrainGlobe](https://brainglobe.info/) the first time you select it |
+
+Switch between them via **File → Atlas…**, or live from the dropdown on the [Pre-surgical planning](tutorials/pre-surgical-planning) screen itself. The first time you select the microscopy atlas, IMPLAnT downloads and converts it automatically (a one-time step, same idea as the initial WHS atlas download); every switch after that is instant.
+
 ## MRID library file
 
 The electrode localisation feature requires `mrid_library.pkl`, a lookup file specific to your experimental setup. Place it in the repository root (next to `main_window.py`) or next to the `IMPLAnT` executable. If no file is found, you'll be prompted to browse for it manually — click **Save** next to the browse field to remember that path in `paths_config.json` (as `mrid_library`) so it's the default on future runs too.
