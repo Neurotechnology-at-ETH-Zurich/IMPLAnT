@@ -90,7 +90,12 @@ class LoadMRI(QObject):
             if self.volumes[0].is_4d:
                 Zoom.fit_to_window(self.vtk_widgets[0][data_view], self.vtk_widgets.values(), self.scale_bar, self.vtk_widgets, data_index)
             else: #3d
-                Zoom.fit_to_window(self.vtk_widgets[0]["coronal"], self.vtk_widgets.values(), self.scale_bar, self.vtk_widgets, data_index)
+                # "coronal" is the reference widget whenever it exists (every
+                # existing caller registers all three views) -- fall back to
+                # whichever view IS registered for callers with fewer (e.g.
+                # the Surgery tab's axial-only LoadMRI instance).
+                fit_widget = self.vtk_widgets[0].get("coronal") or next(iter(self.vtk_widgets[0].values()))
+                Zoom.fit_to_window(fit_widget, self.vtk_widgets.values(), self.scale_bar, self.vtk_widgets, data_index)
             self.is_first_slice = False
 
         self.render()
@@ -155,14 +160,6 @@ class LoadMRI(QObject):
         if self.threshold_on == True:
             layer = self.Layers[0][self.SegmentationGUI.layer_index]
             layer.update_vtk([z,y,x])
-            if getattr(self.SegmentationGUI, 'mode', None) == 'skull':
-                # skull segmentation's paint-seed initialization
-                # (Paintbrush.start_paintbrush) adds its own layer to
-                # self.Layers[0] -- without this it keeps showing whichever
-                # slice it was last painted on instead of following scroll.
-                for layer_index, other_layer in self.Layers[0].items():
-                    if layer_index != self.SegmentationGUI.layer_index:
-                        other_layer.update_vtk([z,y,x])
         else:
             # only the data set that moved: [z,y,x] is slice_indices[data_index],
             # so applying it to every data set's layers would drag the other 4D
