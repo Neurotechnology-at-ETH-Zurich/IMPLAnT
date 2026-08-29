@@ -3,6 +3,7 @@ import os
 import sys
 import SimpleITK as sitk
 from paths_config import _paths
+from mrid_utils import handlers
 import pyvista as pv
 from pyvistaqt import QtInteractor
 from pathlib import Path
@@ -338,13 +339,15 @@ class Visualisation3D:
         matches = np.where(self.atlaslabelsdf['LABEL'].values == label)[0]
         return int(matches[0]) if len(matches) else -1
 
-    def get_last_ca1_channels(self, n=2, region="Cornu ammonis 1"):
+    def get_last_ca1_channels(self, n=2, region=None):
         """
         Channel numbers of the last n channels labelled as CA1.
 
         points_data rows are in probe order and aligned with chMap, so the last
         matching rows are the deepest CA1 channels. Returns [] if unavailable.
         """
+        if region is None:
+            region = _paths.get('atlas_ca1_region_name', "Cornu ammonis 1")
         if getattr(self, 'points_data', None) is None or not hasattr(self, 'chMap'):
             return []
         labels = self.points_data['Channel Label'].astype(str).str.strip().str.lower()
@@ -389,12 +392,14 @@ class Visualisation3D:
             print("pyl LFP fallback failed:", e, flush=True)
             return None
 
-    def _ca1_channel_ids(self, region="Cornu ammonis 1"):
+    def _ca1_channel_ids(self, region=None):
         """CA1 channel numbers from the 'Channel ID' column — the same space the
         DWI marker, the LFP memmap and the ripple dialog use. [] if unavailable.
 
         (Note: rows in points_data are in reversed order, so the 'Channel ID'
         column — not the row position — is the correct channel identity.)"""
+        if region is None:
+            region = _paths.get('atlas_ca1_region_name', "Cornu ammonis 1")
         pd_ = getattr(self, 'points_data', None)
         if pd_ is None or 'Channel ID' not in pd_.columns:
             return []
@@ -414,10 +419,12 @@ class Visualisation3D:
         j = n - 1 - int(idx)
         return int(chmap[j]) if 0 <= j < n else None
 
-    def get_pyl_channel(self, region="Cornu ammonis 1"):
+    def get_pyl_channel(self, region=None):
         """The single pyramidal-layer *recording* channel: Excel marker row (DWI
         dark band) → LFP ripple-band fallback → middle of CA1. None if there are
         no CA1 channels."""
+        if region is None:
+            region = _paths.get('atlas_ca1_region_name', "Cornu ammonis 1")
         if not hasattr(self, 'chMap'):
             return None
         ca1_idxs = self._ca1_channel_ids(region)
@@ -432,8 +439,10 @@ class Visualisation3D:
             return int(pyr)
         return int(sorted(ca1_phys)[len(ca1_phys) // 2]) if ca1_phys else None
 
-    def get_pyl_centered_channels(self, n=8, region="Cornu ammonis 1"):
+    def get_pyl_centered_channels(self, n=8, region=None):
         """n CA1 *recording* channels centred on the pyramidal layer. [] if none."""
+        if region is None:
+            region = _paths.get('atlas_ca1_region_name', "Cornu ammonis 1")
         if not hasattr(self, 'chMap'):
             return []
         ca1_phys = sorted(c for c in (self._idx_to_channel(i)
@@ -469,8 +478,31 @@ class Visualisation3D:
         if self.old_target_idx != target_idx or resetTo3D:
             self.old_target_idx = target_idx
             if target_idx==0:
-                self.plotter.remove_actor('atlas')
+                # Clear Label -- no single region to highlight, but the rest
+                # of the brain (everything 'atlas' normally shows minus the
+                # selected region) should still be visible instead of also
+                # disappearing: rebuild 'atlas' with nothing excluded.
                 self.plotter.remove_actor('atlas_region')
+                nifti_vals = np.round(self.mesh_atlas.cell_data['NIFTI']).astype(int)
+                colors = np.array([self.cmap.colors[int(v)] for v in nifti_vals])
+                full_atlas = self.mesh_atlas.copy()
+                full_atlas.cell_data['colors'] = (colors[:, :3]*255).astype(np.uint8)
+                surface = full_atlas.extract_surface(algorithm='dataset_surface')
+                smoothed_vol = surface.smooth_taubin(n_iter=50, pass_band=0.1)
+
+                self.plotter.add_mesh(
+                    smoothed_vol,
+                    scalars='colors',
+                    rgb=True,
+                    show_scalar_bar=False,
+                    name='atlas',
+                    style='surface',
+                    pickable=False,
+                    opacity=self.opacityRegions,
+                    reset_camera=False,
+                    render=False,
+                    culling='front',
+                )
             else:
                 volomue_thresholded = self.mesh_atlas.threshold([target_idx - 0.5, target_idx + 0.5], scalars='NIFTI', invert=True)
                 nifti_vals = np.round(volomue_thresholded.cell_data['NIFTI']).astype(int)
@@ -562,10 +594,7 @@ class Visualisation3D:
 
         def load_labels():
             labels_path = os.path.join(_paths['atlas_folder'], _paths['atlas_labels'])
-            if Path(labels_path).is_file():
-                return pd.read_csv(labels_path, comment='#', sep='\s+',
-                                   names=['IDX', 'R', 'G', 'B', 'A', 'VIS', 'MSH', 'LABEL'])
-            return None
+            return handlers.read_itk_snap_labels(labels_path)
 
         # Run all three file reads in parallel
         with ThreadPoolExecutor(max_workers=3) as executor:
@@ -826,7 +855,14 @@ class Visualisation3D:
 
 
         if self.electrode_localisation:
-            self.manually_pick_point(point=[],idx=0)
+            # resetTo3D=True forces the region-mesh block in
+            # manually_pick_point to actually run for this first call, even
+            # when channel 0's region happens to already match old_target_idx's
+            # 0 default (i.e. it's Clear Label) -- without it, that guard
+            # (old_target_idx != target_idx) is False on the very first call
+            # and no atlas mesh (not even the "everything else" one) ever
+            # gets built until something else changes the selection.
+            self.manually_pick_point(point=[],idx=0,resetTo3D=True)
 
 
 
