@@ -37,7 +37,7 @@ class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         if not MainWindow.objectName():
             MainWindow.setObjectName(u"MainWindow")
-        MainWindow.resize(2184, 2248)
+        MainWindow.resize(2184, 2307)
         sizePolicy = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -2140,6 +2140,7 @@ class Ui_MainWindow(object):
         self.page_33.setObjectName(u"page_33")
         self.gridLayout_229 = QGridLayout(self.page_33)
         self.gridLayout_229.setObjectName(u"gridLayout_229")
+        self.gridLayout_229.setContentsMargins(0, 0, 0, 0)
         self.textEdit_16 = QTextEdit(self.page_33)
         self.textEdit_16.setObjectName(u"textEdit_16")
         self.textEdit_16.setMinimumSize(QSize(0, 30))
@@ -2369,6 +2370,7 @@ class Ui_MainWindow(object):
         self.page_32.setObjectName(u"page_32")
         self.gridLayout_227 = QGridLayout(self.page_32)
         self.gridLayout_227.setObjectName(u"gridLayout_227")
+        self.gridLayout_227.setContentsMargins(0, 0, 0, 0)
         self.textEdit_15 = QTextEdit(self.page_32)
         self.textEdit_15.setObjectName(u"textEdit_15")
         self.textEdit_15.setMinimumSize(QSize(0, 30))
@@ -3081,6 +3083,11 @@ class Ui_MainWindow(object):
         self.tableintensity_data3d_2.horizontalHeader().setDefaultSectionSize(67)
 
         self.gridLayout_213.addWidget(self.tableintensity_data3d_2, 1, 0, 1, 1)
+
+        self.pushButton_contrastAdjustments = QPushButton(self.groupBox_71)
+        self.pushButton_contrastAdjustments.setObjectName(u"pushButton_contrastAdjustments")
+
+        self.gridLayout_213.addWidget(self.pushButton_contrastAdjustments, 2, 0, 1, 1)
 
 
         self.gridLayout_214.addWidget(self.groupBox_71, 1, 0, 3, 1)
@@ -9673,6 +9680,7 @@ class Ui_MainWindow(object):
 #if QT_CONFIG(tooltip)
         self.tableintensity_data3d_2.setToolTip(QCoreApplication.translate("MainWindow", u"Loaded layers (mirrors the table above during this step)", None))
 #endif // QT_CONFIG(tooltip)
+        self.pushButton_contrastAdjustments.setText(QCoreApplication.translate("MainWindow", u"Contrast Adjustments", None))
 #if QT_CONFIG(tooltip)
         self.checkBox_brain_region.setToolTip(QCoreApplication.translate("MainWindow", u"Show the anatomical region name next to the shank line", None))
 #endif // QT_CONFIG(tooltip)

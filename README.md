@@ -7,7 +7,7 @@ IMPLAnT is an open-source graphical user interface (GUI) that unifies all three 
 
 Currently, the GUI contains the following functions:
 
-- **Pre-surgical planning** - register subject MRI data to the WHS brain atlas, letting you plan and visualise electrode trajectories before surgery
+- **Pre-surgical planning** - register subject MRI data to the WHS brain atlas, letting you plan and visualise electrode trajectories before surgery — switch between the bundled MRI/DTI atlas and a higher-resolution microscopy atlas at any time (see [Atlas](#atlas))
 - **Post-implant localisation** - uses semi-supervised pipeline for MR identification tags to localise electrodes after implantation and automatically assign atlas-defined region labels to each channel to facilitate a more accurate analysis 
 - **Electrophysiology data visualisation** - visualises and curates signal data channel-by-channel, directly linked to the anatomical labels from previous steps
 
@@ -34,7 +34,7 @@ As far as we are aware, IMPLAnT is the first open-source tool to bridge this ent
 
 ## Requirements
 
-- **OS**: Linux (tested on Ubuntu 24)
+- **OS**: Linux (tested on Ubuntu 24) or macOS (dependencies pinned for both; from source only for now — no macOS standalone build yet)
 - **Python**: 3.10 (from source only)
 - **ANTs**: required to build from source or to build the standalone executable yourself (see [Dependencies](#dependencies)) — NOT required just to run a pre-built release, its binaries are bundled in
 - **Internet connection**: needed the *first* time you open ephys data, start SAMRI registration, or start trajectory planning — IMPLAnT downloads and caches the ~1.3GB reference atlas automatically at that point (see [Atlas files](#atlas-files)). Not needed to just browse a 3D/4D MRI volume, and not needed again once the atlas is cached locally.
@@ -67,15 +67,17 @@ IMPLAnT requires **ANTs** (Advanced Normalization Tools) for MRI registration. A
 1. Clone the repository, including its submodules (`electrode2geometry`, `rippl-AI`)
    ```
    git clone --recurse-submodules git@github.com:Neurotechnology-at-ETH-Zurich/IMPLAnT.git
+   cd IMPLAnT
    ```
    If you already have a clone without them, fetch the submodules into it with:
    ```
    git submodule update --init --recursive
    ```
-2. Install dependencies
+2. Create a Python 3.10 virtual environment and install dependencies into it
    ```
-   cd IMPLAnT
-   pip install -r requirements.txt
+   python3.10 -m venv .venv
+   source .venv/bin/activate
+   python -m pip install -r requirements.txt
    ```
 3. Install ANTs as described above
 
@@ -83,7 +85,21 @@ IMPLAnT requires **ANTs** (Advanced Normalization Tools) for MRI registration. A
    ```
    python main_window.py
    ```
-   Alternatively, in Qt Creator: open the project and press Ctrl+R
+   Alternatively, run it from Qt Creator — see [Qt Creator](#qt-creator) below.
+
+### Qt Creator
+
+To open the project in Qt Creator, e.g. on a new machine:
+
+1. Open `MRID-GUI.creator` (double-click it, or File → Open File or Project) — Qt Creator picks up `MRID-GUI.files` alongside it automatically as a Generic Project.
+2. **Projects → Build Settings → Build Directory**: set this to the repository root. A Python project has no real build step, but Qt Creator's Generic Project Manager still requires a value here.
+3. **Projects → Run Settings**, on the "Custom Executable" run configuration, set:
+   - **Executable**: `.venv/bin/python` (the virtual environment created above)
+   - **Arguments**: `main_window.py`
+   - **Working directory**: the repository root (not the venv folder)
+4. Press Ctrl+R to run, or Ctrl+F5 to debug — Qt Creator reuses the same Executable/Arguments/Working directory for both, there's nothing extra to set for debugging.
+
+These settings are stored per-machine in `MRID-GUI.creator.user`, so redo steps 2–4 on each new machine.
 
 ### Standalone application
 
@@ -136,6 +152,17 @@ cp paths_config.example.json paths_config.json
 - **From source**: place `paths_config.json` in the repository root
 - **Standalone app**: place `paths_config.json` in the same folder as the `IMPLAnT` executable
 
+### Atlas
+
+IMPLAnT can register and plan against either of two atlases:
+
+| Atlas | What it is | Source |
+|-------|------------|--------|
+| **WHS SD rat (MRI/DTI)** *(default)* | The bundled Waxholm Space atlas described above | Downloaded once, as above |
+| **WHS-aligned SWC female rat (microscopy)** | A higher-resolution microscopy atlas, resampled onto the same WHS coordinate grid | Fetched automatically via [BrainGlobe](https://brainglobe.info/) the first time you select it |
+
+Switch between them via **File → Atlas…**, or live from the dropdown on the Trajectory Planning screen itself. The first time you select the microscopy atlas, IMPLAnT downloads and converts it automatically (a one-time step, same idea as the initial WHS atlas download); every switch after that is instant.
+
 ### MRID library file
 
 The electrode localization feature requires `mrid_library.pkl`, a lookup file specific to your experimental setup. Place it in the repository root (next to `main_window.py`) or next to the `IMPLAnT` executable. If no file is found, you will be prompted to browse for it manually — click **Save** next to the browse field to remember that path in `paths_config.json` (as `mrid_library`) so it's the default on future runs too.
@@ -184,7 +211,7 @@ IMPLAnT follows a four-stage workflow:
 
 **2. During surgery**
 
-On the day of surgery, real bregma/lambda measurements taken on the animal rarely match exactly what was picked on the pre-op MRI. *File → During Surgery* loads the saved report PDF, locates and loads the corresponding scan automatically, and lets you correct bregma/lambda from your manipulator's measured values to get an updated target position (in mm) for each shank. See [`docs/surgery_workflow.md`](docs/surgery_workflow.md) for the full walkthrough.
+On the day of surgery, real bregma/lambda measurements taken on the animal rarely match exactly what was picked on the pre-op MRI. *File → During Surgery* opens the same Load Previous Session picker used throughout the app — pick a prior surgery session, or use *Load New File...* to load a saved Trajectory Report PDF instead. Type the manipulator's measured Bregma/Lambda (RL/AP, in mm from your rig's null point) to get an updated target position for each shank, shown against a fixed dorsal skull reference photo marked with Bregma, Lambda, and each shank's planned insertion point. See [`docs/surgery_workflow.md`](docs/surgery_workflow.md) for the full walkthrough.
 
 **3. Post-implant electrode localisation**
 1. Load the pre-surgical MRI via *File → Load MRI Image*.

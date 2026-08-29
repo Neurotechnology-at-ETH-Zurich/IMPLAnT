@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>2184</width>
-    <height>2248</height>
+    <height>2307</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -4327,6 +4327,18 @@ background-color: rgb(0, 153, 255);</string>
                          </widget>
                          <widget class="QWidget" name="page_33">
                           <layout class="QGridLayout" name="gridLayout_229">
+                           <property name="leftMargin">
+                            <number>0</number>
+                           </property>
+                           <property name="topMargin">
+                            <number>0</number>
+                           </property>
+                           <property name="rightMargin">
+                            <number>0</number>
+                           </property>
+                           <property name="bottomMargin">
+                            <number>0</number>
+                           </property>
                            <item row="0" column="0">
                             <widget class="QTextEdit" name="textEdit_16">
                              <property name="minimumSize">
@@ -4823,6 +4835,18 @@ background-color: rgb(0, 153, 255);</string>
                          </widget>
                          <widget class="QWidget" name="page_32">
                           <layout class="QGridLayout" name="gridLayout_227">
+                           <property name="leftMargin">
+                            <number>0</number>
+                           </property>
+                           <property name="topMargin">
+                            <number>0</number>
+                           </property>
+                           <property name="rightMargin">
+                            <number>0</number>
+                           </property>
+                           <property name="bottomMargin">
+                            <number>0</number>
+                           </property>
                            <item row="0" column="0">
                             <widget class="QTextEdit" name="textEdit_15">
                              <property name="minimumSize">
@@ -5642,7 +5666,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                           </size>
                          </property>
                          <property name="currentIndex">
-                          <number>1</number>
+                          <number>0</number>
                          </property>
                          <widget class="QWidget" name="page_29">
                           <property name="maximumSize">
@@ -6326,7 +6350,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                              <property name="title">
                               <string>Intensity under cursor</string>
                              </property>
-                             <layout class="QGridLayout" name="gridLayout_213" rowstretch="0,0">
+                             <layout class="QGridLayout" name="gridLayout_213" rowstretch="0,0,0">
                               <property name="rightMargin">
                                <number>9</number>
                               </property>
@@ -6382,6 +6406,13 @@ li.checked::marker { content: &quot;\2612&quot;; }
                                   <string>Opacity</string>
                                  </property>
                                 </column>
+                               </widget>
+                              </item>
+                              <item row="2" column="0">
+                               <widget class="QPushButton" name="pushButton_contrastAdjustments">
+                                <property name="text">
+                                 <string>Contrast Adjustments</string>
+                                </property>
                                </widget>
                               </item>
                              </layout>
