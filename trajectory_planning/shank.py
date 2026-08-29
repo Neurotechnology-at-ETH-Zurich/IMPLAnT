@@ -196,8 +196,10 @@ class ShankRendering:
                 # trajectory to clip a 3D view around, so switch any panel
                 # currently in 3D mode back to its plain 2D slice view --
                 # the real toggle each pushButton_*View/change_view_*
-                # already uses (stackedWidget_coronal/sagittal/axial index
-                # 0 = 2D, 1 = 3D), not just a layout/column-width change.
+                # already uses (index 0 = 2D for all three; the 3D/clipped
+                # page is 1 for sagittal/axial, but 2 for coronal -- see
+                # change_view_coronal), not just a layout/column-width
+                # change.
                 for stacked, btn in (
                     (self.ui.stackedWidget_coronal, self.ui.pushButton_coronalView),
                     (self.ui.stackedWidget_sagittal, self.ui.pushButton_sagittalView),
@@ -216,6 +218,18 @@ class ShankRendering:
             # for every shank here would reintroduce the exact per-click
             # lag that caching it in refresh_shanks was meant to avoid.
             self.tp3d_window._select_shank(index, sync_combo=True, sync_table=True)
+
+        # Switching shanks changes which insert point the oblique
+        # constraint view(s) should be anchored on -- without this, picking
+        # a different shank left the panel showing the PREVIOUS shank's
+        # anchor (or reset to the plain 2D page by the insert-is-None
+        # branch above), even though the constraint checkbox was still
+        # checked. _refresh_oblique_views_for_insert (ElecGeometryMri,
+        # electrode_mri.py) already does exactly this re-anchor + re-open
+        # -- hasattr-guarded since select_shank is shared with the plain
+        # (non-MRI) TrajectoryPlanning, which has no oblique views at all.
+        if hasattr(self, '_refresh_oblique_views_for_insert'):
+            self._refresh_oblique_views_for_insert(index)
 
     def compute_shank_regions(self, shank_idx, points):
         """List of dicts, one per brain region the shank physically passes

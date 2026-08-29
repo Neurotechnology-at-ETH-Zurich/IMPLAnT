@@ -9,15 +9,39 @@ from pathlib import Path
 import pandas as pd
 from matplotlib.colors import ListedColormap
 import numpy as np
-from PySide6.QtWidgets import QVBoxLayout, QApplication
+from PySide6.QtWidgets import QVBoxLayout, QApplication, QWidget
 from PySide6.QtCore import Qt
 import nibabel as nib
 import vtk
 from concurrent.futures import ThreadPoolExecutor
 from paths_config import _paths
+from mrid_utils import handlers
 
 
 class Visualisation3D:
+    @staticmethod
+    def _reset_widget_layout(widget):
+        """Trajectory planning's atlas switcher (TpRegistration.
+        reload_atlas_view) re-instantiates Visualisation3D against the
+        newly selected atlas -- without this, the second QVBoxLayout(widget)
+        below would be a no-op (Qt refuses to replace an existing layout),
+        leaving the old QtInteractor as a stray, un-managed child sitting
+        underneath/behind the new one instead of being replaced by it."""
+        old_layout = widget.layout()
+        if old_layout is None:
+            return
+        while old_layout.count():
+            item = old_layout.takeAt(0)
+            child = item.widget()
+            if child is not None:
+                if hasattr(child, 'close'):
+                    child.close()
+                child.deleteLater()
+        # Qt has no widget.setLayout(None) -- reparenting the now-empty
+        # layout onto a throwaway widget is the standard way to detach it
+        # so a fresh QVBoxLayout(widget) below is accepted.
+        QWidget().setLayout(old_layout)
+
     def __init__(self,MW):
         self.MW = MW
         self.ui = MW.ui
@@ -31,6 +55,7 @@ class Visualisation3D:
         #set up layout
         #coronal
         widget = self.ui.vtkWidget_trajPlan_1
+        self._reset_widget_layout(widget)
         pv.global_theme.background = 'black'
         layout = QVBoxLayout(widget) #)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -45,6 +70,7 @@ class Visualisation3D:
         self.plotter_co.renderer.AddActor2D(self.hover_label_co)
         #sagittal
         widget = self.ui.vtkWidget_trajPlan_2
+        self._reset_widget_layout(widget)
         pv.global_theme.background = 'black'
         layout = QVBoxLayout(widget) #)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -59,6 +85,7 @@ class Visualisation3D:
         self.plotter_sa.renderer.AddActor2D(self.hover_label_sa)
         #axial
         widget = self.ui.vtkWidget_trajPlan_3
+        self._reset_widget_layout(widget)
         pv.global_theme.background = 'black'
         layout = QVBoxLayout(widget) #)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -239,36 +266,12 @@ class Visualisation3D:
 
         def load_labels():
             labels_path = os.path.join(_paths['atlas_folder'], _paths['atlas_labels'])
-            if Path(labels_path).is_file():
-                return pd.read_csv(labels_path, comment='#', sep='\s+',
-                                   names=['IDX', 'R', 'G', 'B', 'A', 'VIS', 'MSH', 'LABEL'])
-            return None
+            return handlers.read_itk_snap_labels(labels_path)
 
         def load_background_full_numpy():
             background_path = self.MW.LoadMRI.volumes[0].file_path
             img = nib.load(background_path)
             return np.array(img.header.get_zooms()[:3])
-
-        def load_skull_mesh(scale):
-            # the skull mask (see SegmentationGUI._compute_skull_th_vol /
-            # Registration.warp_skull_mask) already lives in memory on the
-            # same atlas grid as background_small (warp_skull_mask warps it
-            # onto the atlas image directly) -- no file to read here, just
-            # match load_background_mesh's array convention: sitk gives
-            # (z,y,x), nib's get_fdata() (used above) gives (x,y,z).
-            tp = getattr(self.MW.LoadMRI, 'TrajPlanning', None)
-            skull_img = getattr(tp, 'skull_mask_img', None) if tp is not None else None
-            if skull_img is None:
-                return None
-            data = sitk.GetArrayFromImage(skull_img)
-            data = np.transpose(data, (2, 1, 0))[::scale, ::scale, ::scale]
-            zooms = skull_img.GetSpacing()
-            mesh = pv.ImageData()
-            mesh.dimensions = np.array(data.shape) + 1
-            mesh.spacing = tuple(s * scale for s in zooms)
-            mesh.origin = tuple(-s for s in zooms)
-            mesh.cell_data['MASK'] = data.flatten(order='F')
-            return mesh
 
         with ThreadPoolExecutor(max_workers=3) as executor:
             future_small  = executor.submit(load_background_mesh, 3) #2
@@ -280,13 +283,6 @@ class Visualisation3D:
             self.brain_surface_small = self.background_small.extract_surface(algorithm='dataset_surface')
             self.brain_surface_small = self.brain_surface_small.smooth_taubin(n_iter=50, pass_band=0.1)
             self.background_full_zooms = future_full.result()
-
-        self.skull_surface_small = None
-        skull_mesh = load_skull_mesh(3)
-        if skull_mesh is not None:
-            self.skull_surface_small = skull_mesh.threshold(value=0.5)
-            self.skull_surface_small = self.skull_surface_small.extract_surface(algorithm='dataset_surface')
-            self.skull_surface_small = self.skull_surface_small.smooth_taubin(n_iter=50, pass_band=0.1)
 
         max_idx = int(self.atlaslabelsdf['IDX'].max())
         self.rgba = np.zeros((max_idx + 1, 4))
@@ -329,7 +325,7 @@ class Visualisation3D:
                 colors[idx] = self._desaturate(colors[idx], 0.25)
         return (colors * 255).astype(np.uint8)
 
-    def render_clipped(self,normal,view,shank_number,depth=0,recenter=True):
+    def render_clipped(self,normal,view,shank_number,depth=0,recenter=True,only_shank=None,show_plane_and_angle=True):
         p = self.MW.LoadMRI.TrajPlanning.coords_insert_point[shank_number]
         self.insertion_point = np.array(p)
         p = self.MW.LoadMRI.TrajPlanning.coords_deepest_point[shank_number]
@@ -435,22 +431,6 @@ class Visualisation3D:
                     render=False,
                 )
 
-        # --- Skull shell: clipped skull-mask surface, same dark grey as
-        # its 2D-slice overlay (see registration.py's binary_color) ---
-        if self.skull_surface_small is not None:
-            skull_shell = self.skull_surface_small.clip(normal=normal, origin=(x0, y0, z0))
-            if skull_shell.n_cells > 0:
-                plotter.add_mesh(
-                    skull_shell,
-                    color=[0.3, 0.3, 0.3],
-                    opacity=1,
-                    show_scalar_bar=False,
-                    pickable=False,
-                    name='skull_shell',
-                    reset_camera=False,
-                    render=False,
-                )
-
         insertion_poly = pv.PolyData(np.array(self.insertion_point, dtype=np.float32)*self.spacing)
         plotter.add_mesh(
             insertion_poly,
@@ -487,11 +467,16 @@ class Visualisation3D:
             reset_camera=False,
         )
 
-        self.draw_electrode_lines(plotter, shank_number)
+        self.draw_electrode_lines(plotter, shank_number, only_shank=only_shank)
 
         if view in ('coronal', 'sagittal'):
-            self._draw_atlas_reference_plane(plotter, view, (x0, y0, z0))
-            self._draw_shank_angle_indicator(plotter, view, shank_number)
+            # PDF export (file_input_output.py) passes show_plane_and_angle=
+            # False -- that panel now shows the reference plane/angle on the
+            # MRI-space panel instead (see FileOutput._draw_mri_reference_
+            # plane_and_angle), so the atlas panel's copy is switched off
+            # rather than drawn twice.
+            self._draw_atlas_reference_plane(plotter, view, (x0, y0, z0), draw=show_plane_and_angle)
+            self._draw_shank_angle_indicator(plotter, view, shank_number, draw=show_plane_and_angle)
 
         plotter.render()
 
@@ -520,30 +505,34 @@ class Visualisation3D:
             return None, None
         return normal / norm, b
 
-    def _draw_atlas_reference_plane(self, plotter, view, origin_mm):
+    def _draw_atlas_reference_plane(self, plotter, view, origin_mm, draw=True):
         """The full atlas reference plane -- not just its 1D crossing of
         some slice -- drawn as a semi-transparent yellow quad in true 3D
-        space. Coronal uses the bregma/lambda/corpus-callosum plane
-        (matching compute_shank_reference_angle's coronal reference);
-        sagittal uses the bregma-lambda line swept along the ML axis (see
-        _atlas_sagittal_plane_normal_and_point), matching sagittal's own
-        2D reference instead of coronal's plane. Positioned to pass
-        through THIS view's own clip origin (origin_mm, i.e. the current
-        shank's own slicing reference point, projected onto the true
-        plane) so it actually shows up near the currently selected shank
-        instead of sitting wherever the plane's defining atlas points
-        happen to be -- projecting only moves the quad's center along the
-        plane, so every point drawn still lies exactly on the real
-        reference plane."""
+        space. Coronal uses the bregma/lambda reference plane (matching
+        compute_shank_reference_angle's coronal reference -- misalignment-
+        frame-driven, ap_rl_si_frame_from_misalignment, not corpus-
+        callosum-derived); sagittal uses the bregma-lambda line swept
+        along the ML axis (see _atlas_sagittal_plane_normal_and_point),
+        matching sagittal's own 2D reference instead of coronal's plane.
+        Positioned to pass through THIS view's own clip origin (origin_mm,
+        i.e. the current shank's own slicing reference point, projected
+        onto the true plane) so it actually shows up near the currently
+        selected shank instead of sitting wherever the plane's defining
+        atlas points happen to be -- projecting only moves the quad's
+        center along the plane, so every point drawn still lies exactly on
+        the real reference plane."""
         name = f'atlas_ref_plane_{view}'
+        if not draw:
+            if name in plotter.actors:
+                plotter.remove_actor(name, render=False)
+            return
         tp = self.MW.LoadMRI.TrajPlanning
         if view == 'sagittal':
             normal, plane_point = self._atlas_sagittal_plane_normal_and_point(tp)
         else:
-            if getattr(tp, 'atlas_cc_centroid', None) is None:
-                if name in plotter.actors:
-                    plotter.remove_actor(name, render=False)
-                return
+            # _atlas_plane_normal_and_point already returns (None, None) on
+            # its own if bregma/lambda can't form a frame -- see the
+            # `if normal is None` bailout right below.
             normal, plane_point = tp._atlas_plane_normal_and_point()
         if normal is None:
             if name in plotter.actors:
@@ -581,7 +570,7 @@ class Visualisation3D:
         poly.lines = np.array(lines)
         return poly
 
-    def _draw_shank_angle_indicator(self, plotter, view, shank_number=None):
+    def _draw_shank_angle_indicator(self, plotter, view, shank_number=None, draw=True):
         """3D counterpart of TrajectoryPlanning._update_shank_angle_display_
         view: the same shank-vs-atlas-reference angle (caption + arc) shown
         in the 2D view, reusing compute_shank_reference_angle so the angle
@@ -598,7 +587,12 @@ class Visualisation3D:
         indicator uses, since this angle is measured against a fixed
         anatomical plane, not render_clipped's shank-trajectory-relative
         clip plane."""
-        names = (f'shank_angle_label_{view}',)
+        # add_point_labels stores its actor under f'{name}-labels' (and, if
+        # show_points were True, f'{name}-points') -- NOT the bare name
+        # passed in, so removal has to target that same suffixed key or it
+        # silently no-ops (plotter.actors never actually contains the bare
+        # name).
+        names = (f'shank_angle_label_{view}-labels', f'shank_angle_label_{view}-points')
         if not hasattr(self, 'shank_angle_arc2d_actors'):
             self.shank_angle_arc2d_actors = {}
         if not hasattr(self, 'shank_angle_refline2d_actors'):
@@ -614,6 +608,10 @@ class Visualisation3D:
             old_refline2d = self.shank_angle_refline2d_actors.pop(view, None)
             if old_refline2d is not None:
                 plotter.renderer.RemoveActor2D(old_refline2d)
+
+        if not draw:
+            _clear()
+            return
 
         tp = self.MW.LoadMRI.TrajPlanning
         result = tp.compute_shank_reference_angle(view, shank_number)
@@ -792,11 +790,33 @@ class Visualisation3D:
             name=f'shank_angle_label_{view}', render=False, reset_camera=False,
         )
 
-    def draw_electrode_lines(self, plotter, active_shank):
+    def draw_electrode_lines(self, plotter, active_shank, only_shank=None):
+        """only_shank restricts drawing to just that one shank (used by the
+        PDF report's per-shank pages, so a page focused on shank N doesn't
+        also show every other shank's line/label/dots) -- also removes any
+        other shank's actors left over from a previous call on this same
+        (reused) plotter, since add_mesh only overwrites an actor sharing
+        its own name and wouldn't otherwise clear them."""
         tp = self.MW.LoadMRI.TrajPlanning
         dark_grey  = (0.3, 0.3, 0.3)
 
-        for shank_idx in sorted(tp.coords_deepest_point):
+        all_shanks = sorted(tp.coords_deepest_point)
+        if only_shank is not None:
+            for other in all_shanks:
+                if other == only_shank:
+                    continue
+                # add_point_labels stores its actor under f'{name}-labels'
+                # (and, since show_points=False below, never a '-points'
+                # one) -- NOT the bare name passed to it, so the label has
+                # to be removed by that suffixed key or this silently no-ops.
+                for name in (f"electrode_line_{other}", f"shank_label_{other}-labels", f"channel_points_{other}"):
+                    if name in plotter.actors:
+                        plotter.remove_actor(name, render=False)
+            shank_iter = [only_shank] if only_shank in all_shanks else []
+        else:
+            shank_iter = all_shanks
+
+        for shank_idx in shank_iter:
             deep = tp.coords_deepest_point[shank_idx]
             insert = tp.coords_insert_point[shank_idx]
             if deep is None or insert is None:

@@ -28,6 +28,31 @@ class ShankSidebarWidget(QWidget):
     def refresh(self):
         self.update()
 
+    @staticmethod
+    def _high_contrast_color(rgb):
+        """QColor(black) or QColor(white), whichever has the higher WCAG
+        contrast ratio against this region colour -- contrast against white
+        and against black aren't symmetric (e.g. a mid-grey can legitimately
+        read better with black text than white, or vice versa), so picking
+        the actual higher-contrast option is more reliable than a flat
+        "is this light or dark" luminance threshold."""
+        def _linear(c):
+            c = c / 255.0
+            return c / 12.92 if c <= 0.03928 else ((c + 0.055) / 1.055) ** 2.4
+        r, g, b = rgb[:3]
+        luminance = 0.2126 * _linear(r) + 0.7152 * _linear(g) + 0.0722 * _linear(b)
+        contrast_with_white = 1.05 / (luminance + 0.05)
+        contrast_with_black = (luminance + 0.05) / 0.05
+        return QColor(255, 255, 255) if contrast_with_white >= contrast_with_black else QColor(0, 0, 0)
+
+    @staticmethod
+    def _region_index_for_depth(cuts, d):
+        """Which region (index into the `regions`/bands list that produced
+        `cuts`) a given depth falls into, so a dot can be coloured to
+        contrast with the band it's actually drawn on top of."""
+        idx = int(np.searchsorted(cuts, d, side='right')) - 1
+        return int(np.clip(idx, 0, len(cuts) - 2))
+
     def _contact_depths(self, shank_idx, points):
         """Real distance from the shank's shallow end (the insertion point,
         or the shank-end point if that reaches further out -- same
@@ -125,6 +150,22 @@ class ShankSidebarWidget(QWidget):
             if contact_depths_mm is not None and len(contact_depths_mm):
                 depth_min = float(contact_depths_mm.min())
                 depth_max = float(contact_depths_mm.max())
+                # A region entirely before the first contact or entirely
+                # after the last one (e.g. inert shank material, or a real
+                # anatomical region with zero contacts right at the
+                # insertion end) has no overlap with [depth_min, depth_max]
+                # at all -- left in, its outer cut (pinned to depth_min/
+                # depth_max, not to its own d_start/d_end) would land past
+                # its neighbour's cut, collapsing its band to the 1px floor
+                # below while still carrying its full-span, vertically
+                # "centered" text -- which reads as that text sitting
+                # anomalously high, jammed right under the header. Drop it
+                # from the drawn column entirely instead (its contacts, if
+                # any, are already re-homed onto a surviving region by
+                # compute_shank_regions' own carry-forward logic).
+                visible_regions = [r for r in regions if r['d_end'] > depth_min and r['d_start'] < depth_max]
+                if visible_regions:
+                    regions = visible_regions
             else:
                 depth_min = regions[0]['d_start']
                 depth_max = regions[-1]['d_end']
@@ -161,7 +202,10 @@ class ShankSidebarWidget(QWidget):
 
                 painter.save()
                 painter.setClipRect(seg_rect)
-                painter.setPen(QColor(255, 255, 255))
+                # white text washes out on a light region colour (e.g. a
+                # near-white atlas region) -- pick whichever of black/white
+                # actually contrasts better against this region's colour.
+                painter.setPen(self._high_contrast_color(r['color']))
 
                 # channel count, left-aligned -- the most prominent number
                 painter.setFont(count_font)
@@ -193,10 +237,15 @@ class ShankSidebarWidget(QWidget):
                 for y in (first_y, last_y):
                     painter.drawLine(QPointF(x, y), QPointF(x + col_width, y))
 
+                # white-filled dots wash out on a light region colour (e.g.
+                # a near-white atlas region) -- pick whichever of black/
+                # white actually contrasts better against whichever band
+                # each dot is actually drawn on top of.
                 painter.setPen(QPen(QColor(0, 0, 0), 1))
-                painter.setBrush(QColor(255, 255, 255))
                 for d in contact_depths_mm:
                     y = y_for_depth(d)
+                    region_idx = self._region_index_for_depth(cuts, d)
+                    painter.setBrush(self._high_contrast_color(regions[region_idx]['color']))
                     painter.drawEllipse(QPointF(x + col_width / 2, y), self.DOT_RADIUS, self.DOT_RADIUS)
 
         painter.restore()

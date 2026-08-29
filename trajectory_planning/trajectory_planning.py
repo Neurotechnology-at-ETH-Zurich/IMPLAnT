@@ -19,7 +19,6 @@ import re
 
 from mrid_utils.channel_mapper import plot_dwi_1D_cross_section
 import nibabel as nib
-from PySide6.QtWidgets import QDockWidget
 from PySide6.QtGui import QPixmap, QIcon, QColor
 from gui_utils.busy_overlay import BusyOverlay
 from itertools import groupby
@@ -43,6 +42,7 @@ class TrajectoryPlanning(CoordTransform, Rendering, TpRegistration, ElecGeometry
 
         self.main_file = file_names[0]
         self.second_file = file_names[1]
+        self.second_file_layer_index = None
         self.mask_idx = None
         self.shank_number = 0
         self.line_actor = {}
@@ -92,7 +92,6 @@ class TrajectoryPlanning(CoordTransform, Rendering, TpRegistration, ElecGeometry
         self.atlas_shank_end[self.shank_number] = None
 
         self.transform_path = transformPath
-        self.skull_mask_native_path = None
 
         # insertion-point refinement page (page_31, stackedWidget_
         # trajectoryplanning index 2) state -- see electrode.py.
@@ -113,6 +112,15 @@ class TrajectoryPlanning(CoordTransform, Rendering, TpRegistration, ElecGeometry
         self.LoadMRI.picking_insertion_point = False
 
         self.LoadMRI.tp_imgvtk = {}
+        self.LoadMRI.tp_actor = {}
+        # created here (not just later in do_get_shank_line/create_edge_mask)
+        # because TrajectoryPlanningMri.__init__ calls setup_misalignment_
+        # controls -> _ensure_top_renderer right after this constructor
+        # returns, well before do_get_shank_line ever runs -- that needs
+        # tp_renderer to already exist. do_get_shank_line's own reset of
+        # this dict later is harmless: hide_misalignment_guide_line() (MRI
+        # workflow) already removes this actor first.
+        self.LoadMRI.tp_renderer = {}
 
         self.movingidx_bregma, self.movingidx_lambda, atlas_distance = self.get_atlas_coords(self.LoadMRI.volumes[0],transformPath)
         self.ui.spinBox_atlas_bregma_x.setValue(self.movingidx_bregma[0]+1)
@@ -273,15 +281,6 @@ class TrajectoryPlanning(CoordTransform, Rendering, TpRegistration, ElecGeometry
         actually relevant right now, based on live state -- NOT whatever
         popup happened to fire last (that goes stale the moment the user
         moves to a different step/shank than when it was shown)."""
-        seg_dock = self.MW.findChild(QDockWidget, "dock_segmentation")
-        if seg_dock is not None and seg_dock.isVisible():
-            # skull segmentation is its own sub-workflow (threshold/bubbles
-            # or paint/evolution), tracked by stackedWidget_segmentation /
-            # stackedWidget_initialization -- NOT stackedWidget_trajectoryplanning,
-            # which is still sitting at index 0 the whole time this dock is
-            # open, so it has to be checked before anything below.
-            self._popup_segment_skull()
-            return
         if self.ui.stackedWidget_trajectoryplanning.currentIndex() == 0:
             if self.ui.pushButton_paint_done.isVisible():
                 self._popup_red_areas()
@@ -308,16 +307,6 @@ class TrajectoryPlanning(CoordTransform, Rendering, TpRegistration, ElecGeometry
             ["Use the paintbrush to mark, in red, any regions the shank(s) must avoid.",
              "Click 'Continue with Trajectory Planning' when done."])
 
-    def _popup_segment_skull(self):
-        self.show_step_popup(
-            "Segment the Skull",
-            ["Enable 'Threshold' and set the intensity threshold (skull is "
-             "dark) and the search radius around the existing brain mask.",
-             "The brain mask shows red, the computed skull mask stays "
-             "transparent (so you can check it's actually bone), and "
-             "everything the radius/threshold rule out is purple -- all "
-             "updating live as you adjust the controls.",
-             "Click 'Finish Skull Segmentation' when you're happy with it."])
 
     def _popup_geometry(self):
         self.show_step_popup(

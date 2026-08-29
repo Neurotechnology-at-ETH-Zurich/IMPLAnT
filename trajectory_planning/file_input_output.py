@@ -1,7 +1,7 @@
 # This Python file uses the following encoding: utf-8
-from PySide6 import QtWidgets
+from PySide6 import QtWidgets, QtGui
 from PySide6.QtWidgets import QFileDialog
-from PySide6.QtCore import QBuffer, QIODevice
+from PySide6.QtCore import QBuffer, QIODevice, Qt
 import os
 import re
 import sys
@@ -17,6 +17,7 @@ from pypdf import PdfReader, PdfWriter
 import sys
 from gui_utils.busy_overlay import BusyOverlay
 from paths_config import _paths
+from during_surgery.buttons_gui_surgery import build_skull_reference_scene, _PHOTO_CREDIT
 
 class FileInput(QtWidgets.QDialog):
     """
@@ -149,12 +150,16 @@ class FileOutput(QtWidgets.QDialog):
     """Save a trajectory planning report as a multi-page PDF: one page per
     shank with its coronal + sagittal clipped views (each re-clipped to
     that shank's own trajectory, since shanks don't all lie on the same
-    slice) and a numeric caption, followed by the shank geometry plot and
-    a rendered-text summary page with the per-shank numbers. The same
-    numbers -- plus the exact bregma/lambda/shank coordinates needed to
-    reconstruct the plan -- are also embedded as a JSON file attachment
-    inside the PDF (see _attach_reload_data), since the visible pages are
-    flattened bitmaps with no extractable text of their own."""
+    slice) plus that shank's region sidebar and a numeric caption, followed
+    by a rendered-text summary page with the per-shank numbers. Each page
+    shows only the focused shank's own geometry (other shanks are hidden),
+    and the reference plane + roll/pitch angle indicator is drawn on the
+    MRI-space panel only (not the atlas panel) since that's the physically
+    meaningful space. The same numbers -- plus the exact bregma/lambda/
+    shank coordinates needed to reconstruct the plan -- are also embedded
+    as a JSON file attachment inside the PDF (see _attach_reload_data),
+    since the visible pages are flattened bitmaps with no extractable text
+    of their own."""
 
     def __init__(self, MW, mri_file_path,parent=None):
         super().__init__(parent)
@@ -197,15 +202,12 @@ class FileOutput(QtWidgets.QDialog):
         # than needed for a report filename -- keep just the animal ("sub-…",
         # stopping at the next "_key-" segment so an underscore inside the
         # subject id itself, e.g. "sub-rEO_10", isn't mistaken for a
-        # boundary) and the trailing "ind_N" (this scan's own per-volume
-        # index, see utils/mrid_inputdialog.py's identical "ind_" convention).
-        # Falls back to the full stem if either piece isn't found, rather
-        # than silently producing a garbled/empty name for a differently
-        # named file.
+        # boundary)
+        # Falls back to the full stem if animal id isn't found, rather
+        # than silently producing a garbled/empty name
         sub_match = re.match(r'(sub-.+?)(?=_[A-Za-z]+-|$)', subject_id)
-        ind_match = re.search(r'(ind_\d+)$', subject_id)
-        short_id = f"{sub_match.group(1)}-{ind_match.group(1)}" if sub_match and ind_match else subject_id
-        default_path = f"{os.path.dirname(mri_file_path)}/trajectory_planning-{short_id}.pdf"
+        short_id = f"{sub_match.group(1)}" if sub_match else subject_id
+        default_path = f"{os.path.dirname(mri_file_path)}/{short_id}-trajectory_planning.pdf"
         self.path_edit.setText(default_path)
         path_layout.addWidget(browse)
         layout.addLayout(path_layout)
@@ -270,16 +272,86 @@ class FileOutput(QtWidgets.QDialog):
 
     def capture_pages(self, tp, summary):
         pages = []
+        pages.append(self._cover_page(summary))
         pages.extend(self._capture_shank_views(tp, summary))
-
-        dfx_plot = getattr(tp, "dfx_plot", None)
-        if dfx_plot is not None and getattr(tp, "dfx_shank_data", None):
-            pages.append(self._label_page(self._grab_widget(dfx_plot), "Shank geometry"))
-
         pages.append(self._summary_page(summary))
         return pages
 
     _PDF_PANEL_SIZE = (600, 600)
+
+    def _render_scene(self, scene):
+        """Same QBuffer/PNG/PIL conversion as _grab_widget, but for a
+        QGraphicsScene with no backing widget to .grab() (see _cover_page)."""
+        rect = scene.sceneRect()
+        pixmap = QtGui.QPixmap(int(rect.width()), int(rect.height()))
+        pixmap.fill(Qt.white)
+        painter = QtGui.QPainter(pixmap)
+        scene.render(painter)
+        painter.end()
+        buffer = QBuffer()
+        buffer.open(QIODevice.OpenModeFlag.WriteOnly)
+        pixmap.save(buffer, "PNG")
+        return Image.open(io.BytesIO(bytes(buffer.data())))
+
+    def _wrap_text_to_width(self, draw, text, font, max_width):
+        """Greedy word-wrap by actual rendered pixel width (via draw.
+        textlength), not a fixed character count -- textwrap.wrap's char
+        count assumes a fixed page width, but this page's width is driven
+        by the skull photo's own (portrait, narrow) aspect ratio, not a
+        constant."""
+        words = text.split()
+        lines, current = [], ""
+        for word in words:
+            candidate = f"{current} {word}".strip()
+            if current and draw.textlength(candidate, font=font) > max_width:
+                lines.append(current)
+                current = word
+            else:
+                current = candidate
+        if current:
+            lines.append(current)
+        return lines
+
+    def _cover_page(self, summary):
+        """First page of the report: the exact same skull-reference photo
+        (Bregma/Lambda markers, AP/RL axis indicator, per-shank insertion-
+        point markers) the Surgery tab's widget_axialView shows -- built
+        from during_surgery/buttons_gui_surgery.py's own scene-construction
+        code (build_skull_reference_scene), not a re-derivation of it, so
+        this page can never drift out of sync with what the Surgery tab
+        actually displays. Rendered once, statically, so the plan carries
+        this reference even before/without the Surgery tab ever being
+        opened for this animal.
+
+        The photo itself is narrow/portrait (a dorsal skull crop), so the
+        page canvas is padded out to at least as wide as the other report
+        pages (_summary_page's own 850px) rather than staying photo-width
+        -- otherwise the title/citation text has nowhere to fit and this
+        page reads as a tiny sliver next to the rest of the report."""
+        scene, _photo_item = build_skull_reference_scene(summary)
+        img = self._render_scene(scene).convert("RGB")
+
+        font_title = ImageFont.load_default(size=22)
+        font_caption = ImageFont.load_default(size=14)
+        page_width = max(850, img.width + 40)
+        title_band_h = 40
+
+        canvas_probe = Image.new("RGB", (1, 1))
+        wrapped_credit = self._wrap_text_to_width(
+            ImageDraw.Draw(canvas_probe), _PHOTO_CREDIT, font_caption, page_width - 40)
+        credit_band_h = 10 + 18 * len(wrapped_credit)
+
+        canvas = Image.new("RGB", (page_width, title_band_h + img.height + credit_band_h), "white")
+        draw = ImageDraw.Draw(canvas)
+        draw.text((10, 10), "Skull Reference", fill="black", font=font_title)
+        canvas.paste(img, ((page_width - img.width) // 2, title_band_h))
+
+        y = title_band_h + img.height + 6
+        for line in wrapped_credit:
+            w = draw.textlength(line, font=font_caption)
+            draw.text(((canvas.width - w) / 2, y), line, fill=(120, 120, 120), font=font_caption)
+            y += 18
+        return canvas
 
     def _placeholder_image(self, reference_img):
         """Grey stand-in for a panel that couldn't be rendered (e.g. no
@@ -301,7 +373,10 @@ class FileOutput(QtWidgets.QDialog):
         own directions can disagree slightly). Atlas-space reuses the
         on-screen Vis3D clipped-view panes; MRI-space uses dedicated
         off-screen plotters, since it has no visible on-screen counterpart
-        -- see _render_clipped_mri."""
+        -- see _render_clipped_mri. Every panel is restricted to just the
+        focused shank (other shanks' lines/dots/labels are hidden), and the
+        page ends with that shank's region sidebar appended alongside the
+        four panels."""
         pages = []
         vis = getattr(tp, "Vis3D", None)
         have_mri = getattr(tp, 'movingImg_resampled', None) is not None
@@ -313,8 +388,12 @@ class FileOutput(QtWidgets.QDialog):
         prev_coronal = tp.ui.stackedWidget_coronal.currentIndex()
         prev_sagittal = tp.ui.stackedWidget_sagittal.currentIndex()
         if vis is not None:
-            tp.ui.stackedWidget_coronal.setCurrentIndex(1)
-            tp.ui.stackedWidget_sagittal.setCurrentIndex(1)
+            # page 1 now holds the oblique-reslice widgets for
+            # checkBox_constraint_90deg (coronal) / _coronal (sagittal) --
+            # the clipped-3D-view pages moved to page 2 on both, see
+            # change_view_coronal/change_view_sagittal.
+            tp.ui.stackedWidget_coronal.setCurrentIndex(2)
+            tp.ui.stackedWidget_sagittal.setCurrentIndex(2)
             QtWidgets.QApplication.processEvents()
 
         plotter_co = pv.Plotter(off_screen=True, window_size=self._PDF_PANEL_SIZE) if have_mri else None
@@ -350,8 +429,15 @@ class FileOutput(QtWidgets.QDialog):
                 img_atlas_co = img_atlas_sa = None
                 if vis is not None:
                     normal_co, normal_sa = clip_normals(direction)
-                    vis.render_clipped(normal_co, 'coronal', shank_num)
-                    vis.render_clipped(normal_sa, 'sagittal', shank_num)
+                    # only_shank hides every other shank's line/label/dots so
+                    # this page shows just the focused shank; show_plane_and_
+                    # angle=False keeps the reference plane/angle indicator
+                    # off the atlas panel -- it's now drawn on the MRI panel
+                    # instead (see _render_clipped_mri).
+                    vis.render_clipped(normal_co, 'coronal', shank_num,
+                                        only_shank=shank_num, show_plane_and_angle=False)
+                    vis.render_clipped(normal_sa, 'sagittal', shank_num,
+                                        only_shank=shank_num, show_plane_and_angle=False)
                     QtWidgets.QApplication.processEvents()
                     # the on-screen atlas panes are whatever size their widget
                     # happens to be (usually much smaller than the MRI-space
@@ -423,6 +509,18 @@ class FileOutput(QtWidgets.QDialog):
                 entry = summary["shanks"].get(f"shank_{shank_num + 1}")
                 if entry is not None:
                     page = self._overlay_caption(page, self._shank_caption(entry))
+
+                sidebar_img = self._grab_shank_sidebar(tp, shank_num)
+                if sidebar_img is not None:
+                    sidebar_panel = self._label_page(sidebar_img, f"Shank {shank_num + 1} - Regions")
+                    scale = page.height / sidebar_panel.height
+                    sidebar_panel = sidebar_panel.resize(
+                        (max(int(sidebar_panel.width * scale), 1), page.height))
+                    combined = Image.new("RGB", (page.width + sidebar_panel.width, page.height), "white")
+                    combined.paste(page, (0, 0))
+                    combined.paste(sidebar_panel, (page.width, 0))
+                    page = combined
+
                 pages.append(page)
         finally:
             if vis is not None:
@@ -443,15 +541,21 @@ class FileOutput(QtWidgets.QDialog):
         """Cached pv.ImageData of the subject's OWN MRI intensity data, in
         true MRI space (movingImg_resampled's own grid -- no atlas warp
         involved, this literally IS the real scan the animal was scanned
-        with), masked down to just the brain via mri_grid_not_background_
-        mask (excludes atlas label 0, "Clear Label"/background, reprojected
-        onto this grid via the atlas<->MRI correspondence table)."""
+        with). The ENTIRE slice, not masked down to just the brain --
+        this used to zero out (and, via the threshold below, geometrically
+        remove) every voxel mri_grid_not_background_mask called
+        background, but that mask is only a coarse, strided nearest-
+        neighbour approximation of the atlas<->MRI correspondence, so it
+        could clip real anatomy near the brain/skull boundary, not just
+        the skull/scalp it was deliberately excluding -- exactly what
+        made the MRI-space report panel look cut off. The threshold below
+        now runs directly on the real MRI intensities, so it only drops
+        genuinely black/background (air) voxels, the same natural crop
+        any grayscale scan gets, not an atlas-derived one."""
         if getattr(self, '_mri_masked_volume', None) is not None:
             return self._mri_masked_volume
         mri_img = tp.movingImg_resampled
         data_zyx = sitk.GetArrayFromImage(mri_img).astype(np.float32)
-        mask = tp.mri_grid_not_background_mask()
-        data_zyx = np.where(mask, data_zyx, 0.0)
         data_xyz = np.transpose(data_zyx, (2, 1, 0))
         vol = pv.ImageData()
         vol.dimensions = np.array(data_xyz.shape) + 1
@@ -506,7 +610,22 @@ class FileOutput(QtWidgets.QDialog):
             opacity=1, style='surface', pickable=False, name='mri_slab',
             reset_camera=False, render=False,
         )
+        # Every add_mesh call in this method uses reset_camera=False (same
+        # convention as the atlas-space render_clipped this mirrors), so
+        # the camera's actual zoom (parallel_scale) is never touched here
+        # -- fine for render_clipped's on-screen plotters, which already
+        # inherited a sensible scale from earlier interactive use, but
+        # this plotter is a brand-new off-screen pv.Plotter created purely
+        # for this PDF export (_capture_shank_views), so without this it
+        # sat at whatever VTK's raw default scale is -- unrelated to this
+        # slab's actual size in mm -- and the MRI-space panel came out
+        # severely cropped. reset_camera() here fits to the slab's own
+        # bounds while preserving the position/focal_point/up already set
+        # above (parallel projection only needs a new parallel_scale, not
+        # a different camera pose, to fit new bounds).
+        plotter.reset_camera()
         self._draw_electrode_lines_mri(plotter, tp, shank_number)
+        self._draw_mri_reference_plane_and_angle(plotter, tp, shank_number, view)
         return True
 
     _MRI_SHANK_TIP_EXTENSION_MM = 4.0  # matches draw_electrode_lines' atlas-space convention
@@ -515,59 +634,217 @@ class FileOutput(QtWidgets.QDialog):
         """MRI-space analogue of Visualisation3D.draw_electrode_lines --
         without this, the MRI-space report pages showed a bare anatomical
         slice with no indication of the planned trajectory at all. Draws
-        every shank's own line, extended past the insertion point (outside
-        the brain, same distance/convention as the atlas-space version),
-        plus channel-point dots for the non-active shanks; the active
-        shank is left dot-free and drawn thicker, exactly matching
-        draw_electrode_lines' own convention."""
+        only active_shank's own line (other shanks are intentionally left
+        out -- this page is focused on one shank, see _capture_shank_views),
+        extended past the insertion point (outside the brain, same
+        distance/convention as the atlas-space version), plus bregma/lambda
+        markers labelled "b"/"l" (same red/green convention as
+        CoordTransform.get_bregma/get_lambda)."""
         spacing = np.array(tp.movingImg_resampled.GetSpacing())
-        atlas_spacing = np.array(tp.fixedImg.GetSpacing())
-        dark_grey = (0.3, 0.3, 0.3)
-        for shank_idx in sorted(tp.mri_deep):
-            deep = tp.mri_deep.get(shank_idx)
-            insert = tp.mri_insert.get(shank_idx)
-            if deep is None or insert is None:
-                continue
+        deep = tp.mri_deep.get(active_shank)
+        insert = tp.mri_insert.get(active_shank)
+        if deep is not None and insert is not None:
             deep_mm = np.array(deep, dtype=float) * spacing
             insert_mm = np.array(insert, dtype=float) * spacing
             direction = insert_mm - deep_mm
             length = np.linalg.norm(direction)
-            if length < 1e-6:
-                continue
-            direction /= length
-            end_mm = insert_mm + direction * self._MRI_SHANK_TIP_EXTENSION_MM
+            if length >= 1e-6:
+                direction /= length
+                end_mm = insert_mm + direction * self._MRI_SHANK_TIP_EXTENSION_MM
+                color = tp.get_shank_vtk_color(active_shank) if hasattr(tp, 'get_shank_vtk_color') else (0.0, 1.0, 28 / 255)
 
-            is_active = (shank_idx == active_shank)
-            color = tp.get_shank_vtk_color(shank_idx) if hasattr(tp, 'get_shank_vtk_color') else (0.0, 1.0, 28 / 255)
+                plotter.add_mesh(
+                    pv.Line(deep_mm, end_mm), color=color, opacity=1.0,
+                    line_width=4, name=f"mri_electrode_line_{active_shank}",
+                    render=False, reset_camera=False,
+                )
+                label_pt = pv.PolyData(end_mm.reshape(1, 3))
+                plotter.add_point_labels(
+                    label_pt, [f"Shank {active_shank + 1}"],
+                    text_color='white', font_size=16, shape=None, bold=True, shadow=False,
+                    show_points=False, always_visible=True,
+                    name=f"mri_shank_label_{active_shank}", render=False, reset_camera=False,
+                )
 
+        if tp.coords_bregma is not None and tp.coords_lambda is not None:
+            bregma_mm = np.array(tp.coords_bregma, dtype=float) * spacing
+            lambda_mm = np.array(tp.coords_lambda, dtype=float) * spacing
+            for name_prefix, point_mm, color, letter in (
+                    ('bregma', bregma_mm, (1.0, 0.0, 0.0), 'b'),
+                    ('lambda', lambda_mm, (0.0, 1.0, 0.0), 'l')):
+                plotter.add_mesh(
+                    pv.Sphere(radius=0.5, center=point_mm), color=color, lighting=False,
+                    pickable=False, name=f'mri_{name_prefix}_point', render=False, reset_camera=False,
+                )
+                plotter.add_point_labels(
+                    pv.PolyData(point_mm.reshape(1, 3)), [letter],
+                    text_color=color, font_size=14, shape=None, bold=True, shadow=False,
+                    show_points=False, always_visible=True,
+                    name=f'mri_{name_prefix}_label', render=False, reset_camera=False,
+                )
+
+    def _draw_mri_reference_plane_and_angle(self, plotter, tp, shank_number, view):
+        """MRI-space analogue of Visualisation3D._draw_atlas_reference_plane
+        + _draw_shank_angle_indicator -- draws the same bregma-lambda-CC-
+        anchored reference plane and roll/pitch angle arc, computed
+        directly in true MRI space (bregma/lambda/CC/insert/deep, all in
+        MRI voxel indices * movingImg_resampled spacing) rather than atlas
+        space, since the PDF report now shows this indicator on the
+        MRI-space panel only -- see render_clipped's show_plane_and_angle
+        and _capture_shank_views. Angle text has no "(MRI)"/"(Atlas)" suffix
+        since there's no longer an atlas-space copy to disambiguate from."""
+        if tp.coords_bregma is None or tp.coords_lambda is None:
+            return
+        mri_insert = tp.mri_insert.get(shank_number)
+        mri_deep = tp.mri_deep.get(shank_number)
+        if mri_insert is None or mri_deep is None:
+            return
+        roll_pitch = tp.compute_shank_roll_pitch_mri(shank_number)
+        if roll_pitch is None:
+            return
+        roll_deg, pitch_deg = roll_pitch
+        angle = roll_deg if view == 'coronal' else pitch_deg
+
+        spacing = np.array(tp.movingImg_resampled.GetSpacing())
+        bregma_mm = np.array(tp.coords_bregma, dtype=float) * spacing
+        lambda_mm = np.array(tp.coords_lambda, dtype=float) * spacing
+        misalignment_deg = getattr(tp, 'coronal_misalignment_deg', 0.0)
+        frame = tp.ap_rl_si_frame_from_misalignment(bregma_mm, lambda_mm, misalignment_deg)
+        if frame is None:
+            return
+        ap_axis, rl_axis, si_axis = frame
+        # roll (coronal) = angle from vertical (SI), within the RL-SI
+        # plane, dropping the AP component entirely; pitch (sagittal) =
+        # angle from the AP line, within the AP-SI plane, dropping RL
+        # entirely -- same 2D-angle-to-reference-line convention as
+        # compute_shank_roll_pitch_mri (NOT the angle to a plane -- that
+        # would fold the dropped component's magnitude back in instead of
+        # discarding it).
+        if view == 'coronal':
+            drop_axis, reference_axis = ap_axis, si_axis
+        else:
+            drop_axis, reference_axis = rl_axis, ap_axis
+
+        insert_mm = np.array(mri_insert, dtype=float) * spacing
+        deep_mm = np.array(mri_deep, dtype=float) * spacing
+        shank_vec = insert_mm - deep_mm
+        shank_dist = float(np.linalg.norm(shank_vec))
+        if shank_dist <= 1e-9:
+            return
+        shank_dir = shank_vec / shank_dist
+        # Project OUT drop_axis (discard that component) rather than
+        # project ONTO a plane_normal's plane -- the arc is then drawn
+        # between this projection and reference_axis, not between
+        # shank_dir and its own projection (which would just reproduce the
+        # old line-to-plane angle).
+        shank_proj = shank_dir - np.dot(shank_dir, drop_axis) * drop_axis
+        proj_norm = np.linalg.norm(shank_proj)
+        if proj_norm <= 1e-9:
+            return
+        shank_proj /= proj_norm
+
+        # reference_axis is undirected (a line, not a ray) -- flip it onto
+        # whichever side shank_proj is actually on so the arc always spans
+        # the true (<=90 deg) angle, matching abs() in the arctan2 formula.
+        reference_dir = reference_axis if np.dot(shank_proj, reference_axis) >= 0 else -reference_axis
+
+        # The plane (spanned by whatever's perpendicular to drop_axis)
+        # only passes through bregma_mm -- insert_mm generally sits off it
+        # by some offset along drop_axis (it has no reason to be exactly
+        # at zero RL/SI offset from bregma), so a line THROUGH insert_mm
+        # was floating off the plane's surface even though its direction
+        # (shank_proj) was correctly parallel to it. Project insert_mm
+        # onto the plane first and anchor the plane's own rendered patch,
+        # the dashed reference line, and the arc all at that projected
+        # point -- same "recenter the visible patch onto the shank" trick
+        # Visualisation3D._draw_atlas_reference_plane uses -- so the
+        # dashed line is exactly ON the plane and everything sits right
+        # next to the shank instead of off at bregma.
+        plane_point = insert_mm - np.dot(insert_mm - bregma_mm, drop_axis) * drop_axis
+
+        bl_dist = float(np.linalg.norm(lambda_mm - bregma_mm))
+        size = max(bl_dist * 3, 1.0)
+        plotter.add_mesh(
+            pv.Plane(center=plane_point, direction=drop_axis, i_size=size, j_size=size),
+            color='yellow', opacity=0.25, show_edges=False,
+            name=f'mri_ref_plane_{view}', render=False, reset_camera=False,
+        )
+
+        radius = max(shank_dist * 0.4, 2.0)
+
+        # Dotted white line lying IN the reference plane, through
+        # plane_point along reference_dir -- this is the line the angle is
+        # measured against ("the angle end"). The arc is drawn between
+        # shank_proj and this exact same direction from this same point, so
+        # it visually spans from the shank's projection to this dotted
+        # line, not to an arbitrary/invisible/off-plane endpoint.
+        refline_mesh = self._dashed_line_mesh(
+            plane_point - reference_dir * radius * 1.2, plane_point + reference_dir * radius * 1.2)
+        plotter.add_mesh(
+            refline_mesh, color='white', line_width=2,
+            name=f'mri_angle_refline_{view}', render=False, reset_camera=False,
+        )
+
+        arc_mesh = self._dashed_arc_mesh(plane_point, reference_dir, shank_proj, radius)
+        if arc_mesh is not None:
             plotter.add_mesh(
-                pv.Line(deep_mm, end_mm), color=color, opacity=1.0,
-                line_width=4 if is_active else 2, name=f"mri_electrode_line_{shank_idx}",
-                render=False, reset_camera=False,
-            )
-            label_pt = pv.PolyData(end_mm.reshape(1, 3))
-            plotter.add_point_labels(
-                label_pt, [f"Shank {shank_idx + 1}"],
-                text_color='white', font_size=16, shape=None, bold=True, shadow=False,
-                show_points=False, always_visible=True,
-                name=f"mri_shank_label_{shank_idx}", render=False, reset_camera=False,
+                arc_mesh, color='cyan', line_width=3,
+                name=f'mri_angle_arc_{view}', render=False, reset_camera=False,
             )
 
-            if not is_active:
-                pts = tp.channel_points.get(shank_idx)
-                if pts is not None and len(pts) > 0:
-                    # channel_points are stored in atlas voxel coordinates --
-                    # same atlas-mm -> mri-idx -> mri-mm conversion used
-                    # throughout the codebase for warping points into MRI
-                    # space (see atlas_points_to_mri_indices's own docstring).
-                    pts_mm = np.asarray(pts, dtype=float) * atlas_spacing
-                    mri_pts_mm = tp.atlas_points_to_mri_indices(pts_mm) * spacing
-                    plotter.add_mesh(
-                        pv.PolyData(mri_pts_mm.astype(np.float32)), color=dark_grey,
-                        point_size=6, name=f"mri_channel_points_{shank_idx}",
-                        render_points_as_spheres=True, render=False,
-                        show_scalar_bar=False, reset_camera=False,
-                    )
+        label_pt = pv.PolyData((plane_point + (reference_dir + shank_proj) * (radius / 2)).reshape(1, 3))
+        plotter.add_point_labels(
+            label_pt, [f"{angle:.1f}°"],
+            text_color='cyan', font_size=16, shape=None, bold=True, shadow=False,
+            show_points=False, always_visible=True,
+            name=f'mri_angle_label_{view}', render=False, reset_camera=False,
+        )
+
+    @staticmethod
+    def _dashed_arc_mesh(center, dir1, dir2, radius, n_dashes=16):
+        """Dashed arc of the given radius around `center`, sweeping from
+        dir1 to dir2 (both unit vectors from center) -- same technique as
+        trajectory_planning_3d/window.py's identical helper (Rodrigues'
+        rotation formula, walked in alternating on/off segments). Returns
+        None if dir1/dir2 are ~parallel (no well-defined sweep plane)."""
+        dir1 = np.asarray(dir1, dtype=float)
+        dir2 = np.asarray(dir2, dtype=float)
+        sweep = np.arccos(np.clip(np.dot(dir1, dir2), -1.0, 1.0))
+        axis = np.cross(dir1, dir2)
+        axis_norm = np.linalg.norm(axis)
+        if sweep < 1e-6 or axis_norm < 1e-9:
+            return None
+        axis /= axis_norm
+        t = np.linspace(0.0, sweep, n_dashes * 2 + 1)
+        c, s = np.cos(t), np.sin(t)
+        rotated = (dir1[None, :] * c[:, None] + np.cross(axis, dir1)[None, :] * s[:, None]
+                   + axis[None, :] * np.dot(axis, dir1) * (1 - c)[:, None])
+        points = np.asarray(center, dtype=float)[None, :] + rotated * radius
+        lines = []
+        for i in range(0, len(points) - 1, 2):
+            lines.extend([2, i, i + 1])
+        poly = pv.PolyData()
+        poly.points = points
+        poly.lines = np.array(lines)
+        return poly
+
+    @staticmethod
+    def _dashed_line_mesh(p1, p2, n_dashes=16):
+        """Dashed/dotted straight line from p1 to p2, same alternating-
+        segment technique (and same reason -- VTK's own line stippling
+        doesn't render reliably here) as the identical helpers in
+        visualisation3D.py and trajectory_planning_3d/window.py."""
+        p1 = np.asarray(p1, dtype=float)
+        p2 = np.asarray(p2, dtype=float)
+        t = np.linspace(0.0, 1.0, n_dashes * 2 + 1)
+        points = p1[None, :] + t[:, None] * (p2 - p1)[None, :]
+        lines = []
+        for i in range(0, len(points) - 1, 2):
+            lines.extend([2, i, i + 1])
+        poly = pv.PolyData()
+        poly.points = points
+        poly.lines = np.array(lines)
+        return poly
 
     def _screenshot_plotter(self, plotter):
         """Grab pixels straight from the render window's back buffer rather
@@ -594,6 +871,27 @@ class FileOutput(QtWidgets.QDialog):
         buffer.open(QIODevice.OpenModeFlag.WriteOnly)
         pixmap.save(buffer, "PNG")
         return Image.open(io.BytesIO(bytes(buffer.data())))
+
+    def _grab_shank_sidebar(self, tp, shank_num):
+        """Screenshot of the region sidebar (ShankSidebarWidget) for
+        shank_num specifically -- it only ever paints tp.shank_number (the
+        currently GUI-selected shank), so the selection is swapped to
+        shank_num, repainted synchronously, grabbed, then restored. Setting
+        shank_number is a plain attribute assignment with no signal/slot
+        side effects of its own (see select_shank in shank.py for the real
+        UI-driven path); repaint() forces an immediate synchronous paint so
+        no stray Qt event can be processed while the selection is swapped."""
+        sidebar = getattr(tp, "shank_sidebar", None)
+        if sidebar is None:
+            return None
+        prev_shank_number = tp.shank_number
+        try:
+            tp.shank_number = shank_num
+            sidebar.repaint()
+            return self._grab_widget(sidebar)
+        finally:
+            tp.shank_number = prev_shank_number
+            sidebar.repaint()
 
     def _label_page(self, img, title):
         img = img.convert("RGB")

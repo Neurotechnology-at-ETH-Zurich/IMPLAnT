@@ -12,6 +12,32 @@ from electrode2geometry.python.geometry_core import (
 from trajectory_planning.shank import NEON_COLORS, _make_color_icon
 
 
+def ensure_dfx_plot(widget_dfx):
+    """Returns widget_dfx's PlotWidget, creating it (and widget_dfx's
+    layout) on first use. widget_dfx is a bare placeholder in the .ui with
+    no layout of its own -- both trajectory planning (DfxGeometry, below)
+    and 4D electrode localisation (core/dfx_geometry_4d.py) share this same
+    widget instance, so whichever runs first builds the plot and whichever
+    runs after reuses it instead of trying to give widget_dfx a second
+    layout (Qt raises on that)."""
+    layout = widget_dfx.layout()
+    if layout is not None and layout.count():
+        return layout.itemAt(0).widget()
+
+    plot = pg.PlotWidget(background="k")
+    plot.setAspectLocked(True)
+    plot.showGrid(x=True, y=True, alpha=0.3)
+    plot.setLabel("bottom", "ML from center (µm)")
+    plot.setLabel("left", "DV (µm)")
+    plot.addLegend()
+
+    if layout is None:
+        layout = QVBoxLayout(widget_dfx)
+        layout.setContentsMargins(0, 0, 0, 0)
+    layout.addWidget(plot)
+    return plot
+
+
 class DfxGeometry:
     """
     Shank Geometry panel: bends a DXF electrode drawing toward a V-tip
@@ -29,33 +55,73 @@ class DfxGeometry:
         self.dfx_xml_nchannels = 0
         self.dfx_shank_data = {}  # shank_number -> {"geometry", "channels", "dxf_file", "result"}
 
-        self.dfx_plot = pg.PlotWidget(background="k")
-        self.dfx_plot.setAspectLocked(True)
-        self.dfx_plot.showGrid(x=True, y=True, alpha=0.3)
-        self.dfx_plot.setLabel("bottom", "ML from center (µm)")
-        self.dfx_plot.setLabel("left", "DV (µm)")
-        self.dfx_plot.addLegend()
-        dfx_layout = QVBoxLayout(self.ui.widget_dfx)
-        dfx_layout.setContentsMargins(0, 0, 0, 0)
-        dfx_layout.addWidget(self.dfx_plot)
+        self.dfx_plot = ensure_dfx_plot(self.ui.widget_dfx)
 
         self.ui.stackedWidget_dfx.setCurrentIndex(0)
-        self.ui.pushButton_geometry_dfx.clicked.connect(self.show_dfx_panel)
-        self.ui.pushButton_geometry_dfx.clicked.connect(self.show_geometry_step_popup)
-        self.ui.pushButton_dfx_ok.clicked.connect(self.hide_dfx_panel)
-        self.ui.pushButton_dfx.clicked.connect(self.browse_dfx_file)
-        self.ui.pushButton_xml.clicked.connect(self.browse_dfx_xml)
-        self.ui.pushButton_dfx_run.clicked.connect(self.run_dfx_bending)
-        self.ui.pushButton_plot_probe.clicked.connect(self.add_dfx_shank)
-        self.ui.pushButton_export.clicked.connect(self.export_dfx_json)
-        self.ui.checkBox_defaultchannels.toggled.connect(self.update_default_channels)
 
         # Mirrors comboBox_Shanks so a shank can be picked without leaving
-        # this panel; both stay in sync via select_shank (shank.py).
+        # this panel; both stay in sync via select_shank (shank.py). Added
+        # before _connect_dfx_signals wires currentIndexChanged below, same
+        # as comboBox_Shanks itself (trajectory_planning.py), so this first
+        # item doesn't fire select_shank prematurely.
         self.ui.comboBox_geometry_shanks.addItem("Shank 1")
         self.ui.comboBox_geometry_shanks.setItemData(0, 0)
         self.ui.comboBox_geometry_shanks.setItemIcon(0, _make_color_icon(0))
-        self.ui.comboBox_geometry_shanks.currentIndexChanged.connect(self.select_shank)
+
+        self._connect_dfx_signals()
+
+    def _connect_dfx_signals(self):
+        """(Re)wires page_24's buttons to this trajectory-planning instance.
+        Called from init_dfx_geometry, and again from reclaim_dfx_widget
+        when 4D electrode localisation (Dfx4DGeometry, which borrows this
+        same page_24/stackedWidget_dfx and rewires these same signals to
+        its own tag-based handlers) hands the widget back. Signals are
+        blindly disconnected first since whoever had them last (this
+        instance, or the 4D borrower) may already have something wired."""
+        connections = (
+            (self.ui.pushButton_geometry_dfx.clicked, (self.show_dfx_panel, self.show_geometry_step_popup)),
+            (self.ui.pushButton_dfx_ok.clicked, (self.hide_dfx_panel,)),
+            (self.ui.pushButton_dfx.clicked, (self.browse_dfx_file,)),
+            (self.ui.pushButton_xml.clicked, (self.browse_dfx_xml,)),
+            (self.ui.pushButton_dfx_run.clicked, (self.run_dfx_bending,)),
+            (self.ui.pushButton_plot_probe.clicked, (self.add_dfx_shank,)),
+            (self.ui.pushButton_export.clicked, (self.export_dfx_json,)),
+            (self.ui.checkBox_defaultchannels.toggled, (self.update_default_channels,)),
+            (self.ui.comboBox_geometry_shanks.currentIndexChanged, (self.select_shank,)),
+        )
+        for signal, slots in connections:
+            try:
+                signal.disconnect()
+            except (TypeError, RuntimeError):
+                pass
+            for slot in slots:
+                signal.connect(slot)
+
+    def reclaim_dfx_widget(self):
+        """Hands stackedWidget_dfx back to trajectory planning after 4D
+        electrode localisation (Dfx4DGeometry) reparented it into
+        data_4d_3d and rewired it for its own tag-based flow -- restores
+        this instance's signal wiring, page_24's channel/XML controls
+        (hidden by Dfx4DGeometry, since they're irrelevant to depths-only
+        electrode localisation), and comboBox_geometry_shanks' mirroring of
+        comboBox_Shanks (shank.py keeps them in lockstep on every shank
+        add/remove/select, but not while this combo was repurposed to list
+        ROI tags instead)."""
+        self._connect_dfx_signals()
+        self.ui.pushButton_xml.setVisible(True)
+        self.ui.textEdit_channels_xml.setVisible(True)
+        self.ui.checkBox_defaultchannels.setVisible(True)
+
+        combo = self.ui.comboBox_geometry_shanks
+        shanks = self.ui.comboBox_Shanks
+        combo.blockSignals(True)
+        combo.clear()
+        for i in range(shanks.count()):
+            combo.addItem(shanks.itemIcon(i), shanks.itemText(i))
+            combo.setItemData(i, shanks.itemData(i))
+        combo.setCurrentIndex(shanks.currentIndex())
+        combo.blockSignals(False)
+        self.refresh_dfx_channel_display()
 
     def show_dfx_panel(self):
         self.ui.stackedWidget_dfx.setCurrentIndex(1)
@@ -168,12 +234,25 @@ class DfxGeometry:
         self._fill_default_channel_text(self.dfx_n_contacts)
         self.draw_dfx_geometry(result)
 
+    def _next_default_channel_offset(self):
+        """Smallest channel id not yet used by any OTHER already-committed
+        shank -- so default numbering runs continuously across shanks
+        (shank 1 = 0..63, shank 2 = 64..127, ...) instead of every shank's
+        defaults independently restarting at 0. Manually typed or
+        XML-loaded channel lists are untouched by this -- they already
+        carry their own real hardware channel numbers."""
+        used = [int(c) for idx, data in self.dfx_shank_data.items()
+                if idx != self.shank_number for c in data["channels"]]
+        return max(used) + 1 if used else 0
+
     def _fill_default_channel_text(self, n):
-        self.ui.textEdit_channels_xml.setPlainText(" ".join(str(i) for i in range(n)))
+        offset = self._next_default_channel_offset()
+        self.ui.textEdit_channels_xml.setPlainText(" ".join(str(offset + i) for i in range(n)))
 
     def update_default_channels(self):
-        """Re-fill with 0..n-1 when the checkbox is (re-)checked. Does
-        nothing on uncheck, so it never clobbers manually typed channels."""
+        """Re-fill with the continuous default range when the checkbox is
+        (re-)checked. Does nothing on uncheck, so it never clobbers
+        manually typed channels."""
         if self.dfx_n_contacts is None or not self.ui.checkBox_defaultchannels.isChecked():
             return
         self._fill_default_channel_text(self.dfx_n_contacts)
@@ -189,14 +268,26 @@ class DfxGeometry:
         data = self.dfx_shank_data.get(self.shank_number)
         self.ui.checkBox_defaultchannels.blockSignals(True)
         if data is None:
-            self.ui.textEdit_channels_xml.clear()
-            self.ui.checkBox_defaultchannels.setChecked(True)
+            # Not committed yet -- if a Neuroscope XML is already loaded
+            # (via ShankSetupDialog up front, or browse_dfx_xml here), this
+            # shank's own channel group from it is already known, so show
+            # that instead of an empty box / the previous shank's leftover
+            # default-sequential text.
+            if self.dfx_xml_groups and self.shank_number < len(self.dfx_xml_groups):
+                channels = self.dfx_xml_groups[self.shank_number]
+                self.ui.textEdit_channels_xml.setPlainText(
+                    " ".join(str(int(c)) for c in channels))
+                self.ui.checkBox_defaultchannels.setChecked(False)
+            else:
+                self.ui.textEdit_channels_xml.clear()
+                self.ui.checkBox_defaultchannels.setChecked(True)
         else:
             channels = data["channels"]
             self.ui.textEdit_channels_xml.setPlainText(
                 " ".join(str(int(c)) for c in channels))
+            offset = self._next_default_channel_offset()
             self.ui.checkBox_defaultchannels.setChecked(
-                bool(np.array_equal(channels, np.arange(channels.size))))
+                bool(np.array_equal(channels, np.arange(offset, offset + channels.size))))
         self.ui.checkBox_defaultchannels.blockSignals(False)
 
         # Show the final assembled-probe overview again (same as right
@@ -216,7 +307,8 @@ class DfxGeometry:
         """Channel-ID array for `n` contacts from the checkbox/text box, or
         None (after warning) if a manually entered list doesn't match."""
         if self.ui.checkBox_defaultchannels.isChecked():
-            return np.arange(n)
+            offset = self._next_default_channel_offset()
+            return np.arange(offset, offset + n)
         channels = parse_channel_text(self.ui.textEdit_channels_xml.toPlainText())
         if channels.size != n:
             QMessageBox.warning(
@@ -242,6 +334,18 @@ class DfxGeometry:
         if channels is None:
             return
 
+        # Catch a channel reused across shanks regardless of how it got
+        # there -- default-sequential, manually typed, or pulled from a
+        # loaded Neuroscope XML group.
+        other_channels = {int(c) for idx, data in self.dfx_shank_data.items()
+                           if idx != self.shank_number for c in data["channels"]}
+        overlap = other_channels & {int(c) for c in channels}
+        if overlap:
+            QMessageBox.warning(
+                self.MW, "Duplicate channels",
+                f"Channel(s) {sorted(overlap)} are already used by another shank.")
+            return
+
         self.dfx_shank_data[self.shank_number] = {
             "geometry": geometry.copy(), "channels": channels,
             "dxf_file": self.dfx_file, "result": self.dfx_result}
@@ -255,6 +359,17 @@ class DfxGeometry:
         if (self.coords_deepest_point.get(self.shank_number) is not None
                 and self.coords_insert_point.get(self.shank_number) is not None):
             self.create_channel_list()
+
+        # This shank's geometry is committed -- move straight to the next
+        # one awaiting it (ShankSetupDialog already pre-created every shank
+        # up front, so it's just sitting there), instead of making the user
+        # reselect it from comboBox_geometry_shanks by hand every time.
+        # select_shank also syncs comboBox_Shanks/comboBox_insertion_shank
+        # and refreshes this panel's channel text for the new shank (see
+        # refresh_dfx_channel_display).
+        next_index = self.shank_number + 1
+        if next_index < self.ui.comboBox_Shanks.count():
+            self.select_shank(next_index)
 
     def draw_dfx_geometry(self, result):
         """Detailed preview of the current (not-yet-committed) bend run."""

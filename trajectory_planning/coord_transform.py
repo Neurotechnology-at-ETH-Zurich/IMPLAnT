@@ -76,7 +76,14 @@ class CoordTransform:
 
 
 
-    def get_atlas_coords(self,vol,transformPath,bregma_coords = [246-1,653-1,440-1],lamdba_coords = [244-1,442-1,464-1]):
+    def get_atlas_coords(self,vol,transformPath,bregma_coords=None,lamdba_coords=None):
+        # Per-atlas voxel coordinates -- defaults fall back to WHS's own
+        # values when the active atlas doesn't override them (see
+        # mrid_utils/atlas_registry.py).
+        if bregma_coords is None:
+            bregma_coords = _paths.get('atlas_bregma_coords', [245, 652, 439])
+        if lamdba_coords is None:
+            lamdba_coords = _paths.get('atlas_lambda_coords', [243, 441, 463])
         #load transformation dataf
         self.fixedImg = sitk.ReadImage(os.path.join(_paths['atlas_folder'], _paths['atlas_volume']))
         self.atlas_vol = sitk.GetArrayFromImage(self.fixedImg)
@@ -205,18 +212,18 @@ class CoordTransform:
         return self._mri_not_background_mask
 
 
-    def get_cc_mri_voxel_mean(self, cc_label=67):
+    def get_cc_mri_voxel_mean(self, cc_label=None):
         """
         Mean position of the atlas's corpus callosum, in MRI/working-volume
         voxel space (same space/units as coords_bregma/coords_lambda/
-        mri_insert/mri_deep) -- the MRI-space counterpart of get_cc_mri_mean
-        below, which converts this same mean into atlas space for display.
-        Reuses the whole-atlas correspondence table _build_bregma_lambda_
+        mri_insert/mri_deep). Reuses the whole-atlas correspondence table _build_bregma_lambda_
         lookup already computes (atlas points -> their forward-transformed
         MRI points) -- no separate transforming needed: filter those
         already-computed pairs down to the ones labelled corpus callosum
         and average their MRI side.
         """
+        if cc_label is None:
+            cc_label = _paths.get('atlas_cc_label', 67)
         if not hasattr(self, '_cc_mean_mri'):
             if not hasattr(self, '_bl_lookup_tree'):
                 self._build_bregma_lambda_lookup()
@@ -224,18 +231,6 @@ class CoordTransform:
             labels = self.atlas_vol[atlas_xyz[:, 2], atlas_xyz[:, 1], atlas_xyz[:, 0]]
             self._cc_mean_mri = self._bl_lookup_mri[labels == cc_label].mean(axis=0)
         return self._cc_mean_mri
-
-
-    def get_cc_mri_mean(self, cc_label=67):
-        """
-        Mean position of the atlas's corpus callosum, in atlas space --
-        see get_cc_mri_voxel_mean for the MRI-space version this is
-        derived from.
-        """
-        if not hasattr(self, '_cc_mean_atlas'):
-            cc_mri_mean = self.get_cc_mri_voxel_mean(cc_label)
-            self._cc_mean_atlas = self.mri_to_atlas_via_lookup(cc_mri_mean)
-        return self._cc_mean_atlas
 
 
     def atlas_points_to_mri_indices(self, atlas_points_mm):
@@ -308,6 +303,61 @@ class CoordTransform:
         return ap_axis, rl_axis, si_axis
 
 
+    @staticmethod
+    def ap_rl_si_frame_from_misalignment(bregma_mm, lambda_mm, misalignment_deg):
+        """
+        Orthonormal (AP, RL, SI) frame from bregma/lambda alone plus the
+        user's manually-dialed-in coronal misalignment angle
+        (dial_missalignment/doubleSpinBox_missalignment on the bregma/
+        lambda page) -- replaces ap_rl_si_frame's corpus-callosum-centroid
+        -derived RL axis, which depended on a single, potentially noisy
+        interior landmark instead of something the user can verify by eye.
+
+        AP is exactly the bregma->lambda direction, same as ap_rl_si_frame.
+        RL/SI are fixed by taking the raw image's own SI axis (0,0,1),
+        projecting it perpendicular to AP (the "no coronal rotation"
+        baseline), then rotating that baseline (and its matching RL
+        baseline) around AP by -misalignment_deg.
+
+        The minus sign corrects for how that angle is actually measured:
+        update_misalignment_guide_line draws a line on the coronal view
+        that the user rotates onscreen until it matches the interhemispheric
+        fissure, and that view's RL/display-x axis is mirrored (radiological
+        convention -- see rendering.py's _atlas_point_display_xy). A line
+        drawn rotating by +theta on screen therefore corresponds to a
+        physical rotation of -theta around AP in raw voxel/mm space. Keep
+        this in sync with that function if either one changes.
+
+        Returns (ap_axis, rl_axis, si_axis), or None if bregma == lambda.
+        """
+        bl_vec = np.asarray(lambda_mm, dtype=float) - np.asarray(bregma_mm, dtype=float)
+        bl_dist = float(np.linalg.norm(bl_vec))
+        if bl_dist <= 1e-9:
+            return None
+        ap_axis = bl_vec / bl_dist
+
+        raw_si = np.array([0.0, 0.0, 1.0])
+        si_ref = raw_si - np.dot(raw_si, ap_axis) * ap_axis
+        si_ref_norm = float(np.linalg.norm(si_ref))
+        if si_ref_norm <= 1e-6:
+            # ap_axis is (near-)parallel to the raw SI axis -- fall back to
+            # the raw RL axis as the perpendicular reference instead.
+            raw_rl = np.array([1.0, 0.0, 0.0])
+            si_ref = raw_rl - np.dot(raw_rl, ap_axis) * ap_axis
+            si_ref_norm = float(np.linalg.norm(si_ref))
+            if si_ref_norm <= 1e-9:
+                return None
+        si_ref = si_ref / si_ref_norm
+        rl_ref = np.cross(ap_axis, si_ref)
+
+        theta = np.radians(-misalignment_deg)
+        cos_t, sin_t = np.cos(theta), np.sin(theta)
+        si_axis = si_ref * cos_t + np.cross(ap_axis, si_ref) * sin_t
+        rl_axis = rl_ref * cos_t + np.cross(ap_axis, rl_ref) * sin_t
+
+        return ap_axis, rl_axis, si_axis
+
+
     def refresh_atlas_bregma_lambda_from_user_points(self):
         """
         Point draw_atlas_reference_points' atlas_bregma_coords/
@@ -315,9 +365,8 @@ class CoordTransform:
         the user's own clicked bregma/lambda instead, converted directly to
         atlas space -- no correction of any kind, the user's own click is
         trusted as-is. Called from get_shank_line's proceed() (registration.
-        py), alongside warp_skull_mask/warp_red_areas -- already wrapped in
-        a BusyOverlay there, so this runs synchronously rather than showing
-        its own.
+        py), alongside warp_red_areas -- already wrapped in a BusyOverlay
+        there, so this runs synchronously rather than showing its own.
         """
         if self.coords_bregma is not None:
             self.atlas_bregma_coords = list(self.mri_to_atlas_via_lookup(self.coords_bregma))
@@ -327,44 +376,53 @@ class CoordTransform:
 
     def compute_shank_roll_pitch_mri(self, shank_number):
         """
-        Shank angle to two bregma/lambda/corpus-callosum-anchored planes,
-        in MRI/working-volume space -- the physically meaningful space,
-        since insertion actually happens into the real animal, not the
-        atlas (a nonlinear SyN warp connects the two and does not preserve
-        angles, so computing this in atlas space instead would not give
-        the same number for the same physical trajectory). Single source
-        of truth for this math, used by both the 2D/3D view angle
-        indicators (rendering.py's compute_shank_reference_angle) and the
-        PDF report (file_input_output.py's compute()) -- previously
-        duplicated with the 3D view computed in atlas space instead, which
-        is why the two used to disagree.
+        Shank angle to two bregma/lambda-anchored planes, in MRI/working-
+        volume space -- the physically meaningful space, since insertion
+        actually happens into the real animal, not the atlas (a nonlinear
+        SyN warp connects the two and does not preserve angles, so
+        computing this in atlas space instead would not give the same
+        number for the same physical trajectory). Single source of truth
+        for this math, used by both the 2D/3D view angle indicators
+        (rendering.py's compute_shank_reference_angle) and the PDF report
+        (file_input_output.py's compute()) -- previously duplicated with
+        the 3D view computed in atlas space instead, which is why the two
+        used to disagree.
 
-        These are true line-to-plane angles (theta = arcsin(|shank_dir .
-        plane_normal|)) using the shank's full 3D deep->insert direction,
-        NOT the angle of that direction's projection into a 2D view (which
-        is what an ML/DV or AP/DV atan2 decomposition would give, and
-        would silently discard whichever component isn't in that view).
+        These are 2D angles to a reference LINE within the relevant plane,
+        each dropping (discarding, not folding in) whichever axis isn't
+        that plane's reference direction -- NOT true 3D line-to-plane
+        angles (theta = arcsin(|shank_dir . plane_normal|)), which was
+        this function's previous definition. That line-to-plane version
+        coupled roll and pitch together in a way that didn't match how a
+        real stereotaxic frame's independent ML/AP tilt dials behave (e.g.
+        it made checkBox_constraint_90deg's exact-AP=0 correction show
+        LESS than 90 degrees in the sagittal view whenever there was also
+        coronal tilt, since that formula folded the coronal/RL component's
+        magnitude back into the reported angle instead of ignoring it).
 
-        RL axis = unit normal of the plane through bregma, lambda and the
-        corpus-callosum centroid (get_cc_mri_voxel_mean) -- automatically
-        exactly perpendicular to the bregma-lambda/AP axis, since it's a
-        cross product built from it, and anchored to real anatomy via the
-        CC landmark rather than a raw-image-axis guess. SI axis = AP x RL,
-        the remaining direction completing the (AP, RL, SI) orthonormal
-        frame.
+        RL/SI axes come from ap_rl_si_frame_from_misalignment: AP is the
+        bregma-lambda direction, and RL/SI are fixed by the user's own
+        manually-dialed-in coronal misalignment angle (dial_missalignment/
+        doubleSpinBox_missalignment on the bregma/lambda page), NOT the
+        corpus-callosum centroid this used to derive RL from -- a single
+        interior landmark's centroid was a noisier way to pin down the
+        rotation around the AP axis than having the user align a guide
+        line to the interhemispheric fissure by eye.
 
-        Roll = angle between the shank and the bregma-lambda-CC plane
-        itself (spanned by AP/SI, normal = RL) -- how far the shank leans
-        out of the true sagittal plane. Shown in the coronal view, where
-        that lean is what's visible.
-        Pitch = angle between the shank and the bregma-lambda plane
-        parallel to RL (spanned by AP/RL, normal = SI) -- how far the
-        shank tilts off horizontal. Shown in the sagittal view.
+        Roll = angle from vertical (SI), within the RL-SI plane, dropping
+        the AP component entirely -- how far the shank leans toward RL,
+        ignoring any AP tilt. Shown in the coronal view.
+        Pitch = angle from the AP line, within the AP-SI plane, dropping
+        the RL component entirely -- how far the shank tilts off the AP
+        line, ignoring any coronal/RL tilt. Shown in the sagittal view.
+        Since each angle now discards a DIFFERENT component instead of
+        both reading off the same one remaining degree of freedom, roll
+        and pitch are no longer forced to sum to 90 degrees the way the
+        old line-to-plane formula was whenever AP happened to be zero.
 
         Returns (roll_deg, pitch_deg), or None if bregma/lambda or this
-        shank's MRI-space insert/deepest points aren't set yet, or the
-        three landmarks are degenerate (near-collinear, so no well-defined
-        plane).
+        shank's MRI-space insert/deepest points aren't set yet, or bregma
+        == lambda (degenerate, no well-defined AP axis).
         """
         if self.coords_bregma is None or self.coords_lambda is None:
             return None
@@ -376,9 +434,9 @@ class CoordTransform:
         mri_spacing = np.array(self.movingImg_resampled.GetSpacing())
         bregma_mm = np.array(self.coords_bregma, dtype=float) * mri_spacing
         lambda_mm = np.array(self.coords_lambda, dtype=float) * mri_spacing
-        cc_mm = np.array(self.get_cc_mri_voxel_mean(), dtype=float) * mri_spacing
+        misalignment_deg = getattr(self, 'coronal_misalignment_deg', 0.0)
 
-        frame = self.ap_rl_si_frame(bregma_mm, lambda_mm, cc_mm)
+        frame = self.ap_rl_si_frame_from_misalignment(bregma_mm, lambda_mm, misalignment_deg)
         if frame is None:
             return None
         ap_axis, rl_axis, si_axis = frame
@@ -391,10 +449,211 @@ class CoordTransform:
             return 0.0, 0.0
 
         shank_dir = shank_vec / shank_dist
-        roll_deg = float(np.degrees(np.arcsin(np.clip(abs(np.dot(shank_dir, rl_axis)), 0.0, 1.0))))
-        pitch_deg = float(np.degrees(np.arcsin(np.clip(abs(np.dot(shank_dir, si_axis)), 0.0, 1.0))))
+        ap_comp = abs(float(np.dot(shank_dir, ap_axis)))
+        rl_comp = abs(float(np.dot(shank_dir, rl_axis)))
+        si_comp = abs(float(np.dot(shank_dir, si_axis)))
+        roll_deg = float(np.degrees(np.arctan2(rl_comp, si_comp)))
+        pitch_deg = float(np.degrees(np.arctan2(si_comp, ap_comp)))
 
         return roll_deg, pitch_deg
+
+
+    def _deep_point_in_bounds(self, deep_mm, mri_spacing):
+        """True if the given MRI-space physical-mm point converts to a
+        voxel index still inside the working volume's own grid (with half
+        a voxel of slack for rounding) -- the one non-negotiable bound
+        constrain_shank_ap_to_zero must respect, since a deep point
+        outside the volume isn't a point at all."""
+        voxel = deep_mm / mri_spacing
+        shape = self.LoadMRI.volumes[0].slices[0].shape  # zyx
+        max_xyz = (shape[2] - 1, shape[1] - 1, shape[0] - 1)
+        return all(-0.5 <= voxel[i] <= max_xyz[i] + 0.5 for i in range(3))
+
+    def _max_feasible_axis_correction(self, insert_mm, raw_dir, corrected_dir, depth, mri_spacing):
+        """Largest t in [0, 1] for which insert_mm - depth * direction(t)
+        stays within the volume, where direction(t) blends from raw_dir
+        (t=0, the shank's original direction -- always feasible, since
+        that's where the deep point already was) to corrected_dir (t=1,
+        fully perpendicular to whichever axis is being zeroed -- AP for
+        constrain_shank_ap_to_zero, RL for constrain_shank_rl_to_zero).
+        t=1 is used whenever it's already feasible (the common case);
+        otherwise this is the "as close to 90 degrees as the volume
+        bounds allow" fallback -- binary search, assuming feasibility
+        flips at most once along this blend (true in practice: t=0 is a
+        small nudge away from the shank's existing, already-valid
+        direction, and the blend sweeps smoothly and monotonically
+        toward corrected_dir with no reason to re-enter the volume after
+        leaving it for a typical correction-sized angle)."""
+        def direction_at(t):
+            if t <= 0.0:
+                return raw_dir
+            if t >= 1.0:
+                return corrected_dir
+            blended = (1 - t) * raw_dir + t * corrected_dir
+            norm = np.linalg.norm(blended)
+            return blended / norm if norm > 1e-9 else corrected_dir
+
+        def feasible(t):
+            return self._deep_point_in_bounds(insert_mm - depth * direction_at(t), mri_spacing)
+
+        if feasible(1.0):
+            return 1.0
+        lo, hi = 0.0, 1.0  # feasible(0.0) assumed True -- raw_dir is the shank's existing, already-valid direction
+        for _ in range(20):
+            mid = (lo + hi) / 2
+            if feasible(mid):
+                lo = mid
+            else:
+                hi = mid
+        return lo
+
+    def constrain_shank_ap_to_zero(self, shank_number):
+        """
+        checkBox_constraint_90deg: zero out the bregma-lambda (AP) axis
+        component of this shank's deep->insert direction, so the shank is
+        exactly perpendicular to the bregma-lambda line -- while leaving
+        whatever coronal/RL tilt already existed untouched (renormalized
+        to fill the remaining unit-direction budget). Insert is always the
+        anchor and never moves here; mri_deep/coords_deepest_point are
+        overwritten with the corrected point, preserving the existing
+        insert-to-deep depth.
+
+        If going fully to 90 degrees would push the deep point outside the
+        MRI volume's own grid (insert is anchored at the skull surface, so
+        a long, steep shank can run out of volume before reaching true
+        perpendicular), this doesn't silently produce an invalid point --
+        _max_feasible_axis_correction finds the largest angle actually
+        achievable while keeping the deep point inside the volume,
+        blending back toward the shank's original (already-valid)
+        direction just enough to stay in bounds.
+
+        Only needs bregma/lambda (unlike compute_shank_roll_pitch_mri,
+        which also needs the corpus-callosum centroid to build the full
+        RL/SI frame) -- removing a single axis component from a vector
+        doesn't require the rest of an orthonormal frame.
+
+        No-op if bregma/lambda or this shank's insert/deep aren't set yet,
+        or if bregma==lambda.
+        """
+        if self.coords_bregma is None or self.coords_lambda is None:
+            return
+        mri_insert = getattr(self, 'mri_insert', {}).get(shank_number)
+        mri_deep = getattr(self, 'mri_deep', {}).get(shank_number)
+        if mri_insert is None or mri_deep is None:
+            return
+
+        mri_spacing = np.array(self.movingImg_resampled.GetSpacing())
+        bregma_mm = np.array(self.coords_bregma, dtype=float) * mri_spacing
+        lambda_mm = np.array(self.coords_lambda, dtype=float) * mri_spacing
+        bl_vec = lambda_mm - bregma_mm
+        bl_dist = float(np.linalg.norm(bl_vec))
+        if bl_dist <= 1e-9:
+            return
+        ap_axis = bl_vec / bl_dist
+
+        insert_mm = np.array(mri_insert, dtype=float) * mri_spacing
+        deep_mm = np.array(mri_deep, dtype=float) * mri_spacing
+        vec = insert_mm - deep_mm  # deep->insert direction, same convention as compute_shank_roll_pitch_mri
+        depth = float(np.linalg.norm(vec))
+        if depth <= 1e-9:
+            return
+        raw_dir = vec / depth
+
+        ap_comp = float(np.dot(vec, ap_axis))
+        remaining = vec - ap_comp * ap_axis
+        remaining_norm = float(np.linalg.norm(remaining))
+        if remaining_norm <= 1e-9:
+            # Shank was purely along AP -- no coronal/vertical component to
+            # preserve; fall back to straight up in image space.
+            remaining = np.array([0.0, 0.0, 1.0])
+            remaining_norm = 1.0
+
+        corrected_dir = remaining / remaining_norm
+        t = self._max_feasible_axis_correction(insert_mm, raw_dir, corrected_dir, depth, mri_spacing)
+        if t <= 0.0:
+            final_dir = raw_dir
+        elif t >= 1.0:
+            final_dir = corrected_dir
+        else:
+            blended = (1 - t) * raw_dir + t * corrected_dir
+            final_dir = blended / np.linalg.norm(blended)
+        new_deep_mm = insert_mm - depth * final_dir
+        new_deep_voxel = new_deep_mm / mri_spacing
+
+        self.mri_deep[shank_number] = [int(round(c)) for c in new_deep_voxel]
+        self.coords_deepest_point[shank_number] = list(self.mri_deep[shank_number])
+
+    def constrain_shank_rl_to_zero(self, shank_number):
+        """
+        checkBox_constraint_90deg_coronal: the coronal-angle analogue of
+        constrain_shank_ap_to_zero -- zero out the RL (mediolateral) axis
+        component of this shank's deep->insert direction instead of the
+        AP component, so the shank is exactly perpendicular to the RL
+        axis (runs entirely within the true AP-SI/sagittal plane), while
+        leaving whatever AP tilt already existed untouched (renormalized
+        to fill the remaining unit-direction budget). Insert is always
+        the anchor and never moves here; mri_deep/coords_deepest_point
+        are overwritten with the corrected point, preserving the
+        existing insert-to-deep depth. Same in-bounds fallback as the AP
+        version (_max_feasible_axis_correction) if going fully to zero RL
+        would push the deep point outside the MRI volume's own grid.
+
+        Needs the full (AP, RL, SI) frame (ap_rl_si_frame_from_
+        misalignment), unlike constrain_shank_ap_to_zero which only
+        needs the bregma-lambda vector directly -- RL isn't derivable
+        from bregma/lambda alone, it also depends on the user's manually-
+        dialed-in coronal misalignment angle.
+
+        No-op if bregma/lambda or this shank's insert/deep aren't set
+        yet, or if bregma==lambda.
+        """
+        if self.coords_bregma is None or self.coords_lambda is None:
+            return
+        mri_insert = getattr(self, 'mri_insert', {}).get(shank_number)
+        mri_deep = getattr(self, 'mri_deep', {}).get(shank_number)
+        if mri_insert is None or mri_deep is None:
+            return
+
+        mri_spacing = np.array(self.movingImg_resampled.GetSpacing())
+        bregma_mm = np.array(self.coords_bregma, dtype=float) * mri_spacing
+        lambda_mm = np.array(self.coords_lambda, dtype=float) * mri_spacing
+        misalignment_deg = getattr(self, 'coronal_misalignment_deg', 0.0)
+        frame = self.ap_rl_si_frame_from_misalignment(bregma_mm, lambda_mm, misalignment_deg)
+        if frame is None:
+            return
+        _ap_axis, rl_axis, _si_axis = frame
+
+        insert_mm = np.array(mri_insert, dtype=float) * mri_spacing
+        deep_mm = np.array(mri_deep, dtype=float) * mri_spacing
+        vec = insert_mm - deep_mm  # deep->insert direction, same convention as compute_shank_roll_pitch_mri
+        depth = float(np.linalg.norm(vec))
+        if depth <= 1e-9:
+            return
+        raw_dir = vec / depth
+
+        rl_comp = float(np.dot(vec, rl_axis))
+        remaining = vec - rl_comp * rl_axis
+        remaining_norm = float(np.linalg.norm(remaining))
+        if remaining_norm <= 1e-9:
+            # Shank was purely along RL -- no AP/vertical component to
+            # preserve; fall back to straight up in image space.
+            remaining = np.array([0.0, 0.0, 1.0])
+            remaining_norm = 1.0
+
+        corrected_dir = remaining / remaining_norm
+        t = self._max_feasible_axis_correction(insert_mm, raw_dir, corrected_dir, depth, mri_spacing)
+        if t <= 0.0:
+            final_dir = raw_dir
+        elif t >= 1.0:
+            final_dir = corrected_dir
+        else:
+            blended = (1 - t) * raw_dir + t * corrected_dir
+            final_dir = blended / np.linalg.norm(blended)
+        new_deep_mm = insert_mm - depth * final_dir
+        new_deep_voxel = new_deep_mm / mri_spacing
+
+        self.mri_deep[shank_number] = [int(round(c)) for c in new_deep_voxel]
+        self.coords_deepest_point[shank_number] = list(self.mri_deep[shank_number])
 
 
     def calculate_distance(self,start,end,return_distance=False):
@@ -439,8 +698,19 @@ class CoordTransform:
             rows = np.sort(same_x[:, 0])
             splits = np.where(np.diff(rows) > 1)[0] + 1
             crossings = np.split(rows, splits)
-            # pick the crossing (side of the head) nearest the click...
-            crossing = min(crossings, key=lambda c: np.min(np.abs(c - indices2d[0])))
+            if view_name in ('sagittal', 'coronal'):
+                # row = Z (dorsal-ventral) here -- insertion is always
+                # through the dorsal (top) skull surface, never the
+                # ventral/skull-base side, so always take the highest-Z
+                # crossing. Picking whichever crossing merely happened to
+                # be nearest the clicked pixel could just as easily land
+                # on the wrong (bottom) side of a multi-crossing shell.
+                crossing = max(crossings, key=lambda c: c.max())
+            else:
+                # axial: row = Y (AP) -- no anatomical "always this side"
+                # rule for anterior vs. posterior, so nearest-the-click
+                # is still the right tiebreak here.
+                crossing = min(crossings, key=lambda c: np.min(np.abs(c - indices2d[0])))
             # ...then, within that crossing, the row farthest from the
             # mask's own centroid in this slice -- i.e. the OUTER surface,
             # not whichever row of the shell happened to be nearest the

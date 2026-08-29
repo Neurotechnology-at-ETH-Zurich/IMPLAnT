@@ -1,14 +1,19 @@
 # This Python file uses the following encoding: utf-8
 import numpy as np
 import os
+import nibabel as nib
 import SimpleITK as sitk
 import vtk
 from vtkmodules.vtkFiltersSources import vtkRegularPolygonSource
 from vtkmodules.vtkRenderingCore import vtkActor, vtkPolyDataMapper
 from scipy import ndimage
 import sys
+from PySide6.QtCore import QTimer
 from core.image_layer import ImageLayer
 from paths_config import _paths
+from mrid_utils import atlas_switch
+from mrid_utils.atlas_registry import ATLASES, get_active_atlas_id
+from trajectory_planning.visualisation3D import Visualisation3D
 
 class Rendering:
     def render(self):
@@ -70,9 +75,9 @@ class Rendering:
 
     def _set_bregma_lambda_visible(self, visible):
         """Toggle the Step 1 bregma/lambda markers (picked on the animal's
-        own MRI, drawn by draw_point) -- used to hide them while the skull
-        segmentation dock is open, since they're just clutter at that point
-        and the atlas isn't loaded yet anyway."""
+        own MRI, drawn by draw_point) -- used to hide them once the user
+        moves on to painting forbidden areas, since they're just clutter
+        at that point and the atlas isn't loaded yet anyway."""
         for actor_dict in (self.point_actor_bregma, self.point_actor_lambda):
             for actor in actor_dict.values():
                 actor.SetVisibility(visible)
@@ -279,6 +284,97 @@ class Rendering:
 
         self.render()
 
+    def _ensure_atlas_selector_widget(self):
+        """Populates and wires form.ui's own comboBox_atlas (page_30,
+        self.ui.frame / self.ui.gridLayout_177, next to its lineEdit_83
+        "Atlas" label) the first time this page is shown, letting the user
+        switch atlases while looking at one (see reload_atlas_view) --
+        reads that real, hand-placed widget instead of creating/inserting a
+        new combo into the same grid layout at runtime, which collided
+        with the already-placed pushButton_sagittalView/coronalView."""
+        if hasattr(self.ui, '_atlas_selector_wired'):
+            self._atlas_ids = list(ATLASES.keys())
+            self._sync_atlas_selector_widget()
+            return
+        self.ui._atlas_selector_wired = True
+        self._atlas_ids = list(ATLASES.keys())
+        for atlas_id in self._atlas_ids:
+            self.ui.comboBox_atlas.addItem(ATLASES[atlas_id]['display_name'])
+        self._sync_atlas_selector_widget()
+        self.ui.comboBox_atlas.currentIndexChanged.connect(self._on_atlas_selector_changed)
+
+    def _sync_atlas_selector_widget(self):
+        current_id = get_active_atlas_id(_paths)
+        if current_id in self._atlas_ids:
+            self.ui.comboBox_atlas.blockSignals(True)
+            self.ui.comboBox_atlas.setCurrentIndex(self._atlas_ids.index(current_id))
+            self.ui.comboBox_atlas.blockSignals(False)
+
+    def _on_atlas_selector_changed(self, index):
+        atlas_id = self._atlas_ids[index]
+        if atlas_id == get_active_atlas_id(_paths):
+            return
+        if not self.reload_atlas_view(atlas_id):
+            self._sync_atlas_selector_widget()  # switch declined/failed -- revert the combo
+
+    def reload_atlas_view(self, atlas_id):
+        """Switches to atlas_id and redraws this already-open atlas view in
+        place -- replays the atlas-loading portion of
+        TpRegistration.do_get_shank_line against the newly selected atlas
+        instead of a full re-entry into trajectory planning. Returns False
+        (leaving the previous atlas showing) if the user cancels the fetch
+        or it fails."""
+        if not atlas_switch.switch_active_atlas(atlas_id, self.MW):
+            return False
+
+        current_view = getattr(self.LoadMRI, 'data_view', 'coronal')
+        path_main = os.path.join(_paths['atlas_folder'], _paths['atlas_volume'])
+        self.MW.restart_gui(path_main, full_restart=False, label_file=True, data_view=current_view)
+        self.LoadMRI = self.MW.LoadMRI
+        self.LoadMRI.TrajPlanning = self
+        self.tp_labels = self.LoadMRI.tp_labels
+        self.update_voxel_spinbox_ranges()
+
+        # unlike the initial load, always rebuild -- the new atlas's
+        # geometry/labels differ from whatever tg_edge_mask was built from
+        self.LoadMRI.tp_imgvtk = {}
+        self.LoadMRI.tp_actor = {}
+        self.LoadMRI.tp_renderer = {}
+        self.create_edge_mask()
+
+        # re-anchor the atlas<->MRI coordinate machinery (coord_transform.py)
+        # against the new atlas volume -- same call trajectory_planning.py's
+        # __init__ made initially, reusing the same (unaffected -- both
+        # atlases share one coordinate grid) registration transform. The
+        # dense lookup table and corpus-callosum-mean caches built on top of
+        # it are now stale and must be dropped, not just their inputs
+        # refreshed, since they're only ever (re)built lazily via hasattr
+        # guards.
+        self.movingidx_bregma, self.movingidx_lambda, _ = self.get_atlas_coords(
+            self.LoadMRI.volumes[0], self.transform_path)
+        for stale_attr in ('_bl_lookup_atlas', '_bl_lookup_mri', '_bl_lookup_tree',
+                           '_bl_lookup_stride', '_bl_lookup_grid_shape',
+                           '_bl_lookup_mri_grid', '_bl_lookup_interpolator',
+                           '_cc_mean_mri', '_cc_mean_atlas',
+                           '_mri_not_background_mask', '_mri_not_background_mask_key'):
+            if hasattr(self, stale_attr):
+                delattr(self, stale_attr)
+
+        self.Vis3D = Visualisation3D(self.MW)
+
+        if hasattr(self, 'dwi'):
+            del self.dwi
+        if _paths.get('atlas_dwi'):
+            dwi_path = os.path.join(_paths['atlas_folder'], _paths['atlas_dwi'])
+            nii_dwi = nib.load(dwi_path)
+            dwi = np.asanyarray(nii_dwi.dataobj)
+            self.dwi = dwi[:, :, :, 0]
+
+        self.draw_atlas_reference_points()
+        self._sync_atlas_selector_widget()
+        QTimer.singleShot(0, self.render)
+        return True
+
     def _atlas_plane_normal_and_point(self):
         """Normal (unit vector) and a point (both in physical mm) of the
         plane through atlas bregma, lambda and the corpus-callosum
@@ -404,8 +500,8 @@ class Rendering:
         # atlas bregma/lambda and this plane indicator only belong on the
         # final (post-restart, atlas-space) insertion/deepest-point step --
         # not while still on the subject's own MRI (bregma/lambda picking,
-        # forbidden-areas painting) or during the skull-segmentation dock,
-        # both of which stay on stackedWidget_trajectoryplanning page 0.
+        # forbidden-areas painting), which stays on
+        # stackedWidget_trajectoryplanning page 0.
         if self.ui.stackedWidget_trajectoryplanning.currentIndex() != 1:
             renderer = self.LoadMRI.renderers[0][view_name]
             for key in ('line', 'text'):
@@ -896,27 +992,27 @@ class Rendering:
                     tp_renderer.RemoveActor(self.text_actor[vn])
 
     def create_edge_mask(self):
-        if getattr(self, 'skull_mask_img', None) is not None:
-            # the electrode enters through the skull, not through wherever
-            # the atlas brain's own outer boundary happens to be -- snap
-            # insertion points to the actual (warped) skull mask instead.
-            # It's already a thin shell (see compute_skull_mask/
-            # warp_skull_mask), so no erosion/border extraction needed.
-            edge_mask = sitk.GetArrayFromImage(self.skull_mask_img).astype(np.uint8)
-        else:
-            file_name = os.path.join(_paths['atlas_folder'], _paths['atlas_mask'])
-            image = sitk.ReadImage(file_name)
-            array = sitk.GetArrayFromImage(image)
-            #array = self.LoadMRI.volumes[0].slices[0].copy()
-            fg = array > 0
-            fg_filled = ndimage.binary_fill_holes(fg)
-            struct = np.ones((3, 3, 3), dtype=bool)
-            eroded = ndimage.binary_erosion(fg_filled, structure=struct)
-            border = fg_filled & ~eroded
-            edge_mask = border.astype(np.uint8)
+        file_name = os.path.join(_paths['atlas_folder'], _paths['atlas_mask'])
+        image = sitk.ReadImage(file_name)
+        array = sitk.GetArrayFromImage(image)
+        #array = self.LoadMRI.volumes[0].slices[0].copy()
+        fg = array > 0
+        fg_filled = ndimage.binary_fill_holes(fg)
+        struct = np.ones((3, 3, 3), dtype=bool)
+        eroded = ndimage.binary_erosion(fg_filled, structure=struct)
+        border = fg_filled & ~eroded
+        edge_mask = border.astype(np.uint8)
         self.edge_mask = edge_mask
 
-        layer_index = len(self.LoadMRI.MW.Layers[0])
+        # Shared with every other overlay-adding call site (region_to_avoid_
+        # img below, add_another_file, ...) instead of len(Layers[0]),
+        # which only tracks layers added via THAT counter and can collide
+        # with (silently overwrite) whichever Layers[0][layer_index] slot
+        # this picks once anything else has used self.MW.FileLoader.
+        # layer_index in the meantime -- see rendering_mri.py's identical
+        # fix for the MRI-space version of this same method.
+        self.MW.FileLoader.layer_index += 1
+        layer_index = self.MW.FileLoader.layer_index
         # Attach LUT for contrast and brightness
         vminmax_perc = [0, 1] #reset
         vmin, vmax = np.percentile(edge_mask.copy(), [vminmax_perc[0]*100, vminmax_perc[1]*100])
@@ -943,7 +1039,7 @@ class Rendering:
 
         # register it in the intensity table too. Skipping this used to
         # silently desync every layer added afterward (region-to-avoid,
-        # skull mask): their layer_index (= len(Layers[0]) at creation
+        # ...): their layer_index (= len(Layers[0]) at creation
         # time) kept counting this layer, but the table's own row counter
         # never did, so each later row's visibility/opacity controls ended
         # up wired to the WRONG actual layer, one off from the row they
@@ -958,7 +1054,11 @@ class Rendering:
             # coronal view
             self.ui.stackedWidget_coronal.setCurrentIndex(0) #coronal
         else:
-            self.ui.stackedWidget_coronal.setCurrentIndex(1) #CHANGE TO 1
+            # page 2 (page_10) -- the clipped-3D-view page used to be page 1
+            # (page_32), but that slot now holds the oblique-reslice widget
+            # for checkBox_constraint_90deg (see ElecGeometryMri.
+            # enforce_constraint_90deg), so this got moved to page 2.
+            self.ui.stackedWidget_coronal.setCurrentIndex(2)
             axis_y = np.array([0,1,0])
             direction = self.direction_atlas[self.shank_number]
             normal = axis_y - np.dot(axis_y, direction) * direction
@@ -975,7 +1075,12 @@ class Rendering:
             # sagittal view
             self.ui.stackedWidget_sagittal.setCurrentIndex(0) #sagittal
         else:
-            self.ui.stackedWidget_sagittal.setCurrentIndex(1) #CHANGE TO 1
+            # page 2 (page_4) -- the clipped-3D-view page used to be page 1
+            # (page_33), but that slot now holds the oblique-reslice widget
+            # for checkBox_constraint_90deg_coronal (see ElecGeometryMri.
+            # enforce_constraint_90deg_coronal), so this got moved to page 2,
+            # same reordering as change_view_coronal's own page_32->page_10.
+            self.ui.stackedWidget_sagittal.setCurrentIndex(2)
             axis_x = np.array([1,0,0]) #x-axis #(0,0,1)
             direction = self.direction_atlas[self.shank_number] #xyz
             normal = axis_x - np.dot(axis_x, direction) * direction

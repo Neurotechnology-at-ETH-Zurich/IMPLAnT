@@ -75,7 +75,6 @@ class ElecGeometry:
 
 
     def create_channel_list(self):
-        self.ui.groupBox_shank.setEnabled(True)
         self.ui.pushButton_coronalView.setEnabled(True)
         self.ui.pushButton_sagittalView.setEnabled(True)
         self.ui.pushButton_axialView.setEnabled(True)
@@ -138,9 +137,9 @@ class ElecGeometry:
             # explicitly switching to this view, so keep whatever pan/zoom/
             # rotation they already have on it instead of snapping back to
             # centered on every single edit.
-            if self.ui.stackedWidget_coronal.currentIndex() == 1: #coronal
+            if self.ui.stackedWidget_coronal.currentIndex() == 2: #coronal
                 self.change_view_coronal(checked=False, recenter=False)
-            if self.ui.stackedWidget_sagittal.currentIndex() == 1: #coronal
+            if self.ui.stackedWidget_sagittal.currentIndex() == 2: #coronal
                 self.change_view_sagittal(checked=False, recenter=False)
         atlas_values = [self.atlas_vol[tuple(np.round(p[::-1]).astype(int))] for p in self.channel_points[self.shank_number]]
         region_name = [self.tp_labels[val][4] for val in atlas_values]
@@ -244,7 +243,11 @@ class ElecGeometry:
         return float(np.linalg.norm(closest1 - closest2))
 
     def check_CA1_or_2(self,regionNames,points,num_channels):
-        if "Cornu ammonis 1" in regionNames:
+        ca1_region_name = _paths.get('atlas_ca1_region_name', "Cornu ammonis 1")
+        # Not every atlas has a DWI volume (see ATLASES[...]['has_dwi']) --
+        # without self.dwi there's no signal to probe CA1's darkest voxel
+        # with, so the pyramidal-layer detector has nothing to work from.
+        if ca1_region_name in regionNames and hasattr(self, 'dwi'):
             self.ui.pushButton_PyLdetection.setEnabled(True)
 
             minPixVal = 2e16
@@ -255,7 +258,7 @@ class ElecGeometry:
                 z, y, x = [int(c) for c in point]
                 dwi1Dsignal[idx] = self.dwi[x, y, z]
 
-                if regionNames[idx] == "Cornu ammonis 1":
+                if regionNames[idx] == ca1_region_name:
                     if dwi1Dsignal[idx] < minPixVal:
                         minPixVal = dwi1Dsignal[idx]
                         pyrChIdx = idx
@@ -263,6 +266,9 @@ class ElecGeometry:
             plot_dwi_1D_cross_section(dwi1Dsignal,regionNames,pyrChIdx,num_channels,mplwidget=self.ui.tp_dwi1D_widget)
         else:
             self.ui.pushButton_PyLdetection.setEnabled(False)
+            if hasattr(self.ui.tp_dwi1D_widget, 'canvas'):
+                self.ui.tp_dwi1D_widget.canvas.figure.clear()
+                self.ui.tp_dwi1D_widget.canvas.draw()
 
     def show_canvas(self):
         if not hasattr(self, 'dwi_window'):
@@ -356,7 +362,7 @@ class ElecGeometry:
         points, per-shank lines/channels) -- mirrors do_get_shank_line's
         own post-restart setup, minus the parts that are only valid to run
         once per session (signal connections, the one-time forbidden-
-        region/skull-mask overlay reload, the insertion-step popup). Not
+        region overlay reload, the insertion-step popup). Not
         needed for the PDF report itself -- see on_next_shank_clicked --
         only for continued interactive use of page_6/the 2D views."""
         path_main = os.path.join(_paths['atlas_folder'], _paths['atlas_volume'])
@@ -388,12 +394,6 @@ class ElecGeometry:
             if region_to_avoid_img is not None:
                 self.MW.FileLoader.layer_index += 1
                 self.MW.FileLoader.initialize_file(region_to_avoid_img, self.MW.FileLoader.layer_index, 'coronal', 0)
-            skull_mask_img = getattr(self, 'skull_mask_img', None)
-            if skull_mask_img is not None:
-                self.MW.FileLoader.layer_index += 1
-                self.MW.FileLoader.initialize_file(
-                    skull_mask_img, self.MW.FileLoader.layer_index, 'coronal', 0,
-                    binary_color=(0.3, 0.3, 0.3), layer_label="Skull Mask", visibility_enabled=True)
             self._overlay_layers_reloaded = True
 
         # Vis3D itself is NOT rebuilt here -- its plotters live in their own
@@ -446,6 +446,15 @@ class ElecGeometry:
 
         self._draw_insertion_guide_line_mri()
         self._refresh_next_shank_button()
+
+        # Same reasoning as select_shank's own call (shank.py): switching
+        # shanks here (page_31, insertion refinement) changes which insert
+        # point the oblique constraint view(s) should be anchored on --
+        # hasattr-guarded since this method is inherited unchanged by the
+        # plain (non-MRI) TrajectoryPlanning too, which has no oblique
+        # views at all.
+        if hasattr(self, '_refresh_oblique_views_for_insert'):
+            self._refresh_oblique_views_for_insert(index)
 
     def _flip_cursor_to_point(self, point_xyz):
         """Jump the crosshair/cursor (all three 2D views) to an XYZ point in

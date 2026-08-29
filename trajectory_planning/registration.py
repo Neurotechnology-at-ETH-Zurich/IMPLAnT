@@ -6,9 +6,8 @@ import numpy as np
 import SimpleITK as sitk
 import ants
 import nibabel as nib
-from PySide6 import QtWidgets
-from PySide6.QtWidgets import QDockWidget, QDialog, QAbstractSpinBox, QTableWidgetItem, QMessageBox
-from PySide6.QtCore import QTimer, Qt
+from PySide6.QtWidgets import QDockWidget, QDialog, QMessageBox
+from PySide6.QtCore import QTimer
 from gui_utils.busy_overlay import BusyOverlay
 from trajectory_planning.visualisation3D import Visualisation3D
 from trajectory_planning.shank_setup_dialog import ShankSetupDialog
@@ -49,6 +48,11 @@ class TpRegistration:
 
             ants.image_write(img_aligned, new_name)
 
+        # initialize_file's "add another file" branch (loader.py) actually
+        # keys self.MW.Layers[0] by len(self.MW.Layers[0]) at call time, not
+        # by the layer_index passed in below -- capture that same key here
+        # so paint_red_areas can find this layer again afterwards.
+        self.second_file_layer_index = len(self.MW.Layers[0])
         self.MW.FileLoader.layer_index += 1
         self.MW.FileLoader.initialize_file(new_name,self.MW.FileLoader.layer_index,'coronal',0)
         #add to registration combobox
@@ -73,12 +77,26 @@ class TpRegistration:
         dlg = ShankSetupDialog(self.MW)
         if dlg.exec() != QDialog.DialogCode.Accepted:
             return
-        n_shanks, mode = dlg.get_values()
+        n_shanks, mode, xml_path, xml_groups, xml_nchannels = dlg.get_values()
         self.shank_geometry_mode = mode
         # stackedWidget_geometry: page_25 (index 0) holds the user-defined /
         # "Shank Geometry" entry point, page_26 (index 1) the pre-defined
         # equal-spacing channel/separation inputs.
         self.ui.stackedWidget_geometry.setCurrentIndex(0 if mode == "custom" else 1)
+
+        # Carry a Neuroscope XML loaded in the setup dialog straight into
+        # the same state browse_dfx_xml (dfx_geometry.py) would have set,
+        # so every shank's channel numbers are already there once its DXF
+        # bending is run (see refresh_dfx_channel_display) -- no need to
+        # load the same file a second time from inside the Shank Geometry
+        # panel. init_dfx_geometry (TrajectoryPlanning.__init__) has always
+        # already run by this point, so these attributes exist.
+        if xml_path is not None:
+            self.dfx_xml_file = xml_path
+            self.dfx_xml_groups = xml_groups
+            self.dfx_xml_nchannels = xml_nchannels
+            self.ui.pushButton_xml.setText(os.path.basename(xml_path))
+            self.ui.pushButton_xml.setToolTip(xml_path)
         while self.ui.comboBox_Shanks.count() < n_shanks:
             self.add_shank()
         self.ui.comboBox_Shanks.setCurrentIndex(0)
@@ -86,18 +104,6 @@ class TpRegistration:
 
         def proceed():
             self.refresh_atlas_bregma_lambda_from_user_points()
-            if self.skull_mask_native_path is not None:
-                # optional overlay -- a failure here (e.g. a warping bug)
-                # must not take the whole next step down with it: without
-                # this guard, an exception here means do_get_shank_line()
-                # below (spinbox ranging, atlas load, everything else)
-                # never runs at all, which looks like unrelated features
-                # silently breaking.
-                try:
-                    self.warp_skull_mask()
-                except Exception:
-                    import traceback
-                    traceback.print_exc()
             if transformPath is not None:
                 self.warp_red_areas(transformPath)
             else:
@@ -132,13 +138,9 @@ class TpRegistration:
         if hasattr(self,'region_to_avoid_img'):
             region_to_avoid_img = self.region_to_avoid_img
 
-        skull_mask_img = None
-        if hasattr(self,'skull_mask_img'):
-            skull_mask_img = self.skull_mask_img
-
-
         self.ui.stackedWidget_3d_tp.setCurrentIndex(1)
         self.ui.stackedWidget_3d.setCurrentIndex(0)
+        self._ensure_atlas_selector_widget()
         #load atlas file for further trajectory planning
         path_main = os.path.join(_paths['atlas_folder'], _paths['atlas_volume'])
         self.MW.restart_gui(path_main, full_restart=False,label_file=True,data_view='coronal')
@@ -187,25 +189,10 @@ class TpRegistration:
             self.MW.FileLoader.initialize_file(region_to_avoid_img,self.MW.FileLoader.layer_index,'coronal',0)
             self.region_to_avoid = sitk.GetArrayFromImage(region_to_avoid_img)
 
-        if skull_mask_img is not None:
-            self.MW.FileLoader.layer_index += 1
-            # dark grey, deliberately distinct from the forbidden-region
-            # overlay's grey/red and not tied to whether one happens to be
-            # loaded too -- initialize_file's default red/grey heuristic
-            # picks color based on that unrelated coincidence. Also give it
-            # its own label/visibility toggle -- without layer_label it's a
-            # sitk.Image just like the forbidden-region overlay, so it would
-            # otherwise be mislabeled "Forbidden Regions" in the layer table
-            # (and have its own visibility toggle disabled) by that same
-            # isinstance-based heuristic.
-            self.MW.FileLoader.initialize_file(
-                skull_mask_img,self.MW.FileLoader.layer_index,'coronal',0,
-                binary_color=(0.3,0.3,0.3),layer_label="Skull Mask",visibility_enabled=True)
-
         # load atlas for 3d visualisation
         self.Vis3D = Visualisation3D(self.MW)
-        # load dwi atlas
-        if not hasattr(self,'dwi'):
+        # load dwi atlas -- not every atlas has one (see ATLASES[...]['has_dwi'])
+        if not hasattr(self,'dwi') and _paths.get('atlas_dwi'):
             dwi_path=os.path.join(_paths['atlas_folder'], _paths['atlas_dwi'])
             nii_dwi=nib.load(dwi_path)
             dwi=np.asanyarray(nii_dwi.dataobj)
@@ -214,102 +201,43 @@ class TpRegistration:
         self.init_page30_mirror()
 
     def init_page30_mirror(self):
-        """page_30 (stackedWidget_3d_tp index 1) has its own copies of the
-        Cursor Position / Intensity under cursor widgets (spinBox_*_data3d_2,
-        tableintensity_data3d_2) so that info stays visible during the
-        insertion/deepest-point step -- but they aren't wired into the
-        shared Cursor/IntensityTable machinery (that only drives the
-        original *_data3d widgets), so they were always stuck showing
-        nothing. Mirror the real widgets into them here instead of touching
-        that shared, app-wide machinery.
+        """page_30 (stackedWidget_3d_tp index 1) used to have its own dead
+        copies of the Cursor Position / Intensity under cursor widgets
+        (spinBox_*_data3d_2, tableintensity_data3d_2), poll-synced from the
+        real *_data3d widgets every 200ms -- but the copies were never
+        actually interactive (a static icon item, a read-only text item),
+        so the eye-icon toggle did nothing there and the opacity cell only
+        looked editable.
+
+        page_29 (which holds the real spinBox_*_data3d/tableintensity_data3d)
+        and page_30 are two pages of the same stackedWidget_3d_tp, so they're
+        never visible at the same time -- reparent the real, already fully
+        wired widgets into page_30's layout instead of maintaining a second
+        copy. Removing a widget that isn't currently in a given layout (or
+        re-adding one that's already in it) is a harmless no-op, so this can
+        run again later (e.g. after an insertion-refinement round trip)
+        without needing to guard against repeats.
         """
-        for sb in (self.ui.spinBox_x_data3d_2, self.ui.spinBox_y_data3d_2, self.ui.spinBox_z_data3d_2):
-            sb.setReadOnly(True)
-            sb.setButtonSymbols(QAbstractSpinBox.NoButtons)
+        ui = self.ui
 
-        table = self.ui.tableintensity_data3d_2
-        table.setRowCount(1)
-        header = table.horizontalHeader()
-        header.setSectionResizeMode(0, QtWidgets.QHeaderView.ResizeToContents)
-        header.setSectionResizeMode(1, QtWidgets.QHeaderView.Stretch)
-        header.setSectionResizeMode(2, QtWidgets.QHeaderView.ResizeToContents)
-        header.setSectionResizeMode(3, QtWidgets.QHeaderView.ResizeToContents)
-        self.sync_page30_display()
+        for axis, dst_row, dst_col in (('x', 1, 1), ('y', 1, 2), ('z', 1, 3)):
+            mirror = getattr(ui, f"spinBox_{axis}_data3d_2")
+            ui.gridLayout_212.removeWidget(mirror)
+            mirror.setParent(None)
+            mirror.hide()
 
-        if hasattr(self.MW, '_page30_mirror_timer') and self.MW._page30_mirror_timer is not None:
-            self.MW._page30_mirror_timer.stop()
-        timer = QTimer(self.MW)
-        timer.timeout.connect(self.sync_page30_display)
-        timer.start(200)
-        self.MW._page30_mirror_timer = timer
+            real = getattr(ui, f"spinBox_{axis}_data3d")
+            ui.gridLayout_157.removeWidget(real)
+            ui.gridLayout_212.addWidget(real, dst_row, dst_col)
 
-    def sync_page30_display(self):
-        for src_name, dst_name in (
-            ('spinBox_x_data3d', 'spinBox_x_data3d_2'),
-            ('spinBox_y_data3d', 'spinBox_y_data3d_2'),
-            ('spinBox_z_data3d', 'spinBox_z_data3d_2'),
-        ):
-            src = getattr(self.ui, src_name)
-            dst = getattr(self.ui, dst_name)
-            if dst.value() != src.value():
-                dst.setValue(src.value())
+        mirror_table = ui.tableintensity_data3d_2
+        ui.gridLayout_213.removeWidget(mirror_table)
+        mirror_table.setParent(None)
+        mirror_table.hide()
 
-        src_table = self.ui.tableintensity_data3d
-        dst_table = self.ui.tableintensity_data3d_2
-
-        # mirror every layer row, not just row 0 -- previously any overlay
-        # added after the base image (region-to-avoid, skull mask, ...)
-        # never appeared here even though it was genuinely in the real
-        # table, because this only ever synced row 0 and never grew the
-        # mirror table's row count to match.
-        if dst_table.rowCount() != src_table.rowCount():
-            dst_table.setRowCount(src_table.rowCount())
-
-        for row in range(src_table.rowCount()):
-            # columns 1 (Layer) and 2 (Intensity) are plain QTableWidgetItems
-            # on the real table -- mirror their text directly, and their
-            # tooltip too (the real table's layer-name column shows the full
-            # name on hover when the column is too narrow to fit it -- the
-            # mirror never got that, since only .text() was ever copied).
-            for col in (1, 2):
-                src_item = src_table.item(row, col)
-                text = src_item.text() if src_item is not None else ""
-                dst_item = dst_table.item(row, col)
-                if dst_item is None:
-                    dst_item = QTableWidgetItem()
-                    dst_item.setFlags(dst_item.flags() & ~Qt.ItemIsEditable)
-                    dst_table.setItem(row, col, dst_item)
-                if dst_item.text() != text:
-                    dst_item.setText(text)
-                dst_item.setToolTip(text)
-
-            # columns 0 (visibility toggle) and 3 (opacity) are cell WIDGETS
-            # on the real table (QToolButton / QDoubleSpinBox), not items --
-            # there's nothing for item(row, col) to read there, which is why
-            # they were missing entirely before. This panel is a passive
-            # display, not another interactive control, so mirror both as
-            # read-only.
-            visible_widget = src_table.cellWidget(row, 0)
-            icon_item = dst_table.item(row, 0)
-            if icon_item is None:
-                icon_item = QTableWidgetItem()
-                icon_item.setFlags(icon_item.flags() & ~Qt.ItemIsEditable)
-                icon_item.setTextAlignment(Qt.AlignCenter)
-                dst_table.setItem(row, 0, icon_item)
-            if visible_widget is not None:
-                icon_item.setIcon(visible_widget.icon())
-
-            opacity_widget = src_table.cellWidget(row, 3)
-            opacity_item = dst_table.item(row, 3)
-            if opacity_item is None:
-                opacity_item = QTableWidgetItem()
-                opacity_item.setFlags(opacity_item.flags() & ~Qt.ItemIsEditable)
-                opacity_item.setTextAlignment(Qt.AlignCenter)
-                dst_table.setItem(row, 3, opacity_item)
-            if opacity_widget is not None:
-                text = f"{opacity_widget.value():.1f} %"
-                if opacity_item.text() != text:
-                    opacity_item.setText(text)
+        table = ui.tableintensity_data3d
+        ui.gridLayout_156.removeWidget(table)
+        ui.gridLayout_213.addWidget(table, 1, 0)
 
     def ask_paint_forbidden_areas(self):
         """pushButton_tp_next0 ('Next'): ask whether to mark forbidden
@@ -327,157 +255,20 @@ class TpRegistration:
         else:
             self.get_shank_line(None)
 
-    def segment_skull(self, transformPath):
-        # segment_skull runs right after Step 1 (bregma/lambda picked on the
-        # animal's own MRI), before the atlas is even loaded -- the Step 1
-        # markers are still sitting on these same renderers and are just
-        # clutter now that the user is focused on the skull, not bregma/lambda.
-        self._set_bregma_lambda_visible(False)
-
-        # done painting (or skipped it) -- close the paintbrush dock now,
-        # right as we move on to skull segmentation, instead of leaving it
-        # open underneath the skull-segmentation dock until warp_red_areas
-        # closes it much later (only once the ENTIRE skull step is also
-        # finished). A no-op if painting was skipped or already closed.
-        paintbrush_dock = self.MW.findChild(QDockWidget, "dock_paintbrush")
-        if paintbrush_dock is not None:
-            paintbrush_dock.close()
-        # closing the dock doesn't turn the brush itself off -- brush_on
-        # stays True and the cursor/brush actors stay live on the render
-        # views underneath. Un-checking the same checkbox the user would
-        # normally uncheck triggers brush_3D(False) properly (clears
-        # brush_on, removes the brush actors) instead of duplicating that
-        # logic here.
-        if hasattr(self.ui, 'checkBox_Brush') and self.ui.checkBox_Brush.isChecked():
-            self.ui.checkBox_Brush.setChecked(False)
-
-        # informational only (no Yes/No) -- skull segmentation is mandatory
-        # once this step is reached, there is no skip path.
-        msg_box = QMessageBox(self.MW)
-        msg_box.setWindowTitle("Skull Segmentation")
-        msg_box.setText("Continuing with skull segmentation.")
-        msg_box.exec()
-
-        self.ui.stackedWidget_3d.setVisible(False)
-        layout = self.ui.page_3D.layout()
-        layout.setColumnStretch(0, 1)
-        layout.setColumnStretch(1, 1)
-        layout.setColumnStretch(2, 1)
-        layout.setColumnStretch(3, 0)
-
-        #make second image invisible and lock its toggle so the user can't
-        #click it back on during skull segmentation (data_index=0, layer_index=1)
-        if self.LoadMRI.TrajPlanning.second_file:
-            layer = self.MW.Layers[0][1]
-            layer.toggle_visibility(False, layer.visibility_btn)
-            layer.visibility_btn.setEnabled(False)
-
-        #same treatment for the painted forbidden-regions overlay, if the
-        #user painted one -- its toggle is already created disabled (see
-        #PaintbrushGUI.brush_3D), but nothing had ever actually hidden the
-        #layer itself
-        if hasattr(self.MW, 'Paintbrush') and 0 in self.MW.Paintbrush.layer_index:
-            forbidden_layer = self.MW.Layers[0][self.MW.Paintbrush.layer_index[0]]
-            forbidden_layer.toggle_visibility(False, forbidden_layer.visibility_btn)
-            forbidden_layer.visibility_btn.setEnabled(False)
-
-        # skull segmentation now derives its search region from the brain
-        # mask (a dilated shell around it, see SegmentationGUI._compute_skull_th_vol)
-        # -- without one there is nothing to build that shell from, so send
-        # the user to segment the brain first and resume here once it's saved.
-        # masks are named off the original (pre-resample) file, not the
-        # working "_resampledXXum" volume actually loaded for planning.
-        brain_mask_path = self.MW.data_pre_resampled[:-7] + "-mask.nii.gz"
-        if not os.path.exists(brain_mask_path):
-            msg_box = QMessageBox(self.MW)
-            msg_box.setWindowTitle("Brain Mask Required")
-            msg_box.setText(
-                "Skull segmentation needs an existing brain mask to define "
-                "its search region, and none was found for this scan.\n\n"
-                "Segment the brain now -- skull segmentation will continue "
-                "automatically once the brain mask is saved.")
-            msg_box.exec()
-
-            def _load_brain():
-                self.MW.ButtonsGUI_3D.initialize_segmentation(
-                    on_finish=lambda: self.segment_skull(transformPath))
-
-            self.MW.overlay = BusyOverlay(self.MW, message="Loading brain segmentation, please wait…")
-            self.MW.overlay.run(_load_brain)
-            return
-
-        def _load():
-            # initialize_segmentation() builds a thresholded volume + a new
-            # image layer for the full 3D image, which is heavy enough to
-            # freeze the UI for a moment on a typical scan -- same overlay
-            # pattern as get_shank_line's "please wait" while it loads.
-            self.MW.ButtonsGUI_3D.initialize_segmentation(
-                mode="skull",
-                on_finish=lambda: self._skull_segmentation_finished(transformPath))
-            # the instructions popup only makes sense once the segmentation
-            # dock is actually up -- deferred a tick so it appears after the
-            # busy overlay (which closes right as this function returns)
-            # has cleared, not stacked underneath it.
-            QTimer.singleShot(0, self._popup_segment_skull)
-
-        self.MW.overlay = BusyOverlay(self.MW, message="Loading skull segmentation, please wait…")
-        self.MW.overlay.run(_load)
-
-    def _skull_segmentation_finished(self, transformPath):
-        self.ui.stackedWidget_3d.setVisible(True)
-        self._set_bregma_lambda_visible(True)
-        skull_mask_path = self.MW.data_pre_resampled[:-7] + "-skullmask.nii.gz"
-        if os.path.exists(skull_mask_path):
-            self.skull_mask_native_path = skull_mask_path
-        self.get_shank_line(transformPath)
-
-    def warp_skull_mask(self):
-        """Warp the manually segmented skull mask (native subject space)
-        into atlas space, the same way warp_red_areas does for painted
-        forbidden regions, so it can be shown as an overlay once
-        trajectory planning switches into atlas space.
-
-        Unlike the paintbrush label (already on the working volume's
-        grid), the skull mask on disk was saved against the original
-        (pre-resample) scan -- see SegmentationGUI._compute_skull_th_vol --
-        a different, finer grid than raw_ref_image (the working volume's
-        raw-oriented image). Resample onto raw_ref_image's grid first so
-        the spacing/origin/direction pulled from it below actually
-        describe the array being warped, instead of mislabeling a
-        finer-grid array with the working grid's (coarser) geometry."""
-        mask_img_rawOrientation = sitk.ReadImage(self.skull_mask_native_path)
-
-        raw_ref = self.LoadMRI.volumes[0].raw_ref_image
-        mask_img_rawOrientation = sitk.Resample(
-            mask_img_rawOrientation, raw_ref,
-            sitk.Transform(), sitk.sitkNearestNeighbor, 0)
-        mask_raw_np = sitk.GetArrayFromImage(mask_img_rawOrientation)
-
-        mask_ants = ants.from_numpy(
-            mask_raw_np.T.astype(np.float32),
-            origin=list(raw_ref.GetOrigin()),
-            spacing=list(raw_ref.GetSpacing()),
-            direction=np.array(raw_ref.GetDirection()).reshape(3, 3),
-        )
-        raw_fixed = ants.image_read(os.path.join(_paths['atlas_folder'], _paths['atlas_volume']))
-        mask_aligned = ants.apply_transforms(
-            fixed=raw_fixed,
-            moving=mask_ants,
-            transformlist=self.transform_path,
-            interpolator="nearestNeighbor",
-        )
-        atlas_img = sitk.ReadImage(os.path.join(_paths['atlas_folder'], _paths['atlas_volume']))
-        self.skull_mask_img = sitk.GetImageFromArray(mask_aligned.numpy().T)
-        self.skull_mask_img.CopyInformation(atlas_img)
 
     def paint_red_areas(self):
         self._popup_red_areas()
 
         # Step 1's bregma/lambda markers are just clutter once the user is
-        # focused on painting forbidden areas -- segment_skull already hides
-        # them for the skull-segmentation step right after this one, but
-        # painting itself left them on screen until now.
+        # focused on painting forbidden areas.
         self._set_bregma_lambda_visible(False)
+        # Same for the misalignment guide line (RenderingMri-only -- see
+        # hide_misalignment_guide_line) -- do_get_shank_line hides it too,
+        # but that only runs once painting is DONE (warp_red_areas ->
+        # do_get_shank_line); without this, it stayed visible for the
+        # entire painting step itself.
+        if hasattr(self, 'hide_misalignment_guide_line'):
+            self.hide_misalignment_guide_line()
 
         self.ui.stackedWidget_3d.setVisible(False)
         layout = self.ui.page_3D.layout()
@@ -490,6 +281,18 @@ class TpRegistration:
             layer = self.LoadMRI.MW.Layers[0][self.mask_idx]
             layer.toggle_visibility(False,self.LoadMRI.MW.Layers[0][self.mask_idx].visibility_btn)
 
+        if self.second_file and self.second_file_layer_index is not None:
+            # Hidden, not disabled -- the eye toggle stays clickable so the
+            # user can still bring the registered second file back while
+            # painting, same as every other layer's toggle. toggle_visibility
+            # only swaps the icon/actor visibility, not the button's own
+            # checked state -- set that too, or the next real click (which
+            # flips checked from its still-True state) would toggle it the
+            # wrong way and it'd stay hidden.
+            layer = self.LoadMRI.MW.Layers[0][self.second_file_layer_index]
+            layer.visibility_btn.setChecked(False)
+            layer.toggle_visibility(False, layer.visibility_btn)
+
         self.MW.ButtonsGUI_3D.initialize_paintbrush(red_only=True)
         #increase maximum due to resampling
         self.LoadMRI.brush['size'].setRange(1,30)
@@ -498,34 +301,8 @@ class TpRegistration:
         self.ui.pushButton_paint_done.setVisible(True)
 
 
-    def warp_red_areas(self, transform_path):
-        label_vol = self.MW.Layers[0][self.MW.Paintbrush.layer_index[0]].volume[0]
-        label_img = sitk.GetImageFromArray(label_vol)
-        label_img.CopyInformation(self.LoadMRI.volumes[0].oriented_ref_image)
-        label_img_rawOrientation = sitk.DICOMOrient(label_img, self.LoadMRI.volumes[0].raw_DICOMOrient)
-        #resample to atlas
-        label_img_raw_np = sitk.GetArrayFromImage(label_img_rawOrientation)
-
-        raw_ref = self.LoadMRI.volumes[0].raw_ref_image
-        label_ants = ants.from_numpy(
-            label_img_raw_np.T.astype(np.float32),
-            origin=list(raw_ref.GetOrigin()),
-            spacing=list(raw_ref.GetSpacing()),
-            direction=np.array(raw_ref.GetDirection()).reshape(3, 3),
-        )
-        #register to atlas
-        raw_fixed = ants.image_read(os.path.join(_paths['atlas_folder'], _paths['atlas_volume']))
-        label_aligned = ants.apply_transforms(
-            fixed=raw_fixed,
-            moving=label_ants,
-            transformlist=transform_path,
-            interpolator="nearestNeighbor",
-        )
-
-        atlas_img = sitk.ReadImage(os.path.join(_paths['atlas_folder'], _paths['atlas_volume']))
-        self.region_to_avoid_img = sitk.GetImageFromArray(label_aligned.numpy().T)
-        self.region_to_avoid_img.CopyInformation(atlas_img) #(self.LoadMRI.volumes[0].raw_ref_image)
-        self.ui.stackedWidget_3d.setVisible(True)
-        dock = self.MW.findChild(QDockWidget, "dock_paintbrush")
-        dock.close()
-        self.do_get_shank_line()
+    # warp_red_areas removed -- dead code. Only TrajectoryPlanningMri is
+    # ever instantiated (see main_window.py), and TpRegistrationMri.
+    # warp_red_areas (registration_mri.py) is a complete standalone
+    # replacement (including its own copy of the stackedWidget_3d/dock/
+    # do_get_shank_line tail), never calling super().
