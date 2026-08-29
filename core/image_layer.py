@@ -172,6 +172,13 @@ class ImageLayer:
             else:
                 btn.setIcon(self.icon_hidden)
 
+        # keep the intensity table's opacity box in sync regardless of which
+        # caller (table row click, segmentation threshold checkbox, registration
+        # mask toggle, ...) triggered this
+        opacity_box = getattr(self, 'opacity_box', None)
+        if opacity_box is not None:
+            opacity_box.setEnabled(checked)
+
         self.render_fct()
 
 

@@ -94,13 +94,16 @@ class IntensityTable(QObject):
         self.table.setRowCount(self.index+1)
 
         btn = QToolButton()
+        # Layer 0 (the main image) can never be hidden -- disabled and
+        # locked to the closed-eye icon, same as every other intensity
+        # table (tableintensity_data3d/data0/data1/data2).
         btn.setCheckable(False)
-        btn.setChecked(True)  # visible by default
+        btn.setChecked(True)
         btn.setEnabled(False)
-        btn.setIcon(self.icon_visible)
-        btn.setToolTip("Toggle visibility")
+        btn.setIcon(self.icon_hidden)
+        btn.setToolTip("Main image is always visible and cannot be hidden")
         btn.setAutoRaise(True)
-        btn.clicked.connect(lambda checked , b=btn: self.MW.Layers[self.data_index][self.index].toggle_visibility(checked,b))
+        row0 = self.index
         btn.setStyleSheet("""
             QToolButton {
                 border: none;
@@ -142,11 +145,27 @@ class IntensityTable(QObject):
         opacity_spin.setSuffix(" %")
         opacity_spin.setAlignment(Qt.AlignCenter)
         opacity_spin.setToolTip("Adjust layer opacity")
-        opacity_spin.setEnabled(False)
+        # Tied to btn.isChecked() (always True, row 0 can't be hidden) rather
+        # than a hardcoded True, so this follows the same
+        # opacity-enabled-iff-row-visible rule as every other row.
+        opacity_spin.setEnabled(btn.isChecked())
+        # self.overlay_slider doesn't exist yet at this point (create_table
+        # runs before initialize_class's own setup_slider_overlay call) --
+        # unlike update_table's identical wiring, read it inside the lambda
+        # body (by the time this actually fires, __init__ has long since
+        # finished) instead of capturing it as a default-argument value now.
+        opacity_spin.valueChanged.connect(lambda value, box=opacity_spin, r=row0: (
+            self.opacity_values[r].__setitem__(0, value),
+            self.MW.Layers[self.data_index][r].set_opacity(value, self.overlay_slider, box)
+        ))
         self.table.setCellWidget(self.index , 3, opacity_spin)
         self.MW.LoadMRI.cursor_ui[f"opacity{self.index }"] = opacity_spin
+        # so toggle_visibility() can keep this in sync no matter who calls it
+        # (self.data_index isn't set yet -- create_table runs from __init__,
+        # before that assignment -- use the parameter instead)
+        self.MW.Layers[data_index][row0].opacity_box = opacity_spin
 
-        self.opacity_values.append([100,False,data_index])
+        self.opacity_values.append([100,True,data_index])
 
         # Layout
         self.original_image.append(None)
@@ -198,12 +217,23 @@ class IntensityTable(QObject):
         row_index = self.index
         btn = QToolButton()
         btn.setCheckable(True)
-        btn.setChecked(True)
-        btn.setEnabled(visibility_enabled)
-        btn.setIcon(self.icon_visible)
+        btn.setChecked(visibility_enabled)
+        # Always clickable -- visibility_enabled is this layer's INITIAL
+        # shown/hidden state, not a permission flag. Tying the button's
+        # enabled state to it (the previous behaviour) permanently locked
+        # out the toggle for every layer that starts hidden (Brain Edge,
+        # Heatmap, paintbrush Label, Threshold Image, ...): once disabled,
+        # nothing ever re-enabled it, so it could never be turned on from
+        # this table again.
+        btn.setEnabled(True)
+        btn.setIcon(self.icon_visible if visibility_enabled else self.icon_hidden)
         btn.setToolTip("Toggle visibility")
         btn.setAutoRaise(True)
-        btn.clicked.connect(lambda checked, b=btn, r=row_index: self.MW.Layers[self.data_index][row_index].toggle_visibility(checked,b))
+        # toggle_visibility() itself keeps the opacity box (self.opacity_box,
+        # set below) in sync, so nothing extra is needed here
+        btn.clicked.connect(lambda checked, b=btn, li=layer_index: (
+            self.MW.Layers[self.data_index][li].toggle_visibility(checked, b),
+        ))
         btn.setStyleSheet("""
             QToolButton {
                 border: none;
@@ -245,14 +275,16 @@ class IntensityTable(QObject):
         opacity_spin.setAlignment(Qt.AlignCenter)
         opacity_spin.setEnabled(visibility_enabled)
         opacity_spin.setToolTip("Adjust layer opacity")
-        opacity_spin.valueChanged.connect(lambda value, slider=self.overlay_slider, box=opacity_spin: (
+        opacity_spin.valueChanged.connect(lambda value, slider=self.overlay_slider, box=opacity_spin, li=layer_index: (
             self.opacity_values[row_index].__setitem__(0, value),
-            self.MW.Layers[self.data_index][row_index].set_opacity(value, slider, box)
+            self.MW.Layers[self.data_index][li].set_opacity(value, slider, box)
         ))
 
         #self.update_opacity(value, i, r))
         self.table.setCellWidget(self.index , 3, opacity_spin)
         self.MW.LoadMRI.cursor_ui[f"opacity{self.index }"] = opacity_spin
+        # so toggle_visibility() can keep this in sync no matter who calls it
+        self.MW.Layers[self.data_index][layer_index].opacity_box = opacity_spin
 
         if visibility_enabled:
             self.opacity_values.append([0.6*100,visibility_enabled,data_index])
@@ -403,6 +435,7 @@ class IntensityTable(QObject):
         self.index-=1
 
         self.opacity_values.pop(row)
+        self.opacity_index.pop(row)
 
 
     def on_contrast_selection_changed(self, combo_idx):
@@ -417,17 +450,12 @@ class IntensityTable(QObject):
             return
         ui = lm.contrast_ui_elements[0]
 
-        # Disconnect existing bindings (PySide6 raises RuntimeWarning, not RuntimeError)
+        # Disconnect existing bindings (a no-op warning, not an exception,
+        # when nothing was connected yet -- nothing to actually catch here)
         for key in ("contrast0", "brightness0"):
-            try:
-                ui[key].valueChanged.disconnect()
-            except Exception:
-                pass
+            ui[key].valueChanged.disconnect()
         for key in ("auto0", "reset0"):
-            try:
-                ui[key].clicked.disconnect()
-            except Exception:
-                pass
+            ui[key].clicked.disconnect()
 
         def _set_sliders(window, level, data_max, block=True):
             for key in ("contrast0", "brightness0"):
@@ -501,18 +529,13 @@ class IntensityTable(QObject):
             rect = self.table.visualRect(index)
 
             slider = self.overlay_slider
-            # Fix: disconnect any previous connections first
-            try:
-                slider.valueChanged.disconnect()
-            except RuntimeError:
-                pass
-
+            slider.valueChanged.disconnect()
             slider.setValue(self.opacity_values[row][0])
             slider.move(rect.left()-(rect.right()-rect.left())+20, rect.center().y())
             slider.show()
-            slider.valueChanged.connect(lambda value, slider=slider, box=self.MW.LoadMRI.cursor_ui[f"opacity{row}"]: (
+            slider.valueChanged.connect(lambda value, slider=slider, box=self.MW.LoadMRI.cursor_ui[f"opacity{row}"], li=self.opacity_index[row]: (
                 self.opacity_values[row].__setitem__(0, value),
-                self.MW.Layers[self.data_index][row].set_opacity(value,slider,box)
+                self.MW.Layers[self.data_index][li].set_opacity(value,slider,box)
             ))
 
     def eventFilter(self, obj, event):

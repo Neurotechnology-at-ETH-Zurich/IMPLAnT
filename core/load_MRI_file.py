@@ -90,12 +90,7 @@ class LoadMRI(QObject):
             if self.volumes[0].is_4d:
                 Zoom.fit_to_window(self.vtk_widgets[0][data_view], self.vtk_widgets.values(), self.scale_bar, self.vtk_widgets, data_index)
             else: #3d
-                # "coronal" is the reference widget whenever it exists (every
-                # existing caller registers all three views) -- fall back to
-                # whichever view IS registered for callers with fewer (e.g.
-                # the Surgery tab's axial-only LoadMRI instance).
-                fit_widget = self.vtk_widgets[0].get("coronal") or next(iter(self.vtk_widgets[0].values()))
-                Zoom.fit_to_window(fit_widget, self.vtk_widgets.values(), self.scale_bar, self.vtk_widgets, data_index)
+                Zoom.fit_to_window(self.vtk_widgets[0]["coronal"], self.vtk_widgets.values(), self.scale_bar, self.vtk_widgets, data_index)
             self.is_first_slice = False
 
         self.render()
