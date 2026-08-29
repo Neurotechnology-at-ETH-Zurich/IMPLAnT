@@ -233,8 +233,12 @@ class PaintbrushGUI:
                 self.MW.Paintbrush.start_paintbrush(is_4d=False,histogram_needed=histogram_needed)
                 layer_name = "Forbidden Regions" if red_only else "Label"
                 paint_layer_index = self.MW.Paintbrush.layer_index[0]
+                # visibility_enabled=True: this layer's actor is fully
+                # visible from the moment you start painting (that's how you
+                # see your strokes) -- the eye icon should say so too,
+                # instead of claiming hidden while actually being shown.
                 self.MW.Layers[0][paint_layer_index].visibility_btn = self.LoadMRI.intensity_table[0].update_table(
-                    layer_name,self.MW.Paintbrush.label_volume[0],0,paint_layer_index,visibility_enabled=False)
+                    layer_name,self.MW.Paintbrush.label_volume[0],0,paint_layer_index,visibility_enabled=True)
             #else:
             #self.MW.Paintbrush.start_paintbrush()
         else:
@@ -244,8 +248,8 @@ class PaintbrushGUI:
                 for view_name, renderer in renderers.items():
                     if self.MW.Paintbrush.brush_actors.get(view_name) is not None:
                         renderer.RemoveActor(self.MW.Paintbrush.brush_actors[view_name])
+                        self.MW.Paintbrush.brush_actors[view_name] = None
                     self.LoadMRI.vtk_widgets[i][view_name].GetRenderWindow().Render() ## FOR ALL IMAGES
-            self.MW.Paintbrush.brush_actors[view_name] = None
 
 
     def brush_4D(self,state:bool,label=True):
@@ -262,8 +266,10 @@ class PaintbrushGUI:
                     # each 4D view has its own table, layer and label volume
                     table = self.LoadMRI.intensity_table[idx]
                     if label:
+                        # same reasoning as brush_3D above: the actor is
+                        # visible from the start, so the icon should match.
                         table.update_table("Label",self.MW.Paintbrush.label_volume[idx],idx,
-                                           self.MW.Paintbrush.layer_index[idx],visibility_enabled=False)
+                                           self.MW.Paintbrush.layer_index[idx],visibility_enabled=True)
         else:
             self.ui.checkBox_Brush_MRID.setText("Brush OFF")
             if self.LoadMRI.heatmap:
@@ -279,8 +285,8 @@ class PaintbrushGUI:
                 for view_name, renderer in renderers.items():
                     if self.MW.Paintbrush.brush_actors.get(view_name) is not None:
                         renderer.RemoveActor(self.MW.Paintbrush.brush_actors[view_name])
+                        self.MW.Paintbrush.brush_actors[view_name] = None
                     self.LoadMRI.vtk_widgets[i][view_name].GetRenderWindow().Render() ## FOR ALL IMAGES
-            self.MW.Paintbrush.brush_actors[view_name] = None
 
 
     def label_table(self):
