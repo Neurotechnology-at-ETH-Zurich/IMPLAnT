@@ -77,6 +77,7 @@ class LoadSurgeryPlan(QtWidgets.QDialog):
             return
 
         data = _json.loads(attachment)
+        self.MW._save_session_state('surgery', path=path)
         # Close this dialog first rather than blocking it on the (possibly
         # slow -- locating + reading the MRI file, building the 3D preview)
         # load_plan() call -- a BusyOverlay over the main window gives
