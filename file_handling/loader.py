@@ -36,11 +36,16 @@ class FileLoader:
 
 
 
-    def choose_file(self,path=None,add_another_file=False):
+    def choose_file(self,path=None,add_another_file=False,skip_dialog=False):
         """
         Let the user pick a NIfTI file and confirm the choice.
         Returns the file path, or None if the user cancelled.
+        skip_dialog=True returns `path` (an exact file, not a directory)
+        immediately, with no picker/confirmation -- for silently restoring a
+        previously-used file via load_previous_session().
         """
+        if skip_dialog:
+            return path
         file_name, _ = QFileDialog.getOpenFileName(
             None,
             "Open NIfTI File",
@@ -69,11 +74,11 @@ class FileLoader:
 
         return file_name
 
-    def open_user_dialog(self,layer_index=0,add_another_file=False,path=None):
+    def open_user_dialog(self,layer_index=0,add_another_file=False,path=None,skip_dialog=False):
         """
         Open the initial User Dialog when the application starts.
         """
-        file_name = self.choose_file(path=path,add_another_file=layer_index!=0)
+        file_name = self.choose_file(path=path,add_another_file=layer_index!=0,skip_dialog=skip_dialog)
         if file_name is None:
             return None, None
 
@@ -239,7 +244,7 @@ class FileLoader:
                     if binary_color is not None:
                         lut.SetTableValue(1, *binary_color, 1.0)
                     elif hasattr(self.MW.LoadMRI,'TrajPlanning') and hasattr(self.MW.LoadMRI.TrajPlanning,'region_to_avoid_img'):
-                        lut.SetTableValue(1, 0.6,0.6,0.6, 1.0) #dark-grey
+                        lut.SetTableValue(1, 0.12,0.12,0.12, 1.0) #super dark grey
                     else:
                         lut.SetTableValue(1, 1,0,0, 1.0) #red
                     lut.Build()
@@ -257,8 +262,8 @@ class FileLoader:
                 else:
                     # every sitk.Image passed in here used to be assumed to be
                     # the forbidden-regions overlay -- callers with their own
-                    # sitk.Image overlay (e.g. the skull mask) now pass an
-                    # explicit layer_label instead of being mislabeled by this.
+                    # sitk.Image overlay now pass an explicit layer_label
+                    # instead of being mislabeled by this.
                     intensity_filename = 'Forbidden Regions' if is_forbidden else os.path.basename(file_name)
                 if visibility_enabled is None:
                     visibility_enabled = not is_forbidden

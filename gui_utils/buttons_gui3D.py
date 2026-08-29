@@ -142,7 +142,27 @@ class ButtonsGUI_3D:
         ctrl_j.setContext(Qt.ApplicationShortcut)
         ctrl_j.activated.connect(lambda: lm.contrast[0].auto(image_index=0))
 
+        self.ui.pushButton_contrastAdjustments.clicked.connect(self.show_contrast_popup)
 
+    def show_contrast_popup(self):
+        """pushButton_contrastAdjustments.clicked -- pop the real
+        groupBox_contrast (page_29 of stackedWidget_3d_tp, normally only
+        visible on that page) up as a floating dialog, same PopupDialog
+        recipe initialize_resampling/initialize_registration already use
+        for groupBox_resample/groupBox_registration: reparent the actual
+        widget in (its sliders/spinboxes/combobox keep whatever they're
+        already wired to above, since reparenting doesn't touch signal
+        connections), not a duplicate control set -- so it works from
+        page_30 (where this button lives) without navigating away."""
+        if hasattr(self, "popup_contrast") and self.popup_contrast.isVisible():
+            self.popup_contrast.raise_()
+            self.popup_contrast.activateWindow()
+            return
+        w = self.ui.groupBox_contrast  # widget inside main UI
+        self.popup_contrast = PopupDialog(parent=self.MW, ui_widget=w)
+        self.popup_contrast.setWindowTitle("Contrast Adjustments")
+        self.popup_contrast.resize(400, 300)
+        self.popup_contrast.show()
 
     def initialize_cursor(self,data_index):
         """
@@ -184,7 +204,14 @@ class ButtonsGUI_3D:
             dock.setObjectName(dock_name)
             dock.setWidget(self.ui.groupBox_paintbrush_3d)
             self.MW.addDockWidget(Qt.RightDockWidgetArea, dock)
-            dock.visibilityChanged.connect(lambda visible: setattr(self.LoadMRI, 'brush_on', False) if not visible else None)
+            # setattr alone only flipped the flag -- it never called brush_3D's
+            # teardown branch, so the last-drawn brush cursor actor (the
+            # square/circle outline that follows the mouse) stayed attached to
+            # the renderers and kept showing on later pages once the dock
+            # closed (e.g. after finishing/skipping forbidden-area painting).
+            dock.visibilityChanged.connect(
+                lambda visible: self.LoadMRI.PaintbrushGUI.brush_3D(False)
+                if not visible and hasattr(self.LoadMRI, 'PaintbrushGUI') else None)
 
             self.LoadMRI.brush = {
                 'size': self.ui.brush_size3d,

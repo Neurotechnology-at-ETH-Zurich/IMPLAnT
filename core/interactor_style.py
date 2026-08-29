@@ -31,6 +31,7 @@ class CustomInteractorStyle(vtk.vtkInteractorStyleImage):
         self.LoadMRI.brush_on = False
         self.changing_measurement_localisation = False
         self.changing_meas_point = False
+        self.dragging_misalignment_line = False
 
         # Add Observers
         self.AddObserver("LeftButtonPressEvent", self.on_left_button_down)
@@ -52,7 +53,7 @@ class CustomInteractorStyle(vtk.vtkInteractorStyleImage):
         picker = vtk.vtkPropPicker()
         renderer = interactor.GetRenderWindow().GetRenderers().GetFirstRenderer()
 
-        picker.Pick(x, y, 0, renderer)
+        picked = picker.Pick(x, y, 0, renderer)
         if self.is_in_minimap_rect(x, y):
             # Start dragging rectangle to pan
             self.dragging_minimap = True
@@ -61,6 +62,13 @@ class CustomInteractorStyle(vtk.vtkInteractorStyleImage):
             self.MW.Paintbrush.mouse_moves(self.paintbrush_pos,self.dragging,self.interactor_view_name,self.interactor_data_index)
         else:
             self.dragging = True
+            trajplanning = getattr(self.LoadMRI, 'TrajPlanning', None)
+            misalignment_actor = getattr(trajplanning, 'misalignment_line_actor', None) if trajplanning else None
+            if (picked and self.interactor_view_name == 'coronal' and misalignment_actor is not None
+                    and trajplanning.is_near_misalignment_line(picker.GetPickPosition())):
+                self.dragging_misalignment_line = True
+                trajplanning.start_misalignment_line_translate(picker.GetPickPosition())
+                return
             # add measurement point if Measurement instance exists
             if self.measurement is not None:
                 for idx, (view_name, line_actor, line_slice_index, text_actor, _,_,points) in enumerate(self.MW.Measurement.measurement_lines):
@@ -119,6 +127,7 @@ class CustomInteractorStyle(vtk.vtkInteractorStyleImage):
 
         self.changing_measurement_localisation = False
         self.changing_meas_point = False
+        self.dragging_misalignment_line = False
 
     def on_mouse_move(self, obj, event):
         """
@@ -138,6 +147,11 @@ class CustomInteractorStyle(vtk.vtkInteractorStyleImage):
             self.LoadMRI.minimap.create_small_rectangle(zoom_factor=Zoom.global_zoom_factor,vn=self.interactor_view_name,new_x=new_x,new_y=new_y)
             self.last_pos = [x,y]
             interactor.GetRenderWindow().Render()
+        elif self.dragging_misalignment_line:
+            picker = vtk.vtkPropPicker()
+            renderer = interactor.GetRenderWindow().GetRenderers().GetFirstRenderer()
+            if picker.Pick(x, y, 0, renderer):
+                self.LoadMRI.TrajPlanning.update_misalignment_line_translate(picker.GetPickPosition())
         elif self.changing_measurement_localisation:
             view_name, line_actor,line_slice_index,text_actor,line,dashed_lines,_= self.MW.Measurement.measurement_lines[self.changing_index]
             midpoint = text_actor.GetPosition()
@@ -231,7 +245,7 @@ class CustomInteractorStyle(vtk.vtkInteractorStyleImage):
                         camera.SetFocalPoint(fp[0],fp[1],fp[2])
                         camera.SetPosition(pos[0],pos[1],pos[2])
                         widget.GetRenderWindow().Render()
-            if len(self.MW.Cursor.cursor_lines)==4:
+            if hasattr(self.MW, 'Cursor') and len(self.MW.Cursor.cursor_lines)==4:
                 renderer = self.LoadMRI.renderers[3][self.interactor_view_name]
                 camera = renderer.GetActiveCamera()
                 camera.SetFocalPoint(fp[0],fp[1],fp[2])
@@ -301,7 +315,7 @@ class CustomInteractorStyle(vtk.vtkInteractorStyleImage):
                         renderer.ResetCameraClippingRange()
                         widget.GetRenderWindow().Render()
 
-            if len(self.MW.Cursor.cursor_lines)==4:
+            if hasattr(self.MW, 'Cursor') and len(self.MW.Cursor.cursor_lines)==4:
                 renderer = self.LoadMRI.renderers[3][view_name]
                 camera = renderer.GetActiveCamera()
                 camera.ParallelProjectionOn()
@@ -412,7 +426,17 @@ class CustomInteractorStyle(vtk.vtkInteractorStyleImage):
                 y = max(0, min(yi, shape[1]-1))
                 x = max(0, min(xi, shape[2]-1))
 
-                value = self.LoadMRI.volumes[0].slices[0][int(z),int(y),int(x)]
+                # mri_label_vol (the atlas-labels-on-MRI-grid overlay,
+                # TrajectoryPlanningMri only -- see trajectory_planning/
+                # mri_label_overlay.py) is what's actually on screen once
+                # the base volume stays the MRI throughout; TrajectoryPlanning
+                # (the unmodified atlas-as-base version) has no such
+                # attribute, and its own volumes[0] IS the label data, same
+                # as before.
+                if hasattr(self.LoadMRI.TrajPlanning, 'mri_label_vol'):
+                    value = self.LoadMRI.TrajPlanning.mri_label_vol[int(z),int(y),int(x)]
+                else:
+                    value = self.LoadMRI.volumes[0].slices[0][int(z),int(y),int(x)]
                 region_name = self.LoadMRI.TrajPlanning.tp_labels[value][4]
                 self.LoadMRI.TrajPlanning.visualize_regionname(region_name,self.interactor_view_name,[int(z),int(y),int(x)])
 
@@ -500,7 +524,7 @@ class CustomInteractorStyle(vtk.vtkInteractorStyleImage):
                 widget.GetRenderWindow().Render()
                 renderer.ResetCameraClippingRange()
 
-        if len(self.MW.Cursor.cursor_lines)==4:
+        if hasattr(self.MW, 'Cursor') and len(self.MW.Cursor.cursor_lines)==4:
             renderer = self.LoadMRI.renderers[3][self.interactor_view_name]
             camera = renderer.GetActiveCamera()
             camera.ParallelProjectionOn()
@@ -588,3 +612,141 @@ class CustomInteractorStyle(vtk.vtkInteractorStyleImage):
 
 
         super().OnMiddleButtonUp()
+
+
+class ObliqueInteractorStyle(vtk.vtkInteractorStyleImage):
+    """
+    Minimal interactor style for the two oblique constraint views
+    (vtkWidget_data_coronal_3 / 'coronal', vtkWidget_data_sagittal_3 /
+    'sagittal') added by trajectory_planning/rendering_mri.py's
+    setup_oblique_coronal_view/setup_oblique_sagittal_view.
+
+    Subclassing vtkInteractorStyleImage (rather than leaving VTK's
+    default trackball-camera style attached) is what stops these views
+    from being freely rotatable/orbitable in 3D -- vtkInteractorStyleImage
+    restricts to pan/zoom (its own defaults: right-drag zoom, middle-drag
+    pan/window-level, mouse wheel dolly), already close to this app's own
+    2D-view conventions.
+
+    Left-click converts the picked point on the oblique image actor back
+    into a volume voxel index via TrajectoryPlanningMri.
+    oblique_click_to_voxel (the reslice's own axes/anchor, kept in sync by
+    update_oblique_coronal_view/update_oblique_sagittal_view every time
+    the cutting plane moves) and writes it into LoadMRI.slice_indices[0]
+    -- the SAME shared cursor position CustomInteractorStyle's own click
+    handling writes for the 3 real axis-aligned views, and the same one
+    Get Bregma/Get Lambda/Get Deep Point read when THEIR pushbuttons are
+    clicked -- so those buttons work correctly off an oblique click with
+    no changes of their own. Also drives picking_insertion_point the same
+    way CustomInteractorStyle does, for the insertion-refinement page.
+
+    Deliberately NOT the full CustomInteractorStyle -- no measurement/
+    paintbrush/minimap/scale-bar/synced-zoom here, since those are
+    hard-wired throughout Cursor/Zoom to exactly the 3 real axis-aligned
+    views (e.g. Zoom.bounds' dict literal only has 'axial'/'sagittal'/
+    'coronal' keys) -- reusing that machinery for a 4th/5th view would
+    mean auditing/extending all of it rather than riding along for free,
+    and several of those (e.g. the scale-bar update in on_mouse_move's
+    zoom branch) crash outright on an unregistered view name (see
+    setup_oblique_coronal_view's own note on why the oblique renderers
+    are deliberately NOT added to LoadMRI.renderers).
+
+    Following CustomInteractorStyle's own convention: left-button
+    handling never calls the superclass's OnLeftButtonDown (which would
+    otherwise start a window/level adjustment drag) -- only mouse-wheel/
+    right/middle button (pan/zoom) fall through to vtkInteractorStyleImage's
+    own defaults.
+
+    Left-drag follows the mouse continuously (on_mouse_move), the same
+    feel as the 3 real views' own crosshair drag (CustomInteractorStyle.
+    on_mouse_move -> Cursor.update_cursor_from_interactor) -- previously
+    only the initial button-press moved the cursor, so dragging felt
+    unresponsive/laggy compared to the real views. pick_insertion_point_
+    from_click still only fires on button-press, not on every drag step,
+    matching CustomInteractorStyle's own on_left_button_down (its
+    on_mouse_move dragging branch never re-calls it either) -- it does a
+    full channel-list/intersection-check rebuild, too expensive to repeat
+    on every mouse-move event.
+    """
+    def __init__(self, LoadMRI, kind):
+        super().__init__()
+        self.LoadMRI = LoadMRI
+        self.kind = kind  # 'coronal' or 'sagittal' -- which oblique view this is
+        self._dragging = False
+        self.AddObserver("LeftButtonPressEvent", self.on_left_button_down)
+        self.AddObserver("LeftButtonReleaseEvent", self.on_left_button_up)
+        self.AddObserver("MouseMoveEvent", self.on_mouse_move)
+
+    def _move_cursor_to_event(self):
+        """Pick the current mouse position against this oblique view's
+        actor and move the shared cursor (LoadMRI.slice_indices[0]) there
+        -- shared by on_left_button_down (the click) and on_mouse_move
+        (continuous drag-follow). Returns True if the pick landed on the
+        actor, else False (matches the old on_left_button_down's no-op
+        behavior on a miss).
+
+        Beyond this view's own marker (set_oblique_cursor), also pushes
+        the new position through LoadMRI.update_slices + Cursor.
+        update_cursor_display/update_cursor_lines -- the same trio
+        trajectory_planning/electrode.py's _flip_cursor_to_point uses
+        after writing slice_indices directly. Without this, a click/drag
+        here moved the shared cursor value but nothing else ever found
+        out: the real axial view kept showing its old slice and the blue
+        crosshair lines in every real view stayed frozen at their old
+        position, completely decoupled from where you'd actually just
+        clicked -- the "crosshair is off" symptom."""
+        interactor = self.GetInteractor()
+        x, y = interactor.GetEventPosition()
+        picker = vtk.vtkPropPicker()
+        renderer = interactor.GetRenderWindow().GetRenderers().GetFirstRenderer()
+        if not picker.Pick(x, y, 0, renderer):
+            return False
+        pos = picker.GetPickPosition()
+
+        tp = getattr(self.LoadMRI, 'TrajPlanning', None)
+        if tp is None:
+            return False
+        voxel = tp.oblique_click_to_voxel(self.kind, pos)
+        if voxel is None:
+            return False
+
+        # Clamp to the volume's own bounds -- a pick anywhere on this
+        # view's actor (which, unlike the real axis-aligned views, can
+        # legitimately span past the anatomy into background) can convert
+        # to a voxel index outside [0, shape-1] on any of the 3 axes,
+        # since the reslice plane is tilted rather than axis-aligned.
+        # Same clamp-before-indexing pattern used everywhere else a click
+        # is turned into slice_indices (Cursor.update_cursor_from_interactor,
+        # the paintbrush branch above, pick_insertion_point_from_click) --
+        # this was the one spot missing it, so an edge/corner click here
+        # crashed LoadMRI.update_slices with an IndexError instead.
+        shape = self.LoadMRI.volumes[0].slices[0].shape  # zyx
+        z = max(0, min(int(round(voxel[2])), shape[0] - 1))
+        y = max(0, min(int(round(voxel[1])), shape[1] - 1))
+        x = max(0, min(int(round(voxel[0])), shape[2] - 1))
+        self.LoadMRI.slice_indices[0] = [z, y, x]
+        tp.clicked_viewname = self.kind
+        tp.set_oblique_cursor(self.kind, pos[0], pos[1])
+
+        self.LoadMRI.update_slices(0, self.kind)
+        mw = self.LoadMRI.MW
+        if hasattr(mw, 'Cursor'):
+            mw.Cursor.update_cursor_display(0)
+            mw.Cursor.update_cursor_lines(0)
+        return True
+
+    def on_left_button_down(self, obj, event):
+        self._dragging = True
+        if not self._move_cursor_to_event():
+            return
+        tp = self.LoadMRI.TrajPlanning
+        if getattr(self.LoadMRI, 'picking_insertion_point', False):
+            tp.pick_insertion_point_from_click()
+
+    def on_left_button_up(self, obj, event):
+        self._dragging = False
+
+    def on_mouse_move(self, obj, event):
+        if self._dragging:
+            self._move_cursor_to_event()
+        super().OnMouseMove()

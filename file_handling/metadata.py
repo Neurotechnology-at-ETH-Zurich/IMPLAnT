@@ -46,10 +46,7 @@ class Metadata:
 
     @staticmethod
     def _reconnect(signal,slot):
-        try:
-            signal.disconnect()
-        except RuntimeError:
-            pass  # not connected to anything yet
+        signal.disconnect()
         signal.connect(slot)
 
 

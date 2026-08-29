@@ -54,7 +54,7 @@ class TrajectoryPlanning3DWindow(QDockWidget):
 
         self.region_actors = {}          # atlas value -> vtk actor
         self.shank_actors = {}           # shank_idx -> vtk actor (shanks are always visible)
-        self._region_meshes = {}         # (geom_mode, atlas value) -> cached pv mesh (or None)
+        self._region_meshes = {}         # atlas value -> cached pv mesh (or None)
         self._shank_region_cache = {}    # shank_idx -> [atlas vals it traverses], refreshed in refresh_shanks
         self._syncing = False            # guards against the table<->list resync re-triggering itself
         self._depth_peeling_enabled = False  # only turned on once 2+ translucent layers overlap
@@ -126,11 +126,6 @@ class TrajectoryPlanning3DWindow(QDockWidget):
         self.ui.pushButton_stepFwd10_vis3D.clicked.connect(lambda: self._queue_nudge(10))
         self._update_axis_arm_ui()
 
-        self.space_mode = 'atlas'  # 'atlas' (template shell) or 'mri' (subject MRI intensity)
-        self.ui.pushButton_space.setCheckable(False)
-        self.ui.pushButton_space.setText(self._BUTTON_LABELS[self.space_mode])
-        self.ui.pushButton_space.clicked.connect(self._cycle_space_mode)
-
         self.forbidden_area_actor = None
         self.ui.checkBox_forbiddenareas.toggled.connect(self._on_forbidden_areas_toggled)
         self.ui.checkBox_forbiddenareas.setToolTip("Hide the forbidden-area overlay in this 3D view")
@@ -141,7 +136,14 @@ class TrajectoryPlanning3DWindow(QDockWidget):
         self.ui.checkBox_hideplanes.setToolTip(
             "Hide the bregma-lambda-CC and bregma-lambda reference planes used to measure roll/pitch")
 
-        self._update_space_legend()
+        # checkBox_constraint_90deg/_coronal live on the MAIN window (page_5
+        # -- see ElecGeometryMri.enforce_constraint_90deg/_coronal), not
+        # this docked window's own ui -- self.tp.ui is that same main-window
+        # ui object (see TrajectoryPlanning.__init__).
+        self.tp.ui.checkBox_constraint_90deg.toggled.connect(self._update_roll_pitch_enabled)
+        self.tp.ui.checkBox_constraint_90deg_coronal.toggled.connect(self._update_roll_pitch_enabled)
+        self._update_roll_pitch_enabled()
+
         self._rebuild_background_mesh()
         self._draw_landmarks_and_planes()
         self.plotter.add_axes()
@@ -362,7 +364,7 @@ class TrajectoryPlanning3DWindow(QDockWidget):
         deep = self.tp.coords_deepest_point.get(shank_idx)
         if insert is None or deep is None:
             return
-        spacing = np.array(self.tp.fixedImg.GetSpacing())
+        spacing = np.array(self.tp.movingImg_resampled.GetSpacing())
         mid = (np.array(insert, dtype=float) + np.array(deep, dtype=float)) / 2 * spacing
         self.plotter.set_focus(mid)
         self.plotter.render()
@@ -457,45 +459,35 @@ class TrajectoryPlanning3DWindow(QDockWidget):
         self.plotter.render()
 
     def _current_space_insert_deep_mm(self, shank_idx):
-        """This shank's insert/deep points in whichever space is currently
-        displayed (atlas or MRI, via _geom_mode), in physical mm -- shared
-        by _build_shank_actor and the landmark/plane drawing so both agree
-        on exactly the same points."""
-        if self._geom_mode() == 'mri':
-            insert = self.tp.mri_insert.get(shank_idx)
-            deep = self.tp.mri_deep.get(shank_idx)
-            spacing = (np.array(self.tp.movingImg_resampled.GetSpacing())
-                       if getattr(self.tp, 'movingImg_resampled', None) is not None else None)
-        else:
-            insert = self.tp.coords_insert_point.get(shank_idx)
-            deep = self.tp.coords_deepest_point.get(shank_idx)
-            spacing = np.array(self.tp.fixedImg.GetSpacing())
-        if insert is None or deep is None or spacing is None:
+        """This shank's insert/deep points, in MRI physical mm -- shared by
+        _build_shank_actor and the landmark/plane drawing so both agree on
+        exactly the same points. mri_insert/mri_deep are already MRI-grid
+        voxel indices (electrode_mri.py's change_insert_point/
+        change_deepest_point set them straight from the MRI-space spinbox
+        values), so no atlas conversion is needed here."""
+        insert = self.tp.mri_insert.get(shank_idx)
+        deep = self.tp.mri_deep.get(shank_idx)
+        if getattr(self.tp, 'movingImg_resampled', None) is None:
+            return None, None
+        spacing = np.array(self.tp.movingImg_resampled.GetSpacing())
+        if insert is None or deep is None:
             return None, None
         return np.array(insert, dtype=float) * spacing, np.array(deep, dtype=float) * spacing
 
     def _current_space_channel_points_mm(self, shank_idx):
-        """This shank's contact points in whichever space is currently
-        displayed, in physical mm -- same atlas/MRI convention as
-        _current_space_insert_deep_mm, just for the whole channel_points
-        array (always stored in atlas voxel coordinates) instead of a
-        single point."""
+        """This shank's contact points, in MRI physical mm. channel_points
+        is built (electrode_mri.py's create_channel_list) directly from
+        coords_deepest_point/direction_atlas using movingImg_resampled's
+        own spacing -- i.e. already MRI-grid voxel indices, same as
+        mri_insert/mri_deep -- so this just scales by MRI spacing, no
+        atlas_points_to_mri_indices warp needed."""
         pts = self.tp.channel_points.get(shank_idx)
         if pts is None or len(pts) == 0:
             return None
-        atlas_spacing = np.array(self.tp.fixedImg.GetSpacing())
-        pts_mm = np.asarray(pts, dtype=float) * atlas_spacing
-        if self._geom_mode() != 'mri':
-            return pts_mm
         if getattr(self.tp, 'movingImg_resampled', None) is None:
             return None
-        mri_spacing = np.array(self.tp.movingImg_resampled.GetSpacing())
-        # atlas_points_to_mri_indices takes atlas-mm points (see its own
-        # docstring) and returns MRI VOXEL indices -- same two-step
-        # atlas-mm -> mri-idx -> mri-mm conversion _build_background_mesh
-        # uses for the background shell's vertices, so channel dots line up
-        # with everything else already warped into this space.
-        return self.tp.atlas_points_to_mri_indices(pts_mm) * mri_spacing
+        spacing = np.array(self.tp.movingImg_resampled.GetSpacing())
+        return np.asarray(pts, dtype=float) * spacing
 
     def _build_shank_actor(self, shank_idx):
         insert_mm, deep_mm = self._current_space_insert_deep_mm(shank_idx)
@@ -624,7 +616,7 @@ class TrajectoryPlanning3DWindow(QDockWidget):
         needs_peeling = any(a.GetVisibility() for a in self.region_actors.values())
         if self.forbidden_area_actor is not None and self.forbidden_area_actor.GetVisibility():
             needs_peeling = True
-        plane_actor = self.plotter.actors.get('plane_bregma_lambda_cc')
+        plane_actor = self.plotter.actors.get('plane_bregma_lambda_roll')
         if plane_actor is not None and plane_actor.GetVisibility():
             needs_peeling = True  # the two reference planes are translucent whenever shown
         if needs_peeling and not self._depth_peeling_enabled:
@@ -654,6 +646,10 @@ class TrajectoryPlanning3DWindow(QDockWidget):
             if region_to_avoid is None:
                 return
             if self.forbidden_area_actor is None:
+                # region_to_avoid lives on the MRI's own grid --
+                # registration_mri.py's warp_red_areas paints it directly
+                # onto the displayed MRI and never warps it into atlas
+                # space -- same grid _build_mask_mesh now always assumes.
                 mesh = self._build_mask_mesh(region_to_avoid > 0)
                 if mesh is None or mesh.n_points == 0:
                     return
@@ -667,24 +663,25 @@ class TrajectoryPlanning3DWindow(QDockWidget):
         self.plotter.render()
 
     def _get_region_mesh(self, val):
-        key = (self._geom_mode(), val)
-        if key in self._region_meshes:
-            return self._region_meshes[key]
-        mesh = self._build_mask_mesh(self.tp.atlas_vol == val)
-        self._region_meshes[key] = mesh
+        if val in self._region_meshes:
+            return self._region_meshes[val]
+        mesh = self._build_mask_mesh(self.tp.mri_label_vol == val)
+        self._region_meshes[val] = mesh
         return mesh
 
     def _build_mask_mesh(self, mask_zyx):
         """Crop to the mask's own bounding box (+1 voxel padding) before
-        handing it to VTK -- thresholding the WHOLE brain volume at full
+        handing it to VTK -- thresholding the WHOLE volume at full
         resolution just to extract one small mask is what makes the first
         toggle of any given region/mask slow, since it's typically a tiny
-        fraction of the full atlas. Shared by per-region meshes and the
-        forbidden-area mesh -- both are just "some boolean mask on the atlas
-        grid" as far as this is concerned. Built on the atlas grid always,
-        then (in MRI mode) reprojected into MRI space -- see
-        atlas_points_to_mri_indices -- the same way _build_background_mesh
-        warps the background shell."""
+        fraction of the full volume. Shared by per-region meshes
+        (mri_label_vol, the atlas-region-label overlay already resampled
+        onto the MRI's own grid by TrajectoryPlanningMri.
+        build_mri_label_overlay -- see registration_mri.py) and the
+        forbidden-area mesh (region_to_avoid, painted directly onto the
+        displayed MRI -- registration_mri.py's warp_red_areas) -- both
+        already live on the MRI's own grid, so this just needs the MRI's
+        own spacing, no cross-grid reprojection at all."""
         if not mask_zyx.any():
             return None
         zs, ys, xs = np.nonzero(mask_zyx)
@@ -694,118 +691,42 @@ class TrajectoryPlanning3DWindow(QDockWidget):
         cropped_zyx = mask_zyx[z0:z1, y0:y1, x0:x1]
 
         mask_xyz = np.transpose(cropped_zyx, (2, 1, 0)).astype(np.uint8)
-        spacing = np.array(self.tp.fixedImg.GetSpacing())
+        spacing = np.array(self.tp.movingImg_resampled.GetSpacing())
         vol = pv.ImageData()
         vol.dimensions = np.array(mask_xyz.shape) + 1
         vol.spacing = spacing
         vol.origin = np.array([x0, y0, z0]) * spacing  # position the crop back where it belongs
         vol.cell_data['mask'] = mask_xyz.flatten(order='F')
-        mesh = vol.threshold(0.5, scalars='mask')
-        if self._geom_mode() == 'mri' and getattr(self.tp, 'movingImg_resampled', None) is not None:
-            mri_spacing = np.array(self.tp.movingImg_resampled.GetSpacing())
-            mesh.points = self.tp.atlas_points_to_mri_indices(mesh.points) * mri_spacing
-        return mesh
+        return vol.threshold(0.5, scalars='mask')
 
     # ---- background context mesh -------------------------------------------
 
-    _SPACE_ORDER = ('atlas', 'mri')
-    _SPACE_LABELS = {
-        'atlas': 'Atlas space',
-        'mri': 'MRI space',
-    }
-
-    _BUTTON_LABELS = {
-        'atlas': 'Switch to \n MRI space',
-        'mri': 'Switch to \n Atlas space',
-    }
-
-    def _geom_mode(self):
-        """Which coordinate space actual geometry (shanks, regions,
-        forbidden area, landmarks/planes) should be built in -- currently
-        identical to space_mode, but kept as its own method since several
-        call sites care about "which space is geometry in" specifically."""
-        return self.space_mode
-
-    def _cycle_space_mode(self):
-        """pushButton_space toggles atlas <-> MRI space. Switching moves
-        every object in the scene (atlas and MRI space are related by a
-        nonlinear warp, so shanks/regions/landmarks can't be left behind
-        in the old space while only the background shell moves -- they'd
-        drift apart) -- rebuild all of them, not just the shell."""
-        idx = self._SPACE_ORDER.index(self.space_mode)
-        self.space_mode = self._SPACE_ORDER[(idx + 1) % len(self._SPACE_ORDER)]
-        self.ui.pushButton_space.setText(self._BUTTON_LABELS[self.space_mode])
-        self._update_space_legend()
-        self._rebuild_background_mesh()
-        self._draw_all_shanks()
-        self._redraw_visible_regions()
-        self._redraw_forbidden_area()
-        self._draw_landmarks_and_planes()
-        self._update_axis_indicator()
-        self.plotter.reset_camera()
-        self.plotter.render()
-
-    def _redraw_visible_regions(self):
-        """Region meshes are cached per (geom_mode, val) (see
-        _get_region_mesh) but each visible one still has a live actor
-        bound to its OLD mesh object -- drop those actors so _set_region_
-        visible rebuilds (or fetches from cache, if this mode was visited
-        before) fresh ones in the new space."""
-        for val, actor in list(self.region_actors.items()):
-            was_visible = actor.GetVisibility()
-            self.plotter.remove_actor(f'region_{val}')
-            del self.region_actors[val]
-            if was_visible:
-                self._set_region_visible(val, True)
-
-    def _redraw_forbidden_area(self):
-        """Same idea as _redraw_visible_regions, for the single forbidden-
-        area actor -- unlike regions this mesh isn't cached at all, so
-        just drop it and let _set_forbidden_area_visible rebuild it fresh
-        next time it's shown."""
-        if self.forbidden_area_actor is None:
-            return
-        was_visible = self.forbidden_area_actor.GetVisibility()
-        self.plotter.remove_actor('forbidden_area')
-        self.forbidden_area_actor = None
-        if was_visible:
-            self._set_forbidden_area_visible(True)
-
-    def _update_space_legend(self):
-        """On-screen reminder of which of the 2 background modes is active,
-        in the viewport's own top-left corner -- the button text already
-        says this too, but that can be scrolled out of view or just easy to
-        miss once the legend/region lists get long."""
-        self.plotter.add_text(
-            self._SPACE_LABELS[self.space_mode], position='upper_left',
-            font_size=10, color='white', name='space_legend')
-
     def _rebuild_background_mesh(self):
         """(Re)builds the background shell behind a BusyOverlay -- it's a
-        real, ~seconds-long blocking operation (full-atlas threshold +
-        surface extraction + decimation + smoothing, and MRI-mode adds a
-        per-point atlas->MRI lookup on top), so show a "loading" overlay
-        while it runs instead of the window just appearing to hang."""
+        real, ~seconds-long blocking operation (full-volume threshold +
+        surface extraction + decimation + smoothing), so show a "loading"
+        overlay while it runs instead of the window just appearing to
+        hang."""
         BusyOverlay(self.widget(), "Loading atlas…").run(self._build_background_mesh)
 
     def _build_background_mesh(self, downsample=3):
         """Translucent context shell, built the same way as add_background in
         ephys/visualisation3D.py: threshold the volume, extract+clean+fill
         the outer surface, Taubin-smooth it, and cull the front faces so you
-        can see the highlighted regions/shanks inside. The SHAPE always
-        STARTS from the atlas's own nonzero mask (a ready-made, reliable
-        brain outline) regardless of mode -- in MRI mode (self.space_mode
-        == 'mri'), every vertex is additionally warped into true MRI space
-        (via atlas_points_to_mri_indices, the same atlas->subject-MRI
-        correspondence used for mri_insert/mri_deep, just vectorized for a
-        whole mesh at once instead of one point at a time) and colored by
-        the subject's own MRI intensity there, rather than sitting on the
-        atlas grid under a flat white shell."""
-        data_zyx = self.tp.atlas_vol[::downsample, ::downsample, ::downsample]
+        can see the highlighted regions/shanks inside. Built directly on the
+        MRI's own grid (mri_label_vol, the atlas-region-label overlay
+        already resampled onto the MRI's own array shape by
+        TrajectoryPlanningMri.build_mri_label_overlay -- see registration_
+        mri.py) at the MRI's own spacing/origin, so the shell's vertex
+        positions are true MRI physical-mm coordinates from the moment
+        they're created -- no separate atlas->MRI warp step needed, just
+        colour by the subject's own MRI intensity at those same positions."""
+        mri_spacing = np.array(self.tp.movingImg_resampled.GetSpacing())
+        data_zyx = self.tp.mri_label_vol[::downsample, ::downsample, ::downsample]
         data_xyz = np.transpose(data_zyx, (2, 1, 0))
         vol = pv.ImageData()
         vol.dimensions = np.array(data_xyz.shape) + 1
-        vol.spacing = tuple(s * downsample for s in self.tp.fixedImg.GetSpacing())
+        vol.spacing = tuple(s * downsample for s in mri_spacing)
         vol.origin = (0.0, 0.0, 0.0)
         vol.cell_data['NIFTI'] = data_xyz.flatten(order='F')
 
@@ -833,109 +754,104 @@ class TrajectoryPlanning3DWindow(QDockWidget):
             culling='front',
         )
 
-        if self.space_mode == 'mri' and getattr(self.tp, 'movingImg_resampled', None) is not None:
-            mri_spacing = np.array(self.tp.movingImg_resampled.GetSpacing())
-            mri_idx = self.tp.atlas_points_to_mri_indices(smoothed.points)  # (N,3) float xyz, interpolated
-            mri_arr = sitk.GetArrayFromImage(self.tp.movingImg_resampled)  # zyx
-            mri_shape = mri_arr.shape
-            rounded = np.round(mri_idx).astype(int)
-            in_bounds = (
-                (rounded[:, 0] >= 0) & (rounded[:, 0] < mri_shape[2]) &
-                (rounded[:, 1] >= 0) & (rounded[:, 1] < mri_shape[1]) &
-                (rounded[:, 2] >= 0) & (rounded[:, 2] < mri_shape[0])
-            )
-            clipped = np.clip(rounded, 0, np.array(mri_shape[::-1]) - 1)
-            intensity = np.where(
-                in_bounds, mri_arr[clipped[:, 2], clipped[:, 1], clipped[:, 0]], 0
-            ).astype(float)
-            smoothed.point_data['intensity'] = intensity
-            # warp the shell's own vertex positions into true MRI space --
-            # not just their color -- so it, the shanks, the regions and
-            # the landmark planes all actually line up in the same space.
-            smoothed.points = mri_idx * mri_spacing
-            # stretch contrast to the actual (non-background) intensity
-            # range instead of mapping the raw scanner range 0..max onto
-            # gray -- otherwise real tissue, which rarely reaches the
-            # data's true max, renders far darker than it needs to.
-            nonzero = intensity[intensity > 0]
-            clim = [float(np.percentile(nonzero, 1)), float(np.percentile(nonzero, 99))] if nonzero.size else None
-            self.background_actor = self.plotter.add_mesh(
-                smoothed, scalars='intensity', cmap='gray', clim=clim, show_scalar_bar=False, **mesh_kwargs)
-        else:
-            self.background_actor = self.plotter.add_mesh(smoothed, color='white', **mesh_kwargs)
+        # Already true MRI physical-mm coordinates (vol was built at the
+        # MRI's own spacing/origin above) -- just divide back to a voxel
+        # index to sample this subject's own MRI intensity there.
+        mri_arr = sitk.GetArrayFromImage(self.tp.movingImg_resampled)  # zyx
+        mri_shape = mri_arr.shape
+        idx = smoothed.points / mri_spacing  # (N,3) float xyz
+        rounded = np.round(idx).astype(int)
+        in_bounds = (
+            (rounded[:, 0] >= 0) & (rounded[:, 0] < mri_shape[2]) &
+            (rounded[:, 1] >= 0) & (rounded[:, 1] < mri_shape[1]) &
+            (rounded[:, 2] >= 0) & (rounded[:, 2] < mri_shape[0])
+        )
+        clipped = np.clip(rounded, 0, np.array(mri_shape[::-1]) - 1)
+        intensity = np.where(
+            in_bounds, mri_arr[clipped[:, 2], clipped[:, 1], clipped[:, 0]], 0
+        ).astype(float)
+        smoothed.point_data['intensity'] = intensity
+        # stretch contrast to the actual (non-background) intensity range
+        # instead of mapping the raw scanner range 0..max onto gray --
+        # otherwise real tissue, which rarely reaches the data's true max,
+        # renders far darker than it needs to.
+        nonzero = intensity[intensity > 0]
+        clim = [float(np.percentile(nonzero, 1)), float(np.percentile(nonzero, 99))] if nonzero.size else None
+        self.background_actor = self.plotter.add_mesh(
+            smoothed, scalars='intensity', cmap='gray', clim=clim, show_scalar_bar=False, **mesh_kwargs)
 
-    # ---- bregma/lambda/CC landmarks + roll/pitch reference planes -----------
+    # ---- bregma/lambda landmarks + roll/pitch reference planes -------------
 
-    _LANDMARK_ACTOR_NAMES = ('landmark_bregma', 'landmark_lambda', 'landmark_cc')
-    _PLANE_ACTOR_NAMES = ('plane_bregma_lambda_cc', 'plane_bregma_lambda_rl')
+    _LANDMARK_ACTOR_NAMES = ('landmark_bregma', 'landmark_lambda')
+    _PLANE_ACTOR_NAMES = ('plane_bregma_lambda_roll', 'plane_bregma_lambda_rl')
     _LANDMARK_AND_PLANE_ACTOR_NAMES = _LANDMARK_ACTOR_NAMES + _PLANE_ACTOR_NAMES
 
-    def _current_space_bregma_lambda_cc_mm(self):
-        """Bregma/lambda/CC points in whichever space is currently
-        displayed (atlas or MRI, via _geom_mode), in physical mm -- shared
-        by the plane drawing and the armed-axis indicator (for its roll/
-        pitch rotation-axis line) so both agree on exactly the same
-        points. Returns None if not all three are available yet."""
-        if self._geom_mode() == 'mri':
-            if (self.tp.coords_bregma is None or self.tp.coords_lambda is None
-                    or getattr(self.tp, 'movingImg_resampled', None) is None):
-                return None
-            spacing = np.array(self.tp.movingImg_resampled.GetSpacing())
-            bregma = np.array(self.tp.coords_bregma, dtype=float) * spacing
-            lam = np.array(self.tp.coords_lambda, dtype=float) * spacing
-            cc = np.array(self.tp.get_cc_mri_voxel_mean(), dtype=float) * spacing
-        else:
-            if (getattr(self.tp, 'atlas_bregma_coords', None) is None
-                    or getattr(self.tp, 'atlas_lambda_coords', None) is None
-                    or getattr(self.tp, 'atlas_cc_centroid', None) is None):
-                return None
-            spacing = np.array(self.tp.fixedImg.GetSpacing())
-            bregma = np.array(self.tp.atlas_bregma_coords, dtype=float) * spacing
-            lam = np.array(self.tp.atlas_lambda_coords, dtype=float) * spacing
-            cc = np.array(self.tp.atlas_cc_centroid, dtype=float) * spacing
-        return bregma, lam, cc
+    def _current_space_bregma_lambda_mm(self):
+        """Bregma/lambda points, in MRI physical mm -- shared by the plane
+        drawing and the armed-axis indicator (for its roll/pitch rotation-
+        axis line) so both agree on exactly the same points.
+        coords_bregma/coords_lambda are always set by the time this window
+        is usable (bregma/lambda selection is a mandatory earlier wizard
+        step)."""
+        spacing = np.array(self.tp.movingImg_resampled.GetSpacing())
+        bregma = np.array(self.tp.coords_bregma, dtype=float) * spacing
+        lam = np.array(self.tp.coords_lambda, dtype=float) * spacing
+        return bregma, lam
+
+    def _current_space_frame(self):
+        """(ap_axis, rl_axis, si_axis), driven by the user's manually-
+        dialed-in coronal misalignment angle (CoordTransform.
+        ap_rl_si_frame_from_misalignment) -- matches compute_shank_
+        roll_pitch_mri exactly, so this window's angle readouts always
+        agree with the PDF report's."""
+        spacing = np.array(self.tp.movingImg_resampled.GetSpacing())
+        bregma = np.array(self.tp.coords_bregma, dtype=float) * spacing
+        lam = np.array(self.tp.coords_lambda, dtype=float) * spacing
+        misalignment_deg = getattr(self.tp, 'coronal_misalignment_deg', 0.0)
+        return self.tp.ap_rl_si_frame_from_misalignment(bregma, lam, misalignment_deg)
 
     def _draw_landmarks_and_planes(self):
-        """Bregma/lambda/CC landmark markers, plus the two reference planes
+        """Bregma/lambda landmark markers, plus the two reference planes
         compute_shank_roll_pitch_mri measures each shank's roll/pitch
-        against (see CoordTransform.ap_rl_si_frame) -- drawn in whichever
-        space this window is currently showing (atlas or MRI, via
-        _geom_mode), purely so those angle numbers can be visually
-        sanity-checked against an actual picture of the planes they
-        describe, in either space. Yellow = the bregma-lambda-CC plane
-        itself (roll is the shank's angle to this one). Cyan = the
-        bregma-lambda plane parallel to RL (pitch is the shank's angle to
-        this one). checkBox_hideplanes hides just the two planes, leaving
-        the landmark spheres visible."""
+        against (see _current_space_frame -- CoordTransform.
+        ap_rl_si_frame_from_misalignment), purely so those angle numbers
+        can be visually sanity-checked against an actual picture of the
+        planes they describe. Yellow = the RL-SI plane (normal=AP) roll
+        is measured within, as an angle from vertical (SI). Cyan = the
+        AP-SI plane (normal=RL) pitch is measured within, as an angle
+        from the AP line -- each plane's own reference LINE is what the
+        angle is actually measured to (see _update_axis_indicator), not
+        the plane itself; these planes just show where that line lives.
+        checkBox_hideplanes hides just the two planes, leaving the
+        landmark spheres visible."""
         for name in self._LANDMARK_AND_PLANE_ACTOR_NAMES:
             if name in self.plotter.actors:
                 self.plotter.remove_actor(name, render=False)
 
-        points = self._current_space_bregma_lambda_cc_mm()
+        points = self._current_space_bregma_lambda_mm()
         if points is None:
             return
-        bregma, lam, cc = points
+        bregma, lam = points
 
-        frame = self.tp.ap_rl_si_frame(bregma, lam, cc)
+        frame = self._current_space_frame()
         if frame is None:
             return
-        _ap_axis, rl_axis, si_axis = frame
+        ap_axis, rl_axis, _si_axis = frame
         bl_dist = float(np.linalg.norm(lam - bregma))
 
         radius = max(bl_dist * 0.03, 0.05)
         for name, point, color in (
             ('landmark_bregma', bregma, 'red'),
             ('landmark_lambda', lam, 'green'),
-            ('landmark_cc', cc, 'blue'),
         ):
             self.plotter.add_mesh(pv.Sphere(radius=radius, center=point), color=color, name=name, render=False)
 
         size = max(bl_dist * 3, 1.0)
         self.plotter.add_mesh(
-            pv.Plane(center=bregma, direction=rl_axis, i_size=size, j_size=size),
-            color='yellow', opacity=0.25, name='plane_bregma_lambda_cc', render=False)
+            pv.Plane(center=bregma, direction=ap_axis, i_size=size, j_size=size),
+            color='yellow', opacity=0.25, name='plane_bregma_lambda_roll', render=False)
         self.plotter.add_mesh(
-            pv.Plane(center=bregma, direction=si_axis, i_size=size, j_size=size),
+            pv.Plane(center=bregma, direction=rl_axis, i_size=size, j_size=size),
             color='cyan', opacity=0.25, name='plane_bregma_lambda_rl', render=False)
 
         hide_planes = self.ui.checkBox_hideplanes.isChecked()
@@ -1047,26 +963,28 @@ class TrajectoryPlanning3DWindow(QDockWidget):
             direction = shank_dir
             anchor = deep_mm
         else:  # 'roll' / 'pitch'
-            points = self._current_space_bregma_lambda_cc_mm()
-            if points is None:
-                return
-            frame = self.tp.ap_rl_si_frame(*points)
+            frame = self._current_space_frame()
             if frame is None:
                 return
-            _ap_axis, rl_axis, si_axis = frame
+            ap_axis, rl_axis, si_axis = frame
             direction = si_axis if self._armed_axis == 'roll' else rl_axis
             anchor = insert_mm
 
-            # roll is measured against the RL-normal plane, pitch against
-            # the SI-normal plane (see compute_shank_roll_pitch_mri) --
-            # NOT the rotation axis itself (`direction` above), which is
-            # the OTHER one of the two.
-            plane_normal = rl_axis if self._armed_axis == 'roll' else si_axis
-            shank_in_plane = shank_dir - np.dot(shank_dir, plane_normal) * plane_normal
-            in_plane_norm = np.linalg.norm(shank_in_plane)
-            if in_plane_norm > 1e-9:
+            # roll = angle from vertical (SI), within the RL-SI plane,
+            # dropping AP entirely; pitch = angle from the AP line, within
+            # the AP-SI plane, dropping RL entirely (see
+            # compute_shank_roll_pitch_mri) -- NOT the rotation axis
+            # itself (`direction` above), which is the OTHER one of the
+            # two axes.
+            drop_axis = ap_axis if self._armed_axis == 'roll' else rl_axis
+            reference_axis = si_axis if self._armed_axis == 'roll' else ap_axis
+            shank_proj = shank_dir - np.dot(shank_dir, drop_axis) * drop_axis
+            proj_norm = np.linalg.norm(shank_proj)
+            if proj_norm > 1e-9:
+                shank_proj /= proj_norm
+                reference_dir = reference_axis if np.dot(shank_proj, reference_axis) >= 0 else -reference_axis
                 arc_mesh = self._dashed_arc_mesh(
-                    insert_mm, shank_in_plane / in_plane_norm, shank_dir, half_len * 0.6)
+                    insert_mm, reference_dir, shank_proj, half_len * 0.6)
                 if arc_mesh is not None:
                     self.plotter.add_mesh(arc_mesh, color='cyan', line_width=2, name=arc_name, render=False)
 
@@ -1074,69 +992,10 @@ class TrajectoryPlanning3DWindow(QDockWidget):
             self._dashed_line_mesh(anchor - direction * half_len, anchor + direction * half_len),
             color='orange', line_width=3, name=name, render=False)
 
-    def _view_space_plane_angles(self, shank_idx):
-        """Literal angle between shank_idx's shank line and each reference
-        plane, using THIS view's own currently-displayed points (atlas or
-        MRI, via _geom_mode) -- i.e. exactly what you'd get by measuring
-        the picture on screen. In MRI mode this is the identical
-        computation compute_shank_roll_pitch_mri already does (so the two
-        numbers shown will simply agree); in atlas/xyz mode it's the
-        atlas-space equivalent, which can legitimately differ from the
-        true (always-MRI-space) roll/pitch -- the atlas<->MRI registration
-        is a nonlinear warp that doesn't preserve angles, so a shank that
-        looks aligned to a plane here can still measure a different angle
-        in real MRI space. Returns (roll_deg, pitch_deg) in this view's
-        space, or None if not computable."""
-        if self._geom_mode() == 'mri':
-            if getattr(self.tp, 'movingImg_resampled', None) is None:
-                return None
-            spacing = np.array(self.tp.movingImg_resampled.GetSpacing())
-            bregma, lam = self.tp.coords_bregma, self.tp.coords_lambda
-            if bregma is None or lam is None:
-                return None
-            bregma = np.array(bregma, dtype=float) * spacing
-            lam = np.array(lam, dtype=float) * spacing
-            cc = np.array(self.tp.get_cc_mri_voxel_mean(), dtype=float) * spacing
-            insert = self.tp.mri_insert.get(shank_idx)
-            deep = self.tp.mri_deep.get(shank_idx)
-        else:
-            if (getattr(self.tp, 'atlas_bregma_coords', None) is None
-                    or getattr(self.tp, 'atlas_lambda_coords', None) is None
-                    or getattr(self.tp, 'atlas_cc_centroid', None) is None):
-                return None
-            spacing = np.array(self.tp.fixedImg.GetSpacing())
-            bregma = np.array(self.tp.atlas_bregma_coords, dtype=float) * spacing
-            lam = np.array(self.tp.atlas_lambda_coords, dtype=float) * spacing
-            cc = np.array(self.tp.atlas_cc_centroid, dtype=float) * spacing
-            insert = self.tp.coords_insert_point.get(shank_idx)
-            deep = self.tp.coords_deepest_point.get(shank_idx)
-
-        if insert is None or deep is None:
-            return None
-        frame = self.tp.ap_rl_si_frame(bregma, lam, cc)
-        if frame is None:
-            return None
-        _ap_axis, rl_axis, si_axis = frame
-
-        shank_vec = (np.array(insert, dtype=float) - np.array(deep, dtype=float)) * spacing
-        shank_dist = float(np.linalg.norm(shank_vec))
-        if shank_dist <= 1e-9:
-            return None
-        shank_dir = shank_vec / shank_dist
-        roll = float(np.degrees(np.arcsin(np.clip(abs(np.dot(shank_dir, rl_axis)), 0.0, 1.0))))
-        pitch = float(np.degrees(np.arcsin(np.clip(abs(np.dot(shank_dir, si_axis)), 0.0, 1.0))))
-        return roll, pitch
-
     def _update_angle_legend(self):
-        """On-screen roll/pitch readout for the currently selected shank.
-        Always shows the TRUE angle (compute_shank_roll_pitch_mri -- always
-        computed in MRI space, the same single source of truth used by the
-        2D views and the PDF report), and -- only when this window isn't
-        already showing MRI space -- also the literal angle measured in
-        THIS view's own space (_view_space_plane_angles), so the two can be
-        compared directly instead of the atlas-space picture silently
-        looking "wrong" against a number that was never computed in that
-        space to begin with."""
+        """On-screen roll/pitch readout for the currently selected shank --
+        compute_shank_roll_pitch_mri, the same single source of truth used
+        by the 2D views and the PDF report."""
         name = 'angle_legend'
         roll_pitch = (self.tp.compute_shank_roll_pitch_mri(self.selected_shank_idx)
                       if self.selected_shank_idx is not None else None)
@@ -1146,25 +1005,10 @@ class TrajectoryPlanning3DWindow(QDockWidget):
             return
 
         roll_deg, pitch_deg = roll_pitch
-        # Same "X(MRI) (Y Atlas)" format as the 2D view's arc caption and
-        # the old 3D dock's angle label, for one consistent reading across
-        # every place this shows up.
-        view_roll = view_pitch = None
-        if self._geom_mode() != 'mri':
-            view_angles = self._view_space_plane_angles(self.selected_shank_idx)
-            if view_angles is not None:
-                view_roll, view_pitch = view_angles
-
-        def _fmt(true_val, view_val):
-            text = f"{true_val:.1f}°(MRI)"
-            if view_val is not None:
-                text += f" ({view_val:.1f}° Atlas)"
-            return text
-
         lines = [
             f"Shank {self.selected_shank_idx + 1}",
-            f"roll:  {_fmt(roll_deg, view_roll)}",
-            f"pitch: {_fmt(pitch_deg, view_pitch)}",
+            f"roll:  {roll_deg:.1f}°",
+            f"pitch: {pitch_deg:.1f}°",
         ]
         self.plotter.add_text(
             "\n".join(lines), position='upper_right', font_size=10, color='white', name=name)
@@ -1195,6 +1039,33 @@ class TrajectoryPlanning3DWindow(QDockWidget):
         'pitch': 'Pitch (deg)',
     }
     _ARMED_STYLE = "background-color: #e67e22; color: white;"
+
+    def _update_roll_pitch_enabled(self, *_args):
+        """checkBox_constraint_90deg/checkBox_constraint_90deg_coronal
+        (main window -- see ElecGeometryMri.enforce_constraint_90deg/
+        _coronal) lock the shank's AP or RL component to exactly zero,
+        and re-enforce that lock on every subsequent deep/insert change
+        (ElecGeometryMri._apply_constraints, which change_insert_point/
+        change_deepest_point call -- the same path _nudge_shank drives).
+        The roll/pitch buttons pivot the shank around the insertion point
+        with no notion of either lock, so whatever a nudge just did gets
+        partly undone/redistributed the moment that automatic re-snap
+        runs -- a confusingly imprecise stand-in for what the button's
+        own step size promises. Disable both while either constraint is
+        active, rather than one-off-verify which rotation axis happens
+        not to disturb which locked component (rotating around one
+        in-plane axis can still perturb the locked one via the other
+        in-plane component -- not reliably safe to leave enabled)."""
+        constrained = (self.tp.ui.checkBox_constraint_90deg.isChecked()
+                       or self.tp.ui.checkBox_constraint_90deg_coronal.isChecked())
+        self.ui.pushButton_roll.setEnabled(not constrained)
+        self.ui.pushButton_pitch.setEnabled(not constrained)
+        if constrained and self._armed_axis in ('roll', 'pitch'):
+            self._flush_pending_nudge()
+            self._armed_axis = None
+            self._update_axis_arm_ui()
+            self._update_axis_indicator()
+            self.plotter.render()
 
     def _toggle_axis_arm(self, axis):
         """Clicking one of the 6 axis buttons arms/disarms it -- only one
@@ -1296,19 +1167,17 @@ class TrajectoryPlanning3DWindow(QDockWidget):
             # without touching the RL component pitch is independent of.
             # Symmetrically, rotating around RL leaves the SI component
             # (pitch's own) fixed. So each button moves only its own angle.
-            # Uses ATLAS-space bregma/lambda/CC -- this window's own
-            # editable/canonical space (coords_insert_point/coords_
-            # deepest_point) -- via the same ap_rl_si_frame math
-            # compute_shank_roll_pitch_mri uses in MRI space.
-            if (getattr(self.tp, 'atlas_bregma_coords', None) is None
-                    or getattr(self.tp, 'atlas_lambda_coords', None) is None
-                    or getattr(self.tp, 'atlas_cc_centroid', None) is None):
-                return
-            spacing = np.array(self.tp.fixedImg.GetSpacing())
-            bregma = np.array(self.tp.atlas_bregma_coords, dtype=float) * spacing
-            lam = np.array(self.tp.atlas_lambda_coords, dtype=float) * spacing
-            cc = np.array(self.tp.atlas_cc_centroid, dtype=float) * spacing
-            frame = self.tp.ap_rl_si_frame(bregma, lam, cc)
+            # coords_insert_point/coords_deepest_point are already MRI-grid
+            # voxel indices (electrode_mri.py's change_insert_point/
+            # change_deepest_point) -- use the same MRI-space frame
+            # (ap_rl_si_frame_from_misalignment) compute_shank_roll_pitch_mri
+            # does, so the nudge buttons actually move the angle the legend
+            # displays.
+            spacing = np.array(self.tp.movingImg_resampled.GetSpacing())
+            bregma = np.array(self.tp.coords_bregma, dtype=float) * spacing
+            lam = np.array(self.tp.coords_lambda, dtype=float) * spacing
+            misalignment_deg = getattr(self.tp, 'coronal_misalignment_deg', 0.0)
+            frame = self.tp.ap_rl_si_frame_from_misalignment(bregma, lam, misalignment_deg)
             if frame is None:
                 return
             _ap_axis, rl_axis, si_axis = frame
