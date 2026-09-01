@@ -1,0 +1,6 @@
+latest:
+  version: "v0.1.0"
+  platforms:
+    linux: "https://github.com/Neurotechnology-at-ETH-Zurich/IMPLAnT/releases/download/v0.1.0/IMPLAnT"
+    macos: null
+    windows: null

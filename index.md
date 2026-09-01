@@ -11,8 +11,10 @@ Integrated Multimodal Planning, Localisation, Analysis Toolbox
 {: .fs-6 .fw-300 }
 
 [Get started](installation){: .btn .btn-primary .fs-5 .mb-4 .mb-md-0 .mr-2 }
-[Direct Download](download){: .btn .fs-5 .mb-4 .mb-md-0 .mr-2 }
+<a href="download" id="direct-download-btn" class="btn fs-5 mb-4 mb-md-0 mr-2" onclick="return implantDirectDownload(event)">Direct Download</a>
 [Download on GitHub](https://github.com/Neurotechnology-at-ETH-Zurich/IMPLAnT/releases){: .btn .fs-5 .mb-4 .mb-md-0 }
+
+<div id="direct-download-msg" class="direct-download-msg"></div>
 
 ![IMPLAnT](assets/images/IMPLAnT.png)
 
