@@ -4,6 +4,7 @@ import os
 import SimpleITK as sitk
 from PySide6.QtCore import QObject, Signal
 from mrid_utils import heatmap
+from core.image_layer import ImageLayer
 import vtk
 from vtk.util import numpy_support
 import numpy as np
@@ -250,8 +251,32 @@ class MRID_tags(QObject):
             table_class = self.LoadMRI.intensity_table[data_index]
             if self.LoadMRI.tag_file:
                 #add to intensity table
-                self.MW.FileLoader.layer_index += 1
-                table_class.update_table('Heatmap', self.heatmap_nii[data_index],data_index,self.MW.FileLoader.layer_index,visibility_enabled=False)
+                # key by this data_index's OWN layer count (matching every other
+                # caller of update_table, e.g. file_handling/loader.py's "add
+                # another file" branch) -- self.MW.FileLoader.layer_index is a
+                # counter shared across every dataset in the whole app, so it
+                # drifts away from len(Layers[data_index]) as soon as more than
+                # one dataset/layer has been loaded this session, and update_table
+                # then KeyErrors on a Layers[data_index] slot nothing ever created.
+                layer_index = len(self.MW.Layers[data_index])
+                # ImageLayer's own actors/img_vtks are never attached to any
+                # renderer here (no init_vtk call) -- the heatmap's actual on-
+                # screen actor is self.actor_heatmap[data_index], built and
+                # rendered separately in visualize_heatmap/open_mainimage. This
+                # object only exists so the intensity table row has something
+                # to hang its opacity_box/toggle_visibility/set_opacity calls on
+                # without crashing; it doesn't duplicate the real rendering.
+                self.MW.Layers[data_index][layer_index] = ImageLayer(
+                    {0: self.heatmap_nii[data_index]},
+                    self.MW.Layers[data_index][0].spacing,
+                    self.MW.Layers[data_index][0].view_names,
+                    self.LoadMRI.slice_indices[data_index],
+                    self.MW.Layers[data_index][0].is_4d,
+                    self.LoadMRI.render,
+                    opacity=0.6,
+                    visibility_at_start=False,
+                )
+                table_class.update_table('Heatmap', self.heatmap_nii[data_index],data_index,layer_index,visibility_enabled=False)
             else:
                 #change volume in intensity table
                 for i in range(table_class.table.rowCount()):
