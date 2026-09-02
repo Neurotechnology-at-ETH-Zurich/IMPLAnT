@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 420" width="1000" height="420" role="img"
+     aria-label="Four concurrency lanes compared. Register's GUI thread hands off to a SamriWorker QThread subclass, running picsl_greedy and ANTsPy in-process while the GUI stays free. Segmentation's evolution step hands off to an EvolutionWorker via QObject moveToThread, a different pattern, also keeping the GUI free. Resample's GUI thread calls BusyOverlay.run, which schedules work via QTimer.singleShot back onto the same GUI thread, so the UI is actually blocked for the full duration despite showing a spinner. Paintbrush and Measurement make direct synchronous calls with no async wrapper at all, by design, since they need to feel instant.">
+  <style>
+    text{font-family:'IBM Plex Mono','Courier New',monospace;}
+    .node{fill:#FFFFFF;stroke:#8FA1C4;stroke-width:1.5;}
+    .well{fill:#E2E9F2;stroke:#8FA1C4;stroke-width:1.5;}
+    .accent-node{fill:#FFFFFF;stroke:#0E8C89;stroke-width:2;}
+    .warn-node{fill:#FFFFFF;stroke:#B5730A;stroke-width:2;}
+    .ink-t{fill:#12213D;}
+    .dim-t{fill:#57678C;}
+    .accent-t{fill:#0E8C89;}
+    .warn-t{fill:#B5730A;}
+  </style>
+  <rect x="0" y="0" width="1000" height="420" fill="#FFFFFF"/>
+  <defs>
+    <marker id="arF" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#0E8C89"/></marker>
+    <marker id="arW" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#B5730A"/></marker>
+    <marker id="arN" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#8FA1C4"/></marker>
+  </defs>
+
+  <!-- Lane 1: Register -->
+  <g><rect x="20" y="30" width="140" height="60" rx="3" class="well"/>
+    <text x="90" y="65" text-anchor="middle" font-size="10" class="ink-t">GUI THREAD</text></g>
+  <g><rect x="220" y="30" width="220" height="60" rx="3" class="accent-node"/>
+    <text x="330" y="55" text-anchor="middle" font-size="11" font-weight="600" class="ink-t">SamriWorker</text>
+    <text x="330" y="70" text-anchor="middle" font-size="8.5" class="dim-t">QThread subclass — menu path only</text></g>
+  <line x1="160" y1="60" x2="217" y2="60" class="accent-t" stroke="#0E8C89" stroke-width="1.75" marker-end="url(#arF)"/>
+  <text x="480" y="55" font-size="10" font-weight="700" class="accent-t">picsl_greedy + ANTsPy in-process</text>
+  <text x="480" y="70" font-size="10" font-weight="700" class="accent-t">Register (3D Tools menu) — GUI free</text>
+  <text x="220" y="102" font-size="9" fill="#B5730A">&#9888; Register's OTHER call site — Trajectory Planning's second-file comparison (register_to_main_img) — instead runs</text>
+  <text x="220" y="114" font-size="9" fill="#B5730A">via BusyOverlay, same non-threaded pattern as the Resample lane below.</text>
+
+  <!-- Lane 2: Segmentation -->
+  <g><rect x="20" y="130" width="140" height="60" rx="3" class="well"/>
+    <text x="90" y="165" text-anchor="middle" font-size="10" class="ink-t">GUI THREAD</text></g>
+  <g><rect x="220" y="130" width="220" height="60" rx="3" class="accent-node" stroke-dasharray="5 4"/>
+    <text x="330" y="155" text-anchor="middle" font-size="11" font-weight="600" class="ink-t">EvolutionWorker</text>
+    <text x="330" y="170" text-anchor="middle" font-size="9" class="dim-t">QObject.moveToThread()</text></g>
+  <line x1="160" y1="160" x2="217" y2="160" stroke="#0E8C89" stroke-width="1.75" marker-end="url(#arF)"/>
+  <text x="480" y="150" font-size="10" font-weight="700" class="accent-t">numpy/scipy evolution loop — Segmentation</text>
+  <text x="480" y="165" font-size="10" font-weight="700" class="accent-t">GUI free, a DIFFERENT pattern than Register's</text>
+
+  <!-- Lane 3: Resample -->
+  <g><rect x="20" y="230" width="140" height="60" rx="3" class="well"/>
+    <text x="90" y="265" text-anchor="middle" font-size="10" class="ink-t">GUI THREAD</text></g>
+  <g><rect x="220" y="230" width="220" height="60" rx="3" class="warn-node"/>
+    <text x="330" y="255" text-anchor="middle" font-size="11" font-weight="600" class="ink-t">BusyOverlay.run()</text>
+    <text x="330" y="270" text-anchor="middle" font-size="8.5" class="dim-t">QTimer.singleShot(50, _execute)</text></g>
+  <line x1="160" y1="260" x2="217" y2="260" stroke="#B5730A" stroke-width="1.75" marker-end="url(#arW)"/>
+  <path d="M 90 290 C 90 320, 330 320, 330 292" fill="none" stroke="#B5730A" stroke-width="1.25" stroke-dasharray="4 3" marker-end="url(#arW)"/>
+  <text x="480" y="250" font-size="10" font-weight="700" class="warn-t">&#9888; still the GUI thread — Resample —</text>
+  <text x="480" y="265" font-size="10" font-weight="700" class="warn-t">UI BLOCKED, just shows a spinner first</text>
+
+  <!-- Lane 4: sync -->
+  <g><rect x="20" y="330" width="140" height="60" rx="3" class="well"/>
+    <text x="90" y="365" text-anchor="middle" font-size="10" class="ink-t">GUI THREAD</text></g>
+  <g><rect x="220" y="330" width="220" height="60" rx="3" class="node"/>
+    <text x="330" y="355" text-anchor="middle" font-size="11" font-weight="600" class="ink-t">direct call</text>
+    <text x="330" y="370" text-anchor="middle" font-size="9" class="dim-t">no async wrapper</text></g>
+  <line x1="160" y1="360" x2="217" y2="360" stroke="#8FA1C4" stroke-width="1.5" marker-end="url(#arN)"/>
+  <text x="480" y="360" font-size="10" class="dim-t">Paintbrush, Measurement, Contrast, Zoom, Minimap — instant, by design</text>
+</svg>

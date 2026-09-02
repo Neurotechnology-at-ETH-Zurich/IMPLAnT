@@ -38,7 +38,7 @@ class PopupDialog(QDialog):
 
 
 
-class ButtonsGUI_3D:
+class ButtonsGUI_Structural:
     def __init__(self,MW,data_index,label_file=False):
         """
            Initialize the 3D buttons GUI.

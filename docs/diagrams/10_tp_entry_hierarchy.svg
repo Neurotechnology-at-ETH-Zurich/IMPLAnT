@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 480" width="1200" height="480" role="img"
+     aria-label="Entry pipeline: initialize_trajectory_planning, gated on output_Composite.h5 existing, leads to a FileInput dialog, then finish_trajectory_work which resamples, then constructs TrajectoryPlanningMri. Below, two class hierarchies compared: TrajectoryPlanning with its six mixins is never directly instantiated anywhere in the repo and would swap the display to the atlas; TrajectoryPlanningMri, built from MRI-space mixins placed first plus TrajectoryPlanning, is what main_window.py actually constructs, keeping the subject's own MRI displayed for the whole session. A side panel lists which methods are overridden, which are new MRI-space-only features, and which are inherited unchanged.">
+  <style>
+    text{font-family:'IBM Plex Mono','Courier New',monospace;}
+    .node{fill:#FFFFFF;stroke:#8FA1C4;stroke-width:1.5;}
+    .well{fill:#E2E9F2;stroke:#8FA1C4;stroke-width:1.5;}
+    .accent-node{fill:#FFFFFF;stroke:#0E8C89;stroke-width:2;}
+    .flowline{stroke:#0E8C89;stroke-width:1.75;fill:none;}
+    .guideline{stroke:#8FA1C4;stroke-width:1.5;fill:none;}
+    .ink-t{fill:#12213D;}
+    .dim-t{fill:#57678C;}
+    .accent-t{fill:#0E8C89;}
+  </style>
+  <rect x="0" y="0" width="1200" height="480" fill="#FFFFFF"/>
+  <defs>
+    <marker id="arA" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#8FA1C4"/></marker>
+    <marker id="arB" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#0E8C89"/></marker>
+  </defs>
+
+  <g><rect x="20" y="30" width="230" height="60" rx="3" class="well"/>
+    <text x="135" y="55" text-anchor="middle" font-size="11" font-weight="600" class="ink-t">initialize_trajectory_planning()</text>
+    <text x="135" y="70" text-anchor="middle" font-size="9" class="dim-t">requires output_Composite.h5 to exist</text></g>
+  <g><rect x="290" y="30" width="230" height="60" rx="3" class="node"/>
+    <text x="405" y="55" text-anchor="middle" font-size="11" font-weight="600" class="ink-t">FileInput dialog</text>
+    <text x="405" y="70" text-anchor="middle" font-size="9" class="dim-t">&#8594; (main_file, second_file, spacing_mm)</text></g>
+  <g><rect x="560" y="30" width="280" height="60" rx="3" class="node"/>
+    <text x="700" y="52" text-anchor="middle" font-size="11" font-weight="600" class="ink-t">finish_trajectory_work()</text>
+    <text x="700" y="67" text-anchor="middle" font-size="8.5" class="dim-t">resample (reuses SAMRI's 25&#181;m convention</text>
+    <text x="700" y="79" text-anchor="middle" font-size="8.5" class="dim-t">if spacing==25&#181;m) &#8594; load into main viewer</text></g>
+  <g><rect x="880" y="30" width="260" height="60" rx="3" class="accent-node"/>
+    <text x="1010" y="55" text-anchor="middle" font-size="11" font-weight="600" class="ink-t">TrajectoryPlanningMri(...)</text>
+    <text x="1010" y="70" text-anchor="middle" font-size="9" class="accent-t">the class that ACTUALLY runs</text></g>
+
+  <line x1="250" y1="60" x2="287" y2="60" class="guideline" marker-end="url(#arA)"/>
+  <line x1="520" y1="60" x2="557" y2="60" class="guideline" marker-end="url(#arA)"/>
+  <line x1="840" y1="60" x2="877" y2="60" class="flowline" marker-end="url(#arB)"/>
+
+  <text x="20" y="135" font-size="10" font-weight="700" class="dim-t">TWO CLASS HIERARCHIES — one is never instantiated, the other is what actually runs (main_window.py:1101)</text>
+
+  <g><rect x="20" y="150" width="420" height="180" class="well" stroke-dasharray="6 5"/>
+    <text x="40" y="175" font-size="13" font-weight="700" class="ink-t">TrajectoryPlanning</text>
+    <text x="40" y="195" font-size="9" class="ink-t">(CoordTransform, Rendering, TpRegistration,</text>
+    <text x="40" y="207" font-size="9" class="ink-t">ElecGeometry, ShankRendering, DfxGeometry)</text>
+    <text x="40" y="230" font-size="9" class="dim-t">NEVER directly instantiated anywhere in the repo</text>
+    <text x="40" y="242" font-size="9" class="dim-t">(confirmed by grep) — swaps display to the ATLAS</text></g>
+
+  <g><rect x="500" y="150" width="420" height="180" class="accent-node"/>
+    <text x="520" y="175" font-size="13" font-weight="700" class="ink-t">TrajectoryPlanningMri</text>
+    <text x="520" y="195" font-size="9" class="ink-t">(RenderingMri, TpRegistrationMri, ElecGeometryMri,</text>
+    <text x="520" y="207" font-size="9" class="ink-t">ShankRenderingMri, TrajectoryPlanning)</text>
+    <text x="520" y="230" font-size="9" class="accent-t">What main_window.py actually constructs — keeps</text>
+    <text x="520" y="242" font-size="9" class="accent-t">the subject's own MRI displayed for the WHOLE</text>
+    <text x="520" y="254" font-size="9" class="accent-t">session; atlas labels scattered onto the MRI grid</text>
+    <text x="520" y="266" font-size="9" class="accent-t">as a colored overlay (build_mri_label_overlay)</text></g>
+
+  <line x1="440" y1="240" x2="497" y2="240" class="flowline" marker-end="url(#arB)"/>
+  <text x="468" y="228" text-anchor="middle" font-size="8" font-weight="700" class="accent-t">MRI-space mixins</text>
+  <text x="468" y="255" text-anchor="middle" font-size="8" font-weight="700" class="accent-t">placed FIRST — C3 MRO</text>
+
+  <g><rect x="960" y="150" width="220" height="180" class="node"/>
+    <text x="978" y="172" font-size="10" font-weight="700" class="ink-t">Overridden (display-dependent):</text>
+    <text x="978" y="188" font-size="8.5" class="dim-t">do_get_shank_line, warp_red_areas</text>
+    <text x="978" y="200" font-size="8.5" class="dim-t">(&#8594; no-op), draw_atlas_reference_points,</text>
+    <text x="978" y="212" font-size="8.5" class="dim-t">reload_atlas_view, compute_shank_</text>
+    <text x="978" y="224" font-size="8.5" class="dim-t">reference_angle, draw_electrode_line</text>
+    <text x="978" y="244" font-size="10" font-weight="700" class="ink-t">NEW in MRI-space only:</text>
+    <text x="978" y="258" font-size="8.5" class="dim-t">misalignment correction dial,</text>
+    <text x="978" y="270" font-size="8.5" class="dim-t">oblique coronal/sagittal views</text>
+    <text x="978" y="290" font-size="10" font-weight="700" class="ink-t">Inherited unchanged:</text>
+    <text x="978" y="304" font-size="8.5" class="dim-t">register_to_main_img, get_shank_line,</text>
+    <text x="978" y="316" font-size="8.5" class="dim-t">init_page30_mirror, paint_red_areas</text></g>
+</svg>

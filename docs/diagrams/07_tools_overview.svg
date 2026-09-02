@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1150 340" width="1150" height="340" role="img"
+     aria-label="Five 3D Tools cards. Register: core/registration.py and itksnap_registration.py, picsl_greedy in-process C++ plus ANTsPy, writes a transformation text file and an aligned NIfTI, runs on a SamriWorker QThread. Resample: file_handling/resample_data.py, sitk.Resample, writes new resampled sibling files, uses BusyOverlay which looks async but is not. Paintbrush: core/paintbrush.py, a numpy label volume, writes no file at all, runs synchronously. Segmentation: gui_utils/segmentation_gui.py, a threshold then active bubbles then level-set evolution wizard still marked not finished, writes a mask file that feeds SAMRI's create moving mask flow, its evolution step runs via QObject moveToThread. Measurement: core/measurement.py, a two-click distance tool drawn into a dedicated overlay VTK layer, writes no file, runs synchronously.">
+  <style>
+    text{font-family:'IBM Plex Mono','Courier New',monospace;}
+    .card{fill:#E2E9F2;stroke:#C4D0E3;stroke-width:1.25;}
+    .ink-t{fill:#12213D;}
+    .dim-t{fill:#57678C;}
+  </style>
+  <rect x="0" y="0" width="1150" height="340" fill="#FFFFFF"/>
+
+  <!-- Register -->
+  <g>
+    <rect x="20" y="40" width="210" height="280" class="card"/>
+    <rect x="20" y="40" width="6" height="280" fill="#0E8C89"/>
+    <text x="42" y="65" font-size="14" font-weight="700" class="ink-t">Register</text>
+    <text x="42" y="95" font-size="9" class="ink-t">core/registration.py</text>
+    <text x="42" y="107" font-size="9" class="ink-t">itksnap_registration.py</text>
+    <text x="42" y="130" font-size="9" class="dim-t">picsl_greedy (in-process C++)</text>
+    <text x="42" y="142" font-size="9" class="dim-t">+ ANTsPy</text>
+    <text x="42" y="165" font-size="9" class="ink-t">&#8594; transformation-*.txt</text>
+    <text x="42" y="177" font-size="9" class="ink-t">&#8594; *-aligned_to_*.nii.gz</text>
+    <text x="42" y="196" font-size="8" fill="#B5730A">2 call sites, 2 threading</text>
+    <text x="42" y="207" font-size="8" fill="#B5730A">behaviors — sheet 3</text>
+    <rect x="35" y="270" width="180" height="24" rx="12" fill="#0E8C89"/>
+    <text x="125" y="286" text-anchor="middle" font-size="8.5" font-weight="700" fill="#FFFFFF">QThread — menu path only</text>
+  </g>
+
+  <!-- Resample -->
+  <g>
+    <rect x="250" y="40" width="210" height="280" class="card"/>
+    <rect x="250" y="40" width="6" height="280" fill="#B5730A"/>
+    <text x="272" y="65" font-size="14" font-weight="700" class="ink-t">Resample</text>
+    <text x="272" y="95" font-size="9" class="ink-t">file_handling/resample_data.py</text>
+    <text x="272" y="130" font-size="9" class="dim-t">sitk.Resample (z-only 100&#181;m,</text>
+    <text x="272" y="142" font-size="9" class="dim-t">3-pass 25&#181;m isotropic)</text>
+    <text x="272" y="165" font-size="9" class="ink-t">&#8594; *_resampled100um.nii.gz</text>
+    <text x="272" y="177" font-size="9" class="ink-t">&#8594; *_resampled.nii.gz (new sibling)</text>
+    <rect x="265" y="270" width="180" height="24" rx="12" fill="#B5730A"/>
+    <text x="355" y="286" text-anchor="middle" font-size="8.5" font-weight="700" fill="#FFFFFF">&#9888; BusyOverlay — looks async, isn't</text>
+  </g>
+
+  <!-- Paintbrush -->
+  <g>
+    <rect x="480" y="40" width="210" height="280" class="card"/>
+    <rect x="480" y="40" width="6" height="280" fill="#8FA1C4"/>
+    <text x="502" y="65" font-size="14" font-weight="700" class="ink-t">Paintbrush</text>
+    <text x="502" y="95" font-size="9" class="ink-t">core/paintbrush.py</text>
+    <text x="502" y="107" font-size="9" class="ink-t">paintbrush_gui.py</text>
+    <text x="502" y="130" font-size="9" class="dim-t">numpy label_volume, brush in</text>
+    <text x="502" y="142" font-size="9" class="dim-t">view-plane voxel space</text>
+    <text x="502" y="165" font-size="9" class="ink-t">&#8594; none — session-only overlay,</text>
+    <text x="502" y="177" font-size="9" class="ink-t">no file I/O at all</text>
+    <rect x="495" y="270" width="180" height="24" rx="12" fill="#8FA1C4"/>
+    <text x="585" y="286" text-anchor="middle" font-size="9" font-weight="700" fill="#FFFFFF">synchronous, by design</text>
+  </g>
+
+  <!-- Segmentation -->
+  <g>
+    <rect x="710" y="40" width="210" height="280" class="card"/>
+    <rect x="710" y="40" width="6" height="280" fill="#0E8C89"/>
+    <text x="732" y="65" font-size="14" font-weight="700" class="ink-t">Segmentation</text>
+    <text x="732" y="95" font-size="9" class="ink-t">gui_utils/segmentation_gui.py</text>
+    <text x="732" y="107" font-size="9" class="ink-t">segmentation/evolution.py</text>
+    <text x="732" y="130" font-size="9" class="dim-t">threshold &#8594; active bubbles &#8594;</text>
+    <text x="732" y="142" font-size="9" class="dim-t">level-set evolution ("not finished")</text>
+    <text x="732" y="165" font-size="9" class="ink-t">&#8594; *-mask.nii.gz — feeds SAMRI</text>
+    <text x="732" y="177" font-size="9" class="ink-t">"Create Moving Mask" (sheet 4)</text>
+    <rect x="725" y="270" width="180" height="24" rx="12" fill="#0E8C89"/>
+    <text x="815" y="286" text-anchor="middle" font-size="8.5" font-weight="700" fill="#FFFFFF">moveToThread (evolution only)</text>
+  </g>
+
+  <!-- Measurement -->
+  <g>
+    <rect x="940" y="40" width="210" height="280" class="card"/>
+    <rect x="940" y="40" width="6" height="280" fill="#8FA1C4"/>
+    <text x="962" y="65" font-size="14" font-weight="700" class="ink-t">Measurement</text>
+    <text x="962" y="95" font-size="9" class="ink-t">core/measurement.py</text>
+    <text x="962" y="130" font-size="9" class="dim-t">2-click distance, dedicated</text>
+    <text x="962" y="142" font-size="9" class="dim-t">overlay VTK layer per view</text>
+    <text x="962" y="165" font-size="9" class="ink-t">&#8594; none — in-memory VTK actors</text>
+    <text x="962" y="177" font-size="9" class="ink-t">+ table rows only</text>
+    <rect x="955" y="270" width="180" height="24" rx="12" fill="#8FA1C4"/>
+    <text x="1045" y="286" text-anchor="middle" font-size="9" font-weight="700" fill="#FFFFFF">synchronous, by design</text>
+  </g>
+</svg>

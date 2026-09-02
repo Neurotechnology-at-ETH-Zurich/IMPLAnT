@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1150 420" width="1150" height="420" role="img"
+     aria-label="FileOutput builds three kinds of report content: atlas-space panels as literal screenshots of the live Visualisation3D plotters, MRI-space panels from a fresh off-screen PyVista plotter with separate drawing code, and a cover page that directly reuses During Surgery's build_skull_reference_scene. All three feed a PDF that Pillow assembles and pypdf then reopens to add an embedded JSON attachment holding the full trajectory plan. That JSON is read back by both main_window's session restore and During Surgery's load_surgery_plan, which explicitly cites the write side in its own code comment. A note corrects the existing walkthrough doc's paraphrased filename pattern.">
+  <style>
+    text{font-family:'IBM Plex Mono','Courier New',monospace;}
+    .node{fill:#FFFFFF;stroke:#8FA1C4;stroke-width:1.5;}
+    .well{fill:#E2E9F2;stroke:#8FA1C4;stroke-width:1.5;}
+    .accent-node{fill:#FFFFFF;stroke:#0E8C89;stroke-width:2;}
+    .flowline{stroke:#8FA1C4;stroke-width:1.5;fill:none;}
+    .accentline{stroke:#0E8C89;stroke-width:1.75;fill:none;}
+    .ink-t{fill:#12213D;}
+    .dim-t{fill:#57678C;}
+    .accent-t{fill:#0E8C89;}
+    .warn-t{fill:#B5730A;}
+  </style>
+  <rect x="0" y="0" width="1150" height="420" fill="#FFFFFF"/>
+  <defs>
+    <marker id="ar1" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#8FA1C4"/></marker>
+    <marker id="ar2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#0E8C89"/></marker>
+  </defs>
+
+  <g><rect x="20" y="30" width="200" height="60" rx="3" class="well"/>
+    <text x="120" y="55" text-anchor="middle" font-size="11" font-weight="600" class="ink-t">FileOutput</text>
+    <text x="120" y="70" text-anchor="middle" font-size="8.5" class="dim-t">file_input_output.py</text></g>
+
+  <g><rect x="280" y="20" width="230" height="70" rx="3" class="accent-node"/>
+    <text x="395" y="42" text-anchor="middle" font-size="10.5" font-weight="600" class="ink-t">Atlas-space panels</text>
+    <text x="395" y="57" text-anchor="middle" font-size="8" class="accent-t">literal screenshot of the LIVE</text>
+    <text x="395" y="68" text-anchor="middle" font-size="8" class="accent-t">Visualisation3D plotters — can't drift</text></g>
+  <g><rect x="280" y="100" width="230" height="70" rx="3" class="node"/>
+    <text x="395" y="122" text-anchor="middle" font-size="10.5" font-weight="600" class="ink-t">MRI-space panels</text>
+    <text x="395" y="137" text-anchor="middle" font-size="8" class="dim-t">fresh off-screen pv.Plotter — separate</text>
+    <text x="395" y="148" text-anchor="middle" font-size="8" class="dim-t">drawing code, not a screenshot</text></g>
+  <g><rect x="280" y="180" width="230" height="70" rx="3" class="node"/>
+    <text x="395" y="202" text-anchor="middle" font-size="10.5" font-weight="600" class="ink-t">Cover page</text>
+    <text x="395" y="217" text-anchor="middle" font-size="8" class="dim-t">reuses during_surgery/buttons_gui_surgery.py</text>
+    <text x="395" y="228" text-anchor="middle" font-size="8" class="dim-t">::build_skull_reference_scene DIRECTLY</text></g>
+
+  <g><rect x="580" y="90" width="260" height="90" rx="3" class="node"/>
+    <text x="710" y="112" text-anchor="middle" font-size="10.5" font-weight="600" class="ink-t">&lt;short_id&gt;-trajectory_planning.pdf</text>
+    <text x="710" y="128" text-anchor="middle" font-size="8" class="dim-t">Pillow assembles pages, then pypdf</text>
+    <text x="710" y="139" text-anchor="middle" font-size="8" class="dim-t">re-opens it to add the JSON attachment</text>
+    <text x="710" y="150" text-anchor="middle" font-size="8" class="dim-t">(written to disk TWICE)</text></g>
+
+  <g><rect x="900" y="90" width="230" height="90" rx="3" class="accent-node"/>
+    <text x="1015" y="112" text-anchor="middle" font-size="10.5" font-weight="600" class="ink-t">trajectory_planning_data.json</text>
+    <text x="1015" y="128" text-anchor="middle" font-size="8" class="accent-t">embedded attachment — compute(tp)</text>
+    <text x="1015" y="139" text-anchor="middle" font-size="8" class="accent-t">output, incl. summary['raw'] voxel/mm</text>
+    <text x="1015" y="150" text-anchor="middle" font-size="8" class="accent-t">values</text></g>
+
+  <g><rect x="900" y="230" width="230" height="60" rx="3" class="node"/>
+    <text x="1015" y="252" text-anchor="middle" font-size="10" font-weight="600" class="ink-t">main_window.py session restore</text>
+    <text x="1015" y="267" text-anchor="middle" font-size="8" class="dim-t">line 437 — reader.attachments[...]</text></g>
+  <g><rect x="900" y="310" width="230" height="60" rx="3" class="accent-node"/>
+    <text x="1015" y="330" text-anchor="middle" font-size="10" font-weight="600" class="ink-t">During Surgery</text>
+    <text x="1015" y="345" text-anchor="middle" font-size="8" class="accent-t">load_surgery_plan.py:67 — cites</text>
+    <text x="1015" y="356" text-anchor="middle" font-size="8" class="accent-t">_attach_reload_data as its write side</text></g>
+
+  <line x1="220" y1="55" x2="277" y2="55" class="flowline" marker-end="url(#ar1)"/>
+  <line x1="220" y1="60" x2="277" y2="135" class="flowline" marker-end="url(#ar1)"/>
+  <line x1="220" y1="65" x2="277" y2="215" class="flowline" marker-end="url(#ar1)"/>
+  <line x1="510" y1="55" x2="577" y2="120" class="flowline" marker-end="url(#ar1)"/>
+  <line x1="510" y1="135" x2="577" y2="135" class="flowline" marker-end="url(#ar1)"/>
+  <line x1="510" y1="215" x2="577" y2="150" class="flowline" marker-end="url(#ar1)"/>
+  <line x1="840" y1="135" x2="897" y2="135" class="accentline" marker-end="url(#ar2)"/>
+  <line x1="1015" y1="180" x2="1015" y2="227" class="accentline" marker-end="url(#ar2)"/>
+  <line x1="1015" y1="290" x2="1015" y2="307" class="accentline" marker-end="url(#ar2)"/>
+
+  <text x="20" y="395" font-size="9.5" class="warn-t">Corrects docs/surgery_workflow.md's paraphrase (trajectory_planning-sub-X-ind_2.pdf) — the real pattern is &lt;short_id&gt;-trajectory_planning.pdf,</text>
+  <text x="20" y="408" font-size="9.5" class="warn-t">short_id via regex on the MRI filename.</text>
+</svg>

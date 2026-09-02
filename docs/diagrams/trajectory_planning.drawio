@@ -1,0 +1,195 @@
+<mxfile host="app.diagrams.net" agent="claude-code" version="24.7.0" type="device">
+
+  <diagram id="page1entry" name="1 - Entry &amp; MRI-space hierarchy">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1200" pageHeight="480" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="gate" value="&lt;b&gt;initialize_trajectory_planning()&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#57678C&quot; style=&quot;font-size:9px&quot;&gt;requires output_Composite.h5 to exist&lt;/font&gt;" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#E2E9F2;strokeColor=#8FA1C4;strokeWidth=1.5;fontColor=#12213D;fontSize=11;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="20" y="30" width="230" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="fileinput" value="&lt;b&gt;FileInput dialog&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#57678C&quot; style=&quot;font-size:9px&quot;&gt;&#8594; (main_file, second_file, spacing_mm)&lt;/font&gt;" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#8FA1C4;strokeWidth=1.5;fontColor=#12213D;fontSize=11;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="290" y="30" width="230" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="finish" value="&lt;b&gt;finish_trajectory_work()&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#57678C&quot; style=&quot;font-size:9px&quot;&gt;resample (reuses SAMRI's 25&#181;m convention&lt;br&gt;if spacing==25&#181;m) &#8594; load into main viewer&lt;/font&gt;" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#8FA1C4;strokeWidth=1.5;fontColor=#12213D;fontSize=11;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="560" y="30" width="280" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="tpmri" value="&lt;b&gt;TrajectoryPlanningMri(...)&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#0E8C89&quot; style=&quot;font-size:9px&quot;&gt;the class that ACTUALLY runs&lt;/font&gt;" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#0E8C89;strokeWidth=2;fontColor=#12213D;fontSize=11;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="880" y="30" width="260" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#8FA1C4;strokeWidth=1.5;endArrow=block;endFill=1;" edge="1" parent="1" source="gate" target="fileinput"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#8FA1C4;strokeWidth=1.5;endArrow=block;endFill=1;" edge="1" parent="1" source="fileinput" target="finish"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#0E8C89;strokeWidth=1.75;endArrow=block;endFill=1;" edge="1" parent="1" source="finish" target="tpmri"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <mxCell id="hdr" value="TWO CLASS HIERARCHIES — one is never instantiated, the other is what actually runs (main_window.py:1101)" style="text;html=1;align=left;verticalAlign=middle;fontColor=#57678C;fontSize=10;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="20" y="120" width="900" height="20" as="geometry" />
+        </mxCell>
+
+        <mxCell id="base" value="&lt;b&gt;TrajectoryPlanning&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px&quot;&gt;(CoordTransform, Rendering, TpRegistration,&lt;br&gt;ElecGeometry, ShankRendering, DfxGeometry)&lt;/font&gt;&lt;br&gt;&lt;br&gt;&lt;font color=&quot;#57678C&quot; style=&quot;font-size:9px&quot;&gt;NEVER directly instantiated anywhere in the repo&lt;br&gt;(confirmed by grep) — swaps display to the ATLAS&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#E2E9F2;strokeColor=#8FA1C4;strokeWidth=1.5;dashed=1;fontColor=#12213D;fontSize=12;align=left;verticalAlign=top;spacing=10;" vertex="1" parent="1">
+          <mxGeometry x="20" y="150" width="420" height="180" as="geometry" />
+        </mxCell>
+        <mxCell id="mri" value="&lt;b&gt;TrajectoryPlanningMri&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px&quot;&gt;(RenderingMri, TpRegistrationMri, ElecGeometryMri,&lt;br&gt;ShankRenderingMri, TrajectoryPlanning)&lt;/font&gt;&lt;br&gt;&lt;br&gt;&lt;font color=&quot;#0E8C89&quot; style=&quot;font-size:9px&quot;&gt;What main_window.py actually constructs — keeps&lt;br&gt;the subject's own MRI displayed for the WHOLE&lt;br&gt;session; atlas labels scattered onto the MRI grid&lt;br&gt;as a colored overlay (build_mri_label_overlay)&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#0E8C89;strokeWidth=2;fontColor=#12213D;fontSize=12;align=left;verticalAlign=top;spacing=10;" vertex="1" parent="1">
+          <mxGeometry x="500" y="150" width="420" height="180" as="geometry" />
+        </mxCell>
+        <mxCell id="e4" value="MRI-space mixins placed FIRST in the base list —&#10;C3 MRO resolves overridden methods to these,&#10;everything else falls through to TrajectoryPlanning unchanged" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#0E8C89;strokeWidth=1.75;endArrow=block;endFill=1;fontColor=#0E8C89;fontSize=9;fontStyle=1;" edge="1" parent="1" source="base" target="mri"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <mxCell id="overridebox" value="&lt;b&gt;Overridden (display-dependent):&lt;/b&gt;&lt;br&gt;do_get_shank_line, warp_red_areas (&#8594; no-op),&lt;br&gt;draw_atlas_reference_points, reload_atlas_view,&lt;br&gt;compute_shank_reference_angle, draw_electrode_line&lt;br&gt;&lt;br&gt;&lt;b&gt;NEW in MRI-space only:&lt;/b&gt; misalignment correction&lt;br&gt;dial, oblique coronal/sagittal views&lt;br&gt;&lt;br&gt;&lt;b&gt;Inherited unchanged:&lt;/b&gt; register_to_main_img,&lt;br&gt;get_shank_line, init_page30_mirror, paint_red_areas" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#E2E9F2;strokeColor=#C4D0E3;strokeWidth=1.25;fontColor=#12213D;fontSize=10;align=left;verticalAlign=top;spacing=10;" vertex="1" parent="1">
+          <mxGeometry x="960" y="150" width="220" height="180" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+
+  <diagram id="page2geometry" name="2 - Geometry pipeline">
+    <mxGraphModel dx="1100" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1100" pageHeight="400" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="coord" value="&lt;b&gt;CoordTransform&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#57678C&quot; style=&quot;font-size:9px&quot;&gt;bregma / lambda / atlas&#8596;MRI correspondence&lt;/font&gt;" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#E2E9F2;strokeColor=#8FA1C4;strokeWidth=1.5;fontColor=#12213D;fontSize=11;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="20" y="30" width="220" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="shank" value="&lt;b&gt;ShankRendering(Mri)&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#57678C&quot; style=&quot;font-size:9px&quot;&gt;add/remove/select_shank — re-numbers IDs&lt;br&gt;on removal (id == combo position invariant)&lt;/font&gt;" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#8FA1C4;strokeWidth=1.5;fontColor=#12213D;fontSize=11;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="280" y="30" width="260" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="elec" value="&lt;b&gt;ElecGeometry(Mri)&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#57678C&quot; style=&quot;font-size:9px&quot;&gt;contact placement, region-avoidance +&lt;br&gt;shank-intersection checks, CA1 finder&lt;/font&gt;" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#8FA1C4;strokeWidth=1.5;fontColor=#12213D;fontSize=11;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="580" y="30" width="260" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="dfx" value="&lt;b&gt;DfxGeometry&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#57678C&quot; style=&quot;font-size:9px&quot;&gt;optional: DXF bend geometry &#8594; probe_geometry.json&lt;/font&gt;" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#8FA1C4;strokeWidth=1.5;fontColor=#12213D;fontSize=11;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="880" y="30" width="200" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#8FA1C4;strokeWidth=1.5;endArrow=block;endFill=1;" edge="1" parent="1" source="coord" target="shank"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#8FA1C4;strokeWidth=1.5;endArrow=block;endFill=1;" edge="1" parent="1" source="shank" target="elec"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e3" value="optional" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#8FA1C4;strokeWidth=1.5;dashed=1;endArrow=block;endFill=1;fontColor=#57678C;fontSize=9;" edge="1" parent="1" source="elec" target="dfx"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <mxCell id="submodule" value="&lt;b&gt;electrode2geometry&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px&quot;&gt;git submodule&lt;/font&gt;&lt;br&gt;&lt;font color=&quot;#57678C&quot; style=&quot;font-size:9px&quot;&gt;bend_dxf_probe_geometry, read_electrode_centroids,&lt;br&gt;parse_neuroscope_xml, write_kilosort_json&lt;/font&gt;" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#E2E9F2;strokeColor=#8FA1C4;strokeWidth=1.5;fontColor=#12213D;fontSize=10.5;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="880" y="140" width="200" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="e4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#8FA1C4;strokeWidth=1.5;endArrow=block;endFill=1;" edge="1" parent="1" source="dfx" target="submodule"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <mxCell id="shared" value="&lt;b&gt;shared widget: widget_dfx / stackedWidget_dfx&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#57678C&quot; style=&quot;font-size:9px&quot;&gt;reparented between DfxGeometry (here) and&lt;br&gt;core/dfx_geometry_4d.py::Dfx4DGeometry (4D electrode&lt;br&gt;localisation, out of scope) via reclaim_dfx_widget —&lt;br&gt;ONE widget instance, re-wired depending on owner&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#F4F4F4;strokeColor=#C4D0E3;strokeWidth=1.25;dashed=1;fontColor=#8FA1C4;fontSize=9.5;align=left;verticalAlign=top;spacing=8;" vertex="1" parent="1">
+          <mxGeometry x="580" y="140" width="260" height="120" as="geometry" />
+        </mxCell>
+
+        <mxCell id="insertion" value="&lt;b&gt;Insertion-point refinement (page_31)&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#57678C&quot; style=&quot;font-size:9px&quot;&gt;swaps to subject's own resampled MRI; click along&lt;br&gt;a shank's fixed guide line to correct insertion point&lt;br&gt;in native MRI voxel space (core/interactor_style.py)&lt;/font&gt;" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#0E8C89;strokeWidth=2;fontColor=#12213D;fontSize=10.5;align=left;verticalAlign=top;spacing=10;" vertex="1" parent="1">
+          <mxGeometry x="20" y="140" width="520" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="e5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#0E8C89;strokeWidth=1.75;endArrow=block;endFill=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="elec" target="insertion"><mxGeometry relative="1" as="geometry" /></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+
+  <diagram id="page3viz3d" name="3 - 3D visualization">
+    <mxGraphModel dx="1000" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1000" pageHeight="380" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="live" value="&lt;b&gt;TrajectoryPlanningMri (live state)&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#57678C&quot; style=&quot;font-size:9px&quot;&gt;self.MW.LoadMRI.TrajPlanning&lt;/font&gt;" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#E2E9F2;strokeColor=#8FA1C4;strokeWidth=1.5;fontColor=#12213D;fontSize=12;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="380" y="20" width="260" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="v3d" value="&lt;b&gt;Visualisation3D&lt;/b&gt; (&#8594; VisualisationMri)&lt;br&gt;&lt;font color=&quot;#57678C&quot; style=&quot;font-size:9px&quot;&gt;PyVista &#183; always-visible, in-panel&lt;br&gt;3 QtInteractor plotters (co/sa/ax),&lt;br&gt;clipping plane = looks like 2D slice&lt;br&gt;ThreadPoolExecutor(3) for parallel LOAD&lt;br&gt;only — still blocks caller, not GUI-async&lt;/font&gt;" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#0E8C89;strokeWidth=2;fontColor=#12213D;fontSize=11;align=left;verticalAlign=top;spacing=10;" vertex="1" parent="1">
+          <mxGeometry x="80" y="150" width="330" height="170" as="geometry" />
+        </mxCell>
+        <mxCell id="dock3d" value="&lt;b&gt;TrajectoryPlanning3DWindow&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#57678C&quot; style=&quot;font-size:9px&quot;&gt;PyVista &#183; QDockWidget, opened on demand&lt;br&gt;(open_3d_window), reused after &#8212; not modal,&lt;br&gt;not a separate process&lt;br&gt;LIVE interactive shank nudging&lt;br&gt;(_nudge_shank, QTimer-coalesced)&lt;br&gt;mesh rebuild via BusyOverlay.run()&lt;/font&gt;" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#0E8C89;strokeWidth=2;fontColor=#12213D;fontSize=11;align=left;verticalAlign=top;spacing=10;" vertex="1" parent="1">
+          <mxGeometry x="590" y="150" width="330" height="170" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#8FA1C4;strokeWidth=1.5;endArrow=block;endFill=1;" edge="1" parent="1" source="live" target="v3d"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#8FA1C4;strokeWidth=1.5;endArrow=block;endFill=1;" edge="1" parent="1" source="live" target="dock3d"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="nolink" value="no import either direction — independent, both read the same live state" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#C1393E;strokeWidth=1.5;dashed=1;endArrow=none;startArrow=none;fontColor=#C1393E;fontSize=9;fontStyle=1;" edge="1" parent="1" source="v3d" target="dock3d"><mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="500" y="235"/></Array></mxGeometry></mxCell>
+
+        <mxCell id="shared2" value="Both warp atlas-shaped mesh vertices into true MRI space via the SAME atlas_points_to_mri_indices technique (coord_transform.py) — mesh cell data (region indices) stays untouched, only vertex positions move" style="text;html=1;align=left;verticalAlign=middle;fontColor=#57678C;fontSize=9.5;" vertex="1" parent="1">
+          <mxGeometry x="80" y="335" width="840" height="34" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+
+  <diagram id="page4registration" name="4 - Registration touchpoints">
+    <mxGraphModel dx="1000" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1000" pageHeight="360" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="hdr" value="Two things both called &quot;registration&quot; in this one screen — easy to confuse, functionally unrelated" style="text;html=1;align=left;verticalAlign=middle;fontColor=#57678C;fontSize=10;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="20" y="10" width="800" height="20" as="geometry" />
+        </mxCell>
+
+        <mxCell id="reg" value="&lt;b&gt;register_to_main_img&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px&quot;&gt;TpRegistration &#8594; core.registration.Registration&lt;/font&gt;&lt;br&gt;&lt;br&gt;&lt;font color=&quot;#57678C&quot; style=&quot;font-size:9px&quot;&gt;fires when a 2nd/comparison file is supplied&lt;br&gt;&#8594; transformation-ind_M-to-ind_N.txt&lt;br&gt;&#8594; never reads/writes output_Composite.h5&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#E2E9F2;strokeColor=#C4D0E3;strokeWidth=1.25;fontColor=#12213D;fontSize=12;align=left;verticalAlign=top;spacing=10;" vertex="1" parent="1">
+          <mxGeometry x="40" y="50" width="420" height="220" as="geometry" />
+        </mxCell>
+        <mxCell id="regbadge" value="unrelated to SAMRI" style="rounded=1;arcSize=20;whiteSpace=wrap;html=1;fillColor=#8FA1C4;strokeColor=none;fontColor=#FFFFFF;fontSize=9;fontStyle=1;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="60" y="230" width="200" height="24" as="geometry" />
+        </mxCell>
+
+        <mxCell id="warp" value="&lt;b&gt;warp_red_areas(transform_path)&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px&quot;&gt;TpRegistration (base/atlas-space) &#8594; ants.apply_transforms&lt;/font&gt;&lt;br&gt;&lt;br&gt;&lt;font color=&quot;#57678C&quot; style=&quot;font-size:9px&quot;&gt;fires after painting forbidden areas&lt;br&gt;(reuses 3D Tools Paintbrush, red_only=True)&lt;br&gt;&#8594; GENUINELY applies output_Composite.h5&lt;br&gt;(in-process ANTsPy, nearest-neighbor)&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#E2E9F2;strokeColor=#0E8C89;strokeWidth=2;fontColor=#12213D;fontSize=12;align=left;verticalAlign=top;spacing=10;" vertex="1" parent="1">
+          <mxGeometry x="540" y="50" width="420" height="220" as="geometry" />
+        </mxCell>
+        <mxCell id="warpbadge" value="real SAMRI transform consumer" style="rounded=1;arcSize=20;whiteSpace=wrap;html=1;fillColor=#0E8C89;strokeColor=none;fontColor=#FFFFFF;fontSize=9;fontStyle=1;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="560" y="230" width="220" height="24" as="geometry" />
+        </mxCell>
+
+        <mxCell id="mrinote" value="TpRegistrationMri's warp_red_areas is a no-op passthrough — the painted mask is already MRI-space, so nothing needs warping; transform_path is accepted-and-ignored just to keep the same call signature." style="text;html=1;align=left;verticalAlign=middle;fontColor=#57678C;fontSize=9.5;" vertex="1" parent="1">
+          <mxGeometry x="540" y="280" width="420" height="50" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+
+  <diagram id="page5report" name="5 - PDF report &amp; handoff">
+    <mxGraphModel dx="1100" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1150" pageHeight="420" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="fo" value="&lt;b&gt;FileOutput&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#57678C&quot; style=&quot;font-size:9px&quot;&gt;file_input_output.py&lt;/font&gt;" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#E2E9F2;strokeColor=#8FA1C4;strokeWidth=1.5;fontColor=#12213D;fontSize=12;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="20" y="30" width="200" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="live_shot" value="&lt;b&gt;Atlas-space panels&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#57678C&quot; style=&quot;font-size:9px&quot;&gt;literal screenshot of the LIVE&lt;br&gt;Visualisation3D plotters — can't drift&lt;/font&gt;" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#0E8C89;strokeWidth=2;fontColor=#12213D;fontSize=10.5;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="280" y="20" width="230" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="offscreen" value="&lt;b&gt;MRI-space panels&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#57678C&quot; style=&quot;font-size:9px&quot;&gt;fresh off-screen pv.Plotter — separate&lt;br&gt;drawing code, not a screenshot&lt;/font&gt;" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#8FA1C4;strokeWidth=1.5;fontColor=#12213D;fontSize=10.5;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="280" y="100" width="230" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="cover" value="&lt;b&gt;Cover page&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#57678C&quot; style=&quot;font-size:9px&quot;&gt;reuses during_surgery/buttons_gui_surgery.py&lt;br&gt;::build_skull_reference_scene DIRECTLY&lt;/font&gt;" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#8FA1C4;strokeWidth=1.5;fontColor=#12213D;fontSize=10.5;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="280" y="180" width="230" height="70" as="geometry" />
+        </mxCell>
+
+        <mxCell id="pdf" value="&lt;b&gt;&lt;short_id&gt;-trajectory_planning.pdf&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#57678C&quot; style=&quot;font-size:9px&quot;&gt;Pillow assembles pages, then pypdf&lt;br&gt;re-opens it to add the JSON attachment&lt;br&gt;(written to disk TWICE)&lt;/font&gt;" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#8FA1C4;strokeWidth=1.5;fontColor=#12213D;fontSize=10.5;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="580" y="90" width="260" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="json" value="&lt;b&gt;trajectory_planning_data.json&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#0E8C89&quot; style=&quot;font-size:9px&quot;&gt;embedded attachment &#8212; compute(tp) output,&lt;br&gt;incl. summary['raw'] voxel/mm values&lt;/font&gt;" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#0E8C89;strokeWidth=2;fontColor=#12213D;fontSize=10.5;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="900" y="90" width="230" height="90" as="geometry" />
+        </mxCell>
+
+        <mxCell id="restore" value="&lt;b&gt;main_window.py session restore&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#57678C&quot; style=&quot;font-size:9px&quot;&gt;line 437 — reader.attachments[...]&lt;/font&gt;" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#8FA1C4;strokeWidth=1.5;fontColor=#12213D;fontSize=10;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="900" y="230" width="230" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="surgery" value="&lt;b&gt;During Surgery&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#57678C&quot; style=&quot;font-size:9px&quot;&gt;load_surgery_plan.py:67 — cites&lt;br&gt;_attach_reload_data as its write side&lt;/font&gt;" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#0E8C89;strokeWidth=2;fontColor=#12213D;fontSize=10;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="900" y="310" width="230" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#8FA1C4;strokeWidth=1.5;endArrow=block;endFill=1;" edge="1" parent="1" source="fo" target="live_shot"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#8FA1C4;strokeWidth=1.5;endArrow=block;endFill=1;" edge="1" parent="1" source="fo" target="offscreen"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#8FA1C4;strokeWidth=1.5;endArrow=block;endFill=1;" edge="1" parent="1" source="fo" target="cover"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#8FA1C4;strokeWidth=1.5;endArrow=block;endFill=1;" edge="1" parent="1" source="live_shot" target="pdf"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#8FA1C4;strokeWidth=1.5;endArrow=block;endFill=1;" edge="1" parent="1" source="offscreen" target="pdf"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e6" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#8FA1C4;strokeWidth=1.5;endArrow=block;endFill=1;" edge="1" parent="1" source="cover" target="pdf"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e7" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#0E8C89;strokeWidth=1.75;endArrow=block;endFill=1;" edge="1" parent="1" source="pdf" target="json"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e8" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#0E8C89;strokeWidth=1.75;endArrow=block;endFill=1;" edge="1" parent="1" source="json" target="restore"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e9" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#0E8C89;strokeWidth=1.75;endArrow=block;endFill=1;" edge="1" parent="1" source="json" target="surgery"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <mxCell id="correction" value="Corrects docs/surgery_workflow.md's paraphrase (trajectory_planning-sub-X-ind_2.pdf) — the real pattern is &lt;short_id&gt;-trajectory_planning.pdf, short_id via regex on the MRI filename." style="text;html=1;align=left;verticalAlign=middle;fontColor=#B5730A;fontSize=9.5;" vertex="1" parent="1">
+          <mxGeometry x="20" y="380" width="1100" height="20" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+
+</mxfile>

@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 440" width="1200" height="440" role="img"
+     aria-label="Atlas acquisition branches from an active-atlas decision into two paths: the bundle path downloads a GitHub release, verifies it against a pinned SHA-256, and extracts it; the BrainGlobe path fetches via the third-party bg_atlasapi package into an unverified home-directory cache, then converts and reorients it using a hardcoded WHS affine. Both converge on five files under atlas_folder, which feed the Register stage. Below, a dashed box marks the general app file layer — FileLoader, LoadMRI, ResampleData, and a separate rigid registration tool — as unrelated to this pipeline, touched only once, when the finished registration result is displayed.">
+  <style>
+    text{font-family:'IBM Plex Mono','Courier New',monospace;}
+    .node{fill:#FFFFFF;stroke:#8FA1C4;stroke-width:1.5;}
+    .well{fill:#E2E9F2;stroke:#8FA1C4;stroke-width:1.5;}
+    .accent-node{fill:#FFFFFF;stroke:#0E8C89;stroke-width:2;}
+    .ok-node{fill:#FFFFFF;stroke:#2E8B57;stroke-width:2;}
+    .warn-node{fill:#FFFFFF;stroke:#B5730A;stroke-width:2;}
+    .flowline{stroke:#8FA1C4;stroke-width:1.5;fill:none;}
+    .accentline{stroke:#0E8C89;stroke-width:1.75;fill:none;}
+    .dashline{stroke:#57678C;stroke-width:1.2;stroke-dasharray:5 4;fill:none;}
+    .ink-t{fill:#12213D;}
+    .dim-t{fill:#57678C;}
+    .accent-t{fill:#0E8C89;}
+    .warn-t{fill:#B5730A;}
+    .ok-t{fill:#2E8B57;}
+  </style>
+  <rect x="0" y="0" width="1200" height="440" fill="#FFFFFF"/>
+  <defs>
+    <marker id="ar5" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#8FA1C4"/>
+    </marker>
+    <marker id="ar5accent" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#0E8C89"/>
+    </marker>
+    <marker id="ar5dim" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#57678C"/>
+    </marker>
+  </defs>
+
+  <text x="20" y="26" font-size="10" class="dim-t">ensure_atlas_available() / ensure_brainglobe_atlas_available() &#8212; called before Register, Trajectory Planning, Ephys, Electrode Localization</text>
+
+  <g>
+    <rect x="20" y="50" width="160" height="60" rx="3" class="well"/>
+    <text x="100" y="76" text-anchor="middle" font-size="12" font-weight="600" class="ink-t">ACTIVE ATLAS</text>
+    <text x="100" y="92" text-anchor="middle" font-size="9.5" class="dim-t">atlas_registry.py</text>
+  </g>
+
+  <!-- lane A: bundle -->
+  <g>
+    <rect x="230" y="30" width="170" height="50" rx="3" class="well"/>
+    <text x="315" y="51" text-anchor="middle" font-size="11" font-weight="600" class="ink-t">GitHub Release</text>
+    <text x="315" y="66" text-anchor="middle" font-size="9" class="dim-t">atlas_fetch.py &#183; ~1.3GB</text>
+  </g>
+  <g>
+    <rect x="440" y="30" width="170" height="50" rx="3" class="ok-node"/>
+    <text x="525" y="59" text-anchor="middle" font-size="11" font-weight="600" class="ink-t"><tspan fill="#2E8B57">&#10003;</tspan> SHA-256 verify</text>
+  </g>
+  <g>
+    <rect x="650" y="30" width="170" height="50" rx="3" class="node"/>
+    <text x="735" y="51" text-anchor="middle" font-size="11" font-weight="600" class="ink-t">extract</text>
+    <text x="735" y="66" text-anchor="middle" font-size="9" class="dim-t">&#8594; atlas_folder/</text>
+  </g>
+
+  <!-- lane B: brainglobe -->
+  <g>
+    <rect x="230" y="110" width="170" height="60" rx="3" class="well"/>
+    <text x="315" y="136" text-anchor="middle" font-size="11" font-weight="600" class="ink-t">BrainGlobeAtlas()</text>
+    <text x="315" y="151" text-anchor="middle" font-size="9" class="dim-t">bg_atlasapi (3rd-party)</text>
+  </g>
+  <g>
+    <rect x="440" y="110" width="170" height="60" rx="3" class="warn-node"/>
+    <text x="525" y="136" text-anchor="middle" font-size="11" font-weight="600" class="ink-t"><tspan fill="#B5730A">&#9888;</tspan> ~/.brainglobe/ cache</text>
+    <text x="525" y="151" text-anchor="middle" font-size="9" class="warn-t">no checksum</text>
+  </g>
+  <g>
+    <rect x="650" y="110" width="170" height="60" rx="3" class="node"/>
+    <text x="735" y="136" text-anchor="middle" font-size="11" font-weight="600" class="ink-t">convert + reorient</text>
+    <text x="735" y="151" text-anchor="middle" font-size="9" class="dim-t">hardcoded WHS affine</text>
+  </g>
+
+  <!-- converge -->
+  <g>
+    <rect x="860" y="70" width="250" height="90" rx="3" class="accent-node"/>
+    <text x="985" y="107" text-anchor="middle" font-size="12" font-weight="600" class="ink-t">atlas_folder/[subfolder/]</text>
+    <text x="985" y="124" text-anchor="middle" font-size="9.5" class="accent-t">5 files: volume, labels,</text>
+    <text x="985" y="138" text-anchor="middle" font-size="9.5" class="accent-t">template, mask[, dwi]</text>
+  </g>
+  <text x="860" y="195" font-size="10" class="dim-t">&#8594; feeds Register (sheet 1, stage 3)</text>
+
+  <line x1="180" y1="65" x2="227" y2="55" class="flowline" marker-end="url(#ar5)"/>
+  <line x1="400" y1="55" x2="437" y2="55" class="flowline" marker-end="url(#ar5)"/>
+  <line x1="610" y1="55" x2="647" y2="55" class="flowline" marker-end="url(#ar5)"/>
+  <line x1="820" y1="55" x2="855" y2="90" class="accentline" marker-end="url(#ar5accent)"/>
+
+  <line x1="180" y1="95" x2="227" y2="140" class="flowline" marker-end="url(#ar5)"/>
+  <line x1="400" y1="140" x2="437" y2="140" class="flowline" marker-end="url(#ar5)"/>
+  <line x1="610" y1="140" x2="647" y2="140" class="flowline" marker-end="url(#ar5)"/>
+  <line x1="820" y1="140" x2="855" y2="120" class="accentline" marker-end="url(#ar5accent)"/>
+
+  <line x1="985" y1="160" x2="985" y2="192" class="dashline"/>
+
+  <!-- file loading layer -->
+  <g>
+    <rect x="60" y="210" width="230" height="30" rx="3" class="node" stroke-dasharray="3 3"/>
+    <text x="175" y="229" text-anchor="middle" font-size="10.5" font-weight="600" class="ink-t">FINALIZE &#8594; visualize_results()</text>
+  </g>
+
+  <rect x="20" y="250" width="1160" height="170" rx="0" class="dashline" fill="none" stroke-dasharray="6 5"/>
+  <text x="32" y="266" font-size="10" font-weight="700" letter-spacing="0.03em" class="dim-t">GENERAL APP FILE LAYER &#8212; separate from this pipeline</text>
+
+  <g>
+    <rect x="60" y="290" width="190" height="60" rx="3" class="node"/>
+    <text x="155" y="316" text-anchor="middle" font-size="11" font-weight="600" class="ink-t">FileLoader</text>
+    <text x="155" y="331" text-anchor="middle" font-size="9" class="dim-t">file_handling/loader.py</text>
+  </g>
+  <g>
+    <rect x="280" y="290" width="190" height="60" rx="3" class="node"/>
+    <text x="375" y="316" text-anchor="middle" font-size="11" font-weight="600" class="ink-t">LoadMRI</text>
+    <text x="375" y="331" text-anchor="middle" font-size="9" class="dim-t">core/load_MRI_file.py</text>
+  </g>
+  <g>
+    <rect x="500" y="290" width="190" height="60" rx="3" class="node"/>
+    <text x="595" y="316" text-anchor="middle" font-size="11" font-weight="600" class="ink-t">ResampleData</text>
+    <text x="595" y="331" text-anchor="middle" font-size="9" class="dim-t">file_handling/resample_data.py</text>
+  </g>
+  <g>
+    <rect x="720" y="290" width="230" height="60" rx="3" class="node"/>
+    <text x="835" y="316" text-anchor="middle" font-size="11" font-weight="600" class="ink-t">Registration (rigid)</text>
+    <text x="835" y="331" text-anchor="middle" font-size="8.5" class="dim-t">core/registration.py &#183; itksnap_registration.py</text>
+  </g>
+
+  <polyline points="175,240 175,270 155,270 155,288" class="dashline" fill="none" marker-end="url(#ar5dim)"/>
+  <text x="190" y="262" font-size="9" class="dim-t">display only, after registration completes</text>
+</svg>

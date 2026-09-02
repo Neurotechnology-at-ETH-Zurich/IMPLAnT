@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 540" width="1100" height="540" role="img"
+     aria-label="FileLoader.initialize_file branches on is_4d: true goes to page_4Ddata0, the separate 4D layout with its own ButtonsGUI_4D implementation; false goes to page_3D, which is three synced 2D slice views plus one real 3D scene widget. Down the 3D path, LoadMRI.volumes feeds ButtonsGUI_3D.buttons_3D feeds ImageLayer.setup_vtk, which for each view does a numpy slice, numpy_to_vtk, vtkImageData, vtkImageReslice, and finally a vtkImageActor with a lookup table for windowing.">
+  <style>
+    text{font-family:'IBM Plex Mono','Courier New',monospace;}
+    .node{fill:#FFFFFF;stroke:#8FA1C4;stroke-width:1.5;}
+    .well{fill:#E2E9F2;stroke:#8FA1C4;stroke-width:1.5;}
+    .accent-node{fill:#FFFFFF;stroke:#0E8C89;stroke-width:2;}
+    .flowline{stroke:#0E8C89;stroke-width:1.75;fill:none;}
+    .guideline{stroke:#8FA1C4;stroke-width:1.5;fill:none;}
+    .ink-t{fill:#12213D;}
+    .dim-t{fill:#57678C;}
+    .accent-t{fill:#0E8C89;}
+  </style>
+  <rect x="0" y="0" width="1100" height="540" fill="#FFFFFF"/>
+  <defs>
+    <marker id="arA" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#8FA1C4"/></marker>
+    <marker id="arB" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#0E8C89"/></marker>
+  </defs>
+
+  <g><rect x="20" y="20" width="220" height="50" rx="3" class="well"/>
+    <text x="130" y="42" text-anchor="middle" font-size="11.5" font-weight="600" class="ink-t">FileLoader.initialize_file()</text>
+    <text x="130" y="58" text-anchor="middle" font-size="9" class="dim-t">sitk.ReadImage</text></g>
+
+  <g><rect x="280" y="20" width="120" height="50" rx="3" class="well"/>
+    <text x="340" y="50" text-anchor="middle" font-size="12" font-weight="600" class="ink-t">is_4d?</text></g>
+
+  <g><rect x="460" y="20" width="300" height="70" rx="3" class="node"/>
+    <text x="610" y="46" text-anchor="middle" font-size="12" font-weight="600" class="ink-t">page_4Ddata0</text>
+    <text x="610" y="61" text-anchor="middle" font-size="9" class="dim-t">per-timepoint tabs, heatmap, own VTK</text>
+    <text x="610" y="73" text-anchor="middle" font-size="9" class="dim-t">widgets — ButtonsGUI_4D (sheet 4)</text></g>
+
+  <g><rect x="460" y="120" width="300" height="70" rx="3" class="accent-node"/>
+    <text x="610" y="146" text-anchor="middle" font-size="12" font-weight="600" class="ink-t">page_3D</text>
+    <text x="610" y="161" text-anchor="middle" font-size="9" class="accent-t">3 slice views (axial/sagittal/coronal)</text>
+    <text x="610" y="173" text-anchor="middle" font-size="9" class="accent-t">+ 1 real 3D scene widget</text></g>
+
+  <g><rect x="460" y="230" width="300" height="50" rx="3" class="node"/>
+    <text x="610" y="252" text-anchor="middle" font-size="11" font-weight="600" class="ink-t">LoadMRI.volumes[data_index]</text>
+    <text x="610" y="267" text-anchor="middle" font-size="9" class="dim-t">MRIVolume: numpy array + spacing</text></g>
+
+  <g><rect x="460" y="300" width="300" height="50" rx="3" class="node"/>
+    <text x="610" y="330" text-anchor="middle" font-size="11" font-weight="600" class="ink-t">ButtonsGUI_3D.buttons_3D</text></g>
+
+  <g><rect x="460" y="370" width="300" height="50" rx="3" class="accent-node"/>
+    <text x="610" y="392" text-anchor="middle" font-size="11" font-weight="600" class="ink-t">ImageLayer.setup_vtk</text>
+    <text x="610" y="407" text-anchor="middle" font-size="9" class="accent-t">per view: axial / coronal / sagittal</text></g>
+
+  <g><rect x="20" y="450" width="180" height="50" rx="3" class="node"/>
+    <text x="110" y="472" text-anchor="middle" font-size="10.5" font-weight="600" class="ink-t">numpy slice</text>
+    <text x="110" y="487" text-anchor="middle" font-size="9" class="dim-t">vol[z,:,:]</text></g>
+  <g><rect x="230" y="450" width="180" height="50" rx="3" class="node"/>
+    <text x="320" y="480" text-anchor="middle" font-size="10.5" font-weight="600" class="ink-t">numpy_to_vtk</text></g>
+  <g><rect x="440" y="450" width="180" height="50" rx="3" class="node"/>
+    <text x="530" y="480" text-anchor="middle" font-size="10.5" font-weight="600" class="ink-t">vtkImageData</text></g>
+  <g><rect x="650" y="450" width="180" height="50" rx="3" class="node"/>
+    <text x="740" y="472" text-anchor="middle" font-size="10.5" font-weight="600" class="ink-t">vtkImageReslice</text>
+    <text x="740" y="487" text-anchor="middle" font-size="9" class="dim-t">cubic / nearest</text></g>
+  <g><rect x="860" y="450" width="180" height="50" rx="3" class="accent-node"/>
+    <text x="950" y="472" text-anchor="middle" font-size="10.5" font-weight="600" class="ink-t">vtkImageActor + LUT</text>
+    <text x="950" y="487" text-anchor="middle" font-size="9" class="accent-t">Contrast.lut_vtk</text></g>
+
+  <line x1="240" y1="45" x2="277" y2="45" class="guideline" marker-end="url(#arA)"/>
+  <line x1="400" y1="38" x2="457" y2="30" class="guideline" marker-end="url(#arA)"/>
+  <text x="415" y="30" font-size="9" class="dim-t">True</text>
+  <line x1="400" y1="55" x2="457" y2="140" class="flowline" marker-end="url(#arB)"/>
+  <text x="415" y="130" font-size="9" class="accent-t">False</text>
+
+  <line x1="610" y1="190" x2="610" y2="228" class="flowline" marker-end="url(#arB)"/>
+  <line x1="610" y1="280" x2="610" y2="298" class="flowline" marker-end="url(#arB)"/>
+  <line x1="610" y1="350" x2="610" y2="368" class="flowline" marker-end="url(#arB)"/>
+  <line x1="610" y1="420" x2="235" y2="448" class="flowline" marker-end="url(#arB)"/>
+
+  <line x1="200" y1="475" x2="227" y2="475" class="guideline" marker-end="url(#arA)"/>
+  <line x1="410" y1="475" x2="437" y2="475" class="guideline" marker-end="url(#arA)"/>
+  <line x1="620" y1="475" x2="647" y2="475" class="guideline" marker-end="url(#arA)"/>
+  <line x1="830" y1="475" x2="857" y2="475" class="flowline" marker-end="url(#arB)"/>
+
+  <text x="20" y="150" font-size="9.5" class="dim-t">Cursor moves mutate the existing vtkImageData in place</text>
+  <text x="20" y="163" font-size="9.5" class="dim-t">(ImageLayer.update_vtk) — no actor recreation per frame.</text>
+  <text x="20" y="176" font-size="9.5" class="dim-t">Multiple ImageLayers stack as independent VTK actors;</text>
+  <text x="20" y="189" font-size="9.5" class="dim-t">VTK composites opacity, not app logic.</text>
+</svg>

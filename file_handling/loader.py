@@ -4,7 +4,7 @@ import SimpleITK as sitk
 import numpy as np
 from PySide6.QtWidgets import QFileDialog
 import sys
-from paths_config import _paths
+from paths_config import _paths, get_raw_base
 from core.mrid_tags import MRID_tags
 from collections import Counter
 from core.load_MRI_file import LoadMRI
@@ -13,8 +13,8 @@ from file_handling.mri_volume import MRIVolume
 from file_handling.metadata import Metadata
 from core.image_layer import ImageLayer
 from gui_utils.intensity_table import IntensityTable
-from gui_utils.buttons_gui3D import ButtonsGUI_3D
-from gui_utils.buttons_gui4D import ButtonsGUI_4D
+from gui_utils.buttons_gui_structural import ButtonsGUI_Structural
+from gui_utils.buttons_gui_time_series import ButtonsGUI_TimeSeries
 from core.cursor import Cursor
 import vtk
 
@@ -31,7 +31,7 @@ class FileLoader:
 
     ##
     #LoadImage4D is still imported and instantiated in two places:
-    #- gui_utils/buttons_gui4D.py lines 437, 523
+    #- gui_utils/buttons_gui_time_series.py lines 437, 523
     #- utils/mrid_inputdialog.py line 146
 
 
@@ -49,7 +49,7 @@ class FileLoader:
         file_name, _ = QFileDialog.getOpenFileName(
             None,
             "Open NIfTI File",
-            _paths['raw_base'] if path is None else path,
+            get_raw_base(self.MW) if path is None else path,
             "NIfTI files (*.nii.gz)"
         )
         #User cancelled
@@ -170,12 +170,12 @@ class FileLoader:
         if data_index==0:
             self.MW.LoadMRI.session_path = os.path.dirname(os.path.dirname(vol.file_path))
             if not vol.is_4d:
-                self.MW.ButtonsGUI_3D = ButtonsGUI_3D(self.MW,data_index,label_file)
+                self.MW.ButtonsGUI_Structural = ButtonsGUI_Structural(self.MW,data_index,label_file)
             else:
-                self.MW.ButtonsGUI_4D = ButtonsGUI_4D(self.MW,data_index,data_view)
+                self.MW.ButtonsGUI_TimeSeries = ButtonsGUI_TimeSeries(self.MW,data_index,data_view)
         else:
-            self.MW.ButtonsGUI_4D.initialize_contrast(data_index,data_view)
-            self.MW.ButtonsGUI_4D.initialize_timestamps(data_index,data_view)
+            self.MW.ButtonsGUI_TimeSeries.initialize_contrast(data_index,data_view)
+            self.MW.ButtonsGUI_TimeSeries.initialize_timestamps(data_index,data_view)
 
     def init_vtk(self, data_view, data_index,layer_index):
         vol = self.MW.LoadMRI.volumes[data_index]
@@ -292,7 +292,7 @@ class FileLoader:
         (own group box, own timestamps and contrast), not as an overlay layer.
 
         The VTK widgets of `data_index` have to be registered in LoadMRI.vtk_widgets
-        before this is called (see ButtonsGUI_4D.add_view_widgets).
+        before this is called (see ButtonsGUI_TimeSeries.add_view_widgets).
         """
         self.MW.Layers[data_index] = {}
 

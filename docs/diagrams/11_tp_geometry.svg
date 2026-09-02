@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 400" width="1100" height="400" role="img"
+     aria-label="Geometry pipeline: CoordTransform handles bregma, lambda, and atlas-to-MRI correspondence, feeding ShankRendering which manages adding, removing, and selecting shanks, feeding ElecGeometry which places electrode contacts and checks region-avoidance and shank intersections, optionally feeding DfxGeometry for DXF bend geometry via the electrode2geometry git submodule. ElecGeometry also branches to an insertion-point refinement page that swaps to the subject's own resampled MRI for precise clicking. DfxGeometry shares one widget instance with a separate 4D electrode localisation subsystem, reparented between the two depending on which owns it.">
+  <style>
+    text{font-family:'IBM Plex Mono','Courier New',monospace;}
+    .node{fill:#FFFFFF;stroke:#8FA1C4;stroke-width:1.5;}
+    .well{fill:#E2E9F2;stroke:#8FA1C4;stroke-width:1.5;}
+    .accent-node{fill:#FFFFFF;stroke:#0E8C89;stroke-width:2;}
+    .excl-node{fill:#F4F4F4;stroke:#C4D0E3;stroke-width:1.25;}
+    .flowline{stroke:#8FA1C4;stroke-width:1.5;fill:none;}
+    .accentline{stroke:#0E8C89;stroke-width:1.75;fill:none;}
+    .ink-t{fill:#12213D;}
+    .dim-t{fill:#57678C;}
+    .accent-t{fill:#0E8C89;}
+    .excl-t{fill:#8FA1C4;}
+  </style>
+  <rect x="0" y="0" width="1100" height="400" fill="#FFFFFF"/>
+  <defs>
+    <marker id="ar1" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#8FA1C4"/></marker>
+    <marker id="ar2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#0E8C89"/></marker>
+  </defs>
+
+  <g><rect x="20" y="30" width="220" height="60" rx="3" class="well"/>
+    <text x="130" y="55" text-anchor="middle" font-size="11" font-weight="600" class="ink-t">CoordTransform</text>
+    <text x="130" y="70" text-anchor="middle" font-size="8.5" class="dim-t">bregma / lambda / atlas&#8596;MRI correspondence</text></g>
+  <g><rect x="280" y="30" width="260" height="60" rx="3" class="node"/>
+    <text x="410" y="52" text-anchor="middle" font-size="11" font-weight="600" class="ink-t">ShankRendering(Mri)</text>
+    <text x="410" y="67" text-anchor="middle" font-size="8" class="dim-t">add/remove/select_shank — re-numbers IDs</text>
+    <text x="410" y="78" text-anchor="middle" font-size="8" class="dim-t">on removal (id == combo position invariant)</text></g>
+  <g><rect x="580" y="30" width="260" height="60" rx="3" class="node"/>
+    <text x="710" y="52" text-anchor="middle" font-size="11" font-weight="600" class="ink-t">ElecGeometry(Mri)</text>
+    <text x="710" y="67" text-anchor="middle" font-size="8" class="dim-t">contact placement, region-avoidance +</text>
+    <text x="710" y="78" text-anchor="middle" font-size="8" class="dim-t">shank-intersection checks, CA1 finder</text></g>
+  <g><rect x="880" y="30" width="200" height="60" rx="3" class="node"/>
+    <text x="980" y="55" text-anchor="middle" font-size="11" font-weight="600" class="ink-t">DfxGeometry</text>
+    <text x="980" y="70" text-anchor="middle" font-size="8" class="dim-t">optional: DXF bend &#8594; probe_geometry.json</text></g>
+
+  <line x1="240" y1="60" x2="277" y2="60" class="flowline" marker-end="url(#ar1)"/>
+  <line x1="540" y1="60" x2="577" y2="60" class="flowline" marker-end="url(#ar1)"/>
+  <line x1="840" y1="60" x2="877" y2="60" class="flowline" stroke-dasharray="4 3" marker-end="url(#ar1)"/>
+  <text x="858" y="50" text-anchor="middle" font-size="8" class="dim-t">optional</text>
+
+  <g><rect x="880" y="140" width="200" height="80" rx="3" class="well"/>
+    <text x="980" y="160" text-anchor="middle" font-size="10.5" font-weight="600" class="ink-t">electrode2geometry</text>
+    <text x="980" y="173" text-anchor="middle" font-size="8" class="ink-t">git submodule</text>
+    <text x="980" y="190" text-anchor="middle" font-size="7.5" class="dim-t">bend_dxf_probe_geometry, read_electrode_</text>
+    <text x="980" y="200" text-anchor="middle" font-size="7.5" class="dim-t">centroids, parse_neuroscope_xml, write_kilosort_json</text></g>
+  <line x1="980" y1="90" x2="980" y2="137" class="flowline" marker-end="url(#ar1)"/>
+
+  <g><rect x="580" y="140" width="260" height="120" rx="0" class="excl-node" stroke-dasharray="4 3"/>
+    <text x="592" y="160" font-size="9" font-weight="700" class="excl-t">shared widget: widget_dfx /</text>
+    <text x="592" y="172" font-size="9" font-weight="700" class="excl-t">stackedWidget_dfx</text>
+    <text x="592" y="190" font-size="8" class="excl-t">reparented between DfxGeometry (here)</text>
+    <text x="592" y="202" font-size="8" class="excl-t">and core/dfx_geometry_4d.py::Dfx4DGeometry</text>
+    <text x="592" y="214" font-size="8" class="excl-t">(4D electrode localisation, out of scope)</text>
+    <text x="592" y="226" font-size="8" class="excl-t">via reclaim_dfx_widget — ONE widget instance,</text>
+    <text x="592" y="238" font-size="8" class="excl-t">re-wired depending on current owner</text></g>
+
+  <g><rect x="20" y="140" width="520" height="100" rx="3" class="accent-node"/>
+    <text x="32" y="162" font-size="10.5" font-weight="700" class="ink-t">Insertion-point refinement (page_31)</text>
+    <text x="32" y="180" font-size="8.5" class="accent-t">swaps to subject's own resampled MRI; click along</text>
+    <text x="32" y="192" font-size="8.5" class="accent-t">a shank's fixed guide line to correct insertion point</text>
+    <text x="32" y="204" font-size="8.5" class="accent-t">in native MRI voxel space (core/interactor_style.py)</text></g>
+  <line x1="710" y1="90" x2="710" y2="118" class="accentline" marker-end="url(#ar2)"/>
+  <line x1="710" y1="118" x2="280" y2="138" class="accentline" marker-end="url(#ar2)"/>
+</svg>

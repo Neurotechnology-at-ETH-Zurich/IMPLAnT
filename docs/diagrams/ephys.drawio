@@ -1,0 +1,240 @@
+<mxfile host="app.diagrams.net" agent="claude-code" version="24.7.0" type="device">
+
+  <diagram id="page1entry" name="1 - Entry, data model &amp; LFP">
+    <mxGraphModel dx="1150" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1150" pageHeight="420" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="mw" value="&lt;b&gt;main_window.py&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px&quot;&gt;&quot;Open Ephys Data&quot;&lt;/font&gt;" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#E2E9F2;strokeColor=#8FA1C4;strokeWidth=1.5;fontColor=#12213D;fontSize=11;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="20" y="30" width="200" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="init" value="&lt;b&gt;InitEphys(MW, file_name)&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px&quot;&gt;constructed ONCE — main_window.py:504&lt;/font&gt;" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#0E8C89;strokeWidth=2;fontColor=#12213D;fontSize=11;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="280" y="30" width="280" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="e1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#0E8C89;strokeWidth=1.75;endArrow=block;endFill=1;" edge="1" parent="1" source="mw" target="init"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <mxCell id="rec" value="&lt;b&gt;EphysRecording&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:8.5px&quot;&gt;.dat via neo.io.NeuroScopeIO,&lt;br&gt;.xml channel groups, .lfp memmap&lt;/font&gt;" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#8FA1C4;strokeWidth=1.5;fontColor=#12213D;fontSize=10.5;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="20" y="130" width="240" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="digi" value="&lt;b&gt;DigitalInFile&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:8.5px&quot;&gt;digitalin.dat — camera/LED TTL&lt;/font&gt;" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#8FA1C4;strokeWidth=1.5;fontColor=#12213D;fontSize=10.5;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="280" y="130" width="240" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="mridinfo" value="&lt;b&gt;MRIDInfo&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:8.5px&quot;&gt;reads analysed/&lt;tag&gt;/gaussian_centers_3D.npy&lt;br&gt;+ channel_atlas_coordinates.xlsx&lt;/font&gt;" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#0E8C89;strokeWidth=2;fontColor=#12213D;fontSize=10.5;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="540" y="130" width="300" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="e2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#8FA1C4;strokeWidth=1.5;endArrow=block;endFill=1;" edge="1" parent="1" source="init" target="rec">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="140" y="105"/></Array></mxGeometry>
+        </mxCell>
+        <mxCell id="e3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#8FA1C4;strokeWidth=1.5;endArrow=block;endFill=1;" edge="1" parent="1" source="init" target="digi"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#0E8C89;strokeWidth=1.75;endArrow=block;endFill=1;" edge="1" parent="1" source="init" target="mridinfo"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="note1" value="Real cross-subsystem dependency: MRIDInfo reads back exactly what Electrode Localization (sheet 4) writes, to identify which shank this recording is." style="text;html=1;align=left;verticalAlign=middle;fontColor=#0E8C89;fontSize=9;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="540" y="205" width="480" height="30" as="geometry" />
+        </mxCell>
+
+        <mxCell id="lfpdialog" value="&lt;b&gt;LFPCreationDialog&lt;/b&gt; (one-time)&lt;br&gt;&lt;font style=&quot;font-size:8.5px&quot;&gt;downsample_filter_LFP: FIXED 10&#215; downsample,&lt;br&gt;order-600 FIR (passband 250Hz, stopband 450Hz)&lt;/font&gt;" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#E2E9F2;strokeColor=#8FA1C4;strokeWidth=1.5;fontColor=#12213D;fontSize=10.5;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="60" y="280" width="380" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="lfpfile" value="&lt;b&gt;&lt;stem&gt;.lfp&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:8.5px&quot;&gt;int16 &#215; 0.195 &#8594; &#181;V (fixed scaling,&lt;br&gt;used by every downstream consumer)&lt;/font&gt;" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#0E8C89;strokeWidth=2;fontColor=#12213D;fontSize=10.5;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="500" y="280" width="300" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="e5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#0E8C89;strokeWidth=1.75;endArrow=block;endFill=1;" edge="1" parent="1" source="lfpdialog" target="lfpfile"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e6" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#8FA1C4;strokeWidth=1.5;endArrow=block;endFill=1;" edge="1" parent="1" source="rec" target="lfpdialog"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="tofeeds" value="&#8594; feeds Theta / Ripple / 2D trace view (sheet 2)" style="text;html=1;align=left;verticalAlign=middle;fontColor=#57678C;fontSize=9.5;" vertex="1" parent="1">
+          <mxGeometry x="500" y="360" width="400" height="20" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+
+  <diagram id="page2concurrency" name="2 - Analysis tools concurrency">
+    <mxGraphModel dx="1150" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1150" pageHeight="440" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="hdr" value="The most diverse concurrency mix in this whole series — no two analysis tools use the same mechanism" style="text;html=1;align=left;verticalAlign=middle;fontColor=#57678C;fontSize=10;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="20" y="10" width="900" height="20" as="geometry" />
+        </mxCell>
+
+        <mxCell id="l1a" value="GUI THREAD" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#E2E9F2;strokeColor=#8FA1C4;strokeWidth=1.5;fontColor=#12213D;fontSize=10;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="20" y="40" width="130" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="l1b" value="&lt;b&gt;theta_detection.detect_theta&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:8.5px&quot;&gt;in-process, BusyOverlay only&lt;/font&gt;" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#B5730A;strokeWidth=2;fontColor=#12213D;fontSize=10.5;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="200" y="40" width="280" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="l1c" value="Theta Detection — fake-async, same pattern as everywhere else in the app" style="text;html=1;align=left;verticalAlign=middle;fontColor=#B5730A;fontSize=9.5;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="520" y="55" width="600" height="25" as="geometry" />
+        </mxCell>
+
+        <mxCell id="l2a" value="GUI THREAD" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#E2E9F2;strokeColor=#8FA1C4;strokeWidth=1.5;fontColor=#12213D;fontSize=10;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="20" y="110" width="130" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="l2b" value="&lt;b&gt;subprocess.run(.venv10/bin/python3,&lt;br&gt;rippl-AI/run_rippl.py)&lt;/b&gt;" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#0E8C89;strokeWidth=2;fontColor=#12213D;fontSize=10;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="200" y="110" width="280" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="l2c" value="Ripple Detection — the ONLY cross-venv subprocess in the app; genuinely leaves the process, but still blocks the GUI thread for its duration" style="text;html=1;align=left;verticalAlign=middle;fontColor=#0E8C89;fontSize=9.5;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="520" y="115" width="600" height="40" as="geometry" />
+        </mxCell>
+
+        <mxCell id="l3a" value="GUI THREAD" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#E2E9F2;strokeColor=#8FA1C4;strokeWidth=1.5;fontColor=#12213D;fontSize=10;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="20" y="185" width="130" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="l3b" value="&lt;b&gt;SpikeRuster.load_matlab_files&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:8.5px&quot;&gt;in-process, BusyOverlay only&lt;/font&gt;" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#B5730A;strokeWidth=2;fontColor=#12213D;fontSize=10.5;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="200" y="185" width="280" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="l3c" value="Spike Sorting load (JRCLUST .mat/.prm) — fake-async" style="text;html=1;align=left;verticalAlign=middle;fontColor=#B5730A;fontSize=9.5;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="520" y="200" width="600" height="25" as="geometry" />
+        </mxCell>
+
+        <mxCell id="l4a" value="GUI THREAD" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#E2E9F2;strokeColor=#8FA1C4;strokeWidth=1.5;fontColor=#12213D;fontSize=10;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="20" y="260" width="130" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="l4b" value="&lt;b&gt;ProcessPoolExecutor&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:8.5px&quot;&gt;one real OS process per ROI tag&lt;/font&gt;" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#0E8C89;strokeWidth=2;fontColor=#12213D;fontSize=10.5;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="200" y="260" width="280" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="l4c" value="Electrode Localization's getCoordinates (sheet 4) — genuine multi-core parallelism, but as_completed() still blocks the GUI thread" style="text;html=1;align=left;verticalAlign=middle;fontColor=#0E8C89;fontSize=9.5;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="520" y="255" width="600" height="40" as="geometry" />
+        </mxCell>
+
+        <mxCell id="l5a" value="GUI THREAD" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#E2E9F2;strokeColor=#8FA1C4;strokeWidth=1.5;fontColor=#12213D;fontSize=10;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="20" y="335" width="130" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="l5b" value="&lt;b&gt;subprocess.run(&quot;ffprobe&quot;, ...)&lt;/b&gt;" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#8FA1C4;strokeWidth=1.5;fontColor=#12213D;fontSize=10.5;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="200" y="335" width="280" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="l5c" value="Video frame-rate query — the app's only ffprobe dependency, trivial/fast" style="text;html=1;align=left;verticalAlign=middle;fontColor=#57678C;fontSize=9.5;" vertex="1" parent="1">
+          <mxGeometry x="520" y="350" width="600" height="25" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#B5730A;strokeWidth=1.5;endArrow=block;endFill=1;" edge="1" parent="1" source="l1a" target="l1b"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#0E8C89;strokeWidth=1.75;endArrow=block;endFill=1;" edge="1" parent="1" source="l2a" target="l2b"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#B5730A;strokeWidth=1.5;endArrow=block;endFill=1;" edge="1" parent="1" source="l3a" target="l3b"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#0E8C89;strokeWidth=1.75;endArrow=block;endFill=1;" edge="1" parent="1" source="l4a" target="l4b"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#8FA1C4;strokeWidth=1.5;endArrow=block;endFill=1;" edge="1" parent="1" source="l5a" target="l5b"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <mxCell id="note" value="No QThread / moveToThread exists anywhere in the entire Ephys subsystem — a real contrast with SAMRI (SamriWorker) and Segmentation (EvolutionWorker) elsewhere in the app." style="text;html=1;align=left;verticalAlign=middle;fontColor=#57678C;fontSize=9.5;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="20" y="405" width="1080" height="25" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+
+  <diagram id="page3viz" name="3 - Visualization (3D + 2D)">
+    <mxGraphModel dx="1150" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1150" pageHeight="420" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="v3d" value="&lt;b&gt;Visualisation3D&lt;/b&gt; (ephys/visualisation3D.py)&lt;br&gt;&lt;font style=&quot;font-size:9px&quot;&gt;a DIFFERENT class from trajectory_planning's own Visualisation3D&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#E2E9F2;strokeColor=#8FA1C4;strokeWidth=1.5;fontColor=#12213D;fontSize=11;align=left;verticalAlign=top;spacing=10;" vertex="1" parent="1">
+          <mxGeometry x="20" y="30" width="1080" height="40" as="geometry" />
+        </mxCell>
+
+        <mxCell id="mode1" value="&lt;b&gt;electrode_localisation=True&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:8.5px&quot;&gt;standalone tab, vtkWidget_vis3D&lt;br&gt;tag switch &#8594; calls back into&lt;br&gt;ButtonsGUI_4D.activate_fill_table_and_plots&lt;/font&gt;" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#8FA1C4;strokeWidth=1.5;fontColor=#12213D;fontSize=10.5;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="40" y="90" width="320" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="mode2" value="&lt;b&gt;electrode_localisation=False&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:8.5px&quot;&gt;live per-recording, vtkWidget_ephys&lt;br&gt;tag switch &#8594; Ephys.change_mridTAG&lt;br&gt;(separate notion of &quot;current tag&quot;)&lt;/font&gt;" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#8FA1C4;strokeWidth=1.5;fontColor=#12213D;fontSize=10.5;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="400" y="90" width="320" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="write" value="&lt;b&gt;writes&lt;/b&gt; analysed/atlas-regions.nii.gz&lt;br&gt;&lt;font style=&quot;font-size:8.5px&quot;&gt;electrode-specific atlas subset&lt;br&gt;(create_atlas_region_file)&lt;/font&gt;" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#0E8C89;strokeWidth=2;fontColor=#12213D;fontSize=10.5;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="760" y="90" width="340" height="90" as="geometry" />
+        </mxCell>
+
+        <mxCell id="shared" value="Shared convention, independently implemented, both sides cite it directly: HSV saturation &#215;0.25 for non-focused regions — ephys/visualisation3D.py's desaturate/_rebuild_colormap AND trajectory_planning/visualisation3D.py's _desaturate use the SAME factor." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#F4F4F4;strokeColor=#C4D0E3;strokeWidth=1.25;fontColor=#57678C;fontSize=9.5;align=left;verticalAlign=middle;spacing=10;" vertex="1" parent="1">
+          <mxGeometry x="40" y="200" width="1060" height="50" as="geometry" />
+        </mxCell>
+
+        <mxCell id="trace" value="&lt;b&gt;2D scrolling trace viewer&lt;/b&gt; — visualisationEphys.py + pgwidget.py (pyqtgraph)&lt;br&gt;&lt;font style=&quot;font-size:9px&quot;&gt;EVENT_STYLES: ripple (gold, 0.025s), theta (green, 0.25s) — draggable pg.LinearRegionItem overlays&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#E2E9F2;strokeColor=#8FA1C4;strokeWidth=1.5;fontColor=#12213D;fontSize=11;align=left;verticalAlign=top;spacing=10;" vertex="1" parent="1">
+          <mxGeometry x="20" y="270" width="1080" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="bug" value="&#9888; Right-drag time-scroll (pgwidget.py) calls the raw-data loader DIRECTLY, bypassing visualize_data's LFP-vs-broadband mode check — dragging always reloads raw broadband data even in LFP mode." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#B5730A;strokeWidth=1.5;fontColor=#B5730A;fontSize=9.5;align=left;verticalAlign=middle;spacing=10;" vertex="1" parent="1">
+          <mxGeometry x="20" y="340" width="1080" height="50" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+
+  <diagram id="page4electrodeloc" name="4 - Electrode Localization">
+    <mxGraphModel dx="1150" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1150" pageHeight="400" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="entry" value="&lt;b&gt;TRANSFORM_InputDialog&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:8.5px&quot;&gt;entry point — see 4D doc&lt;/font&gt;" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#F4F4F4;strokeColor=#C4D0E3;strokeWidth=1.25;dashed=1;fontColor=#8FA1C4;fontSize=10.5;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="20" y="30" width="220" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="gc" value="&lt;b&gt;get_gaussian_centers&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:8.5px&quot;&gt;reads transformation-ind_*-to-ind_*.txt&lt;br&gt;(sitk.ReadTransform) &#8594; warps per-tag heatmap&lt;br&gt;&#8594; Gaussian-fits channel centers&lt;/font&gt;" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#0E8C89;strokeWidth=2;fontColor=#12213D;fontSize=10.5;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="300" y="30" width="340" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="gcoord" value="&lt;b&gt;getCoordinates&lt;/b&gt; &#8594; ChannelVariablesInput&lt;br&gt;&lt;font style=&quot;font-size:8.5px&quot;&gt;default paths: registration/fixed_img-indeces.npy +&lt;br&gt;moving_img_resampled25um-indeces.npy&lt;/font&gt;" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#0E8C89;strokeWidth=2;fontColor=#12213D;fontSize=10.5;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="300" y="130" width="340" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="samri1" value="&lt;b&gt;SAMRI:&lt;/b&gt; transformation-*.txt" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#E2E9F2;strokeColor=#8FA1C4;strokeWidth=1.5;fontColor=#12213D;fontSize=10;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="20" y="140" width="220" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="samri2" value="&lt;b&gt;SAMRI:&lt;/b&gt; fixed_img-indeces.npy&lt;br&gt;+ moving_img_resampled25um-indeces.npy" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#E2E9F2;strokeColor=#0E8C89;strokeWidth=2;fontColor=#12213D;fontSize=10;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="20" y="240" width="220" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="chmap" value="&lt;b&gt;chmap.main&lt;/b&gt; via ProcessPoolExecutor&lt;br&gt;&lt;font style=&quot;font-size:8.5px&quot;&gt;one real OS process per ROI tag&lt;/font&gt;" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#0E8C89;strokeWidth=2;fontColor=#12213D;fontSize=10.5;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="700" y="80" width="260" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="outputs" value="&lt;b&gt;analysed/&lt;tag&gt;/&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:8.5px&quot;&gt;gaussian_centers_3D.npy&lt;br&gt;channel_atlas_coordinates.xlsx&lt;/font&gt;" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#E2E9F2;strokeColor=#0E8C89;strokeWidth=2;fontColor=#12213D;fontSize=10.5;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="1010" y="80" width="120" height="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#8FA1C4;strokeWidth=1.5;endArrow=block;endFill=1;" edge="1" parent="1" source="entry" target="gc"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#8FA1C4;strokeWidth=1.5;endArrow=block;endFill=1;" edge="1" parent="1" source="entry" target="gcoord"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#0E8C89;strokeWidth=1.75;endArrow=block;endFill=1;" edge="1" parent="1" source="samri1" target="gc"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#0E8C89;strokeWidth=1.75;endArrow=block;endFill=1;" edge="1" parent="1" source="samri2" target="gcoord"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#0E8C89;strokeWidth=1.75;endArrow=block;endFill=1;" edge="1" parent="1" source="gcoord" target="chmap"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e6" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#0E8C89;strokeWidth=1.75;endArrow=block;endFill=1;" edge="1" parent="1" source="chmap" target="outputs"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <mxCell id="note" value="TWO independent, real dependencies on SAMRI's registration output exist in this one class — a change to either format needs checking against Electrode Localization specifically." style="text;html=1;align=left;verticalAlign=middle;fontColor=#0E8C89;fontSize=9.5;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="20" y="320" width="1080" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="note2" value="outputs feed back into MRIDInfo (sheet 1) — the closed loop across 4D, Electrode Localization, and Ephys session load (see sheet 5)." style="text;html=1;align=left;verticalAlign=middle;fontColor=#57678C;fontSize=9.5;" vertex="1" parent="1">
+          <mxGeometry x="20" y="350" width="1080" height="20" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+
+  <diagram id="page5crosssubsystem" name="5 - Cross-subsystem data flow">
+    <mxGraphModel dx="1150" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1150" pageHeight="360" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="samri" value="&lt;b&gt;SAMRI&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:8.5px&quot;&gt;output_Composite.h5 +&lt;br&gt;correspondence arrays&lt;/font&gt;" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#E2E9F2;strokeColor=#8FA1C4;strokeWidth=1.5;fontColor=#12213D;fontSize=10.5;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="20" y="40" width="200" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="fourd" value="&lt;b&gt;4D Visualisation&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:8.5px&quot;&gt;MRID tags labeling &#8594; heatmap&lt;br&gt;&#8594; &lt;file&gt;-&lt;roi&gt;-heatmap.nii.gz&lt;/font&gt;" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#E2E9F2;strokeColor=#8FA1C4;strokeWidth=1.5;fontColor=#12213D;fontSize=10.5;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="280" y="40" width="220" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="eloc" value="&lt;b&gt;Electrode Localization&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:8.5px&quot;&gt;Gaussian fit + chmap&lt;/font&gt;" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#0E8C89;strokeWidth=2;fontColor=#12213D;fontSize=10.5;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="560" y="40" width="220" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="ephys" value="&lt;b&gt;Ephys session load&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:8.5px&quot;&gt;InitEphys / MRIDInfo&lt;/font&gt;" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#0E8C89;strokeWidth=2;fontColor=#12213D;fontSize=10.5;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="840" y="40" width="220" height="70" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#0E8C89;strokeWidth=1.75;endArrow=block;endFill=1;" edge="1" parent="1" source="samri" target="eloc">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="120" y="160"/><mxPoint x="670" y="160"/></Array></mxGeometry>
+        </mxCell>
+        <mxCell id="e2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#0E8C89;strokeWidth=1.75;endArrow=block;endFill=1;" edge="1" parent="1" source="fourd" target="eloc"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e3" value="analysed/&lt;tag&gt;/gaussian_centers_3D.npy&#10;+ channel_atlas_coordinates.xlsx" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#0E8C89;strokeWidth=1.75;endArrow=block;endFill=1;fontColor=#0E8C89;fontSize=9;" edge="1" parent="1" source="eloc" target="ephys"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <mxCell id="loopnote" value="A real closed loop spanning THREE separate docs in this series: 4D labeling produces the heatmap Electrode Localization fits Gaussian centers from; Electrode Localization's outputs are what Ephys session load reads back to identify which shank a recording belongs to. SAMRI's registration output feeds Electrode Localization independently, via two different files (transformation-*.txt and the correspondence-array pair)." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#F4F4F4;strokeColor=#C4D0E3;strokeWidth=1.25;fontColor=#57678C;fontSize=10;align=left;verticalAlign=middle;spacing=12;" vertex="1" parent="1">
+          <mxGeometry x="20" y="200" width="1080" height="90" as="geometry" />
+        </mxCell>
+
+        <mxCell id="docs" value="SAMRI doc &#8594; 4D doc &#8594; (this doc, Electrode Localization + Ephys) — the only place in this whole series where three separately-delivered architecture packages meet at real, file-based data dependencies." style="text;html=1;align=left;verticalAlign=middle;fontColor=#8FA1C4;fontSize=9.5;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="20" y="300" width="1080" height="30" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+
+</mxfile>

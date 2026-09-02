@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 360" width="1000" height="360" role="img"
+     aria-label="Two things both called registration in Trajectory Planning, easily confused but functionally unrelated. register_to_main_img fires when a second comparison file is supplied, uses the separate core registration Registration rigid tool, writes its own transformation text file, and never touches output_Composite.h5 — unrelated to SAMRI. warp_red_areas fires after painting forbidden areas, genuinely applies output_Composite.h5 via ants apply_transforms — a real SAMRI transform consumer. In MRI-space mode, warp_red_areas becomes a no-op passthrough since the painted mask is already MRI-space.">
+  <style>
+    text{font-family:'IBM Plex Mono','Courier New',monospace;}
+    .card{fill:#E2E9F2;stroke:#C4D0E3;stroke-width:1.25;}
+    .card2{fill:#E2E9F2;stroke:#0E8C89;stroke-width:2;}
+    .ink-t{fill:#12213D;}
+    .dim-t{fill:#57678C;}
+  </style>
+  <rect x="0" y="0" width="1000" height="360" fill="#FFFFFF"/>
+
+  <text x="20" y="26" font-size="10" font-weight="700" class="dim-t">Two things both called "registration" in this one screen — easy to confuse, functionally unrelated</text>
+
+  <g>
+    <rect x="40" y="50" width="420" height="220" class="card"/>
+    <text x="56" y="76" font-size="13" font-weight="700" class="ink-t">register_to_main_img</text>
+    <text x="56" y="94" font-size="8.5" class="dim-t">TpRegistration &#8594; core.registration.Registration</text>
+    <text x="56" y="120" font-size="9" class="dim-t">fires when a 2nd/comparison file is supplied</text>
+    <text x="56" y="136" font-size="9" class="ink-t">&#8594; transformation-ind_M-to-ind_N.txt</text>
+    <text x="56" y="152" font-size="9" class="ink-t">&#8594; never reads/writes output_Composite.h5</text>
+    <rect x="60" y="230" width="200" height="24" rx="12" fill="#8FA1C4"/>
+    <text x="160" y="246" text-anchor="middle" font-size="9" font-weight="700" fill="#FFFFFF">unrelated to SAMRI</text>
+  </g>
+
+  <g>
+    <rect x="540" y="50" width="420" height="220" class="card2"/>
+    <text x="556" y="76" font-size="13" font-weight="700" class="ink-t">warp_red_areas(transform_path)</text>
+    <text x="556" y="94" font-size="8.5" class="dim-t">TpRegistration (base/atlas-space) &#8594; ants.apply_transforms</text>
+    <text x="556" y="120" font-size="9" class="dim-t">fires after painting forbidden areas</text>
+    <text x="556" y="132" font-size="9" class="dim-t">(reuses 3D Tools Paintbrush, red_only=True)</text>
+    <text x="556" y="152" font-size="9" font-weight="700" class="ink-t">&#8594; GENUINELY applies output_Composite.h5</text>
+    <text x="556" y="166" font-size="9" class="dim-t">(in-process ANTsPy, nearest-neighbor)</text>
+    <rect x="560" y="230" width="230" height="24" rx="12" fill="#0E8C89"/>
+    <text x="675" y="246" text-anchor="middle" font-size="9" font-weight="700" fill="#FFFFFF">real SAMRI transform consumer</text>
+  </g>
+
+  <text x="540" y="298" font-size="9" class="dim-t">TpRegistrationMri's warp_red_areas is a no-op passthrough — the painted mask is already MRI-space, so nothing needs</text>
+  <text x="540" y="311" font-size="9" class="dim-t">warping; transform_path is accepted-and-ignored just to keep the same call signature.</text>
+</svg>

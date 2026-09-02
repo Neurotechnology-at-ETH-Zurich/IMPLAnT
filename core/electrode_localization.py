@@ -148,7 +148,7 @@ class ElectrodeLoc:
                 return
             pklfile_path,atlas,atlaslabelsdf,dwi_path,t2s_path,mask_path,moving_coordinates_path, fixed_coordinates_path,channel_separation,total_ch,chMap_file,channel_depths_um = result
 
-            # buttons_gui4D closed its own overlay before this, to keep the
+            # buttons_gui_time_series closed its own overlay before this, to keep the
             # geometry dock clickable -- raise a fresh one now that the
             # (blocking) localisation work actually starts
             overlay = BusyOverlay(self.MW, message="Localising Electrodes, please wait…")

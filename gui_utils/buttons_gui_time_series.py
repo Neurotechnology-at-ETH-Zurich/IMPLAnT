@@ -37,7 +37,7 @@ class PopupDialog(QDialog):
 
 
 
-class ButtonsGUI_4D:
+class ButtonsGUI_TimeSeries:
     """Handles setup of GUI components for 4D MRI data visualization and interaction."""
     def __init__(self,MW,data_index,data_view):
         """
@@ -472,7 +472,7 @@ class ButtonsGUI_4D:
             self.overlay.close()
             msg_box = QMessageBox()
             msg_box.setWindowTitle("Heatmap Generation Finsihed")
-            msg_box.setText('MRID tags and anatomical regions were successfully identified. Segmentation, Anat and heatmap files were saved. \n Press START if you want to start with the Electrode Localization. \n Press Cancel to not directly start it. You can later do this through the Menu 4D Tools/Electrode Localization.')
+            msg_box.setText('MRID tags and anatomical regions were successfully identified. Segmentation, Anat and heatmap files were saved. \n Press START if you want to start with the Electrode Localization. \n Press Cancel to not directly start it. You can later do this through the Menu Time-Series Tools/Electrode Localization.')
             msg_box.addButton("START", QMessageBox.ActionRole)
             btn_cancel = msg_box.addButton("Cancel", QMessageBox.ActionRole)
             msg_box.exec()

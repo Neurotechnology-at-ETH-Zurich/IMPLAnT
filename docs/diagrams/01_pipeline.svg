@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1240 340" width="1240" height="340" role="img"
+     aria-label="Pipeline: Bruker host over SSH/SCP to Fetch, Convert, Bias-correct and Register, then Finalize, saving output_Composite.h5, which fans out to Trajectory Planning, Electrode Localization and Surgery Preview. Fetch through Finalize run inside one SamriWorker QThread. Convert also has an optional bias-correct-only branch.">
+  <style>
+    text{font-family:'IBM Plex Mono','Courier New',monospace;}
+    .node{fill:#FFFFFF;stroke:#8FA1C4;stroke-width:1.5;}
+    .well{fill:#E2E9F2;stroke:#8FA1C4;stroke-width:1.5;}
+    .accent-node{fill:#FFFFFF;stroke:#0E8C89;stroke-width:1.75;}
+    .guide{stroke:#8FA1C4;stroke-width:1.2;fill:none;}
+    .flowline{stroke:#0E8C89;stroke-width:1.75;fill:none;}
+    .dashline{stroke:#57678C;stroke-width:1.2;stroke-dasharray:5 4;fill:none;}
+    .ink-t{fill:#12213D;}
+    .dim-t{fill:#57678C;}
+    .accent-t{fill:#0E8C89;}
+    .num-badge circle{fill:#0E8C89;}
+    .num-badge text{fill:#FFFFFF;font-weight:600;}
+  </style>
+  <rect x="0" y="0" width="1240" height="340" fill="#FFFFFF"/>
+  <defs>
+    <marker id="ar-flow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#0E8C89"/>
+    </marker>
+    <marker id="ar-dim" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#57678C"/>
+    </marker>
+  </defs>
+
+  <rect x="195" y="80" width="850" height="140" class="guide" stroke-dasharray="6 5" fill="none" rx="2"/>
+  <text x="207" y="95" font-size="10" letter-spacing="0.08em" class="dim-t">SAMRIWORKER &#183; QTHREAD</text>
+
+  <g>
+    <rect x="10" y="100" width="150" height="90" rx="3" class="well"/>
+    <text x="85" y="134" text-anchor="middle" font-size="12.5" font-weight="600" class="ink-t">BRUKER HOST</text>
+    <text x="85" y="152" text-anchor="middle" font-size="10" class="dim-t">PV6.0.1/data/mri/</text>
+  </g>
+
+  <g>
+    <rect x="210" y="100" width="150" height="90" rx="3" class="node"/>
+    <text x="285" y="128" text-anchor="middle" font-size="12.5" font-weight="600" class="ink-t">FETCH</text>
+    <text x="285" y="146" text-anchor="middle" font-size="10" class="dim-t">data_fetcher.py</text>
+  </g>
+
+  <g>
+    <rect x="410" y="100" width="160" height="90" rx="3" class="node"/>
+    <text x="490" y="128" text-anchor="middle" font-size="12.5" font-weight="600" class="ink-t">CONVERT</text>
+    <text x="490" y="146" text-anchor="middle" font-size="10" class="dim-t">bru2bids()</text>
+  </g>
+
+  <g>
+    <rect x="620" y="100" width="180" height="90" rx="3" class="node"/>
+    <text x="710" y="128" text-anchor="middle" font-size="12.5" font-weight="600" class="ink-t">BIAS + REGISTER</text>
+    <text x="710" y="146" text-anchor="middle" font-size="10" class="dim-t">structural() &#183; ANTs SyN</text>
+  </g>
+
+  <g>
+    <rect x="850" y="100" width="180" height="90" rx="3" class="accent-node"/>
+    <text x="940" y="128" text-anchor="middle" font-size="12.5" font-weight="600" class="ink-t">FINALIZE</text>
+    <text x="940" y="146" text-anchor="middle" font-size="10" class="accent-t">output_Composite.h5</text>
+  </g>
+
+  <g class="num-badge"><circle cx="210" cy="100" r="10"/><text x="210" y="104" text-anchor="middle" font-size="10.5">1</text></g>
+  <g class="num-badge"><circle cx="410" cy="100" r="10"/><text x="410" y="104" text-anchor="middle" font-size="10.5">2</text></g>
+  <g class="num-badge"><circle cx="620" cy="100" r="10"/><text x="620" y="104" text-anchor="middle" font-size="10.5">3</text></g>
+  <g class="num-badge"><circle cx="850" cy="100" r="10"/><text x="850" y="104" text-anchor="middle" font-size="10.5">4</text></g>
+
+  <g>
+    <rect x="1070" y="20" width="160" height="66" rx="3" class="node"/>
+    <text x="1150" y="47" text-anchor="middle" font-size="11.5" font-weight="600" class="ink-t">Trajectory Planning</text>
+    <text x="1150" y="63" text-anchor="middle" font-size="9.5" class="dim-t">coord_transform.py</text>
+  </g>
+  <g>
+    <rect x="1070" y="112" width="160" height="66" rx="3" class="node"/>
+    <text x="1150" y="139" text-anchor="middle" font-size="11.5" font-weight="600" class="ink-t">Electrode Localization</text>
+    <text x="1150" y="155" text-anchor="middle" font-size="9.5" class="dim-t">electrode_localization.py</text>
+  </g>
+  <g>
+    <rect x="1070" y="204" width="160" height="66" rx="3" class="node"/>
+    <text x="1150" y="231" text-anchor="middle" font-size="11.5" font-weight="600" class="ink-t">Surgery Preview</text>
+    <text x="1150" y="247" text-anchor="middle" font-size="9.5" class="dim-t">mri_preview.py</text>
+  </g>
+
+  <g>
+    <rect x="410" y="255" width="160" height="58" rx="3" class="node" stroke-dasharray="3 3"/>
+    <text x="490" y="279" text-anchor="middle" font-size="11" font-weight="600" class="dim-t">BIAS-CORRECT ONLY</text>
+    <text x="490" y="295" text-anchor="middle" font-size="9.5" class="dim-t">biascorrect_only()</text>
+  </g>
+  <line x1="490" y1="190" x2="490" y2="253" class="dashline" marker-end="url(#ar-dim)"/>
+  <text x="500" y="222" font-size="9.5" class="dim-t">optional QC path</text>
+
+  <line x1="160" y1="145" x2="207" y2="145" class="flowline" marker-end="url(#ar-flow)"/>
+  <text x="183" y="136" text-anchor="middle" font-size="9.5" class="dim-t">SSH/SCP</text>
+
+  <line x1="360" y1="145" x2="407" y2="145" class="flowline" marker-end="url(#ar-flow)"/>
+
+  <line x1="570" y1="145" x2="617" y2="145" class="flowline" marker-end="url(#ar-flow)"/>
+  <text x="593" y="136" text-anchor="middle" font-size="9" class="dim-t">nipype&#183;MultiProc</text>
+
+  <line x1="800" y1="145" x2="847" y2="145" class="flowline" marker-end="url(#ar-flow)"/>
+
+  <polyline points="1030,145 1055,145 1055,53 1067,53" class="flowline" fill="none" marker-end="url(#ar-flow)"/>
+  <polyline points="1030,145 1067,145" class="flowline" fill="none" marker-end="url(#ar-flow)"/>
+  <polyline points="1030,145 1055,145 1055,237 1067,237" class="flowline" fill="none" marker-end="url(#ar-flow)"/>
+</svg>

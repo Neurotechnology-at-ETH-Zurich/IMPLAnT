@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 440" width="1100" height="440" role="img"
+     aria-label="Segmentation's save_mask writes a mask nii.gz file that SAMRI's Create Moving Mask flow really does glob for — a real handoff. SAMRI's atlas registration output_Composite.h5 gates Trajectory Planning, which can optionally invoke Register for a second comparison file, which writes its own transformation text file — a real sequencing relationship without a shared data file. ButtonsGUI_4D is explicitly NOT a subclass of ButtonsGUI_3D, marked crossed-out — it duplicates the wiring instead. A row of grayed dashed boxes marks Electrode Localization, Ephys 3D visualization and related tools, and pgwidget.py as real, separate subsystems intentionally out of scope for this diagram set.">
+  <style>
+    text{font-family:'IBM Plex Mono','Courier New',monospace;}
+    .node{fill:#FFFFFF;stroke:#8FA1C4;stroke-width:1.5;}
+    .well{fill:#E2E9F2;stroke:#8FA1C4;stroke-width:1.5;}
+    .accent-node{fill:#FFFFFF;stroke:#0E8C89;stroke-width:2;}
+    .excl-node{fill:#F4F4F4;stroke:#C4D0E3;stroke-width:1.25;}
+    .ink-t{fill:#12213D;}
+    .dim-t{fill:#57678C;}
+    .accent-t{fill:#0E8C89;}
+    .excl-t{fill:#8FA1C4;}
+    .danger-t{fill:#C1393E;}
+  </style>
+  <rect x="0" y="0" width="1100" height="440" fill="#FFFFFF"/>
+  <defs>
+    <marker id="arH" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#0E8C89"/></marker>
+    <marker id="arHn" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#8FA1C4"/></marker>
+  </defs>
+
+  <!-- real handoff -->
+  <g><rect x="20" y="30" width="200" height="60" rx="3" class="accent-node"/>
+    <text x="120" y="55" text-anchor="middle" font-size="11" font-weight="600" class="ink-t">Segmentation</text>
+    <text x="120" y="70" text-anchor="middle" font-size="9" class="dim-t">evolution.py::save_mask()</text></g>
+  <g><rect x="280" y="30" width="200" height="60" rx="3" class="well"/>
+    <text x="380" y="65" text-anchor="middle" font-size="11" font-weight="600" class="ink-t">*-mask.nii.gz</text></g>
+  <g><rect x="540" y="30" width="260" height="60" rx="3" class="accent-node"/>
+    <text x="670" y="55" text-anchor="middle" font-size="11" font-weight="600" class="ink-t">SAMRI "Create Moving Mask"</text>
+    <text x="670" y="70" text-anchor="middle" font-size="8.5" class="dim-t">update_mov_mask_path() globs for it</text></g>
+  <line x1="220" y1="60" x2="277" y2="60" stroke="#0E8C89" stroke-width="1.75" marker-end="url(#arH)"/>
+  <text x="248" y="50" text-anchor="middle" font-size="8.5" font-weight="700" class="accent-t">real</text>
+  <line x1="480" y1="60" x2="537" y2="60" stroke="#0E8C89" stroke-width="1.75" marker-end="url(#arH)"/>
+
+  <!-- real sequencing, no shared data: samri -> trajectory planning -> optional register -->
+  <g><rect x="20" y="140" width="220" height="60" rx="3" class="node"/>
+    <text x="130" y="165" text-anchor="middle" font-size="10.5" font-weight="600" class="ink-t">SAMRI atlas registration</text>
+    <text x="130" y="180" text-anchor="middle" font-size="9" class="dim-t">output_Composite.h5</text></g>
+  <g><rect x="270" y="140" width="220" height="60" rx="3" class="node"/>
+    <text x="380" y="165" text-anchor="middle" font-size="10.5" font-weight="600" class="ink-t">Trajectory Planning</text>
+    <text x="380" y="180" text-anchor="middle" font-size="8" class="dim-t">requires output_Composite.h5 to start</text></g>
+  <g><rect x="520" y="140" width="220" height="60" rx="3" class="node"/>
+    <text x="630" y="165" text-anchor="middle" font-size="10.5" font-weight="600" class="ink-t">Register</text>
+    <text x="630" y="180" text-anchor="middle" font-size="8" class="dim-t">optional — if 2nd/comparison file given</text></g>
+  <g><rect x="770" y="140" width="290" height="60" rx="3" class="well"/>
+    <text x="915" y="165" text-anchor="middle" font-size="10.5" font-weight="600" class="ink-t">transformation-*.txt</text>
+    <text x="915" y="180" text-anchor="middle" font-size="8" class="dim-t">separate — never touches output_Composite.h5</text></g>
+  <line x1="240" y1="170" x2="267" y2="170" stroke="#8FA1C4" stroke-width="1.5" marker-end="url(#arHn)"/>
+  <text x="255" y="163" text-anchor="middle" font-size="8.5" font-weight="700" class="dim-t">gates</text>
+  <line x1="490" y1="170" x2="517" y2="170" stroke="#8FA1C4" stroke-width="1.5" stroke-dasharray="4 3" marker-end="url(#arHn)"/>
+  <text x="503" y="163" text-anchor="middle" font-size="8.5" font-weight="700" class="dim-t">optional</text>
+  <line x1="740" y1="170" x2="767" y2="170" stroke="#8FA1C4" stroke-width="1.5" marker-end="url(#arHn)"/>
+  <text x="20" y="205" font-size="9" class="dim-t">Real SEQUENCING relationship (SAMRI &#8594; Trajectory Planning &#8594; optionally Register) without a shared DATA relationship (no shared transform file).</text>
+
+  <!-- explicit non-subclass: buttons4d vs buttons3d -->
+  <g><rect x="20" y="250" width="200" height="60" rx="3" class="node"/>
+    <text x="120" y="275" text-anchor="middle" font-size="11" font-weight="600" class="ink-t">ButtonsGUI_4D</text>
+    <text x="120" y="290" text-anchor="middle" font-size="8.5" class="dim-t">own contrast/cursor/zoom/paintbrush</text></g>
+  <g><rect x="280" y="250" width="200" height="60" rx="3" class="node"/>
+    <text x="380" y="285" text-anchor="middle" font-size="11" font-weight="600" class="ink-t">ButtonsGUI_3D</text></g>
+  <line x1="220" y1="280" x2="277" y2="280" stroke="#C1393E" stroke-width="1.5" stroke-dasharray="5 4"/>
+  <text x="248" y="273" text-anchor="middle" font-size="8.5" font-weight="700" class="danger-t">&#10005;</text>
+  <text x="380" y="325" text-anchor="middle" font-size="9" class="dim-t">not a subclass — duplicated, not shared</text>
+
+  <!-- out of scope row -->
+  <text x="540" y="264" font-size="10" font-weight="700" letter-spacing="0.02em" class="dim-t">OUT OF SCOPE — real, separate subsystems, not researched here</text>
+  <g><rect x="540" y="280" width="170" height="50" rx="3" class="excl-node" stroke-dasharray="4 3"/>
+    <text x="625" y="309" text-anchor="middle" font-size="9.5" class="excl-t">Electrode Localization</text></g>
+  <g><rect x="720" y="280" width="170" height="50" rx="3" class="excl-node" stroke-dasharray="4 3"/>
+    <text x="805" y="301" text-anchor="middle" font-size="9" class="excl-t">Ephys 3D / Rippl AI /</text>
+    <text x="805" y="315" text-anchor="middle" font-size="9" class="excl-t">Theta / Spike Sorting</text></g>
+  <g><rect x="900" y="280" width="170" height="50" rx="3" class="excl-node" stroke-dasharray="4 3"/>
+    <text x="985" y="301" text-anchor="middle" font-size="9" class="excl-t">pgwidget.py</text>
+    <text x="985" y="315" text-anchor="middle" font-size="9" class="excl-t">(ephys plot widget)</text></g>
+</svg>
