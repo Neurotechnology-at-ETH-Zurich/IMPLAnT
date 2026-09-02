@@ -1,6 +1,7 @@
 # This Python file uses the following encoding: utf-8
 from ephys.visualisation3D import Visualisation3D
 import os
+import sys
 from PySide6 import QtWidgets
 import pandas as pd
 import pyvista as pv
@@ -510,8 +511,12 @@ class InitEphys:
             active = self.ephys_data.active_channels
             pyr_default = active[len(active) // 2] if active else 0
 
+        # all_channels is in the recording's own probe/group order (from the
+        # .xml's <channel> list) -- the physical channel IDs are frequently
+        # NOT numerically monotonic (headstage/amplifier wiring), so "above"/
+        # "below" must mean neighbors by *position in this list*, never by
+        # doing arithmetic on the channel number itself
         all_ch = self.ephys_data.all_channels
-        ch_min, ch_max = min(all_ch), max(all_ch)
 
         dialog = QDialog(self.MW)
         dialog.setWindowTitle("Ripple detection")
@@ -524,9 +529,10 @@ class InitEphys:
         # pyramidal-layer channel + N channels above/below → 8 total
         layout.addWidget(QLabel("Pyramidal-layer channel, plus channels above/below (8 total):"))
         ch_row = QtWidgets.QHBoxLayout()
-        pyr_spin = QtWidgets.QSpinBox()
-        pyr_spin.setRange(ch_min, ch_max)
-        pyr_spin.setValue(int(pyr_default))
+        pyr_combo = QtWidgets.QComboBox()
+        pyr_combo.addItems([str(c) for c in all_ch])
+        default_idx = pyr_combo.findText(str(int(pyr_default)))
+        pyr_combo.setCurrentIndex(default_idx if default_idx != -1 else 0)
         above_spin = QtWidgets.QSpinBox()
         above_spin.setRange(0, 7)
         above_spin.setValue(int(default_above))
@@ -535,7 +541,7 @@ class InitEphys:
         below_spin.setValue(int(default_below))
         reset_btn = QtWidgets.QPushButton("Reset to pyl")
         reset_btn.setToolTip("Reset the pyramidal channel to the detected one")
-        for w in (QLabel("PyL ch:"), pyr_spin, QLabel("above:"), above_spin,
+        for w in (QLabel("PyL ch:"), pyr_combo, QLabel("above:"), above_spin,
                   QLabel("below:"), below_spin, reset_btn):
             ch_row.addWidget(w)
         layout.addLayout(ch_row)
@@ -545,8 +551,17 @@ class InitEphys:
         layout.addWidget(channels_line)
 
         def recompute():
-            pyr, above, below = pyr_spin.value(), above_spin.value(), below_spin.value()
-            chans = [pyr + k for k in range(-above, below + 1)]
+            above, below = above_spin.value(), below_spin.value()
+            pyr_text = pyr_combo.currentText()
+            if not pyr_text or int(pyr_text) not in all_ch:
+                channels_line.setText('')
+                return
+            idx = all_ch.index(int(pyr_text))
+            # clamp at the ends of the probe rather than wrap around (Python's
+            # negative-index slicing would silently pick channels from the
+            # opposite end) -- on_accept's length check catches the shortfall
+            start, end = max(0, idx - above), min(len(all_ch), idx + below + 1)
+            chans = all_ch[start:end]
             channels_line.setText(', '.join(str(c) for c in chans))
 
         # above + below is always 7 (→ 8 channels with the pyramidal one); moving
@@ -563,12 +578,33 @@ class InitEphys:
             above_spin.blockSignals(False)
             recompute()
 
-        pyr_spin.valueChanged.connect(lambda _: recompute())
+        def reset_to_pyl():
+            pyl = self.Visualisation3D.get_pyl_channel()
+            if pyl is None:
+                # not a no-op by accident: get_pyl_channel() needs chMap, which
+                # only exists once the MRI tag/channel map has been loaded
+                #
+                # parented to `dialog`, not self.MW: dialog carries
+                # WindowStaysOnTopHint, so a box parented to the main window
+                # would render underneath it instead of on top
+                QtWidgets.QMessageBox.information(
+                    dialog, "No pyramidal-layer channel",
+                    "Couldn't determine a pyramidal-layer channel for this "
+                    "recording -- load the MRI tag/channel map first."
+                )
+                return
+            idx = pyr_combo.findText(str(int(pyl)))
+            if idx == -1:
+                QtWidgets.QMessageBox.warning(
+                    dialog, "Channel error",
+                    f"Detected pyramidal-layer channel {int(pyl)} isn't in this recording.")
+                return
+            pyr_combo.setCurrentIndex(idx)
+
+        pyr_combo.currentIndexChanged.connect(lambda _: recompute())
         above_spin.valueChanged.connect(on_above)
         below_spin.valueChanged.connect(on_below)
-        reset_btn.clicked.connect(
-            lambda: pyr_spin.setValue(self.Visualisation3D.get_pyl_channel() or pyr_spin.value())
-        )
+        reset_btn.clicked.connect(reset_to_pyl)
         recompute()
 
         layout.addWidget(QLabel("Model:"))
@@ -595,19 +631,19 @@ class InitEphys:
             channels = [int(c.strip()) for c in channels_line.text().split(',') if c.strip()]
             if len(channels) != 8:
                 QtWidgets.QMessageBox.warning(
-                    self.MW, "Channel error",
+                    dialog, "Channel error",
                     f"Need exactly 8 channels (got {len(channels)}). Set above + below = 7.")
                 return
             missing = [c for c in channels if c not in all_ch]
             if missing:
                 QtWidgets.QMessageBox.warning(
-                    self.MW, "Channel error", f"Channel(s) not in the recording: {missing}")
+                    dialog, "Channel error", f"Channel(s) not in the recording: {missing}")
                 return
             dialog.accept()
             self._run_ripple_detection(
                 channels, arch_combo.currentText(), threshold_spin.value(),
                 save_path, settings_path,
-                pyr_spin.value(), above_spin.value(), below_spin.value()
+                int(pyr_combo.currentText()), above_spin.value(), below_spin.value()
             )
 
         buttons.accepted.connect(on_accept)
@@ -623,30 +659,51 @@ class InitEphys:
         # slice full LFP for selected channels, convert to float µV
         lfp_slice = self.ephys_data.lfp_memmap[channels, :].T.astype(numpy.float32) * 0.195
 
+        # a frozen (PyInstaller) build has no separate rippl-AI/run_rippl.py
+        # file to point python at -- main_window.py's --ripple-worker sentinel
+        # re-invokes this same exe instead (see its own comment for why).
+        # sys._MEIPASS is the onedir/unpacked-onefile base in a frozen build,
+        # same convention paths_config.py already uses.
+        frozen = getattr(sys, 'frozen', False)
+        base_dir = pathlib.Path(getattr(sys, '_MEIPASS', '')) if frozen else pathlib.Path(__file__).parent.parent
+        script = str(base_dir / "rippl-AI" / "run_rippl.py")
+        if not frozen and not os.path.exists(script):
+            QtWidgets.QMessageBox.critical(
+                self.MW, "Ripple detection unavailable",
+                "The rippl-AI submodule isn't present (missing "
+                f"{script}).\nRun 'git submodule update --init' and try again."
+            )
+            return
+
+        # a bare show()+processEvents() isn't reliably painted before the
+        # blocking subprocess call starves the event loop -- overlay.run()
+        # defers the heavy work by one event-loop turn so the overlay is
+        # actually on screen first (same pattern used elsewhere, e.g.
+        # trajectory_planning_3d/window.py's atlas loading)
+        overlay = BusyOverlay(self.MW, f"Running ripple detection ({arch})…")
+        overlay.run(
+            self._finish_ripple_detection, lfp_slice, script, frozen, arch, threshold,
+            save_path, settings_path, channels, pyr, above, below
+        )
+
+    def _finish_ripple_detection(self, lfp_slice, script, frozen, arch, threshold,
+                                  save_path, settings_path, channels, pyr, above, below):
         with tempfile.TemporaryDirectory() as tmp:
             input_path  = str(pathlib.Path(tmp) / "lfp_in.npy")
             output_path = str(pathlib.Path(tmp) / "events_out.npy")
             numpy.save(input_path, lfp_slice)
 
-            script = str(pathlib.Path(__file__).parent.parent / "rippl-AI" / "run_rippl.py")
-            venv_python = str(pathlib.Path(__file__).parent.parent / ".venv10" / "bin" / "python3")
-
-            overlay = BusyOverlay(self.MW, f"Running ripple detection ({arch})…")
-            overlay.setGeometry(self.MW.rect())
-            overlay.raise_()
-            overlay.show()
-            QApplication.processEvents()
-
-            result = subprocess.run(
-                [venv_python, script,
-                 "--input",     input_path,
-                 "--output",    output_path,
-                 "--sf",        str(self.ephys_data.lfp_sample_rate),
-                 "--arch",      arch,
-                 "--threshold", str(threshold)],
-                capture_output=True, text=True
-            )
-            overlay.close()
+            # frozen: re-invoke this same exe in worker mode (sys.executable
+            # IS the frozen app there, not a python3 binary you can point at
+            # an arbitrary script) -- dev/source: unchanged, real interpreter
+            # running the real script file.
+            cmd = [sys.executable, '--ripple-worker'] if frozen else [sys.executable, script]
+            cmd += ["--input",     input_path,
+                    "--output",    output_path,
+                    "--sf",        str(self.ephys_data.lfp_sample_rate),
+                    "--arch",      arch,
+                    "--threshold", str(threshold)]
+            result = subprocess.run(cmd, capture_output=True, text=True)
             print("---- run_rippl stdout ----\n", result.stdout, flush=True)
             print("---- run_rippl stderr ----\n", result.stderr, flush=True)
 

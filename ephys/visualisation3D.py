@@ -22,6 +22,9 @@ from PySide6.QtCore import Qt
 import vtk
 from concurrent.futures import ThreadPoolExecutor
 import colorsys
+from mrid_utils import atlas_switch
+from mrid_utils.atlas_registry import ATLASES, get_active_atlas_id
+from gui_utils.busy_overlay import BusyOverlay
 
 class Visualisation3D:
     def __init__(self,session_path,MW,electrode_localisation=False,chMap=None,Ephys=None):
@@ -45,6 +48,13 @@ class Visualisation3D:
             (1.0,1.0,0.0),(0.749,0.0,1.0),(0.0,1.0,0.588),(1.0,0.196,0.196),(1.0,0.392,1.0),(0.392,1.0,1.0),(1.0,0.784,0.0),
             (0.196,1.0,0.784),(1.0,0.314,0.0),(0.706,1.0,0.0),(0.0,0.784,1.0),(1.0,0.0,0.392),(0.588,0.196,1.0),(0.0,1.0,0.314),(1.0,0.627,0.196)
         ]
+        # IDX -> index into list_of_good_colors, filled in as regions are first
+        # seen (see _rebuild_colormap) and kept for the life of this view --
+        # survives atlas switches (reload_atlas_view calls _rebuild_colormap on
+        # this same instance) so a region's color never changes underneath the
+        # user, and avoids handing two different regions the same color (which
+        # a plain "IDX % len(list_of_good_colors)" scheme can't guarantee).
+        self._region_color_assignment = {}
 
         self.clipped_meshes = False
 
@@ -76,14 +86,15 @@ class Visualisation3D:
             self.table_excel = self.MW.ui.tableWidget_vis3D
             self.table_excel.cellClicked.connect(self.on_table_click)
 
-            self.comboBox_mrid.addItems(self.MW.ButtonsGUI_4D.totalmrid)
-            self.totalatlasCoordinates_pkl = self.MW.ButtonsGUI_4D.totalatlasCoordinates_pkl
-            self.mrid_tags = self.MW.ButtonsGUI_4D.totalmrid
-            self.index = self.MW.ButtonsGUI_4D.mrid_index
+            self.comboBox_mrid.addItems(self.MW.ButtonsGUI_TimeSeries.totalmrid)
+            self.totalatlasCoordinates_pkl = self.MW.ButtonsGUI_TimeSeries.totalatlasCoordinates_pkl
+            self.mrid_tags = self.MW.ButtonsGUI_TimeSeries.totalmrid
+            self.index = self.MW.ButtonsGUI_TimeSeries.mrid_index
             # the 4D buttons own totalmrid and rebuild the barcode view with it,
             # so switching the tag from here goes back through them
-            self.switch_tag = self.MW.ButtonsGUI_4D.activate_fill_table_and_plots
+            self.switch_tag = self.MW.ButtonsGUI_TimeSeries.activate_fill_table_and_plots
             self.comboBox_mrid.currentIndexChanged.connect(self.switch_tag)
+            self._ensure_atlas_selector_widget()
         else:
             layout = QVBoxLayout(self.ui.vtkWidget_ephys)
             layout.setContentsMargins(0, 0, 0, 0)
@@ -126,6 +137,7 @@ class Visualisation3D:
             self.table_excel = self.MW.ui.tableWidget_ephys
             self.switch_tag = self.Ephys.change_mridTAG
             self.comboBox_mrid.currentIndexChanged.connect(self.switch_tag)
+            self._ensure_atlas_selector_widget()
 
         self.create_atlas_region_file(self.mrid_tags[self.index])
 
@@ -146,6 +158,83 @@ class Visualisation3D:
         self.plotter.renderer.AddActor2D(self.hover_label)
 
 
+
+    def _ensure_atlas_selector_widget(self):
+        """Populates and wires form.ui's own atlas combo for whichever
+        branch this view is: comboBox_atlas_3 (self.ui.frame_33, the
+        electrode-localisation "3D Visualisation" tab) when
+        electrode_localisation, otherwise comboBox_atlas_2 (ephys page,
+        self.ui.frame_32 / self.ui.gridLayout_68) -- letting the user
+        switch the reference atlas while already looking at either 3D
+        view. Mirrors trajectory_planning/rendering.py's comboBox_atlas
+        wiring. Guarded per combo so re-entering either tab (a new
+        InitEphys/Visualisation3D for another session) re-syncs the
+        existing combo instead of re-adding its items or re-connecting
+        the signal a second time."""
+        self._atlas_combo = self.ui.comboBox_atlas_3 if self.electrode_localisation else self.ui.comboBox_atlas_2
+        wired_attr = '_atlas_selector_wired_vis3D' if self.electrode_localisation else '_atlas_selector_wired_ephys'
+        if hasattr(self.ui, wired_attr):
+            self._atlas_ids = list(ATLASES.keys())
+            self._sync_atlas_selector_widget()
+            return
+        setattr(self.ui, wired_attr, True)
+        self._atlas_ids = list(ATLASES.keys())
+        for atlas_id in self._atlas_ids:
+            self._atlas_combo.addItem(ATLASES[atlas_id]['display_name'])
+        self._sync_atlas_selector_widget()
+        self._atlas_combo.currentIndexChanged.connect(self._on_atlas_selector_changed)
+
+    def _sync_atlas_selector_widget(self):
+        current_id = get_active_atlas_id(_paths)
+        if current_id in self._atlas_ids:
+            self._atlas_combo.blockSignals(True)
+            self._atlas_combo.setCurrentIndex(self._atlas_ids.index(current_id))
+            self._atlas_combo.blockSignals(False)
+
+    def _on_atlas_selector_changed(self, index):
+        atlas_id = self._atlas_ids[index]
+        if atlas_id == get_active_atlas_id(_paths):
+            return
+
+        def proceed():
+            if not self.reload_atlas_view(atlas_id):
+                self._sync_atlas_selector_widget()  # switch declined/failed -- revert the combo
+
+        atlas_name = ATLASES[atlas_id]['display_name']
+        self.MW.overlay = BusyOverlay(
+            self.MW, message=f"Switching to {atlas_name} atlas, please wait…")
+        self.MW.overlay.run(proceed)
+
+    def reload_atlas_view(self, atlas_id):
+        """Switches to atlas_id and redraws this already-open ephys 3D view
+        in place. Returns False (leaving the previous atlas showing) if the
+        user cancels the fetch or it fails."""
+        if not atlas_switch.switch_active_atlas(atlas_id, self.MW):
+            return False
+
+        mrid = self.mrid_tags[self.index]
+        # force=True: the cached atlas-regions.nii.gz was cut from the
+        # PREVIOUS atlas's volume -- same channel labels or not, it has to
+        # be re-cut from the newly active atlas's own volume.
+        self.create_atlas_region_file(mrid, force=True)
+        self.load_atlas(self.filepath_atlas, force_background=True)
+        self.update_electrode_points(self.filepath_atlas, mrid)
+        # load_atlas's _rebuild_colormap() ran before update_electrode_points
+        # refreshed self.points_data, so it picked the "electrode region"
+        # colors using the PREVIOUS atlas's channel->region indices. Rebuild
+        # again now that self.points_data matches the newly active atlas.
+        self._rebuild_colormap()
+
+        row = 0
+        items = self.table_excel.selectedItems()
+        if items:
+            row = items[0].row()
+        self.manually_pick_point(point=[], idx=row, resetTo3D=True)
+
+        self.add_other_mrids()
+        self._sync_atlas_selector_widget()
+        self.plotter.render()
+        return True
 
     def initialize_mridTag(self,mrid,chMap=None):
         if not hasattr(self,'chMap'):
@@ -431,6 +520,13 @@ class Visualisation3D:
         if not ca1_idxs:
             return None
         ca1_phys = [c for c in (self._idx_to_channel(i) for i in ca1_idxs) if c is not None]
+        # _pyr_channel_excel comes from the marker row's 'Channel' column. The
+        # writer (channel_mapper.map_channels_to_atlas) only resolves that to a
+        # physical channel via chMap if it's passed one -- its one real caller
+        # (core/electrode_localization.py -> chmap.main) never passes chMap, so
+        # in practice this value is always the raw probe/'Channel ID'-space
+        # index (pyrChIdx), the same space ca1_idxs/_idx_to_channel operate in,
+        # and does need translating through _idx_to_channel like any other.
         pyr_idx = getattr(self, '_pyr_channel_excel', None)
         if pyr_idx is not None and pyr_idx in ca1_idxs:
             return self._idx_to_channel(pyr_idx)
@@ -562,7 +658,7 @@ class Visualisation3D:
         #self.table_excel.verticalScrollBar().setValue(idx / (len(self.Ephys.ephys_data.all_channels)-1)*self.table_excel.verticalScrollBar().maximum())
 
 
-    def load_atlas(self,filepath):
+    def load_atlas(self,filepath,force_background=False):
         # Define the two independent loading tasks
         def load_atlas_mesh():
             img = nib.load(filepath)
@@ -613,7 +709,7 @@ class Visualisation3D:
             self.background_small = background_small
 
 
-        if 'background' not in self.plotter.actors:
+        if force_background or 'background' not in self.plotter.actors:
             self.add_background(background_mesh)  # pass mesh directly
         self._rebuild_colormap()
 
@@ -663,16 +759,26 @@ class Visualisation3D:
             electrode_idxs = set(self.points_data['Channel'].dropna().astype(int).tolist())
         active_vals = set(self.unique_vals.tolist()) | electrode_idxs
 
-        idx_colors = 0
         for _, row in self.atlaslabelsdf.iterrows():
-            if row['IDX'] in active_vals:
-                self.rgba[int(row['IDX']), :3] = self.list_of_good_colors[idx_colors % len(self.list_of_good_colors)]
-                self.rgba[int(row['IDX']), 3] = 1
-                idx_colors += 1
+            idx = int(row['IDX'])
+            if idx in active_vals:
+                # Assign each region its color the first time it's ever seen
+                # (self._region_color_assignment persists on this instance
+                # across atlas switches), instead of re-deriving a color from
+                # this call's active_vals every time -- that's what let the
+                # same region end up a different color after switching atlas:
+                # a running counter over iterrows() depends on the label
+                # file's row order (which differs per atlas), and IDX itself
+                # isn't safe either since two regions can collide once IDX
+                # exceeds len(list_of_good_colors).
+                if idx not in self._region_color_assignment:
+                    self._region_color_assignment[idx] = len(self._region_color_assignment) % len(self.list_of_good_colors)
+                self.rgba[idx, :3] = self.list_of_good_colors[self._region_color_assignment[idx]]
+                self.rgba[idx, 3] = 1
             else:
                 r, g, b = row['R']/255, row['G']/255, row['B']/255
                 r, g, b = self.desaturate((r, g, b), 0.25)
-                rgba_background[int(row['IDX'])] = [r, g, b, 1]
+                rgba_background[idx] = [r, g, b, 1]
 
         self.cmap = ListedColormap(self.rgba)
         self.cmap_background = ListedColormap(rgba_background)
@@ -1351,13 +1457,13 @@ class Visualisation3D:
         actor.GetProperty().SetOpacity(val/100)
         self.opacityRegions = val/100
 
-    def create_atlas_region_file(self,mrid):
+    def create_atlas_region_file(self,mrid,force=False):
         #new atlas with the new label
         self.filepath_atlas = os.path.join(self.session_path,"analysed",'atlas-regions.nii.gz')
         points_electrodes_path = os.path.join(os.path.join(self.session_path,"analysed"),mrid,'channel_atlas_coordinates.xlsx')
 
         channel_labels = np.unique(self._load_channel_excel(points_electrodes_path).iloc[:, 1].values)
-        if os.path.exists(self.filepath_atlas):
+        if not force and os.path.exists(self.filepath_atlas):
             mesh = pv.read(self.filepath_atlas)
             old_labels = np.unique(mesh.point_data['NIFTI'])
             if np.array_equal(old_labels[old_labels != 0], channel_labels[channel_labels != 0]):
