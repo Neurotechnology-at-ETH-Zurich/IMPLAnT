@@ -456,7 +456,7 @@ class ButtonsGUI_3D:
         self._reconnect(self.ui.pushButton_regCancel.clicked, self.cancel_reg)
 
         if len(self.LoadMRI.movingimg_filename):
-            self.check_dimensions_movingimg(0)
+            self.check_dimensions_movingimg(self.ui.comboBox_movingimg.currentIndex())
         else:
             self.MW.ui.textEdit_pixels.setVisible(False)
 
@@ -657,7 +657,7 @@ class ButtonsGUI_3D:
         path = os.path.dirname(self.LoadMRI.volumes[0].file_path)
         self.MW.add_another_file(path)
         if len(self.LoadMRI.movingimg_filename):
-            self.check_dimensions_movingimg(0)
+            self.check_dimensions_movingimg(self.ui.comboBox_movingimg.currentIndex())
 
 
     def check_dimensions_movingimg(self,index):
