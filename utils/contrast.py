@@ -150,6 +150,22 @@ class Contrast:
                     if self.LoadMRI.minimap.minimap_actors[image_index][vn].GetVisibility():
                         minimap_renderer.GetRenderWindow().Render()
 
+        # Trajectory planning's oblique/"constrained" views (rendering_mri.
+        # py's setup_oblique_coronal_view/_sagittal_view) share this same
+        # lut_vtk object with their own image actor (RenderingMri.
+        # _link_oblique_actor_to_contrast) instead of going through
+        # LoadMRI.renderers/vtk_widgets like the 3 real views above -- so
+        # they need their own explicit Render() call here too, or a
+        # contrast/brightness drag would silently do nothing for them.
+        # Only the base MRI (data_index/image_index 0) is ever shown in
+        # the oblique views, so no-op for any other data/image index.
+        if self.data_index == 0 and image_index == 0:
+            traj_planning = getattr(self.LoadMRI, 'TrajPlanning', None)
+            for renderer_attr in ('oblique_renderer', 'oblique_sagittal_renderer'):
+                oblique_renderer = getattr(traj_planning, renderer_attr, None)
+                if oblique_renderer is not None:
+                    oblique_renderer.GetRenderWindow().Render()
+
 
 
     def auto(self,image_index:int):
