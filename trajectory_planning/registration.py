@@ -29,7 +29,7 @@ class TpRegistration:
         # part already has its output on disk from a previous run.
         if not os.path.exists(new_name):
             if not os.path.exists(transform_file_path):
-                Registration(self.LoadMRI,self.MW.ButtonsGUI_3D,0)
+                Registration(self.LoadMRI,self.MW.ButtonsGUI_Structural,0)
 
             fixed = ants.image_read(self.main_file)
             moving = ants.image_read(filename)
@@ -213,7 +213,7 @@ class TpRegistration:
             layer.visibility_btn.setChecked(False)
             layer.toggle_visibility(False, layer.visibility_btn)
 
-        self.MW.ButtonsGUI_3D.initialize_paintbrush(red_only=True)
+        self.MW.ButtonsGUI_Structural.initialize_paintbrush(red_only=True)
         #increase maximum due to resampling
         self.LoadMRI.brush['size'].setRange(1,30)
         self.LoadMRI.brush['size_slider'].setRange(1,30)

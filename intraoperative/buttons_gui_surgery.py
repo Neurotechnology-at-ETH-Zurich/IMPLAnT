@@ -1,6 +1,6 @@
 # This Python file uses the following encoding: utf-8
 """
-Surgery tab's skull-photo reference view: a fixed dorsal rat-skull diagram
+Intraoperative tab's skull-photo reference view: a fixed dorsal rat-skull diagram
 (showing Bregma and Lambda) displayed in widget_axialView, already nose-up
 to match the animal's orientation on the stereotaxic frame. This replaced
 the previous per-plan axial MRI slice
@@ -184,7 +184,7 @@ def _add_shank_markers(scene, data):
 
 
 def build_skull_reference_scene(data=None):
-    """Builds the Surgery tab's skull-reference QGraphicsScene: the photo,
+    """Builds the Intraoperative tab's skull-reference QGraphicsScene: the photo,
     Bregma (green)/Lambda (red) markers, always; plus each shank's planned
     insertion-point marker if a parsed plan JSON is passed (see
     _add_shank_markers). Returns (scene, photo_item).
@@ -193,7 +193,7 @@ def build_skull_reference_scene(data=None):
     image (skull-horizontal.png) already bakes its own A/P/L/R labels
     into the artwork, so drawing another set would just duplicate them.
 
-    Shared by the live Surgery tab widget (ButtonsGUI_Surgery, below) and
+    Shared by the live Intraoperative tab widget (ButtonsGUI_Surgery, below) and
     the trajectory-planning PDF's cover page (trajectory_planning/
     file_input_output.py's _cover_page) -- both show identical content,
     rendered from the exact same drawing code."""

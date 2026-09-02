@@ -130,7 +130,7 @@ class MainWindow(QMainWindow):
         self.setWindowIcon(QIcon(os.path.join(_base_dir, "Icons/Github/IMPLAnT_quad.png")))
         # Lives for the whole app session (unlike TrajectoryPlanning, which
         # only exists while an MRI is loaded) -- see intraoperative/
-        # surgery_controller.py for why the Surgery tab has no MRI/
+        # surgery_controller.py for why the Intraoperative tab has no MRI/
         # TrajectoryPlanning dependency at all.
         self.surgery = SurgeryController(self)
         self.add_actions()
@@ -210,7 +210,7 @@ class MainWindow(QMainWindow):
         self.ui.actionStart_SAMRI_process.triggered.connect(lambda: self.load_previous_session(['samri']))
         self.ui.actionTrajectory_Planning_2.triggered.connect(lambda: self.load_previous_session(['trajectory']))
         self.ui.actionIntraoperative.triggered.connect(lambda: self.load_previous_session(['surgery']))
-        # Surgery tab's measured-mm bregma/lambda fields: "sag"/"cor" match
+        # Intraoperative tab's measured-mm bregma/lambda fields: "sag"/"cor" match
         # the same sagittal/coronal slice-index convention as the voxel-
         # cursor spinboxes elsewhere (x=sag=ML/RL, y=cor=AP) -- DV/"ax" was
         # dropped entirely (no longer measured), so reproject_target_to_null
@@ -784,14 +784,14 @@ class MainWindow(QMainWindow):
         # Unlike initialize_samri below, this only switches tabs AFTER the
         # PDF picker is actually accepted -- clicking the menu action then
         # hitting Cancel should leave you wherever you were, not dropped
-        # onto an empty Surgery tab with nothing loaded.
+        # onto an empty Intraoperative tab with nothing loaded.
         #
         # Deliberately independent of LoadMRI/TrajectoryPlanning -- see
         # intraoperative/surgery_controller.py -- so no MRI/registration
         # state is required or touched here.
         dlg = LoadSurgeryPlan(self, parent=self)
         if dlg.exec() == QtWidgets.QDialog.DialogCode.Accepted:
-            # indexOf rather than a hardcoded index -- the Surgery tab
+            # indexOf rather than a hardcoded index -- the Intraoperative tab
             # currently sits at index 6, but that would silently go stale if
             # tabWidget's pages are ever reordered/added to in Designer.
             self.ui.tabWidget.setCurrentIndex(self.ui.tabWidget.indexOf(self.ui.surgery))

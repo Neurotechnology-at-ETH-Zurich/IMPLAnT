@@ -6,7 +6,7 @@ from intraoperative.buttons_gui_surgery import ButtonsGUI_Surgery
 
 
 class SurgeryController:
-    """Owns the Surgery tab's state and behavior, entirely independent of
+    """Owns the Intraoperative tab's state and behavior, entirely independent of
     TrajectoryPlanning/LoadMRI: correcting bregma/lambda with real
     intraoperative measurements only needs the per-shank ap_mm/rl_mm
     offsets (plus roll_deg/pitch_deg/insertion_depth_mm, carried through
@@ -76,7 +76,7 @@ class SurgeryController:
         located (see SurgeryMRIPreview.locate_resampled_mri) -- renders the
         original planned trajectories in 3D over it. The 3D render is non-
         fatal if the MRI can't be found, since the numeric table (and now
-        the skull-photo markers) are what the surgery tab is actually
+        the skull-photo markers) are what the intraoperative tab is actually
         for."""
         shank_keys = sorted(data["shanks"], key=lambda k: int(k.split("_")[1]))
         self.surgery_shank_offsets = {
@@ -95,9 +95,9 @@ class SurgeryController:
         # the plan still gives an accurate target position, not just the
         # right direction.
         self.surgery_bl_dist_mm = data["bregma_lambda_distance_mm"]
-        # TODO: tp.ui.label is the Surgery tab's placeholder "loaded plan"
+        # TODO: tp.ui.label is the Intraoperative tab's placeholder "loaded plan"
         # label's current (auto-generated) objectName -- update this once
-        # the Surgery tab's widgets are renamed to something more specific.
+        # the Intraoperative tab's widgets are renamed to something more specific.
         # Overwritten below with a "(3D preview: ...)" suffix if the MRI
         # preview ends up empty/failed -- reusing this label rather than a
         # status-bar message (which times out and is easy to miss) since it
@@ -134,7 +134,7 @@ class SurgeryController:
         instructions in main_window.py), and shown once automatically the
         first time a plan is loaded."""
         msg_box = QMessageBox(self.MW)
-        msg_box.setWindowTitle("Surgery Tab")
+        msg_box.setWindowTitle("Intraoperative Tab")
         msg_box.setText("\n".join(f"{i + 1}. {s}" for i, s in enumerate([
             "Type Bregma and Lambda as measured on the manipulator, in mm "
             "from your null point (not clicked on the MRI) -- ML/RL and AP, "

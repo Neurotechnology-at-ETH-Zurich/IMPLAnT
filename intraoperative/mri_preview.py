@@ -1,6 +1,6 @@
 # This Python file uses the following encoding: utf-8
 """
-Standalone 3D reference view for the Surgery tab: renders the ORIGINAL
+Standalone 3D reference view for the Intraoperative tab: renders the ORIGINAL
 planned shank trajectories over the subject's own MRI scan, in MRI space.
 
 Deliberately independent of TrajectoryPlanning/registration/atlas -- this
@@ -492,7 +492,7 @@ class SurgeryMRIPreview:
               f"camera pos={self.plotter.camera_position}", flush=True)
         # reset_camera() right after add_mesh can land on a degenerate
         # camera if the container widget hasn't been given a real size yet
-        # (e.g. first-ever visit to the Surgery tab, still mid-layout) --
+        # (e.g. first-ever visit to the Intraoperative tab, still mid-layout) --
         # same failure mode trajectory_planning_3d/window.py's own
         # _maybe_reset_camera works around, just via retries here instead
         # of showEvent/resizeEvent (this class isn't a QWidget to override

@@ -1207,7 +1207,7 @@ class RenderingMri(Rendering):
         already has on this oblique page (form.ui's page_32/page_33 were
         copied from the real coronal/sagittal pages, buttons included) --
         unlike the real 3 axis-aligned views, initialize_zoom_controls
-        (gui_utils/buttons_gui3D.py) never reaches these: it only wires
+        (gui_utils/buttons_gui_structural.py) never reaches these: it only wires
         button names for idx in range(len(lm.vtk_widgets.items())), and
         the oblique renderers are deliberately never added to lm.
         vtk_widgets/lm.renderers (see setup_oblique_coronal_view's own

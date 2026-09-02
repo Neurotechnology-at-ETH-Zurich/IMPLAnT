@@ -4,9 +4,10 @@
 (fetching/converting if needed), then repoints every _paths['atlas_*'] key
 every existing consumer already reads. Used both by AtlasSelectorDialog below
 (the non-live surface, reachable via File -> Atlas... whenever the user
-isn't already inside trajectory planning) and by trajectory planning's live
-in-view switcher (trajectory_planning/registration.py's
-TpRegistration.reload_atlas_view)."""
+isn't already inside trajectory planning or the ephys 3D view) and by those
+two screens' own live in-view switchers (trajectory_planning/registration.py's
+TpRegistration.reload_atlas_view and ephys/visualisation3D.py's
+Visualisation3D.reload_atlas_view)."""
 import os
 
 from PySide6.QtWidgets import QComboBox, QDialog, QDialogButtonBox, QLabel, QVBoxLayout
@@ -50,7 +51,6 @@ def switch_active_atlas(atlas_id, parent_widget):
         atlas_dwi=_file_path(entry, 'atlas_dwi') if entry['has_dwi'] else None,
         atlas_bregma_coords=entry['bregma_coords'],
         atlas_lambda_coords=entry['lambda_coords'],
-        atlas_cc_label=entry['cc_label'],
         atlas_ca1_region_name=entry['ca1_region_name'],
     )
     return True
@@ -58,11 +58,11 @@ def switch_active_atlas(atlas_id, parent_widget):
 
 class AtlasSelectorDialog(QDialog):
     """Reachable via File -> Atlas... (main_window.py) or wherever else
-    ensure_atlas_available-style checks fire (ephys, electrode
-    localization). Not needed inside trajectory planning itself, which gets
-    its own live in-view combo (see TpRegistration.reload_atlas_view) --
-    this is for choosing the active atlas before entering one of the
-    screens that don't."""
+    ensure_atlas_available-style checks fire (electrode localization). Not
+    needed inside trajectory planning or the ephys 3D view, which each get
+    their own live in-view combo (see TpRegistration.reload_atlas_view and
+    Visualisation3D.reload_atlas_view) -- this is for choosing the active
+    atlas before entering one of the screens that don't."""
 
     def __init__(self, parent=None):
         super().__init__(parent)

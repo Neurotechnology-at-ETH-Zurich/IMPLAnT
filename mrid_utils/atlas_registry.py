@@ -2,7 +2,7 @@
 """Per-atlas constants and fetch metadata for every atlas IMPLAnT can use as
 the active reference atlas (see mrid_utils/atlas_switch.py). Adding a new
 atlas means adding one entry here -- everything else (coord_transform.py's
-bregma/lambda/CC lookups, ephys/visualisation3D.py's CA1 region lookups,
+bregma/lambda lookups, ephys/visualisation3D.py's CA1 region lookups,
 atlas_fetch.py/atlas_fetch_brainglobe.py's file presence checks) reads its
 constants from whichever entry is active via paths_config._paths, rather
 than from hardcoded literals.
@@ -24,7 +24,6 @@ ATLASES = {
         "label_format": "whs_legacy",
         "bregma_coords": [245, 652, 439],
         "lambda_coords": [243, 441, 463],
-        "cc_label": 67,
         "ca1_region_name": "Cornu ammonis 1",
     },
     "whs_sd_swc_female_rat": {
@@ -65,11 +64,9 @@ ATLASES = {
         "bregma_coords": [245, 652, 439],
         "lambda_coords": [243, 441, 463],
         # Verified directly against this atlas's own structures list: its
-        # terminology reuses WHS's own ids for these two regions (id 67 =
-        # "corpus callosum and associated subcortical white matter", id 98 =
-        # "Cornu ammonis 1") -- identical to the plain WHS atlas already
-        # used, so no atlas-specific override was actually needed here.
-        "cc_label": 67,
+        # terminology reuses WHS's own id for this region (id 98 = "Cornu
+        # ammonis 1") -- identical to the plain WHS atlas already used, so
+        # no atlas-specific override was actually needed here.
         "ca1_region_name": "Cornu ammonis 1",
     },
 }

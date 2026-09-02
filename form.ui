@@ -10241,7 +10241,7 @@ background-color: rgb(131, 131, 131);
             </size>
            </property>
            <attribute name="title">
-            <string>Surgery</string>
+            <string>Intraoperative</string>
            </attribute>
            <layout class="QGridLayout" name="gridLayout_225" columnstretch="1,1,0">
             <item row="4" column="0" rowspan="2">

@@ -579,7 +579,7 @@ class SAMRI_InputDock:
         self.MW.restart_gui(path, full_restart=False,label_file=False,data_view='coronal')
         self.ui.dockWidget_ephys.setVisible(False)
         self.ui.textEdit_SAMRI_reg.setVisible(True)
-        self.MW.ButtonsGUI_3D.initialize_segmentation(samri=True)
+        self.MW.ButtonsGUI_Structural.initialize_segmentation(samri=True)
 
     def update_mov_mask_path(self):
         folder = (self.MW.Samri.bids_base + "/bids/sub-" + self.MW.Samri.animal_id

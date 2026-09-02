@@ -1,6 +1,6 @@
 # Intraoperative: System Architecture
 
-Technical map of the Surgery tab — where a previously-saved trajectory
+Technical map of the Intraoperative tab — where a previously-saved trajectory
 plan gets corrected against real, measured bregma/lambda on the day of
 surgery. Same treatment as
 [trajectory_planning_architecture.md](trajectory_planning_architecture.md).
@@ -130,7 +130,7 @@ principles.
 
 **`build_skull_reference_scene` is shared, verbatim, with Trajectory
 Planning's PDF cover page** (`file_input_output.py::_cover_page`, per the
-Trajectory Planning doc §6) — both the live Surgery tab and the saved
+Trajectory Planning doc §6) — both the live Intraoperative tab and the saved
 report's cover page render from the *exact same drawing code*, not two
 independent implementations that happen to look similar.
 

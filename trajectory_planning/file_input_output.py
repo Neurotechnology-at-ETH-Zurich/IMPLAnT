@@ -258,7 +258,7 @@ class FileOutput(QtWidgets.QDialog):
         voxel/mm values compute() worked from, under summary['raw']) as a
         real file attachment inside the just-written PDF -- the report
         pages themselves are flattened bitmaps (see _summary_page) with no
-        selectable/extractable text, so this is the only way a Surgery Tab
+        selectable/extractable text, so this is the only way a Intraoperative Tab
         can later re-read this plan's exact numbers back out of the PDF
         without OCR."""
         data = _json.dumps(summary, indent=2).encode("utf-8")
@@ -314,12 +314,12 @@ class FileOutput(QtWidgets.QDialog):
     def _cover_page(self, summary):
         """First page of the report: the exact same skull-reference photo
         (Bregma/Lambda markers, AP/RL axis indicator, per-shank insertion-
-        point markers) the Surgery tab's widget_axialView shows -- built
+        point markers) the Intraoperative tab's widget_axialView shows -- built
         from intraoperative/buttons_gui_surgery.py's own scene-construction
         code (build_skull_reference_scene), not a re-derivation of it, so
-        this page can never drift out of sync with what the Surgery tab
+        this page can never drift out of sync with what the Intraoperative tab
         actually displays. Rendered once, statically, so the plan carries
-        this reference even before/without the Surgery tab ever being
+        this reference even before/without the Intraoperative tab ever being
         opened for this animal.
 
         The photo itself is narrow/portrait (a dorsal skull crop), so the
@@ -913,7 +913,7 @@ class FileOutput(QtWidgets.QDialog):
         # "-ind_N" is this lab's existing convention for which animal a scan
         # belongs to within a multi-animal session (mrid_utils/handlers.py:
         # find_ind_data/find_resampled_img already parse it the same way).
-        # Stored here so a Surgery Tab can auto-locate the raw scan from just
+        # Stored here so a Intraoperative Tab can auto-locate the raw scan from just
         # the saved PDF's folder + this id, with no manual file picking --
         # matched on "-ind_N" (dash) rather than a bare substring so a
         # derived/aligned file like "..._to_ind_2..." (underscore before
@@ -1004,7 +1004,7 @@ class FileOutput(QtWidgets.QDialog):
                 "roll_deg":  round(roll_deg, 3),
                 "pitch_deg": round(pitch_deg, 3),
                 "insertion_depth_mm": round(shank_dist, 3),
-                # Exact values a Surgery Tab needs to reproduce this plan and
+                # Exact values a Intraoperative Tab needs to reproduce this plan and
                 # recompute roll/pitch after bregma/lambda are corrected with
                 # real intraoperative coordinates -- everything above this is
                 # rounded/formatted for human reading and isn't precise
@@ -1018,7 +1018,7 @@ class FileOutput(QtWidgets.QDialog):
                     # the bl_axis/x_axis/plane_normal frame above -- unlike
                     # AP_mm/RL_mm/DV_mm (rounded, direction-suffixed strings for
                     # human reading), these are exact and sign-preserving, which
-                    # is what a Surgery Tab needs to re-anchor this shank's
+                    # is what a Intraoperative Tab needs to re-anchor this shank's
                     # position to a different (intraoperatively measured)
                     # bregma/lambda without reparsing formatted text.
                     "ap_mm": coord_along_bl,
@@ -1044,7 +1044,7 @@ class FileOutput(QtWidgets.QDialog):
                 "mri_spacing": mri_spacing.tolist(),
                 # Physical mm, i.e. coords_bregma/lambda * mri_spacing -- stored
                 # directly (rather than left for a reader to re-derive) since
-                # it's the anchor point a Surgery Tab's mm-from-null
+                # it's the anchor point a Intraoperative Tab's mm-from-null
                 # reprojection needs.
                 "bregma_mm": bregma_mm.tolist(),
                 "lambda_mm": lambda_mm.tolist(),

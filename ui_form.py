@@ -7542,7 +7542,7 @@ class Ui_MainWindow(object):
         self.lineEdit_81.setText(QCoreApplication.translate("MainWindow", u"AP [mm] - P is negative", None))
         self.pushButton_questionmark_2.setText("")
         self.label_2.setText(QCoreApplication.translate("MainWindow", u"Skull Reference", None))
-        self.tabWidget.setTabText(self.tabWidget.indexOf(self.surgery), QCoreApplication.translate("MainWindow", u"Surgery", None))
+        self.tabWidget.setTabText(self.tabWidget.indexOf(self.surgery), QCoreApplication.translate("MainWindow", u"Intraoperative", None))
         self.tabWidget_visualisation.setTabText(self.tabWidget_visualisation.indexOf(self.tab_2), QCoreApplication.translate("MainWindow", u" MRID Location", None))
 #if QT_CONFIG(tooltip)
         self.comboBox_mridTag_vis3D.setToolTip(QCoreApplication.translate("MainWindow", u"Switch which MRID timepoint tag is shown in this 3D view.", None))

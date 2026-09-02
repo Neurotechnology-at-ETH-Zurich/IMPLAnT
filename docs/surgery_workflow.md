@@ -10,8 +10,8 @@ not a replacement for them.
 ```
  Pre-op                                    Surgery day
 ┌──────────────┐    ┌──────────────┐      ┌──────────────┐    ┌──────────────┐
-│ Load MRI +   │───▶│ Save         │─────▶│ During       │───▶│ Measure &    │
-│ plan shanks  │    │ Trajectory   │      │ Surgery:     │    │ correct      │
+│ Load MRI +   │───▶│ Save         │─────▶│ Intra        │───▶│ Measure &    │
+│ plan shanks  │    │ Trajectory   │      │ operative:   │    │ correct      │
 │ (bregma/     │    │ Report       │      │ pick session │    │ bregma/      │
 │ lambda,      │    │ (one PDF)    │      │ or PDF       │    │ lambda       │
 │ insertion    │    │              │      │              │    │ (RL/AP)      │
@@ -43,25 +43,25 @@ single PDF that does two things at once:
 - **A human-readable report** — one page per shank (coronal/sagittal views
   with a numeric caption), a shank geometry page, and a summary page.
 - **A machine-readable copy of the plan**, embedded invisibly inside the
-  same PDF (a JSON attachment) — this is what the Surgery tab actually
+  same PDF (a JSON attachment) — this is what the Intraoperative tab actually
   reads back on surgery day. You never interact with this directly; it's
   just why the PDF is a self-contained handoff artifact rather than the
   human-readable pages being the only thing that exists.
 
 The PDF is named after the animal (e.g. `trajectory_planning-sub-X-ind_2.pdf`)
 and, **importantly, is saved in the same folder as the MRI scan it came
-from** — the Surgery tab locates the scan automatically using that folder
+from** — the Intraoperative tab locates the scan automatically using that folder
 plus the animal's `ind_N` id, so keeping the PDF alongside the scan (not
 moved to some other folder) is what makes surgery day a one-click load.
 
-## 3. Surgery day: load the plan
+## 3. Intraoperative: load the plan
 
 Click **Intraoperative** in the menu. This opens the same **Load Previous
 Session** picker used throughout the app — pick a prior surgery session
 from the list, or use **Load New File...** to browse for the saved report
 PDF instead. From there it's fully automatic:
 
-- The Surgery tab opens immediately, showing the plan's shanks marked on
+- The Intraoperative tab opens immediately, showing the plan's shanks marked on
   a fixed dorsal skull reference photo (Bregma in red, Lambda in blue,
   each shank's planned insertion point in its own color) — this needs no
   MRI file at all.
@@ -71,11 +71,11 @@ PDF instead. From there it's fully automatic:
   best-effort: if the PDF and the scan are no longer in the same folder,
   the 3D view is simply left empty — it does not block or error out,
   since the skull-photo view and the numeric target table are what the
-  Surgery tab is actually for.
+  Intraoperative tab is actually for.
 
 ## 4. Measure and correct bregma/lambda
 
-This is the actual point of the Surgery tab. The pre-op plan picked
+This is the actual point of the Intraoperative tab. The pre-op plan picked
 bregma/lambda **on the MRI** — on the day, the surgeon locates them
 physically, on the animal, using the stereotaxic manipulator zeroed at an
 arbitrary reference point ("null point"). Those two measurements rarely

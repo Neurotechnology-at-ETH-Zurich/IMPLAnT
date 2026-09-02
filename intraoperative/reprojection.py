@@ -82,7 +82,7 @@ def null_point_ap_rl(bregma_null_mm, lambda_null_mm, bl_dist_plan_mm):
     target = (0, 0). bl_axis/x_axis are orthonormal, so this is just two
     dot products (plus undoing the scale), not a real matrix inversion.
 
-    Used to draw a marker for the null point on the Surgery tab's skull
+    Used to draw a marker for the null point on the Intraoperative tab's skull
     photo (intraoperative/buttons_gui_surgery.py's update_null_point) --
     it's purely a rig-calibration choice, unrelated to the animal's own
     anatomy, so it often lands well outside the photo entirely.
@@ -123,10 +123,10 @@ def refresh_surgery_summary(tp, bregma_null_mm, lambda_null_mm):
     """
     Recompute every loaded shank's target position in the surgeon's
     manipulator-null-relative mm frame from the just-measured bregma/
-    lambda (already sign-corrected by the Surgery tab's invert
+    lambda (already sign-corrected by the Intraoperative tab's invert
     checkboxes upstream of this call), scaled by this plan's own
     Bregma-Lambda distance (see reproject_target_to_null's own docstring),
-    and populate the Surgery tab's summary table with the result,
+    and populate the Intraoperative tab's summary table with the result,
     alongside each shank's roll and pitch angles (see _set(row, 3, ...) /
     _set(row, 4, ...) below) and insertion depth -- all carried over
     unchanged from the saved plan (see reproject_target_to_null's own
@@ -137,9 +137,9 @@ def refresh_surgery_summary(tp, bregma_null_mm, lambda_null_mm):
     "roll_deg", "pitch_deg", "depth_mm"}}) and tp.surgery_bl_dist_mm,
     stashed by SurgeryController.load_plan when a saved plan is loaded.
 
-    TODO: tp.ui.tableWidget is the Surgery tab's placeholder summary
+    TODO: tp.ui.tableWidget is the Intraoperative tab's placeholder summary
     table's current (auto-generated) objectName -- update this once the
-    Surgery tab's widgets are renamed to something more specific.
+    Intraoperative tab's widgets are renamed to something more specific.
     """
     table = tp.ui.tableWidget
     offsets = getattr(tp, 'surgery_shank_offsets', {})
