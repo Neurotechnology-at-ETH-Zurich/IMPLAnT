@@ -5,7 +5,7 @@ planned shank trajectories over the subject's own MRI scan, in MRI space.
 
 Deliberately independent of TrajectoryPlanning/registration/atlas -- this
 is a static reference only. The intraoperative bregma/lambda correction
-(during_surgery/reprojection.py) lives in the manipulator's own physical
+(intraoperative/reprojection.py) lives in the manipulator's own physical
 frame, which has no defined mapping back into image space (no fiducial or
 calibration ties "the null point" to a location in this scan), so the
 correction can't be reflected here -- this view always shows the pre-op

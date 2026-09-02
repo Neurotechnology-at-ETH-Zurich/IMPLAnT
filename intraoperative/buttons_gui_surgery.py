@@ -21,8 +21,8 @@ from PySide6.QtCore import Qt, QRectF, QPointF
 from PySide6.QtGui import QPixmap, QColor, QBrush, QPen
 from PySide6.QtWidgets import (QGraphicsView, QGraphicsScene, QGraphicsPixmapItem, QGraphicsEllipseItem,
                                 QVBoxLayout, QApplication, QLabel)
-from during_surgery.mri_preview import _SHANK_COLORS
-from during_surgery.reprojection import null_point_ap_rl
+from intraoperative.mri_preview import _SHANK_COLORS
+from intraoperative.reprojection import null_point_ap_rl
 
 _SKULL_PHOTO = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))),

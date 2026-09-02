@@ -11,7 +11,7 @@ class LoadSurgeryPlan(QtWidgets.QDialog):
     """Reads a previously saved trajectory report PDF's embedded
     trajectory_planning_data.json (see FileOutput._attach_reload_data,
     trajectory_planning/file_input_output.py) and hands the parsed plan to
-    MW.surgery (during_surgery/surgery_controller.py's SurgeryController).
+    MW.surgery (intraoperative/surgery_controller.py's SurgeryController).
 
     Deliberately independent of TrajectoryPlanning/LoadMRI: correcting
     bregma/lambda with real intraoperative measurements only needs the

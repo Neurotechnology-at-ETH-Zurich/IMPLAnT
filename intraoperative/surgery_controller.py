@@ -1,8 +1,8 @@
 # This Python file uses the following encoding: utf-8
 from PySide6.QtWidgets import QMessageBox
-from during_surgery.reprojection import refresh_surgery_summary
-from during_surgery.mri_preview import SurgeryMRIPreview
-from during_surgery.buttons_gui_surgery import ButtonsGUI_Surgery
+from intraoperative.reprojection import refresh_surgery_summary
+from intraoperative.mri_preview import SurgeryMRIPreview
+from intraoperative.buttons_gui_surgery import ButtonsGUI_Surgery
 
 
 class SurgeryController:
@@ -16,7 +16,7 @@ class SurgeryController:
     created in MainWindow.__init__ and lives for the app's whole session,
     unlike TrajectoryPlanning which only exists while an MRI is loaded.
 
-    surgery_shank_offsets is named to match what during_surgery/
+    surgery_shank_offsets is named to match what intraoperative/
     reprojection.py's refresh_surgery_summary(tp, ...) already expects on
     its first argument (originally written for a TrajectoryPlanning
     instance) -- this class is a drop-in stand-in for that narrow purpose,
@@ -153,7 +153,7 @@ class SurgeryController:
         """Wired to all 4 measured-mm spinboxes' valueChanged (see
         MainWindow.add_actions). Bregma/lambda here are signed mm offsets
         from an arbitrary stereotaxic-manipulator null point -- NOT MRI
-        voxel picks (see during_surgery/reprojection.py) -- so this is a
+        voxel picks (see intraoperative/reprojection.py) -- so this is a
         parallel computation over its own coordinate frame, not a
         correction feeding back into any MRI-space state. Only (ML/RL, AP)
         any more -- the DV/"ax" fields were removed, see reprojection.py's

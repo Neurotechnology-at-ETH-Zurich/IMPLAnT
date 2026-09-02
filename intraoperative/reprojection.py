@@ -44,7 +44,7 @@ def reproject_target_to_null(bregma_null_ml_ap, lambda_null_ml_ap, ap_mm, rl_mm,
     from the MRI-planned one (probe-placement precision, scan distortion,
     calibration drift), and that ratio is exactly the same per-animal
     scale correction _mri_to_photo_affine already applies for the
-    skull-photo markers (during_surgery/buttons_gui_surgery.py) --
+    skull-photo markers (intraoperative/buttons_gui_surgery.py) --
     applying it here too keeps each shank's target POSITION accurate
     even when the measured distance doesn't exactly match the plan, not
     just its direction.
@@ -83,7 +83,7 @@ def null_point_ap_rl(bregma_null_mm, lambda_null_mm, bl_dist_plan_mm):
     dot products (plus undoing the scale), not a real matrix inversion.
 
     Used to draw a marker for the null point on the Surgery tab's skull
-    photo (during_surgery/buttons_gui_surgery.py's update_null_point) --
+    photo (intraoperative/buttons_gui_surgery.py's update_null_point) --
     it's purely a rig-calibration choice, unrelated to the animal's own
     anatomy, so it often lands well outside the photo entirely.
 
