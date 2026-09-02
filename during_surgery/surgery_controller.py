@@ -98,6 +98,10 @@ class SurgeryController:
         # TODO: tp.ui.label is the Surgery tab's placeholder "loaded plan"
         # label's current (auto-generated) objectName -- update this once
         # the Surgery tab's widgets are renamed to something more specific.
+        # Overwritten below with a "(3D preview: ...)" suffix if the MRI
+        # preview ends up empty/failed -- reusing this label rather than a
+        # status-bar message (which times out and is easy to miss) since it
+        # stays on screen until the next plan is loaded.
         self.ui.label.setText(f"Loaded: {data.get('mri_file', '(unknown)')}")
         # axial_view.load must run BEFORE on_bregma_lambda_changed: it's
         # what stashes this plan's own Bregma/Lambda calibration on
@@ -111,10 +115,14 @@ class SurgeryController:
         if pdf_path is not None:
             mri_path = self.mri_preview.locate_resampled_mri(
                 pdf_path, data.get("individual_id"), data["raw"]["mri_spacing"])
-        if mri_path is not None:
-            self.mri_preview.render(mri_path, data)
         else:
+            self.mri_preview.last_missing_reason = "no plan PDF path given to load_plan"
+        preview_ok = mri_path is not None and self.mri_preview.render(mri_path, data)
+        if not preview_ok:
             self.mri_preview.clear()
+            reason = self.mri_preview.last_missing_reason or "unknown reason"
+            self.ui.label.setText(f"{self.ui.label.text()}  [3D preview empty: {reason}]")
+            self.MW.statusBar().showMessage(f"3D preview empty: {reason}", 8000)
 
         if not self._step_popup_shown:
             self.show_step_popup()

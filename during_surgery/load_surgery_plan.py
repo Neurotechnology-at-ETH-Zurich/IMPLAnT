@@ -3,7 +3,7 @@ import json as _json
 from PySide6 import QtWidgets
 from PySide6.QtWidgets import QFileDialog
 from pypdf import PdfReader
-from paths_config import _paths
+from paths_config import get_raw_base
 from gui_utils.busy_overlay import BusyOverlay
 
 
@@ -51,7 +51,7 @@ class LoadSurgeryPlan(QtWidgets.QDialog):
         path, _ = QFileDialog.getOpenFileName(
             self,
             "Select Trajectory Report",
-            _paths['raw_base'],
+            get_raw_base(self),
             "PDF files (*.pdf)"
         )
         if path:

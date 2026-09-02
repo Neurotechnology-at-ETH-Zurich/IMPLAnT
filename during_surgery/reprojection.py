@@ -66,7 +66,10 @@ def reproject_target_to_null(bregma_null_ml_ap, lambda_null_ml_ap, ap_mm, rl_mm,
     x_axis = np.array([-bl_axis[1], bl_axis[0]])
 
     scale = bl_dist_null / bl_dist_plan_mm  # dial-mm per anatomical-mm
-    target = bregma + scale * (ap_mm * bl_axis + rl_mm * x_axis)
+    # bl_axis points bregma -> lambda (posterior), but ap_mm is positive=
+    # Anterior (file_input_output.py's coord_along_bl convention) -- negate
+    # to place it correctly.
+    target = bregma + scale * (-ap_mm * bl_axis + rl_mm * x_axis)
     return float(target[0]), float(target[1])
 
 
@@ -97,21 +100,23 @@ def null_point_ap_rl(bregma_null_mm, lambda_null_mm, bl_dist_plan_mm):
 
     scale = bl_dist_null / bl_dist_plan_mm
     to_null = -bregma_null_mm / scale
-    ap_mm = float(np.dot(to_null, bl_axis))
+    # Negated to match reproject_target_to_null's own Anterior-positive
+    # convention (see its docstring) -- this is its algebraic inverse.
+    ap_mm = -float(np.dot(to_null, bl_axis))
     rl_mm = float(np.dot(to_null, x_axis))
     return ap_mm, rl_mm
 
 
 def _direction_suffix(ap_mm=None, rl_mm=None):
     """Same sign convention as file_input_output.py's compute() own
-    ap_str/rl_str formatting (positive ap_mm -> Posterior, negative ->
-    Anterior; positive rl_mm -> Left, negative/zero -> Right) -- reused
+    ap_str/rl_str formatting (positive ap_mm -> Anterior, negative ->
+    Posterior; positive rl_mm -> Left, negative/zero -> Right) -- reused
     here as a plain letter suffix rather than copied/re-derived, so a
     positive number always means the same direction everywhere in the
     app."""
     if ap_mm is not None:
-        return 'P' if ap_mm >= 0 else 'A'
-    return 'R' if rl_mm <= 0 else 'L'
+        return 'A' if ap_mm >= 0 else 'P'
+    return 'L' if rl_mm <= 0 else 'R'
 
 
 def refresh_surgery_summary(tp, bregma_null_mm, lambda_null_mm):
@@ -122,13 +127,11 @@ def refresh_surgery_summary(tp, bregma_null_mm, lambda_null_mm):
     checkboxes upstream of this call), scaled by this plan's own
     Bregma-Lambda distance (see reproject_target_to_null's own docstring),
     and populate the Surgery tab's summary table with the result,
-    alongside each shank's angle to the AP/RL plane (pitch_deg -- see
-    _set(row, 3, ...) below) and insertion depth -- carried over unchanged
-    from the saved plan (see reproject_target_to_null's own docstring for
-    why: no DV measurement means it can't be intraoperatively re-leveled).
-    roll_deg is loaded but intentionally not shown here -- this rig has no
-    intraoperative way to re-level either angle, and one number is enough
-    for the surgeon to dial in the manipulator's pitch axis.
+    alongside each shank's roll and pitch angles (see _set(row, 3, ...) /
+    _set(row, 4, ...) below) and insertion depth -- all carried over
+    unchanged from the saved plan (see reproject_target_to_null's own
+    docstring for why: no DV measurement means it can't be intraoperatively
+    re-leveled).
 
     Reads tp.surgery_shank_offsets ({shank_idx: {"ap_mm", "rl_mm",
     "roll_deg", "pitch_deg", "depth_mm"}}) and tp.surgery_bl_dist_mm,
@@ -143,9 +146,9 @@ def refresh_surgery_summary(tp, bregma_null_mm, lambda_null_mm):
     bl_dist_plan_mm = getattr(tp, 'surgery_bl_dist_mm', None)
     rows = sorted(offsets)
 
-    table.setColumnCount(5)
+    table.setColumnCount(6)
     table.setHorizontalHeaderLabels(
-        ["Shank", "AP (mm)", "RL (mm)", "Angle to AP/RL plane (deg)", "Depth (mm)"])
+        ["Shank", "AP (mm)", "RL (mm)", "Roll (deg)", "Angle to AP/RL plane (deg)", "Depth (mm)"])
     table.setRowCount(len(rows))
     table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
     table.verticalHeader().setVisible(False)
@@ -168,12 +171,23 @@ def refresh_surgery_summary(tp, bregma_null_mm, lambda_null_mm):
             _set(row, 2, "—")
         else:
             ml_target, ap_target = target
-            _set(row, 1, f"{ap_target:.3f} ({_direction_suffix(ap_mm=ap_target)})")
-            _set(row, 2, f"{ml_target:.3f} ({_direction_suffix(rl_mm=ml_target)})")
+            # The letter comes from entry["ap_mm"]/entry["rl_mm"] -- the
+            # shank's bregma-relative offset, same value file_input_output.
+            # py's ap_str/rl_str label -- NOT from ap_target/ml_target
+            # themselves. Those are absolute manipulator-dial coordinates
+            # relative to an arbitrary rig "null" point, not relative to
+            # Bregma, so their raw sign doesn't mean anterior/posterior --
+            # deriving the letter from them made this table disagree with
+            # the (correct) PDF for the same shank. abs() still avoids
+            # pairing a signed number with a letter that already encodes
+            # the sign (e.g. "-4.000 (A)" reads as a double negative).
+            _set(row, 1, f"{abs(ap_target):.3f} ({_direction_suffix(ap_mm=entry['ap_mm'])})")
+            _set(row, 2, f"{abs(ml_target):.3f} ({_direction_suffix(rl_mm=entry['rl_mm'])})")
 
         # pitch_deg IS the angle between the shank and the AP/RL plane (the
         # bregma-lambda plane parallel to RL, normal = SI) -- see
         # compute_shank_roll_pitch_mri's own docstring (trajectory_planning/
-        # coord_transform.py) -- so no separate roll column is shown here.
-        _set(row, 3, f"{entry['pitch_deg']:.3f}")
-        _set(row, 4, f"{entry['depth_mm']:.3f}")
+        # coord_transform.py).
+        _set(row, 3, f"{entry['roll_deg']:.3f}")
+        _set(row, 4, f"{entry['pitch_deg']:.3f}")
+        _set(row, 5, f"{entry['depth_mm']:.3f}")

@@ -1,15 +1,15 @@
 # This Python file uses the following encoding: utf-8
 """
-Surgery tab's skull-photo reference view: a fixed dorsal rat-skull photo
-(showing Bregma, Lambda, and the interaural line) displayed in widget_
-axialView, rotated 90 degrees to match the animal's orientation on the
-stereotaxic frame. This replaced the previous per-plan axial MRI slice
+Surgery tab's skull-photo reference view: a fixed dorsal rat-skull diagram
+(showing Bregma and Lambda) displayed in widget_axialView, already nose-up
+to match the animal's orientation on the stereotaxic frame. This replaced
+the previous per-plan axial MRI slice
 view (which reused the app's real LoadMRI/ImageLayer pipeline to reslice
 the subject's own resampled MRI) -- the photo is a fixed reference image,
 independent of whatever plan is loaded, so there is no MRI to load/reslice
 here any more.
 
-Bregma (red) and Lambda (blue) are drawn once, always, at their hand-
+Bregma (green) and Lambda (red) are drawn once, always, at their hand-
 calibrated pixel positions in the photo (_BREGMA_PX/_LAMBDA_PX). Each
 shank's planned insertion point (from a loaded plan's ap_mm/rl_mm offset
 from Bregma) is drawn on load(), in that shank's own color -- purely
@@ -18,28 +18,26 @@ plan-derived, no MRI file needed, unlike mri_preview.py's 3D view.
 import os
 import numpy as np
 from PySide6.QtCore import Qt, QRectF, QPointF
-from PySide6.QtGui import QPixmap, QTransform, QColor, QBrush, QPen, QFont
+from PySide6.QtGui import QPixmap, QColor, QBrush, QPen
 from PySide6.QtWidgets import (QGraphicsView, QGraphicsScene, QGraphicsPixmapItem, QGraphicsEllipseItem,
-                                QGraphicsSimpleTextItem, QGraphicsRectItem, QVBoxLayout, QApplication, QLabel)
+                                QVBoxLayout, QApplication, QLabel)
 from during_surgery.mri_preview import _SHANK_COLORS
 from during_surgery.reprojection import null_point_ap_rl
 
 _SKULL_PHOTO = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-    "Icons", "csm_SBIR_rat_skull_overhead_01_93d6774e3d.jpg.webp")
+    "Icons", "skull-horizontal.png")
 
-_PHOTO_CREDIT = (
-    "Location of Bregma and Lambda as defined by Dr. George Paxinos (George "
-    "Paxinos and Charles Watson: The Rat Brain in Stereotaxic Coordinates, "
-    "Academic Press, New York, 1998, p. 11). Courtesy of Academic Press.")
+_PHOTO_CREDIT = ""
 
-# Pixel coordinates of Bregma/Lambda in the photo ABOVE, in the already-
-# 90-degree-rotated frame (i.e. against QPixmap(_SKULL_PHOTO).transformed
-# (QTransform().rotate(90)), same as the pixmap built below) -- picked by
-# hand with a click-to-print helper against this exact image file. Re-pick
-# both if the photo is ever swapped for a different crop/rotation.
-_BREGMA_PX = (168, 425)
-_LAMBDA_PX = (165, 567)
+# Pixel coordinates of Bregma/Lambda in the photo ABOVE -- this image is
+# already nose-up/portrait (unlike the old csm_SBIR photo, which was
+# landscape and needed a +90 degree rotation to match), so these are
+# native-pixel coordinates, no rotation applied. Picked by hand with a
+# click-to-print helper against this exact image file. Re-pick both if
+# the photo is ever swapped for a different crop/rotation.
+_BREGMA_PX = (192, 419)
+_LAMBDA_PX = (191, 534)
 
 
 def _photo_axes():
@@ -55,13 +53,18 @@ def _photo_axes():
     (trajectory_planning/file_input_output.py's compute(): `rl_str =
     f"...{'R' if coord_perp_bl <= 0 else 'L'}"`, the SAME coord_perp_bl
     that becomes a shank's raw rl_mm) -- that part is settled, straight
-    from the app's own existing code. WHICH SIDE of this particular
-    (rotated) photo counts as image-left is a separate question this
-    formula answers empirically, not by re-deriving it from RAS geometry
-    (an earlier "dorsal + anterior-up -> no mirroring" assumption here
-    was confirmed backwards against the app's own 3D trajectory-planning
-    view) -- so the sign below is picked to match that real reference,
-    not first-principles reasoning about the photo's orientation.
+    from the app's own existing code. WHICH SIDE of this particular photo
+    counts as image-left is a separate question this formula answers
+    empirically, NOT by matching this diagram's own printed "L"/"R" text
+    (skull-horizontal.png's labels turned out NOT to be a reliable guide
+    to this image's own left/right pixel sides -- an earlier version of
+    this comment assumed they were and got the sign backwards) -- instead
+    it's confirmed directly: a rl_mm=+5 test shank must render next to
+    the photo's own big "R" letter, rl_mm=-5 next to "L" (verified against
+    the running app, not assumed). This is the SAME sign the old csm_SBIR
+    photo used, since both images share the same nose-up, Bregma-above-
+    Lambda pixel layout -- re-verify against a real rendered test (not the
+    image's own text) if the photo is ever swapped again.
     Returns (ap_axis_px, rl_axis_px), or None if Bregma/Lambda coincide."""
     bregma_px = np.asarray(_BREGMA_PX, dtype=float)
     lambda_px = np.asarray(_LAMBDA_PX, dtype=float)
@@ -119,71 +122,32 @@ def _add_marker(scene, px, color, radius=5):
     return marker
 
 
-def _edge_point(rect, direction, margin=15):
-    """Point where a ray from the photo's own center in `direction` exits
-    its bounding rect, inset by `margin` px -- lets each A/P/R/L letter
-    sit right at the edge of the image in its OWN true direction (see
-    _add_edge_letters), even though the photo's Bregma-Lambda line isn't
-    perfectly axis-aligned (_BREGMA_PX/_LAMBDA_PX), rather than assuming
-    "AP is vertical, RL is horizontal" and hardcoding top/bottom/left/
-    right positions."""
-    cx, cy = rect.width() / 2, rect.height() / 2
-    dx, dy = direction
-    half_w, half_h = rect.width() / 2 - margin, rect.height() / 2 - margin
-    t_candidates = []
-    if abs(dx) > 1e-9:
-        t_candidates.append(half_w / abs(dx))
-    if abs(dy) > 1e-9:
-        t_candidates.append(half_h / abs(dy))
-    t = min(t_candidates)
-    return cx + dx * t, cy + dy * t
-
-
-def _add_edge_letters(scene, color=QColor(20, 20, 20)):
-    """A/P/R/L letters at the corresponding edge of the photo -- the same
-    orientation-labeling convention MRI viewers use (one letter at the
-    edge each anatomical direction points toward), replacing a compass-
-    arrow legend. Uses the exact same _photo_axes directions the shank
-    markers are placed with, so the letters and the markers can never
-    disagree about which way is which."""
-    axes = _photo_axes()
-    if axes is None:
-        return
-    ap_axis_px, rl_axis_px = axes
-    rect = scene.sceneRect()
-    for direction, label in ((-ap_axis_px, "A"), (ap_axis_px, "P"),
-                              (rl_axis_px, "L"), (-rl_axis_px, "R")):
-        pos = _edge_point(rect, direction)
-        text = QGraphicsSimpleTextItem(label)
-        font = QFont()
-        font.setBold(True)
-        font.setPointSize(13)
-        text.setFont(font)
-        text.setBrush(QBrush(color))
-        text_rect = text.boundingRect()
-        text.setPos(pos[0] - text_rect.width() / 2, pos[1] - text_rect.height() / 2)
-        text.setZValue(2)
-
-        # A plain white background chip behind the letter -- some edge
-        # positions (e.g. "A", right at the skull's own nose peak) land
-        # on top of the illustration's own dark linework otherwise,
-        # where a same-color letter is unreadable.
-        padding = 2
-        backing = QGraphicsRectItem(text.pos().x() - padding, text.pos().y() - padding,
-                                     text_rect.width() + 2 * padding, text_rect.height() + 2 * padding)
-        backing.setBrush(QBrush(QColor(255, 255, 255, 220)))
-        backing.setPen(QPen(Qt.NoPen))
-        backing.setZValue(1.5)
-        scene.addItem(backing)
-        scene.addItem(text)
-
-
 def _add_shank_markers(scene, data):
     """data: the parsed plan JSON (FileOutput.compute()'s output,
     trajectory_planning/file_input_output.py). Places each shank's planned
     insertion point at its ap_mm/rl_mm offset from Bregma, mapped into this
     photo's pixel space via the Bregma/Lambda-calibrated affine transform
-    (see _mri_to_photo_affine). Returns the list of marker items added."""
+    (see _mri_to_photo_affine), plus a short dotted line from that point
+    showing which way -- and how far, in the same mm-calibrated scale as
+    the marker itself -- the shank leans as it goes down into the skull
+    (roll_deg/pitch_deg's RL/AP lean components over insertion_depth_mm;
+    see compute()'s docstring for what those two angles mean). Purely a
+    dorsal-view schematic of the horizontal lean, same small-angle drop-
+    the-other-component approximation roll/pitch already use everywhere
+    else in this app -- it can't show the DV/depth component itself,
+    since this is a top-down photo.
+
+    roll_deg and pitch_deg use DIFFERENT reference axes (coord_transform.
+    py's compute_shank_roll_pitch_mri): roll is measured FROM VERTICAL,
+    toward RL, so its horizontal fraction is sin(roll); pitch is measured
+    FROM THE AP LINE, toward vertical, so ITS horizontal (AP) fraction is
+    cos(pitch), not sin(pitch) -- sin(pitch) is the vertical/DV fraction,
+    which this top-down view can't show. Don't "fix" pitch's formula to
+    match roll's without re-checking that asymmetry first.
+
+    Returns the list of marker items
+    added (the dotted lines are added directly to the scene but not
+    returned, same as Bregma/Lambda's own markers)."""
     affine = _mri_to_photo_affine(data["raw"]["bregma_mm"], data["raw"]["lambda_mm"])
     if affine is None:
         return []
@@ -192,33 +156,55 @@ def _add_shank_markers(scene, data):
     markers = []
     shank_keys = sorted(data["shanks"], key=lambda k: int(k.split("_")[1]))
     for i, key in enumerate(shank_keys):
-        raw = data["shanks"][key]["raw"]
-        insert_px = origin_px + matrix @ np.array([raw["ap_mm"], raw["rl_mm"]])
+        entry = data["shanks"][key]
+        raw = entry["raw"]
+        # ap_axis_px (in matrix) points Bregma->Lambda (posterior), but
+        # raw["ap_mm"] is positive=Anterior (file_input_output.py's
+        # coord_along_bl) -- negate to place it correctly.
+        insert_px = origin_px + matrix @ np.array([-raw["ap_mm"], raw["rl_mm"]])
         r, g, b = _SHANK_COLORS[i % len(_SHANK_COLORS)]
         color = QColor(round(r * 255), round(g * 255), round(b * 255))
+
+        depth_mm = entry.get("insertion_depth_mm", 0.0)
+        roll_rad = np.radians(entry.get("roll_deg", 0.0))
+        pitch_rad = np.radians(entry.get("pitch_deg", 0.0))
+        # roll is measured from vertical (sin -> horizontal RL fraction);
+        # pitch is measured from the AP line itself (cos -> horizontal AP
+        # fraction) -- see the differing conventions noted in this
+        # function's docstring above.
+        d_ap_mm = depth_mm * np.cos(pitch_rad)
+        d_rl_mm = depth_mm * np.sin(roll_rad)
+        end_px = insert_px + matrix @ np.array([-d_ap_mm, d_rl_mm])
+        line = scene.addLine(insert_px[0], insert_px[1], end_px[0], end_px[1],
+                              QPen(color, 1.5, Qt.DotLine))
+        line.setZValue(0.5)  # above the photo, below the insertion marker
+
         markers.append(_add_marker(scene, tuple(insert_px), color))
     return markers
 
 
 def build_skull_reference_scene(data=None):
     """Builds the Surgery tab's skull-reference QGraphicsScene: the photo,
-    Bregma (red)/Lambda (blue) markers, and A/P/R/L edge letters, always;
-    plus each shank's planned insertion-point marker if a parsed plan JSON
-    is passed (see _add_shank_markers). Returns (scene, photo_item).
+    Bregma (green)/Lambda (red) markers, always; plus each shank's planned
+    insertion-point marker if a parsed plan JSON is passed (see
+    _add_shank_markers). Returns (scene, photo_item).
+
+    No A/P/R/L edge letters here -- unlike the old csm_SBIR photo, this
+    image (skull-horizontal.png) already bakes its own A/P/L/R labels
+    into the artwork, so drawing another set would just duplicate them.
 
     Shared by the live Surgery tab widget (ButtonsGUI_Surgery, below) and
     the trajectory-planning PDF's cover page (trajectory_planning/
     file_input_output.py's _cover_page) -- both show identical content,
     rendered from the exact same drawing code."""
     scene = QGraphicsScene()
-    pixmap = QPixmap(_SKULL_PHOTO).transformed(QTransform().rotate(90))
+    pixmap = QPixmap(_SKULL_PHOTO)
     photo_item = QGraphicsPixmapItem(pixmap)
     scene.addItem(photo_item)
     scene.setSceneRect(photo_item.boundingRect())
 
-    _add_marker(scene, _BREGMA_PX, QColor(255, 0, 0))
-    _add_marker(scene, _LAMBDA_PX, QColor(0, 0, 255))
-    _add_edge_letters(scene)
+    _add_marker(scene, _BREGMA_PX, QColor(0, 255, 0))
+    _add_marker(scene, _LAMBDA_PX, QColor(255, 0, 0))
     if data is not None:
         _add_shank_markers(scene, data)
     return scene, photo_item
@@ -267,7 +253,9 @@ class ButtonsGUI_Surgery:
         self.credit_label = QLabel(_PHOTO_CREDIT, container_widget)
         self.credit_label.setWordWrap(True)
         self.credit_label.setAlignment(Qt.AlignCenter)
-        self.credit_label.setStyleSheet("color: gray; font-size: 9px;")
+        # frame_13 (this widget's parent, see form.ui) paints a white
+        # background, so plain dark text has real contrast against it.
+        self.credit_label.setStyleSheet("color: black; font-size: 9px;")
         layout.addWidget(self.credit_label)
 
         QApplication.processEvents()
@@ -320,7 +308,10 @@ class ButtonsGUI_Surgery:
         if affine is None:
             return
         matrix, origin_px = affine
-        null_px = origin_px + matrix @ np.array(ap_rl)
+        # Same Anterior-positive/matrix-toward-Lambda negation as
+        # _add_shank_markers -- ap_rl[0] is in the same convention as
+        # raw["ap_mm"].
+        null_px = origin_px + matrix @ np.array([-ap_rl[0], ap_rl[1]])
         if not self.scene.sceneRect().contains(QPointF(*null_px)):
             return
         self._null_marker = _add_marker(self.scene, tuple(null_px), QColor(0, 0, 0))
