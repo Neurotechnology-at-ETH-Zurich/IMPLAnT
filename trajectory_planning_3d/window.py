@@ -134,7 +134,7 @@ class TrajectoryPlanning3DWindow(QDockWidget):
 
         self.ui.checkBox_hideplanes.toggled.connect(self._on_hide_planes_toggled)
         self.ui.checkBox_hideplanes.setToolTip(
-            "Hide the bregma-lambda-CC and bregma-lambda reference planes used to measure roll/pitch")
+            "Hide the two bregma-lambda reference planes used to measure roll/pitch")
 
         # checkBox_constraint_90deg/_coronal live on the MAIN window (page_5
         # -- see ElecGeometryMri.enforce_constraint_90deg/_coronal), not
@@ -597,7 +597,8 @@ class TrajectoryPlanning3DWindow(QDockWidget):
                     return
                 color = self.tp.tp_labels[val][:3]
                 self.region_actors[val] = self.plotter.add_mesh(
-                    mesh, color=color, opacity=self.opacityRegions, name=f'region_{val}')
+                    mesh, color=color, opacity=self.opacityRegions, name=f'region_{val}',
+                    reset_camera=False)
             else:
                 actor.SetVisibility(True)
         else:
@@ -844,15 +845,19 @@ class TrajectoryPlanning3DWindow(QDockWidget):
             ('landmark_bregma', bregma, 'red'),
             ('landmark_lambda', lam, 'green'),
         ):
-            self.plotter.add_mesh(pv.Sphere(radius=radius, center=point), color=color, name=name, render=False)
+            self.plotter.add_mesh(
+                pv.Sphere(radius=radius, center=point), color=color, name=name,
+                render=False, reset_camera=False)
 
         size = max(bl_dist * 3, 1.0)
         self.plotter.add_mesh(
             pv.Plane(center=bregma, direction=ap_axis, i_size=size, j_size=size),
-            color='yellow', opacity=0.25, name='plane_bregma_lambda_roll', render=False)
+            color='yellow', opacity=0.25, name='plane_bregma_lambda_roll',
+            render=False, reset_camera=False)
         self.plotter.add_mesh(
             pv.Plane(center=bregma, direction=rl_axis, i_size=size, j_size=size),
-            color='cyan', opacity=0.25, name='plane_bregma_lambda_rl', render=False)
+            color='cyan', opacity=0.25, name='plane_bregma_lambda_rl',
+            render=False, reset_camera=False)
 
         hide_planes = self.ui.checkBox_hideplanes.isChecked()
         for name in self._PLANE_ACTOR_NAMES:
@@ -926,9 +931,10 @@ class TrajectoryPlanning3DWindow(QDockWidget):
         do, before pressing them: for x/y/z/trajectory, a line through the
         DEEP point (what those steps actually move) along the direction
         it'll move in; for roll/pitch, a line through the INSERTION point
-        (the fixed pivot) along the rotation axis (SI for roll, RL for
-        pitch) -- the line a rotation axis geometrically passes through --
-        PLUS a dotted arc, for roll/pitch only, from the shank's current
+        (the fixed pivot) along the rotation axis (AP for roll, RL for
+        pitch -- see _nudge_shank) -- the line a rotation axis
+        geometrically passes through -- PLUS a dotted arc, for roll/pitch
+        only, from the shank's current
         direction to its own projection onto the reference plane
         compute_shank_roll_pitch_mri measures it against (RL-normal plane
         for roll, SI-normal for pitch) -- i.e. a literal picture of the
@@ -967,7 +973,7 @@ class TrajectoryPlanning3DWindow(QDockWidget):
             if frame is None:
                 return
             ap_axis, rl_axis, si_axis = frame
-            direction = si_axis if self._armed_axis == 'roll' else rl_axis
+            direction = ap_axis if self._armed_axis == 'roll' else rl_axis
             anchor = insert_mm
 
             # roll = angle from vertical (SI), within the RL-SI plane,
@@ -986,11 +992,13 @@ class TrajectoryPlanning3DWindow(QDockWidget):
                 arc_mesh = self._dashed_arc_mesh(
                     insert_mm, reference_dir, shank_proj, half_len * 0.6)
                 if arc_mesh is not None:
-                    self.plotter.add_mesh(arc_mesh, color='cyan', line_width=2, name=arc_name, render=False)
+                    self.plotter.add_mesh(
+                        arc_mesh, color='cyan', line_width=2, name=arc_name,
+                        render=False, reset_camera=False)
 
         self.plotter.add_mesh(
             self._dashed_line_mesh(anchor - direction * half_len, anchor + direction * half_len),
-            color='orange', line_width=3, name=name, render=False)
+            color='orange', line_width=3, name=name, render=False, reset_camera=False)
 
     def _update_angle_legend(self):
         """On-screen roll/pitch readout for the currently selected shank --
@@ -1047,20 +1055,21 @@ class TrajectoryPlanning3DWindow(QDockWidget):
         and re-enforce that lock on every subsequent deep/insert change
         (ElecGeometryMri._apply_constraints, which change_insert_point/
         change_deepest_point call -- the same path _nudge_shank drives).
-        The roll/pitch buttons pivot the shank around the insertion point
-        with no notion of either lock, so whatever a nudge just did gets
-        partly undone/redistributed the moment that automatic re-snap
-        runs -- a confusingly imprecise stand-in for what the button's
-        own step size promises. Disable both while either constraint is
-        active, rather than one-off-verify which rotation axis happens
-        not to disturb which locked component (rotating around one
-        in-plane axis can still perturb the locked one via the other
-        in-plane component -- not reliably safe to leave enabled)."""
-        constrained = (self.tp.ui.checkBox_constraint_90deg.isChecked()
-                       or self.tp.ui.checkBox_constraint_90deg_coronal.isChecked())
-        self.ui.pushButton_roll.setEnabled(not constrained)
-        self.ui.pushButton_pitch.setEnabled(not constrained)
-        if constrained and self._armed_axis in ('roll', 'pitch'):
+        _nudge_shank's roll/pitch rotations each stay within their own
+        angle's defining plane (roll pivots around the AP axis, pitch
+        around RL -- see that method's docstring), so roll can never
+        touch AP and pitch can never touch RL: rolling is always safe
+        under the AP lock and only ever threatens the RL lock; pitching
+        is always safe under the RL lock and only ever threatens the AP
+        lock. So each button is disabled by the OTHER constraint, not its
+        own -- while a constraint is active, its own matching button is
+        exactly the one still safe (and useful) to nudge."""
+        ap_locked = self.tp.ui.checkBox_constraint_90deg.isChecked()
+        rl_locked = self.tp.ui.checkBox_constraint_90deg_coronal.isChecked()
+        self.ui.pushButton_roll.setEnabled(not rl_locked)
+        self.ui.pushButton_pitch.setEnabled(not ap_locked)
+        if ((rl_locked and self._armed_axis == 'roll')
+                or (ap_locked and self._armed_axis == 'pitch')):
             self._flush_pending_nudge()
             self._armed_axis = None
             self._update_axis_arm_ui()
@@ -1158,15 +1167,29 @@ class TrajectoryPlanning3DWindow(QDockWidget):
             new_insert = insert_arr  # entry point through the skull stays put
         elif self._armed_axis in ('roll', 'pitch'):
             # Pivot around the INSERTION point (kept fixed, same convention
-            # as 'trajectory') by `steps` degrees, rotating around the SI
-            # axis for roll or the RL axis for pitch -- rotating a vector
-            # around an axis leaves that vector's component ALONG the axis
-            # unchanged. Roll = angle to the RL-normal plane (depends only
-            # on the shank's RL component); rotating around SI leaves RL
-            # fixed while mixing AP/SI, so it changes roll's own angle
-            # without touching the RL component pitch is independent of.
-            # Symmetrically, rotating around RL leaves the SI component
-            # (pitch's own) fixed. So each button moves only its own angle.
+            # as 'trajectory') by `steps` degrees, staying exactly within
+            # each angle's own defining plane -- roll (coord_transform.py's
+            # "angle from vertical within the RL-SI plane, dropping AP
+            # entirely") rotates around the AP axis, pitch (angle within
+            # the AP-SI plane, dropping RL) rotates around the RL axis.
+            # Rotating a vector around an axis leaves that vector's
+            # component ALONG the axis unchanged and mixes the other two --
+            # so rotating around AP leaves AP untouched while trading RL
+            # against SI (exactly roll's own two ingredients), and rotating
+            # around RL leaves RL untouched while trading AP against SI
+            # (pitch's own two ingredients). That's what actually keeps
+            # each button from touching the OTHER angle's dropped
+            # component: rolling never moves AP, so it can never break an
+            # AP=0 constraint (ElecGeometryMri.enforce_constraint_90deg)
+            # or perturb pitch's own AP-0 special case; pitching never
+            # moves RL, so it can never break an RL=0 constraint
+            # (enforce_constraint_90deg_coronal) or perturb roll's own
+            # RL-0 special case. (An earlier version of this rotated
+            # around SI for roll instead -- a horizontal spin that mixed
+            # AP into RL and so leaked into the other angle; that's why
+            # _update_roll_pitch_enabled below now enables each button
+            # under the OTHER axis's constraint rather than disabling it
+            # under its own.)
             # coords_insert_point/coords_deepest_point are already MRI-grid
             # voxel indices (electrode_mri.py's change_insert_point/
             # change_deepest_point) -- use the same MRI-space frame
@@ -1180,8 +1203,8 @@ class TrajectoryPlanning3DWindow(QDockWidget):
             frame = self.tp.ap_rl_si_frame_from_misalignment(bregma, lam, misalignment_deg)
             if frame is None:
                 return
-            _ap_axis, rl_axis, si_axis = frame
-            rotation_axis = si_axis if self._armed_axis == 'roll' else rl_axis
+            ap_axis, rl_axis, _si_axis = frame
+            rotation_axis = ap_axis if self._armed_axis == 'roll' else rl_axis
 
             # Rodrigues' rotation formula, applied in physical mm (spacing
             # can be anisotropic, so rotating raw voxel-index components
@@ -1221,8 +1244,19 @@ class TrajectoryPlanning3DWindow(QDockWidget):
             box.setValue(int(round(val)) + 1)
             box.blockSignals(False)
 
-        self.tp.change_insert_point()
+        # change_deepest_point MUST run before change_insert_point: _apply_
+        # constraints (which either of these can trigger) writes its
+        # corrected deep point straight back into the deep spinboxes
+        # (electrode_mri.py's set_value(mri_deep, spinBox_tp_deep_*)) --
+        # if change_insert_point ran first, its own _apply_constraints call
+        # would do that clobber using the OLD (not-yet-updated) mri_deep,
+        # overwriting the deep spinboxes we just set above with the STALE
+        # pre-nudge value before change_deepest_point ever got to read
+        # them -- silently discarding the nudge whenever a constraint is
+        # active. _apply_constraints never touches the insert spinboxes,
+        # so reading insert second is always safe.
         self.tp.change_deepest_point()
+        self.tp.change_insert_point()
 
     def _find_new_insert_point(self, new_deep, old_insert, old_deep):
         """After a sideways (x/y/z) nudge, march from the new deep point
