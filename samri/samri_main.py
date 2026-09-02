@@ -25,7 +25,102 @@ import numpy as np
 from PySide6 import QtWidgets
 import pandas as pd
 import SimpleITK as sitk
+import nibabel as nib
 from PySide6.QtWidgets import QMessageBox
+from file_handling.resample_data import ResampleData
+from file_handling.mri_volume import MRIVolume
+
+
+class _ShimLoadMRI:
+    """Minimal stand-in for a LoadMRI instance -- just enough for
+    ResampleData.resampling25um to run outside the GUI (this pipeline class
+    has no loaded MRI volume/session of its own)."""
+    def __init__(self, volumes, session_path):
+        self.volumes = volumes
+        self.session_path = session_path
+
+def _index_to_physical_affine(img):
+    """(origin, A) such that physical_point = origin + A @ index, matching
+    sitk.Image's TransformIndexToPhysicalPoint convention (xyz index, xyz
+    physical mm)."""
+    origin = np.array(img.GetOrigin(), dtype=np.float64)
+    spacing = np.array(img.GetSpacing(), dtype=np.float64)
+    direction = np.array(img.GetDirection(), dtype=np.float64).reshape(3, 3)
+    return origin, direction * spacing[np.newaxis, :]
+
+
+def _build_fixed_moving_correspondence(fixedImg, movingImg, transform_moving2fixed,
+                                        fixed_out_path, moving_out_path, chunk_size=32):
+    """Vectorized replacement for what used to be a pure-Python triple
+    for-loop over every voxel index of fixedImg (the atlas volume -- 512x
+    1024x512 = ~268M voxels for the WHS SD rat atlas), calling
+    TransformIndexToPhysicalPoint/TransformPoint/TransformPhysicalPointToIndex
+    one voxel at a time. That per-voxel Python/SimpleITK call overhead, not
+    the actual math, is what made the step take on the order of 10 hours.
+
+    transform_moving2fixed.TransformPoint is only evaluated once per voxel
+    here too, just in bulk via TransformToDisplacementField (a single
+    compiled ITK pass over a chunk of the fixedImg grid, which is how
+    ITK/ANTs apply such transforms already) instead of one Python call per
+    voxel. The index<->physical conversions (pure affine, no transform
+    involved) are vectorized with numpy, matching ITK's own formula and its
+    round-half-up convention (TransformPhysicalPointToIndex rounds via
+    itk::Math::RoundHalfIntegerUp, i.e. floor(x + 0.5), not numpy's
+    round-half-to-even) so the rounded integer indices match exactly.
+
+    Writes fixed/moving indices straight to fixed_out_path/moving_out_path
+    as memory-mapped .npy files, chunk_size x-slices at a time, instead of
+    building the full (N,3) arrays in RAM first -- for the WHS SD rat atlas
+    that's ~6.4GB per array, and holding several such arrays live at once
+    is exactly what got this OOM-killed on a machine that's already running
+    with most of its swap in use. The two files end up byte-for-byte the
+    same as np.save(path, np.array(...)) would have produced (same dtype,
+    shape, C order), just written incrementally."""
+    size = fixedImg.GetSize()
+    n = size[0] * size[1] * size[2]
+
+    fixed_mm = np.lib.format.open_memmap(fixed_out_path, mode='w+', dtype=np.int64, shape=(n, 3))
+    moving_mm = np.lib.format.open_memmap(moving_out_path, mode='w+', dtype=np.int64, shape=(n, 3))
+
+    fixed_origin, fixed_A = _index_to_physical_affine(fixedImg)
+    moving_origin, moving_A = _index_to_physical_affine(movingImg)
+    moving_A_inv = np.linalg.inv(moving_A)
+
+    pos = 0
+    for x_start in range(0, size[0], chunk_size):
+        cx = min(chunk_size, size[0] - x_start)
+
+        xs, ys, zs = np.meshgrid(np.arange(x_start, x_start + cx), np.arange(size[1]), np.arange(size[2]),
+                                  indexing='ij')
+        idx_chunk = np.stack([xs.ravel(), ys.ravel(), zs.ravel()], axis=1).astype(np.int64)
+        n_chunk = idx_chunk.shape[0]
+
+        # same grid as fixedImg, just offset to start at x_start (so index (i,j,k)
+        # within the chunk maps to full-grid index (x_start+i, j, k))
+        chunk_origin = fixedImg.TransformIndexToPhysicalPoint([x_start, 0, 0])
+        disp_field = sitk.TransformToDisplacementField(
+            transform_moving2fixed,
+            sitk.sitkVectorFloat64,
+            [cx, size[1], size[2]],
+            chunk_origin,
+            fixedImg.GetSpacing(),
+            fixedImg.GetDirection(),
+        )
+        # GetArrayFromImage is zyx (numpy convention); transpose to xyz (x slowest,
+        # z fastest) so raveling matches idx_chunk's x-outer/y-middle/z-inner order
+        disp_xyz = np.transpose(sitk.GetArrayFromImage(disp_field), (2, 1, 0, 3)).reshape(-1, 3)
+
+        fixed_phys_chunk = idx_chunk.astype(np.float64) @ fixed_A.T + fixed_origin
+        moving_phys_chunk = fixed_phys_chunk + disp_xyz
+        moving_cont_idx = (moving_phys_chunk - moving_origin) @ moving_A_inv.T
+
+        fixed_mm[pos:pos + n_chunk] = idx_chunk
+        moving_mm[pos:pos + n_chunk] = np.floor(moving_cont_idx + 0.5).astype(np.int64)
+        pos += n_chunk
+
+    fixed_mm.flush()
+    moving_mm.flush()
+
 
 def _warn_incomplete_scans(raw_base):
     count = 0
@@ -247,7 +342,23 @@ class InitSAMRI:
 
             #copy h5 file to registration folder
             fixedImg = sitk.ReadImage(os.path.join(samri_input['atlas_folder'], _paths['atlas_volume']))
-            movingImg = sitk.ReadImage(filepath)
+            # actually call ResampleData.resampling25um (file_handling/resample_data.py)
+            # instead of reimplementing it -- it only needs a LoadMRI-shaped
+            # object exposing .volumes[index].file_path/.raw_DICOMOrient and
+            # .session_path, which this pipeline class doesn't otherwise have.
+            raw_DICOMOrient = "".join(nib.aff2axcodes(nib.load(filepath).affine))
+            _volume = MRIVolume(file_path=filepath, slices={}, DICOMOrient=raw_DICOMOrient,
+                                 raw_DICOMOrient=raw_DICOMOrient, view_names=[])
+            _shim_loadmri = _ShimLoadMRI(volumes={0: _volume}, session_path=os.path.dirname(filepath))
+            resampled25um_path = ResampleData(_shim_loadmri).resampling25um(0)
+            # plain read, no extra reorientation: TransformPhysicalPointToIndex/
+            # TransformIndexToPhysicalPoint already handle any orientation
+            # difference against whatever grid this correspondence later gets
+            # reprojected onto (mri_label_overlay.py's reconcile_raw_to_display_
+            # indices) via physical-space math -- forcing this to "RAS" here
+            # would only need to be undone consistently everywhere else that
+            # reads this same correspondence, for no actual benefit.
+            movingImg = sitk.ReadImage(resampled25um_path)
             csv_path = f"{self.bids_base}/results/generic_work/data_selection.csv"
             df = pd.read_csv(csv_path, index_col=0)
             #original_path = f"{'_'.join(filepath.split('_')[:-1])}.nii.gz"
@@ -256,23 +367,15 @@ class InitSAMRI:
             idx = df.loc[df['path'] == filepath].index[0] #original_path?
             transformPath = f"{self.bids_base}/results/generic_work/_ind_type_{idx}/s_register/output_Composite.h5"
             transform_moving2fixed = sitk.ReadTransform(transformPath)
-            size = fixedImg.GetSize()
-            fixed_px = []
-            moving_px = []
-            for x in range(size[0]):
-                for y in range(size[1]):
-                    for z in range(size[2]):
-                        fixed_px.append([x,y,z])
-                        fixedpnt = fixedImg.TransformIndexToPhysicalPoint([x,y,z]) #mm
-                        movingpnt = transform_moving2fixed.TransformPoint(fixedpnt) #mri
-                        idx_mri = movingImg.TransformPhysicalPointToIndex(movingpnt) #px
-                        moving_px.append(idx_mri)
 
             #save files
             folder = f"{self.bids_base}/bids/sub-{self.animal_id}/ses-{samri_input['working_session'][0]}/registration"
             os.makedirs(folder, exist_ok=True)
-            np.save(f"{folder}/fixed_img-indeces.npy", np.array(fixed_px))
-            np.save(f"{folder}/moving_img_resampled25um-indeces.npy", np.array(moving_px))
+            _build_fixed_moving_correspondence(
+                fixedImg, movingImg, transform_moving2fixed,
+                f"{folder}/fixed_img-indeces.npy",
+                f"{folder}/moving_img_resampled25um-indeces.npy",
+            )
             shutil.copy(transformPath, f"{folder}/output_Composite.h5")
 
 

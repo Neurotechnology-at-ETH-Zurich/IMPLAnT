@@ -1110,7 +1110,15 @@ def biascorrect_only(bids_base, template,
             with open(path.join(workflow.base_dir, workdir_name, 'registration_parameters.txt'), 'w') as convert_file:
                 convert_file.write(json.dumps(GENERIC_PHASES))
 
-            result = workflow.run(plugin="MultiProc", plugin_args={'n_procs': n_jobs})
+            # SAMRI_PLUGIN=Linear runs every node serially in-process instead of via
+            # MultiProc's worker pool -- use it to diagnose a node crash whose
+            # exception got lost in transit back from a worker (pickling a failed
+            # result across process boundaries can silently swallow it, leaving
+            # MultiProc's scheduler waiting forever on a result that already died).
+            # Defaults to the normal MultiProc behaviour if unset.
+            _plugin = os.environ.get('SAMRI_PLUGIN', 'MultiProc')
+            _plugin_args = {'n_procs': n_jobs} if _plugin == 'MultiProc' else {}
+            result = workflow.run(plugin=_plugin, plugin_args=_plugin_args)
             copy_bids_files(bids_base, os.path.join(out_base, workflow_name))
             if not keep_work:
                 workdir = path.join(workflow.base_dir, workdir_name)
@@ -1323,7 +1331,15 @@ def structural(bids_base, template,
     with open(path.join(workflow.base_dir, workdir_name, 'registration_parameters.txt'), 'w') as convert_file:
         convert_file.write(json.dumps(GENERIC_PHASES))
 
-    result = workflow.run(plugin="MultiProc", plugin_args={'n_procs': n_jobs})
+    # SAMRI_PLUGIN=Linear runs every node serially in-process instead of via
+    # MultiProc's worker pool -- use it to diagnose a node crash whose
+    # exception got lost in transit back from a worker (pickling a failed
+    # result across process boundaries can silently swallow it, leaving
+    # MultiProc's scheduler waiting forever on a result that already died).
+    # Defaults to the normal MultiProc behaviour if unset.
+    _plugin = os.environ.get('SAMRI_PLUGIN', 'MultiProc')
+    _plugin_args = {'n_procs': n_jobs} if _plugin == 'MultiProc' else {}
+    result = workflow.run(plugin=_plugin, plugin_args=_plugin_args)
 
     copy_bids_files(bids_base, os.path.join(out_base, workflow_name))
     if not keep_work:
