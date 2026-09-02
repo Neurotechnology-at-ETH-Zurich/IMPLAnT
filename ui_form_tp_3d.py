@@ -107,6 +107,10 @@ class Ui_Form(object):
         self.gridLayout_2.setObjectName(u"gridLayout_2")
         self.pushButton_slicex_vis3D = QPushButton(self.frame_33)
         self.pushButton_slicex_vis3D.setObjectName(u"pushButton_slicex_vis3D")
+        font = QFont()
+        font.setPointSize(15)
+        font.setBold(True)
+        self.pushButton_slicex_vis3D.setFont(font)
         icon = QIcon()
         icon.addFile(u"Icons/mri/axis_x.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.pushButton_slicex_vis3D.setIcon(icon)
@@ -116,6 +120,7 @@ class Ui_Form(object):
 
         self.pushButton_slicez_vis3D = QPushButton(self.frame_33)
         self.pushButton_slicez_vis3D.setObjectName(u"pushButton_slicez_vis3D")
+        self.pushButton_slicez_vis3D.setFont(font)
         icon1 = QIcon()
         icon1.addFile(u"Icons/mri/axis_z.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.pushButton_slicez_vis3D.setIcon(icon1)
@@ -125,6 +130,7 @@ class Ui_Form(object):
 
         self.pushButton_slicey_vis3D = QPushButton(self.frame_33)
         self.pushButton_slicey_vis3D.setObjectName(u"pushButton_slicey_vis3D")
+        self.pushButton_slicey_vis3D.setFont(font)
         icon2 = QIcon()
         icon2.addFile(u"Icons/mri/axis_y.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.pushButton_slicey_vis3D.setIcon(icon2)
@@ -156,16 +162,19 @@ class Ui_Form(object):
 
         self.pushButton_alongTraj = QPushButton(self.frame_33)
         self.pushButton_alongTraj.setObjectName(u"pushButton_alongTraj")
+        self.pushButton_alongTraj.setFont(font)
 
         self.gridLayout_2.addWidget(self.pushButton_alongTraj, 2, 6, 1, 1)
 
         self.pushButton_pitch = QPushButton(self.frame_33)
         self.pushButton_pitch.setObjectName(u"pushButton_pitch")
+        self.pushButton_pitch.setFont(font)
 
         self.gridLayout_2.addWidget(self.pushButton_pitch, 2, 8, 1, 1)
 
         self.pushButton_roll = QPushButton(self.frame_33)
         self.pushButton_roll.setObjectName(u"pushButton_roll")
+        self.pushButton_roll.setFont(font)
 
         self.gridLayout_2.addWidget(self.pushButton_roll, 2, 7, 1, 1)
 
