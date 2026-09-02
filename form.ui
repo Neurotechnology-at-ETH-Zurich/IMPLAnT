@@ -10920,9 +10920,9 @@ background-color: rgb(131, 131, 131);
     <addaction name="actionQuit"/>
     <addaction name="actionNew_Window"/>
    </widget>
-   <widget class="QMenu" name="menuTools">
+   <widget class="QMenu" name="menuStructural_Tools">
     <property name="title">
-     <string>3D Tools</string>
+     <string>Structural Tools</string>
     </property>
     <addaction name="actionOpen_Session_2"/>
     <addaction name="separator"/>
@@ -10935,9 +10935,9 @@ background-color: rgb(131, 131, 131);
     <addaction name="actionSegmentation"/>
     <addaction name="separator"/>
    </widget>
-   <widget class="QMenu" name="menu4D_Tools">
+   <widget class="QMenu" name="menuTime_Series_Tools">
     <property name="title">
-     <string>4D Tools</string>
+     <string>Time-Series Tools</string>
     </property>
     <widget class="QMenu" name="menuElectrode_Localization">
      <property name="title">
@@ -10967,8 +10967,8 @@ background-color: rgb(131, 131, 131);
     <addaction name="separator"/>
    </widget>
    <addaction name="menuGUI"/>
-   <addaction name="menuTools"/>
-   <addaction name="menu4D_Tools"/>
+   <addaction name="menuStructural_Tools"/>
+   <addaction name="menuTime_Series_Tools"/>
    <addaction name="menuEphys_Analysis"/>
   </widget>
   <action name="actionOpen">

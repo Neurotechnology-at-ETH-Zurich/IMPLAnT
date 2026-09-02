@@ -10,7 +10,7 @@ Before changing a subsystem, read its architecture doc in [`docs/`](docs/):
 - [`intraoperative_architecture.md`](docs/intraoperative_architecture.md)
 - [`ephys_architecture.md`](docs/ephys_architecture.md)
 - [`samri_atlas_registration_architecture.md`](docs/samri_atlas_registration_architecture.md)
-- [`3d_viewer_and_tools_architecture.md`](docs/3d_viewer_and_tools_architecture.md), [`3d_visualisation_and_tools_architecture.md`](docs/3d_visualisation_and_tools_architecture.md), [`4d_visualisation_and_tools_architecture.md`](docs/4d_visualisation_and_tools_architecture.md)
+- [`3d_viewer_and_tools_architecture.md`](docs/3d_viewer_and_tools_architecture.md), [`structural_visualisation_and_tools_architecture.md`](docs/structural_visualisation_and_tools_architecture.md), [`time_series_visualisation_and_tools_architecture.md`](docs/time_series_visualisation_and_tools_architecture.md)
 - [`surgery_workflow.md`](docs/surgery_workflow.md)
 
 These explain how the pieces connect; the code alone won't make that obvious.

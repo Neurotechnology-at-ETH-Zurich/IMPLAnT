@@ -46,8 +46,8 @@ from PySide6 import QtWidgets
 from ephys.init_ephys import InitEphys
 from ephys.ui_dock_ephys import Ui_Dock_ephys
 from ephys.ui_tab_popups_ephys import Ui_tab as Ui_tab_popups_ephys
-from gui_utils.ui_tab_popups_4d import Ui_tab_15 as Ui_tab_popups_4d
-from file_handling.ui_tab_popups_4d_ii import Ui_tab_6 as Ui_tab_popups_4d_ii
+from gui_utils.ui_tab_popups_time_series import Ui_tab_15 as Ui_tab_popups_time_series
+from file_handling.ui_tab_popups_time_series_ii import Ui_tab_6 as Ui_tab_popups_time_series_ii
 from PySide6.QtCore import Qt, QCoreApplication, QResource, QSize
 from PySide6.QtWidgets import QLayout
 import qdarkstyle
@@ -110,12 +110,12 @@ class MainWindow(QMainWindow):
         # the original 7-tab layout: 0 PostSurgery, 1 tab_15, 2 tab_6, 3 tab_ephys,
         # 4 tab, 5 tab_samri, 6 surgery.
         self._load_split_ui(
-            Ui_tab_popups_4d,
-            lambda w: self.ui.tabWidget.insertTab(1, w, "Popups for 4D Data"),
+            Ui_tab_popups_time_series,
+            lambda w: self.ui.tabWidget.insertTab(1, w, "Popups for Time-Series Data"),
         )
         self._load_split_ui(
-            Ui_tab_popups_4d_ii,
-            lambda w: self.ui.tabWidget.insertTab(2, w, "Popups for 4D Data II"),
+            Ui_tab_popups_time_series_ii,
+            lambda w: self.ui.tabWidget.insertTab(2, w, "Popups for Time-Series Data II"),
         )
         self._load_split_ui(
             Ui_tab_popups_ephys,
@@ -240,15 +240,15 @@ class MainWindow(QMainWindow):
         self.ui.actionAtlas = QAction("Atlas…", self)
         self.ui.menuGUI.insertAction(self.ui.actionLoad_Prev_Session, self.ui.actionAtlas)
         self.ui.actionAtlas.triggered.connect(self.show_atlas_selector)
-        # per-tab "Open Session" placeholders: 3D/4D Tools -> mri (filtered by
+        # per-tab "Open Session" placeholders: Structural/Time-Series Tools -> mri (filtered by
         # dimensionality), Ephys Analysis -> ephys, Surgery -> samri
         self.ui.actionOpen_Session_2.triggered.connect(lambda: self.load_previous_session(['mri'], is_4d=False))
         self.ui.actionOpen_Session.triggered.connect(lambda: self.load_previous_session(['mri'], is_4d=True))
         self.ui.actionOpen_Session_3.triggered.connect(lambda: self.load_previous_session(['ephys']))
         self.ui.actionOpen_Session_4.triggered.connect(lambda: self.load_previous_session(['samri']))
 
-        # 3D Tools / 4D Tools / Ephys Analysis menu actions (besides "Open
-        # Session") only do anything once ButtonsGUI_3D/4D or InitEphys
+        # Structural Tools / Time-Series Tools / Ephys Analysis menu actions (besides "Open
+        # Session") only do anything once ButtonsGUI_Structural/4D or InitEphys
         # connects them, which only happens once a matching file is loaded --
         # grey them out until then instead of leaving them as silent no-ops.
         for action_name in ('actionRegister', 'actionResample', 'actionPaintbrush',
@@ -335,7 +335,7 @@ class MainWindow(QMainWindow):
         menu's global "Load Prev. File") shows all three; a single-element
         list (the per-tab "Open Session" actions) shows only that kind and
         adds a "Load New File..." button. `is_4d` further restricts 'mri'
-        entries to only 3D or only 4D files, for the 3D/4D Tools menus.
+        entries to only 3D or only 4D files, for the Structural/Time-Series Tools menus.
         """
         single_kind = kinds[0] if kinds and len(kinds) == 1 else None
         kinds = kinds or list(self._SESSION_KIND_LABELS)

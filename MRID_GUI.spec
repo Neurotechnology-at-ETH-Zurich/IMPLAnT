@@ -44,6 +44,15 @@ datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
 tmp_ret = collect_all('PySide6.QtSvg')
 datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
 
+# rippl-AI's actual runtime deps (see rippl-AI/aux_fcn.py's imports) --
+# tensorflow/xgboost are notorious for incomplete static-import discovery
+# under PyInstaller, so collect them explicitly rather than trust the
+# --ripple-worker sentinel branch's plain `import run_rippl` in
+# main_window.py to pull in everything transitively.
+for _pkg in ('tensorflow', 'tf_keras', 'xgboost', 'imblearn', 'matplotlib'):
+    tmp_ret = collect_all(_pkg)
+    datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
+
 # samri/bruker_info.json is a real, gitignored, per-user secret (scanner
 # hostname/password -- see README's "Bruker scanner" section), NOT
 # something to ever ship in a distributed build. A plain ('samri','samri')
@@ -64,8 +73,23 @@ for _root, _dirs, _files in os.walk('samri'):
         _src = os.path.join(_root, _fname)
         _samri_datas.append((_src, _root))
 
+# rippl-AI submodule: only what --ripple-worker's run_rippl.py actually
+# needs at inference time (rippl_AI.py/aux_fcn.py/run_rippl.py + the trained
+# model weights in optimized_models/) -- excludes .git (submodule metadata,
+# ~29MB), Models_output/figures/examples_explore/notebooks (training/docs
+# artifacts never imported by the inference path, ~50MB combined).
+_RIPPL_AI_EXCLUDE_DIRNAMES = {'.git', '__pycache__', 'Models_output', 'figures', 'examples_explore'}
+_rippl_ai_datas = []
+for _root, _dirs, _files in os.walk('rippl-AI'):
+    _dirs[:] = [d for d in _dirs if d not in _RIPPL_AI_EXCLUDE_DIRNAMES]
+    for _fname in _files:
+        if _fname.endswith('.ipynb'):
+            continue
+        _src = os.path.join(_root, _fname)
+        _rippl_ai_datas.append((_src, _root))
+
 # Project data files
-datas += _samri_datas + [
+datas += _samri_datas + _rippl_ai_datas + [
     ('paths_config.example.json', '.'),
     ('paths_config.py', '.'),
     ('Icons', 'Icons'),
@@ -104,12 +128,17 @@ a = Analysis(
 )
 pyz = PYZ(a.pure)
 
+# onedir, not onefile: --ripple-worker re-invokes this same exe as a
+# subprocess for every single ripple-detection call (see ephys/init_ephys.py)
+# -- a onefile build re-unpacks its ENTIRE bundle (tensorflow included) to a
+# fresh temp dir on every launch, which would mean paying that full cost on
+# every ripple-detection click. onedir sits already-unpacked on disk, so
+# re-invoking it is just launching an existing binary.
 exe = EXE(
     pyz,
     a.scripts,
-    a.binaries,
-    a.datas,
     [],
+    exclude_binaries=True,
     name='IMPLAnT',
     debug=False,
     bootloader_ignore_signals=False,
@@ -126,5 +155,14 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon='Icons/Github/IMPLAnT_logo.png',
+    icon='Icons/Github/IMPLAnT_quad.png',
+)
+coll = COLLECT(
+    exe,
+    a.binaries,
+    a.datas,
+    strip=False,
+    upx=True,
+    upx_exclude=_ANTS_TOOLS,
+    name='IMPLAnT',
 )

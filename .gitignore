@@ -30,3 +30,9 @@ ants/
 
 #Atlas bundle
 atlas_bundle/
+
+# Machine-specific desktop launcher (hardcodes an absolute home path)
+IMPLAnT.desktop
+
+# Large local data blob, not repo content
+csd.bin
