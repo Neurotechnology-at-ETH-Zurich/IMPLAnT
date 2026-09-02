@@ -15,7 +15,7 @@ from pypdf import PdfReader, PdfWriter
 import sys
 from gui_utils.busy_overlay import BusyOverlay
 from paths_config import get_raw_base
-from during_surgery.buttons_gui_surgery import build_skull_reference_scene, _PHOTO_CREDIT
+from intraoperative.buttons_gui_surgery import build_skull_reference_scene, _PHOTO_CREDIT
 from utils.zoom import Zoom
 
 class FileInput(QtWidgets.QDialog):
@@ -315,7 +315,7 @@ class FileOutput(QtWidgets.QDialog):
         """First page of the report: the exact same skull-reference photo
         (Bregma/Lambda markers, AP/RL axis indicator, per-shank insertion-
         point markers) the Surgery tab's widget_axialView shows -- built
-        from during_surgery/buttons_gui_surgery.py's own scene-construction
+        from intraoperative/buttons_gui_surgery.py's own scene-construction
         code (build_skull_reference_scene), not a re-derivation of it, so
         this page can never drift out of sync with what the Surgery tab
         actually displays. Rendered once, statically, so the plan carries

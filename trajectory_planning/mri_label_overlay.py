@@ -74,7 +74,10 @@ def load_or_build_mri_grid_correspondence(session_registration_dir, moving_img, 
     alongside them -- this correspondence is independent of which atlas is
     active (see rendering.py's reload_atlas_view: "both atlases share one
     coordinate grid"), so it only ever needs building once per session, not
-    on every atlas switch.
+    on every atlas switch. Rebuilt if the cache predates the SAMRI .npy
+    files it's derived from (e.g. after a re-registration), so a stale
+    cache from a previous, since-fixed or since-rerun registration doesn't
+    silently linger.
 
     The cache is keyed (via the filename) by moving_img_resampled's own
     voxel shape, NOT just session_registration_dir -- that directory's path
@@ -91,7 +94,11 @@ def load_or_build_mri_grid_correspondence(session_registration_dir, moving_img, 
         _CORRESPONDENCE_CACHE_FILENAME.replace(".npy", f"-{shape_tag}.npy"))
 
     fixed_idx = np.load(fixed_path).astype(np.int64)
-    if os.path.exists(cache_path):
+    cache_is_stale = (
+        os.path.exists(cache_path)
+        and os.path.getmtime(cache_path) < max(
+            os.path.getmtime(fixed_path), os.path.getmtime(moving_raw_path)))
+    if os.path.exists(cache_path) and not cache_is_stale:
         mri_grid_idx = np.load(cache_path)
     else:
         moving_idx_raw = np.load(moving_raw_path)
