@@ -1,0 +1,691 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>Dock_ephys</class>
+ <widget class="QWidget" name="Dock_ephys">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>650</width>
+    <height>867</height>
+   </rect>
+  </property>
+  <property name="minimumSize">
+   <size>
+    <width>650</width>
+    <height>0</height>
+   </size>
+  </property>
+  <layout class="QGridLayout" name="gridLayout_69" rowstretch="0,0,1,0,0,0" columnstretch="0,0,0,0,0,0,0,0">
+   <item row="1" column="4" colspan="4">
+    <widget class="QPushButton" name="pushButton_lfp">
+     <property name="toolTip">
+      <string>Jump half duration forward</string>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">QPushButton:checked {
+                background-color: palette(highlight);
+                color: palette(highlighted-text);
+            }
+            QPushButton:hover {
+                background-color: rgba(255, 255, 255, 30);
+                border-radius: 4px;
+            }</string>
+     </property>
+     <property name="text">
+      <string>Display LFP-filtered Data</string>
+     </property>
+     <property name="checkable">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item row="5" column="0" colspan="8">
+    <widget class="QGroupBox" name="groupBox_3">
+     <property name="minimumSize">
+      <size>
+       <width>0</width>
+       <height>0</height>
+      </size>
+     </property>
+     <property name="title">
+      <string/>
+     </property>
+     <property name="flat">
+      <bool>false</bool>
+     </property>
+     <layout class="QGridLayout" name="gridLayout_76" columnstretch="0,0,0,0,0,0,0">
+      <item row="0" column="4">
+       <widget class="QSpinBox" name="spinBox_startMs">
+        <property name="toolTip">
+         <string>Milliseconds component of the visible window's start time.</string>
+        </property>
+        <property name="suffix">
+         <string>ms</string>
+        </property>
+        <property name="maximum">
+         <number>1000</number>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="3">
+       <widget class="QSpinBox" name="spinBox_startS">
+        <property name="toolTip">
+         <string>Seconds component of the visible window's start time.</string>
+        </property>
+        <property name="suffix">
+         <string>s</string>
+        </property>
+        <property name="maximum">
+         <number>60</number>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="5">
+       <widget class="QLineEdit" name="lineEdit_2">
+        <property name="text">
+         <string>Duration (ms)</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="0">
+       <widget class="QLineEdit" name="lineEdit">
+        <property name="text">
+         <string>Start Time</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="2">
+       <widget class="QSpinBox" name="spinBox_startMin">
+        <property name="toolTip">
+         <string>Minutes component of the visible window's start time.</string>
+        </property>
+        <property name="suffix">
+         <string>min</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="6">
+       <widget class="QSpinBox" name="spinBox_duration">
+        <property name="toolTip">
+         <string>Length of the visible time window, in milliseconds.</string>
+        </property>
+        <property name="maximum">
+         <number>1000000</number>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item row="3" column="6">
+    <widget class="QPushButton" name="pushButton_selectTime">
+     <property name="toolTip">
+      <string>Select Time</string>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">QPushButton:checked {
+                background-color: palette(highlight);
+                color: palette(highlighted-text);
+            }
+            QPushButton:hover {
+                background-color: rgba(255, 255, 255, 30);
+                border-radius: 4px;
+            }</string>
+     </property>
+     <property name="text">
+      <string/>
+     </property>
+     <property name="icon">
+      <iconset>
+       <normaloff>Icons/ephys/select_time.png</normaloff>Icons/ephys/select_time.png</iconset>
+     </property>
+     <property name="iconSize">
+      <size>
+       <width>40</width>
+       <height>40</height>
+      </size>
+     </property>
+     <property name="checkable">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item row="3" column="1">
+    <widget class="QPushButton" name="pushButton_zoomReset">
+     <property name="enabled">
+      <bool>true</bool>
+     </property>
+     <property name="toolTip">
+      <string>Reset Zoom</string>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">
+            QPushButton:hover {
+                background-color: rgba(255, 255, 255, 30);
+                border-radius: 4px;
+            }</string>
+     </property>
+     <property name="text">
+      <string/>
+     </property>
+     <property name="icon">
+      <iconset>
+       <normaloff>Icons/ephys/zoom-in (1).png</normaloff>Icons/ephys/zoom-in (1).png</iconset>
+     </property>
+     <property name="iconSize">
+      <size>
+       <width>40</width>
+       <height>40</height>
+      </size>
+     </property>
+     <property name="checkable">
+      <bool>false</bool>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="0" colspan="8">
+    <widget class="PgWidget" name="widget_pgEphys" native="true">
+     <property name="palette">
+      <palette>
+       <active>
+        <colorrole role="Button">
+         <brush brushstyle="SolidPattern">
+          <color alpha="255">
+           <red>237</red>
+           <green>51</green>
+           <blue>59</blue>
+          </color>
+         </brush>
+        </colorrole>
+       </active>
+       <inactive>
+        <colorrole role="Button">
+         <brush brushstyle="SolidPattern">
+          <color alpha="255">
+           <red>237</red>
+           <green>51</green>
+           <blue>59</blue>
+          </color>
+         </brush>
+        </colorrole>
+       </inactive>
+       <disabled>
+        <colorrole role="Button">
+         <brush brushstyle="SolidPattern">
+          <color alpha="255">
+           <red>237</red>
+           <green>51</green>
+           <blue>59</blue>
+          </color>
+         </brush>
+        </colorrole>
+       </disabled>
+      </palette>
+     </property>
+    </widget>
+   </item>
+   <item row="3" column="4">
+    <widget class="QPushButton" name="pushButton_timeline">
+     <property name="enabled">
+      <bool>true</bool>
+     </property>
+     <property name="toolTip">
+      <string>Draw Timeline</string>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">QPushButton:checked {
+                background-color: palette(highlight);
+                color: palette(highlighted-text);
+            }
+            QPushButton:hover {
+                background-color: rgba(255, 255, 255, 30);
+                border-radius: 4px;
+            }</string>
+     </property>
+     <property name="text">
+      <string/>
+     </property>
+     <property name="icon">
+      <iconset>
+       <normaloff>Icons/ephys/select_timeline.png</normaloff>Icons/ephys/select_timeline.png</iconset>
+     </property>
+     <property name="iconSize">
+      <size>
+       <width>40</width>
+       <height>40</height>
+      </size>
+     </property>
+     <property name="checkable">
+      <bool>true</bool>
+     </property>
+     <property name="checked">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item row="3" column="7">
+    <widget class="QPushButton" name="pushButton_measurement">
+     <property name="enabled">
+      <bool>true</bool>
+     </property>
+     <property name="toolTip">
+      <string>Measure</string>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">QPushButton:checked {
+                background-color: palette(highlight);
+                color: palette(highlighted-text);
+            }
+            QPushButton:hover {
+                background-color: rgba(255, 255, 255, 30);
+                border-radius: 4px;
+            }</string>
+     </property>
+     <property name="text">
+      <string/>
+     </property>
+     <property name="icon">
+      <iconset>
+       <normaloff>Icons/mri/measure.png</normaloff>Icons/mri/measure.png</iconset>
+     </property>
+     <property name="iconSize">
+      <size>
+       <width>40</width>
+       <height>40</height>
+      </size>
+     </property>
+     <property name="checkable">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item row="0" column="4" colspan="4">
+    <widget class="QGroupBox" name="groupBox_1">
+     <property name="toolTip">
+      <string>Step through detected theta events, add one manually, and toggle event/cycle-boundary visibility.</string>
+     </property>
+     <property name="title">
+      <string>Theta Detection</string>
+     </property>
+     <layout class="QGridLayout" name="gridLayout_205">
+      <item row="0" column="0">
+       <widget class="QStackedWidget" name="stackedWidget_theta">
+        <property name="currentIndex">
+         <number>0</number>
+        </property>
+        <widget class="QWidget" name="page_27">
+         <layout class="QGridLayout" name="gridLayout_200">
+          <item row="2" column="2">
+           <widget class="QPushButton" name="pushButton_next_theta">
+            <property name="toolTip">
+             <string>Jump the view to the next detected theta event.</string>
+            </property>
+            <property name="text">
+             <string>Next Theta</string>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="0">
+           <widget class="QCheckBox" name="checkBox_thetaCycles">
+            <property name="toolTip">
+             <string>Show or hide the dotted theta-cycle boundary lines.</string>
+            </property>
+            <property name="text">
+             <string>Visible Phase Cycles</string>
+            </property>
+            <property name="checked">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="2">
+           <widget class="QPushButton" name="pushButton_add_theta">
+            <property name="toolTip">
+             <string>Add a theta event centered on the current view, then drag its edges into place.</string>
+            </property>
+            <property name="text">
+             <string>Add</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="0">
+           <widget class="QCheckBox" name="checkBox_theta">
+            <property name="toolTip">
+             <string>Show or hide theta event markers on the trace.</string>
+            </property>
+            <property name="text">
+             <string>Visible</string>
+            </property>
+            <property name="checked">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0">
+           <widget class="QPushButton" name="pushButton_prev_theta">
+            <property name="toolTip">
+             <string>Jump the view to the previous detected theta event.</string>
+            </property>
+            <property name="text">
+             <string>Previous Theta</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+        <widget class="QWidget" name="page_28">
+         <layout class="QGridLayout" name="gridLayout_204">
+          <item row="0" column="0">
+           <widget class="QLineEdit" name="lineEdit_63">
+            <property name="text">
+             <string>No File found. Please first do Ephys Analysis -&gt; Theta Detection</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item row="0" column="0" colspan="4">
+    <widget class="QGroupBox" name="groupBox_67">
+     <property name="toolTip">
+      <string>Step through detected ripple (SWR) events, add one manually, and toggle their visibility.</string>
+     </property>
+     <property name="title">
+      <string>Rippl-AI</string>
+     </property>
+     <layout class="QGridLayout" name="gridLayout_206">
+      <item row="0" column="0">
+       <widget class="QStackedWidget" name="stackedWidget_ripplAI">
+        <property name="currentIndex">
+         <number>0</number>
+        </property>
+        <widget class="QWidget" name="page_21">
+         <layout class="QGridLayout" name="gridLayout_197">
+          <item row="0" column="1">
+           <widget class="QPushButton" name="pushButton_addRipple">
+            <property name="toolTip">
+             <string>Add a ripple (SWR) event centered on the current view, then drag its edges into place.</string>
+            </property>
+            <property name="text">
+             <string>Add</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="QPushButton" name="pushButton_next_rippl">
+            <property name="toolTip">
+             <string>Jump the view to the next detected ripple (SWR).</string>
+            </property>
+            <property name="text">
+             <string>Next SWR</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="0">
+           <widget class="QCheckBox" name="checkBox_ripplAI">
+            <property name="toolTip">
+             <string>Show or hide ripple (SWR) event markers on the trace.</string>
+            </property>
+            <property name="text">
+             <string>Visible</string>
+            </property>
+            <property name="checked">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QPushButton" name="pushButton_prev_rippl">
+            <property name="toolTip">
+             <string>Jump the view to the previous detected ripple (SWR).</string>
+            </property>
+            <property name="text">
+             <string>Previous SWR</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+        <widget class="QWidget" name="page_22">
+         <layout class="QGridLayout" name="gridLayout_198">
+          <item row="0" column="0">
+           <widget class="QLineEdit" name="lineEdit_18">
+            <property name="text">
+             <string>No File found. Please first do Ephys Analysis -&gt; Rippl AI</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item row="3" column="2">
+    <widget class="QPushButton" name="pushButtonAmp_plus">
+     <property name="toolTip">
+      <string>Increase Amplitude</string>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">
+            QPushButton:hover {
+                background-color: rgba(255, 255, 255, 30);
+                border-radius: 4px;
+            }</string>
+     </property>
+     <property name="text">
+      <string/>
+     </property>
+     <property name="icon">
+      <iconset>
+       <normaloff>Icons/ephys/amplitude_plus.png</normaloff>Icons/ephys/amplitude_plus.png</iconset>
+     </property>
+     <property name="iconSize">
+      <size>
+       <width>40</width>
+       <height>40</height>
+      </size>
+     </property>
+     <property name="checkable">
+      <bool>false</bool>
+     </property>
+    </widget>
+   </item>
+   <item row="3" column="3">
+    <widget class="QPushButton" name="pushButtonAmp_minus">
+     <property name="toolTip">
+      <string>Decrease Amplitude</string>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">
+            QPushButton:hover {
+                background-color: rgba(255, 255, 255, 30);
+                border-radius: 4px;
+            }</string>
+     </property>
+     <property name="text">
+      <string/>
+     </property>
+     <property name="icon">
+      <iconset>
+       <normaloff>Icons/ephys/amplitude_minus.png</normaloff>Icons/ephys/amplitude_minus.png</iconset>
+     </property>
+     <property name="iconSize">
+      <size>
+       <width>40</width>
+       <height>40</height>
+      </size>
+     </property>
+     <property name="checkable">
+      <bool>false</bool>
+     </property>
+    </widget>
+   </item>
+   <item row="3" column="0">
+    <widget class="QPushButton" name="pushButton_zoomIn">
+     <property name="toolTip">
+      <string>Left-drag mode: draw a rubber-band box to zoom into that time/channel range.</string>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">QPushButton:checked {
+                background-color: palette(highlight);
+                color: palette(highlighted-text);
+            }
+            QPushButton:hover {
+                background-color: rgba(255, 255, 255, 30);
+                border-radius: 4px;
+            }</string>
+     </property>
+     <property name="text">
+      <string/>
+     </property>
+     <property name="icon">
+      <iconset>
+       <normaloff>Icons/ephys/zoom_in.png</normaloff>Icons/ephys/zoom_in.png</iconset>
+     </property>
+     <property name="iconSize">
+      <size>
+       <width>40</width>
+       <height>40</height>
+      </size>
+     </property>
+     <property name="checkable">
+      <bool>true</bool>
+     </property>
+     <property name="checked">
+      <bool>false</bool>
+     </property>
+    </widget>
+   </item>
+   <item row="3" column="5">
+    <widget class="QPushButton" name="pushButton_zoomOut">
+     <property name="enabled">
+      <bool>true</bool>
+     </property>
+     <property name="toolTip">
+      <string>Zoom Out</string>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">
+            QPushButton:hover {
+                background-color: rgba(255, 255, 255, 30);
+                border-radius: 4px;
+            }</string>
+     </property>
+     <property name="text">
+      <string/>
+     </property>
+     <property name="icon">
+      <iconset>
+       <normaloff>Icons/ephys/zoom-out.png</normaloff>Icons/ephys/zoom-out.png</iconset>
+     </property>
+     <property name="iconSize">
+      <size>
+       <width>40</width>
+       <height>40</height>
+      </size>
+     </property>
+     <property name="checkable">
+      <bool>false</bool>
+     </property>
+    </widget>
+   </item>
+   <item row="1" column="0" colspan="4">
+    <widget class="QPushButton" name="pushButton_broadband">
+     <property name="toolTip">
+      <string>Show the raw broadband trace instead of the filtered LFP.</string>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">QPushButton:checked {
+                background-color: palette(highlight);
+                color: palette(highlighted-text);
+            }
+            QPushButton:hover {
+                background-color: rgba(255, 255, 255, 30);
+                border-radius: 4px;
+            }</string>
+     </property>
+     <property name="text">
+      <string>Display raw Data</string>
+     </property>
+     <property name="checkable">
+      <bool>true</bool>
+     </property>
+     <property name="checked">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item row="4" column="1" colspan="6">
+    <widget class="QSlider" name="horizontalSlider_ephys">
+     <property name="toolTip">
+      <string>Scrub through the recording; position corresponds to the start of the visible time window.</string>
+     </property>
+     <property name="singleStep">
+      <number>100</number>
+     </property>
+     <property name="pageStep">
+      <number>1000</number>
+     </property>
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+    </widget>
+   </item>
+   <item row="4" column="0">
+    <widget class="QPushButton" name="pushButton_Timeprev">
+     <property name="toolTip">
+      <string>Jump half duration backwards</string>
+     </property>
+     <property name="text">
+      <string/>
+     </property>
+     <property name="icon">
+      <iconset theme="QIcon::ThemeIcon::MediaSeekBackward"/>
+     </property>
+    </widget>
+   </item>
+   <item row="4" column="7">
+    <widget class="QPushButton" name="pushButton_Timenext">
+     <property name="toolTip">
+      <string>Jump half duration forward</string>
+     </property>
+     <property name="text">
+      <string/>
+     </property>
+     <property name="icon">
+      <iconset theme="QIcon::ThemeIcon::MediaSeekForward"/>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>PgWidget</class>
+   <extends>QWidget</extends>
+   <header>pgwidget</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
+ <tabstops>
+  <tabstop>pushButton_zoomOut</tabstop>
+  <tabstop>pushButton_selectTime</tabstop>
+  <tabstop>pushButton_measurement</tabstop>
+  <tabstop>lineEdit_2</tabstop>
+  <tabstop>spinBox_startMs</tabstop>
+  <tabstop>spinBox_startS</tabstop>
+  <tabstop>spinBox_startMin</tabstop>
+  <tabstop>spinBox_duration</tabstop>
+  <tabstop>lineEdit</tabstop>
+  <tabstop>horizontalSlider_ephys</tabstop>
+ </tabstops>
+ <resources/>
+ <connections/>
+</ui>

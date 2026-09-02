@@ -169,9 +169,15 @@ background-color: rgb(131, 131, 131);
      <property name="frameShape">
       <enum>QFrame::NoFrame</enum>
      </property>
-     <layout class="QGridLayout" name="gridLayout_2" rowminimumheight="1,0,0,0" columnminimumwidth="1,1,1,1,1,1,0,0,0">
+     <layout class="QGridLayout" name="gridLayout_2" rowminimumheight="1,0,0" columnminimumwidth="1,1,1,1,1,1,0,0,0">
       <item row="2" column="3">
        <widget class="QPushButton" name="pushButton_slicex_vis3D">
+        <property name="font">
+         <font>
+          <pointsize>15</pointsize>
+          <bold>true</bold>
+         </font>
+        </property>
         <property name="toolTip">
          <string>Select the sagittal (x) axis -- the step buttons below then move the selected shank along it</string>
         </property>
@@ -192,6 +198,12 @@ background-color: rgb(131, 131, 131);
       </item>
       <item row="2" column="5">
        <widget class="QPushButton" name="pushButton_slicez_vis3D">
+        <property name="font">
+         <font>
+          <pointsize>15</pointsize>
+          <bold>true</bold>
+         </font>
+        </property>
         <property name="toolTip">
          <string>Select the axial (z) axis -- the step buttons below then move the selected shank along it</string>
         </property>
@@ -212,6 +224,12 @@ background-color: rgb(131, 131, 131);
       </item>
       <item row="2" column="4">
        <widget class="QPushButton" name="pushButton_slicey_vis3D">
+        <property name="font">
+         <font>
+          <pointsize>15</pointsize>
+          <bold>true</bold>
+         </font>
+        </property>
         <property name="toolTip">
          <string>Select the coronal (y) axis -- the step buttons below then move the selected shank along it</string>
         </property>
@@ -289,6 +307,12 @@ background-color: rgb(131, 131, 131);
       </item>
       <item row="2" column="6">
        <widget class="QPushButton" name="pushButton_alongTraj">
+        <property name="font">
+         <font>
+          <pointsize>15</pointsize>
+          <bold>true</bold>
+         </font>
+        </property>
         <property name="toolTip">
          <string>Select the shank's own insert-to-deep axis -- the step buttons below then move it deeper/shallower along its own trajectory</string>
         </property>
@@ -300,6 +324,12 @@ background-color: rgb(131, 131, 131);
       </item>
       <item row="2" column="8">
        <widget class="QPushButton" name="pushButton_pitch">
+        <property name="font">
+         <font>
+          <pointsize>15</pointsize>
+          <bold>true</bold>
+         </font>
+        </property>
         <property name="text">
          <string>pitch</string>
         </property>
@@ -307,6 +337,12 @@ background-color: rgb(131, 131, 131);
       </item>
       <item row="2" column="7">
        <widget class="QPushButton" name="pushButton_roll">
+        <property name="font">
+         <font>
+          <pointsize>15</pointsize>
+          <bold>true</bold>
+         </font>
+        </property>
         <property name="text">
          <string>roll</string>
         </property>
