@@ -676,6 +676,36 @@ class ObliqueInteractorStyle(vtk.vtkInteractorStyleImage):
         self.AddObserver("LeftButtonPressEvent", self.on_left_button_down)
         self.AddObserver("LeftButtonReleaseEvent", self.on_left_button_up)
         self.AddObserver("MouseMoveEvent", self.on_mouse_move)
+        # Right-drag zoom/middle-drag pan are NOT free from vtkInteractorStyleImage
+        # just by leaving them un-observed -- CustomInteractorStyle (the real
+        # views' own style) explicitly wires RightButtonPress/ReleaseEvent and
+        # calls super().OnRightButtonDown()/Up() itself (see its own on_right_
+        # button_down), including SetDefaultRenderer(renderer) first. Without
+        # that, this style's right-drag silently did nothing at all -- adding a
+        # Python-level AddObserver for OTHER events on this same vtkObject
+        # apparently doesn't leave right/middle-button dispatch working purely
+        # on the C++ base class's own defaults either.
+        self.AddObserver("RightButtonPressEvent", self.on_right_button_down)
+        self.AddObserver("RightButtonReleaseEvent", self.on_right_button_up)
+        self.AddObserver("MiddleButtonPressEvent", self.on_middle_button_down)
+        self.AddObserver("MiddleButtonReleaseEvent", self.on_middle_button_up)
+
+    def _renderer(self):
+        return self.GetInteractor().GetRenderWindow().GetRenderers().GetFirstRenderer()
+
+    def on_right_button_down(self, obj, event):
+        self.SetDefaultRenderer(self._renderer())
+        super().OnRightButtonDown()
+
+    def on_right_button_up(self, obj, event):
+        super().OnRightButtonUp()
+
+    def on_middle_button_down(self, obj, event):
+        self.SetDefaultRenderer(self._renderer())
+        super().OnMiddleButtonDown()
+
+    def on_middle_button_up(self, obj, event):
+        super().OnMiddleButtonUp()
 
     def _move_cursor_to_event(self):
         """Pick the current mouse position against this oblique view's

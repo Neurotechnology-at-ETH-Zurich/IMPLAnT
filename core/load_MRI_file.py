@@ -170,7 +170,6 @@ class LoadMRI(QObject):
         #Trajectory Planning
         if hasattr(self,'TrajPlanning'):
             self.TrajPlanning.check_points_in_slice()
-            self.TrajPlanning.update_coronal_plane_line()
 
         #Electrode Localization
         if hasattr(self,'ElectrodeLoc'):
