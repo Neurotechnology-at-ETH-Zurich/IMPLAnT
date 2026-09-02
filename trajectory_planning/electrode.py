@@ -1,155 +1,18 @@
 # This Python file uses the following encoding: utf-8
-import os
 import numpy as np
 from vtkmodules.vtkFiltersSources import vtkRegularPolygonSource
 from vtkmodules.vtkRenderingCore import vtkActor, vtkPolyDataMapper
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QMessageBox
-from mrid_utils.channel_mapper import plot_dwi_1D_cross_section
 from utils.zoom import Zoom
 from trajectory_planning.file_input_output import FileOutput
 from gui_utils.busy_overlay import BusyOverlay
-from paths_config import _paths
 
 class ElecGeometry:
-    def get_deepest_point(self):
-        self.selecting_point = True
-        self.coords_deepest_point[self.shank_number] = self.LoadMRI.slice_indices[0][::-1].copy()
-        self.set_value(self.coords_deepest_point[self.shank_number].copy(),self.ui.spinBox_tp_deep_x,self.ui.spinBox_tp_deep_y,self.ui.spinBox_tp_deep_z)
-
-        #draw deep green
-        self.draw_point(self.coords_deepest_point[self.shank_number],(0,1,0),'deep')
-
-        self.mri_deep[self.shank_number] = self.atlas_to_mri_coordinates(tuple(int(x) for x in self.coords_deepest_point[self.shank_number])) #xyz
-        if self.mri_insert[self.shank_number] is not None:
-            self.calculate_distance(self.mri_deep[self.shank_number],self.mri_insert[self.shank_number])
-            self.create_channel_list()
-
-        self.selecting_point = False
-        self.render()
-
-
-
-    def get_insert_point(self):
-        self.selecting_point = True
-        self.coords_insert_point[self.shank_number] = self.get_point_at_edge(self.edge_mask, self.clicked_viewname)
-
-        self.set_value(self.coords_insert_point[self.shank_number].copy(),self.ui.spinBox_tp_insert_x,self.ui.spinBox_tp_insert_y,self.ui.spinBox_tp_insert_z)
-
-        #draw insert red
-        self.draw_point(self.coords_insert_point[self.shank_number],(1,0,0),'insert')
-        self.mri_insert[self.shank_number] = self.atlas_to_mri_coordinates(tuple(int(x) for x in self.coords_insert_point[self.shank_number])) #xyz
-        if self.mri_deep[self.shank_number] is not None:
-            self.calculate_distance(self.mri_deep[self.shank_number],self.mri_insert[self.shank_number])
-            self.create_channel_list()
-
-        self.selecting_point = False
-        self.render()
-
-
-
-    def change_insert_point(self):
-        self.coords_insert_point[self.shank_number] = [self.ui.spinBox_tp_insert_x.value()-1,self.ui.spinBox_tp_insert_y.value()-1,self.ui.spinBox_tp_insert_z.value()-1]
-        self.draw_point(self.coords_insert_point[self.shank_number],(0,1,0),'insert')
-        self.mri_insert[self.shank_number] = self.atlas_to_mri_coordinates(tuple(int(x) for x in self.coords_insert_point[self.shank_number]))
-        if self.mri_deep[self.shank_number] is not None:
-            self.calculate_distance(self.mri_deep[self.shank_number],self.mri_insert[self.shank_number])
-            self.create_channel_list()
-
-        self.render()
-
-    def change_deepest_point(self):
-        self.coords_deepest_point[self.shank_number] = [self.ui.spinBox_tp_deep_x.value()-1,self.ui.spinBox_tp_deep_y.value()-1,self.ui.spinBox_tp_deep_z.value()-1]
-        self.draw_point(self.coords_deepest_point[self.shank_number],(0,1,0),'deep')
-        self.mri_deep[self.shank_number] = self.atlas_to_mri_coordinates(tuple(int(x) for x in self.coords_deepest_point[self.shank_number]))
-        if self.mri_insert[self.shank_number] is not None:
-            self.calculate_distance(self.mri_deep[self.shank_number],self.mri_insert[self.shank_number])
-            self.create_channel_list()
-
-        self.render()
-
     def change_shank_parameters(self):
         if self.coords_deepest_point[self.shank_number] is not None and self.coords_insert_point[self.shank_number] is not None:
             self.create_channel_list()
 
         self.render()
-
-
-    def create_channel_list(self):
-        self.ui.pushButton_coronalView.setEnabled(True)
-        self.ui.pushButton_sagittalView.setEnabled(True)
-        self.ui.pushButton_axialView.setEnabled(True)
-
-        self.direction_atlas[self.shank_number] = (np.array(self.coords_insert_point[self.shank_number]) - np.array(self.coords_deepest_point[self.shank_number]))
-        self.direction_atlas[self.shank_number] = self.direction_atlas[self.shank_number] / np.linalg.norm(self.direction_atlas[self.shank_number])
-        physical_per_atlas_voxel = np.linalg.norm(self.direction_atlas[self.shank_number] * np.array(self.fixedImg.GetSpacing()))
-
-        dfx_shank = self.dfx_shank_data.get(self.shank_number)
-        if dfx_shank is not None:
-            # Use the DXF-bent contact depths (distance from the deepest/tip
-            # contact, in um) directly along the deepest->insert axis; the
-            # lateral (X) bundling offset has no defined direction in 3D
-            # (the probe's roll around this axis is unknown), so it is
-            # collapsed/ignored here.
-            depth_um = dfx_shank["geometry"][:, 1]
-            offsets_atlas = (depth_um / 1000) / physical_per_atlas_voxel
-            self.channel_points[self.shank_number] = (
-                self.coords_deepest_point[self.shank_number]
-                + offsets_atlas[:, None] * self.direction_atlas[self.shank_number])
-            self.atlas_shank_end[self.shank_number] = self.channel_points[self.shank_number][
-                np.argmax(depth_um)]
-            num_channels = depth_um.shape[0]
-        else:
-            num_channels = self.ui.spinBox_tp_channels.value()
-            d_separation_atlas = (self.ui.spinBox_tp_separation.value() / 1000) / physical_per_atlas_voxel
-            self.atlas_shank_end[self.shank_number] = self.coords_deepest_point[self.shank_number] + (num_channels-1)*d_separation_atlas*self.direction_atlas[self.shank_number]
-            self.channel_points[self.shank_number] = np.array([self.coords_deepest_point[self.shank_number] + i * d_separation_atlas * self.direction_atlas[self.shank_number] for i in range(num_channels)])
-
-        # The insertion-refinement page (page_31) temporarily swaps the
-        # displayed volume from the atlas to the subject's own MRI (see
-        # _enter_mri_space_for_insertion) so the user can see the real
-        # skull -- self.LoadMRI.renderers[0][view_name] is the MRI-space
-        # renderer for the whole time picking_insertion_point is True, so
-        # drawing this atlas-voxel-coordinate line onto it would place it
-        # nonsensically. The numeric geometry above (direction_atlas,
-        # channel_points, atlas_shank_end) is still needed live for the
-        # PDF report though, so only the rendering is skipped here --
-        # _return_to_atlas_space() re-runs this for every shank once
-        # picking is done, drawing all of this properly.
-        if not getattr(self.LoadMRI, 'picking_insertion_point', False):
-            #line
-            vtk_color = self.get_shank_vtk_color(self.shank_number)
-            for view_name in 'axial','sagittal','coronal':
-                if view_name in self.line_actor[self.shank_number]:
-                    for a in self.line_actor[self.shank_number][view_name]:
-                        self.LoadMRI.renderers[0][view_name].RemoveActor(a)
-                    self.LoadMRI.renderers[0][view_name].RemoveActor(self.label_actor[self.shank_number][view_name])
-                self.line_actor[self.shank_number][view_name], self.label_actor[self.shank_number][view_name] = self.draw_electrode_line(view_name, self.coords_deepest_point[self.shank_number], self.atlas_shank_end[self.shank_number], color=vtk_color)
-                for a in self.line_actor[self.shank_number][view_name]:
-                    self.LoadMRI.renderers[0][view_name].AddActor(a)
-                self.LoadMRI.renderers[0][view_name].AddActor(self.label_actor[self.shank_number][view_name])
-            self.render()
-            if hasattr(self, 'atlas_bregma_coords'):
-                self.update_shank_angle_display()
-                self.update_coronal_plane_line()
-
-            # recenter=False here -- this is an automatic refresh after an edit
-            # to the shank's own geometry (e.g. a 3D-window nudge), not the user
-            # explicitly switching to this view, so keep whatever pan/zoom/
-            # rotation they already have on it instead of snapping back to
-            # centered on every single edit.
-            if self.ui.stackedWidget_coronal.currentIndex() == 2: #coronal
-                self.change_view_coronal(checked=False, recenter=False)
-            if self.ui.stackedWidget_sagittal.currentIndex() == 2: #coronal
-                self.change_view_sagittal(checked=False, recenter=False)
-        atlas_values = [self.atlas_vol[tuple(np.round(p[::-1]).astype(int))] for p in self.channel_points[self.shank_number]]
-        region_name = [self.tp_labels[val][4] for val in atlas_values]
-        self.check_CA1_or_2(region_name,self.channel_points[self.shank_number],num_channels)
-        self.check_region_to_avoid()
-        self.check_shank_intersections()
-        if hasattr(self, 'shank_sidebar'):
-            self.shank_sidebar.refresh()
-        if self.tp3d_window is not None:
-            self.tp3d_window.refresh_shanks()
 
 
     def check_region_to_avoid(self):
@@ -172,46 +35,6 @@ class ElecGeometry:
             msg_box.addButton("OK", QMessageBox.ActionRole)
             msg_box.exec()
 
-
-    def check_shank_intersections(self):
-        """Warn if the current shank's deep->insert line crosses (or passes
-        implausibly close to) any other shank's line -- two physical
-        probes can't occupy the same space, so this is a real planning
-        error, not just a soft "too close for comfort" hint. Same trigger
-        point/style as check_region_to_avoid."""
-        spacing = np.array(self.fixedImg.GetSpacing())
-        deep = self.coords_deepest_point.get(self.shank_number)
-        insert = self.coords_insert_point.get(self.shank_number)
-        if deep is None or insert is None:
-            return
-        deep_mm = np.array(deep, dtype=float) * spacing
-        insert_mm = np.array(insert, dtype=float) * spacing
-
-        # Sub-voxel threshold: below this, the two shank lines are
-        # effectively occupying the same physical location.
-        TOUCH_DIST_MM = 0.05
-        hit_shanks = []
-        for other_idx, other_deep in self.coords_deepest_point.items():
-            if other_idx == self.shank_number or other_deep is None:
-                continue
-            other_insert = self.coords_insert_point.get(other_idx)
-            if other_insert is None:
-                continue
-            other_deep_mm = np.array(other_deep, dtype=float) * spacing
-            other_insert_mm = np.array(other_insert, dtype=float) * spacing
-            dist = self._segment_segment_distance(
-                deep_mm, insert_mm, other_deep_mm, other_insert_mm)
-            if dist < TOUCH_DIST_MM:
-                hit_shanks.append(other_idx)
-
-        if hit_shanks:
-            shanks_str = ", ".join(str(i + 1) for i in sorted(hit_shanks))
-            msg_box = QMessageBox()
-            msg_box.setWindowTitle("Warning")
-            msg_box.setText(
-                f"Shank {self.shank_number + 1} intersects with shank(s) {shanks_str}!")
-            msg_box.addButton("OK", QMessageBox.ActionRole)
-            msg_box.exec()
 
     @staticmethod
     def _segment_segment_distance(p1, p2, p3, p4):
@@ -242,34 +65,6 @@ class ElecGeometry:
         closest2 = p3 + d2 * t
         return float(np.linalg.norm(closest1 - closest2))
 
-    def check_CA1_or_2(self,regionNames,points,num_channels):
-        ca1_region_name = _paths.get('atlas_ca1_region_name', "Cornu ammonis 1")
-        # Not every atlas has a DWI volume (see ATLASES[...]['has_dwi']) --
-        # without self.dwi there's no signal to probe CA1's darkest voxel
-        # with, so the pyramidal-layer detector has nothing to work from.
-        if ca1_region_name in regionNames and hasattr(self, 'dwi'):
-            self.ui.pushButton_PyLdetection.setEnabled(True)
-
-            minPixVal = 2e16
-            pyrChIdx = 0
-            dwi1Dsignal = np.zeros((num_channels,))
-
-            for idx, point in enumerate(points):
-                z, y, x = [int(c) for c in point]
-                dwi1Dsignal[idx] = self.dwi[x, y, z]
-
-                if regionNames[idx] == ca1_region_name:
-                    if dwi1Dsignal[idx] < minPixVal:
-                        minPixVal = dwi1Dsignal[idx]
-                        pyrChIdx = idx
-
-            plot_dwi_1D_cross_section(dwi1Dsignal,regionNames,pyrChIdx,num_channels,mplwidget=self.ui.tp_dwi1D_widget)
-        else:
-            self.ui.pushButton_PyLdetection.setEnabled(False)
-            if hasattr(self.ui.tp_dwi1D_widget, 'canvas'):
-                self.ui.tp_dwi1D_widget.canvas.figure.clear()
-                self.ui.tp_dwi1D_widget.canvas.draw()
-
     def show_canvas(self):
         if not hasattr(self, 'dwi_window'):
             self.dwi_window = QWidget()
@@ -294,128 +89,9 @@ class ElecGeometry:
     # mri_insert), converting back to an atlas-space equivalent
     # (coords_insert_point, via the approximate mri_to_atlas_via_lookup)
     # only for bookkeeping the rest of the app still reads.
-    def enter_insertion_refinement_page(self):
-        missing = [idx + 1 for idx in sorted(self.coords_deepest_point)
-                   if self.coords_deepest_point.get(idx) is None
-                   or self.coords_insert_point.get(idx) is None
-                   or self.direction_atlas.get(idx) is None]
-        if missing:
-            msg_box = QMessageBox(self.MW)
-            msg_box.setWindowTitle("Insertion Points Incomplete")
-            msg_box.setText(
-                "Every shank needs both an insertion and a deepest point "
-                "before continuing -- missing for shank(s): "
-                + ", ".join(str(i) for i in missing))
-            msg_box.addButton("OK", QMessageBox.ActionRole)
-            msg_box.exec()
-            return
-
-        self._insertion_confirmed = set()
-        self.ui.stackedWidget_trajectoryplanning.setCurrentIndex(2)
-        self.MW.overlay = BusyOverlay(self.MW, message="Loading MRI view, please wait…")
-        self.MW.overlay.run(self._enter_insertion_refinement_page_continued)
-
     def _enter_insertion_refinement_page_continued(self):
         self._enter_mri_space_for_insertion()
         self._switch_insertion_shank_mri(0)
-
-    def _enter_mri_space_for_insertion(self):
-        """Swap the displayed volume from the atlas back to the subject's
-        own resampled MRI working volume (the exact file movingImg_resampled
-        was built from, and mri_deep/mri_insert are indexed against --
-        NOT self.MW.data_pre_resampled, which is the original, non-resampled
-        scan used elsewhere only for filename display) -- same restart_gui
-        mechanism do_get_shank_line uses for the opposite direction.
-        Destroys and rebuilds every 2D-view renderer/actor, so every
-        atlas-space actor dict is reset here; _return_to_atlas_space (called
-        once picking is done) does the same in reverse and redraws them
-        properly."""
-        self.MW.restart_gui(self._mri_working_volume_path, full_restart=False,
-                             label_file=False, data_view='coronal')
-        self.LoadMRI = self.MW.LoadMRI
-        self.LoadMRI.TrajPlanning = self
-        self.LoadMRI.picking_insertion_point = True
-
-        self.point_actor_bregma = {}
-        self.point_actor_lambda = {}
-        for shank_idx in self.coords_deepest_point:
-            self.point_actor_deep[shank_idx] = {}
-            self.point_actor_insert[shank_idx] = {}
-            self.line_actor[shank_idx] = {}
-            self.label_actor[shank_idx] = {}
-        self._insertion_guide_actor = {}
-        self._mri_marker_actor = {'deep': {}, 'insert': {}}
-
-        # shank add/remove and the atlas-space combo/3D-view controls don't
-        # make sense mid-refinement -- comboBox_insertion_shank/NEXT are the
-        # only way to switch shanks while this page is up
-        for w in (self.ui.comboBox_Shanks, self.ui.comboBox_geometry_shanks,
-                  self.ui.pushButton_addShank, self.ui.pushButton_removeShank,
-                  self.ui.pushButton_coronalView, self.ui.pushButton_sagittalView,
-                  self.ui.pushButton_axialView):
-            w.setEnabled(False)
-
-    def _return_to_atlas_space(self):
-        """Swap the 2D-slice display back to the atlas once every shank's
-        insertion point has been click-confirmed, and rebuild everything
-        that was torn down entering MRI space (edge mask, atlas reference
-        points, per-shank lines/channels) -- mirrors do_get_shank_line's
-        own post-restart setup, minus the parts that are only valid to run
-        once per session (signal connections, the one-time forbidden-
-        region overlay reload, the insertion-step popup). Not
-        needed for the PDF report itself -- see on_next_shank_clicked --
-        only for continued interactive use of page_6/the 2D views."""
-        path_main = os.path.join(_paths['atlas_folder'], _paths['atlas_volume'])
-        self.MW.restart_gui(path_main, full_restart=False, label_file=True, data_view='coronal')
-        self.LoadMRI = self.MW.LoadMRI
-        self.LoadMRI.TrajPlanning = self
-        self.LoadMRI.picking_insertion_point = False
-        self.tp_labels = self.LoadMRI.tp_labels
-        self.update_voxel_spinbox_ranges()
-
-        self.LoadMRI.tp_imgvtk = {}
-        self.LoadMRI.tp_actor = {}
-        self.LoadMRI.tp_renderer = {}
-        self.create_edge_mask()
-        self.draw_atlas_reference_points()
-
-        self.point_actor_bregma = {}
-        self.point_actor_lambda = {}
-        for shank_idx in self.coords_deepest_point:
-            self.point_actor_deep[shank_idx] = {}
-            self.point_actor_insert[shank_idx] = {}
-            self.line_actor[shank_idx] = {}
-            self.label_actor[shank_idx] = {}
-        self._insertion_guide_actor = {}
-        self._mri_marker_actor = {'deep': {}, 'insert': {}}
-
-        if not self._overlay_layers_reloaded:
-            region_to_avoid_img = getattr(self, 'region_to_avoid_img', None)
-            if region_to_avoid_img is not None:
-                self.MW.FileLoader.layer_index += 1
-                self.MW.FileLoader.initialize_file(region_to_avoid_img, self.MW.FileLoader.layer_index, 'coronal', 0)
-            self._overlay_layers_reloaded = True
-
-        # Vis3D itself is NOT rebuilt here -- its plotters live in their own
-        # persistent widgets (vtkWidget_trajPlan_*), entirely separate from
-        # LoadMRI.vtk_widgets/renderers (the ones restart_gui just tore down
-        # and rebuilt above), and its own atlas meshes (background_small
-        # etc.) were snapshotted once when it was first built -- it stays
-        # perfectly valid across this whole atlas<->MRI round trip.
-        for idx in sorted(self.coords_deepest_point):
-            self.shank_number = idx
-            self.create_channel_list()
-        self.init_page30_mirror()
-
-        for w in (self.ui.comboBox_Shanks, self.ui.comboBox_geometry_shanks,
-                  self.ui.pushButton_addShank, self.ui.pushButton_removeShank,
-                  self.ui.pushButton_coronalView, self.ui.pushButton_sagittalView,
-                  self.ui.pushButton_axialView):
-            w.setEnabled(True)
-        self.select_shank(self.shank_number)
-        # done refining -- land back on the main shank workspace instead of
-        # leaving page_31's now-purposeless NEXT/Save-as-PDF controls up
-        self.ui.stackedWidget_trajectoryplanning.setCurrentIndex(1)
 
     def _switch_insertion_shank_mri(self, index):
         """comboBox_insertion_shank/NEXT's shank-switch handler while page_31
@@ -565,57 +241,6 @@ class ElecGeometry:
                 actor.GetProperty().SetOpacity(0.9)
                 self.LoadMRI.renderers[0][view_name].AddActor(actor)
                 self._mri_marker_actor[kind][view_name] = actor
-
-    def pick_insertion_point_from_click(self):
-        """Wired into CustomInteractorStyle.on_left_button_down
-        (core/interactor_style.py) while LoadMRI.picking_insertion_point is
-        True -- a plain click in any 2D view immediately sets this shank's
-        insertion point, in native MRI voxel space, projected onto its own
-        fixed trajectory line (mri_deep + the direction computed in
-        _draw_insertion_guide_line_mri) instead of wherever was actually
-        clicked, so the point can only ever slide along that line. The
-        atlas-space equivalent (coords_insert_point) is recomputed via the
-        approximate nearest-neighbour lookup so the rest of the app (region
-        checks, PDF report) stays consistent."""
-        shank = self.shank_number
-        deep = self.mri_deep.get(shank)
-        direction = self._insertion_direction_mri.get(shank)
-        if deep is None or direction is None:
-            return
-
-        click_pt = np.array(self.LoadMRI.slice_indices[0][::-1], dtype=float)  # xyz, MRI voxel space
-        deep_arr = np.array(deep, dtype=float)
-        t = float(np.dot(click_pt - deep_arr, direction))
-        t_max = self._insertion_guide_t_max.get(shank)
-        t = max(0.0, min(t, t_max)) if t_max is not None else max(0.0, t)
-        proj = deep_arr + t * direction
-
-        shape = self.LoadMRI.volumes[0].slices[0].shape  # zyx, MRI shape
-        proj[0] = np.clip(proj[0], 0, shape[2] - 1)
-        proj[1] = np.clip(proj[1], 0, shape[1] - 1)
-        proj[2] = np.clip(proj[2], 0, shape[0] - 1)
-        self.mri_insert[shank] = [int(round(c)) for c in proj]
-        self.coords_insert_point[shank] = [int(round(c)) for c in
-                                            self.mri_to_atlas_via_lookup(self.mri_insert[shank])]
-
-        self.set_value(list(self.mri_insert[shank]), self.ui.spinBox_insertion_x,
-                        self.ui.spinBox_insertion_y, self.ui.spinBox_insertion_z)
-        self._draw_mri_shank_markers()
-        self.render()
-
-        spacing = np.array(self.movingImg_resampled.GetSpacing())
-        dist = float(np.linalg.norm((np.array(self.mri_insert[shank]) - np.array(self.mri_deep[shank])) * spacing))
-        self.ui.doubleSpinBox_distance_shank.setValue(dist)
-        self.ui.spinBox_depth.setValue(dist)
-
-        # numeric-only while picking_insertion_point is True (see the guard
-        # inside create_channel_list) -- keeps direction_atlas/channel_points
-        # current for the PDF report without touching the (currently MRI-
-        # displaying) atlas-space renderers
-        self.create_channel_list()
-
-        self._insertion_confirmed.add(shank)
-        self._refresh_next_shank_button()
 
     def _refresh_next_shank_button(self):
         """pushButton_nextShank is dual-purpose: it cycles through shanks

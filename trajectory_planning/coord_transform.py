@@ -212,27 +212,6 @@ class CoordTransform:
         return self._mri_not_background_mask
 
 
-    def get_cc_mri_voxel_mean(self, cc_label=None):
-        """
-        Mean position of the atlas's corpus callosum, in MRI/working-volume
-        voxel space (same space/units as coords_bregma/coords_lambda/
-        mri_insert/mri_deep). Reuses the whole-atlas correspondence table _build_bregma_lambda_
-        lookup already computes (atlas points -> their forward-transformed
-        MRI points) -- no separate transforming needed: filter those
-        already-computed pairs down to the ones labelled corpus callosum
-        and average their MRI side.
-        """
-        if cc_label is None:
-            cc_label = _paths.get('atlas_cc_label', 67)
-        if not hasattr(self, '_cc_mean_mri'):
-            if not hasattr(self, '_bl_lookup_tree'):
-                self._build_bregma_lambda_lookup()
-            atlas_xyz = self._bl_lookup_atlas
-            labels = self.atlas_vol[atlas_xyz[:, 2], atlas_xyz[:, 1], atlas_xyz[:, 0]]
-            self._cc_mean_mri = self._bl_lookup_mri[labels == cc_label].mean(axis=0)
-        return self._cc_mean_mri
-
-
     def atlas_points_to_mri_indices(self, atlas_points_mm):
         """
         Vectorized, approximate atlas-physical-mm point(s) -> MRI/working-
@@ -241,11 +220,9 @@ class CoordTransform:
         without a per-vertex atlas_to_mri_coordinates call each (which is a
         real SimpleITK transform lookup, too slow for thousands of
         vertices). Trilinearly interpolates the dense correspondence grid
-        _build_bregma_lambda_lookup already builds -- same underlying data
-        and accuracy as get_cc_mri_voxel_mean's centroid, just sampled at
-        arbitrary (non-grid-aligned) points instead of averaged over one
-        region's voxels. NOT sub-voxel-exact -- for a single precise point
-        (e.g. a clicked landmark), use atlas_to_mri_coordinates instead.
+        _build_bregma_lambda_lookup already builds. NOT sub-voxel-exact --
+        for a single precise point (e.g. a clicked landmark), use
+        atlas_to_mri_coordinates instead.
 
         atlas_points_mm: (N, 3) array in the atlas voxel-index * atlas-
         spacing convention used throughout this file (e.g. mesh.points from
@@ -266,54 +243,16 @@ class CoordTransform:
 
 
     @staticmethod
-    def ap_rl_si_frame(bregma_mm, lambda_mm, cc_mm):
-        """
-        Orthonormal (AP, RL, SI) frame from bregma, lambda and the corpus-
-        callosum centroid, all in the same physical-mm space (MRI or
-        atlas -- this is pure vector math, agnostic to which). Shared by
-        compute_shank_roll_pitch_mri (MRI space) and the 3D view's
-        landmark/plane drawing (either space, depending on what's
-        currently displayed) so the two can't drift apart.
-
-        AP = unit bregma->lambda vector.
-        RL = unit normal of the plane through bregma, lambda and the CC
-        centroid -- automatically exactly perpendicular to AP, since it's
-        a cross product built from it, and anchored to real anatomy via
-        the CC landmark rather than a raw-image-axis guess. This plane
-        (spanned by AP/SI) is "the bregma-lambda-CC plane".
-        SI = AP x RL, completing the frame. The plane spanned by AP/RL
-        (normal = SI) is "the bregma-lambda plane parallel to RL".
-
-        Returns (ap_axis, rl_axis, si_axis), or None if bregma/lambda/CC
-        are degenerate (near-collinear, so no well-defined plane).
-        """
-        bl_vec = np.asarray(lambda_mm, dtype=float) - np.asarray(bregma_mm, dtype=float)
-        bl_dist = float(np.linalg.norm(bl_vec))
-        if bl_dist <= 1e-9:
-            return None
-        ap_axis = bl_vec / bl_dist
-
-        rl_normal = np.cross(bl_vec, np.asarray(cc_mm, dtype=float) - np.asarray(bregma_mm, dtype=float))
-        rl_norm = float(np.linalg.norm(rl_normal))
-        if rl_norm <= 1e-9:
-            return None
-        rl_axis = rl_normal / rl_norm
-
-        si_axis = np.cross(ap_axis, rl_axis)
-        return ap_axis, rl_axis, si_axis
-
-
-    @staticmethod
     def ap_rl_si_frame_from_misalignment(bregma_mm, lambda_mm, misalignment_deg):
         """
         Orthonormal (AP, RL, SI) frame from bregma/lambda alone plus the
         user's manually-dialed-in coronal misalignment angle
         (dial_missalignment/doubleSpinBox_missalignment on the bregma/
-        lambda page) -- replaces ap_rl_si_frame's corpus-callosum-centroid
-        -derived RL axis, which depended on a single, potentially noisy
+        lambda page) -- RL/SI no longer come from a corpus-callosum-centroid
+        -derived axis, which depended on a single, potentially noisy
         interior landmark instead of something the user can verify by eye.
 
-        AP is exactly the bregma->lambda direction, same as ap_rl_si_frame.
+        AP is exactly the bregma->lambda direction.
         RL/SI are fixed by taking the raw image's own SI axis (0,0,1),
         projecting it perpendicular to AP (the "no coronal rotation"
         baseline), then rotating that baseline (and its matching RL
@@ -527,10 +466,10 @@ class CoordTransform:
         blending back toward the shank's original (already-valid)
         direction just enough to stay in bounds.
 
-        Only needs bregma/lambda (unlike compute_shank_roll_pitch_mri,
-        which also needs the corpus-callosum centroid to build the full
-        RL/SI frame) -- removing a single axis component from a vector
-        doesn't require the rest of an orthonormal frame.
+        Only needs bregma/lambda (unlike compute_shank_roll_pitch_mri, which
+        also needs the coronal misalignment angle to build the full RL/SI
+        frame) -- removing a single axis component from a vector doesn't
+        require the rest of an orthonormal frame.
 
         No-op if bregma/lambda or this shank's insert/deep aren't set yet,
         or if bregma==lambda.

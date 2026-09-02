@@ -1,5 +1,4 @@
 # This Python file uses the following encoding: utf-8
-import os
 import sys
 import colorsys
 import SimpleITK as sitk
@@ -7,15 +6,10 @@ import pyvista as pv
 from pyvistaqt import QtInteractor
 from pathlib import Path
 import pandas as pd
-from matplotlib.colors import ListedColormap
 import numpy as np
 from PySide6.QtWidgets import QVBoxLayout, QApplication, QWidget
 from PySide6.QtCore import Qt
-import nibabel as nib
 import vtk
-from concurrent.futures import ThreadPoolExecutor
-from paths_config import _paths
-from mrid_utils import handlers
 
 
 class Visualisation3D:
@@ -251,54 +245,6 @@ class Visualisation3D:
         hover_label.SetInput(f"{label}")
         plotter.render()
 
-    def load_atlas(self):
-        def load_background_mesh(scale):
-            background_path = self.MW.LoadMRI.volumes[0].file_path
-            img = nib.load(background_path)
-            data = img.get_fdata().astype(int)[::scale, ::scale, ::scale]
-            zooms = img.header.get_zooms()[:3]
-            mesh = pv.ImageData()
-            mesh.dimensions = np.array(data.shape) + 1
-            mesh.spacing = tuple(s * scale for s in zooms)
-            mesh.origin = tuple(-s for s in zooms)
-            mesh.cell_data['NIFTI'] = data.flatten(order='F')
-            return mesh
-
-        def load_labels():
-            labels_path = os.path.join(_paths['atlas_folder'], _paths['atlas_labels'])
-            return handlers.read_itk_snap_labels(labels_path)
-
-        def load_background_full_numpy():
-            background_path = self.MW.LoadMRI.volumes[0].file_path
-            img = nib.load(background_path)
-            return np.array(img.header.get_zooms()[:3])
-
-        with ThreadPoolExecutor(max_workers=3) as executor:
-            future_small  = executor.submit(load_background_mesh, 3) #2
-            future_full   = executor.submit(load_background_full_numpy)
-            future_labels = executor.submit(load_labels)
-
-            self.atlaslabelsdf       = future_labels.result()
-            self.background_small    = future_small.result().threshold(value=0.5)
-            self.brain_surface_small = self.background_small.extract_surface(algorithm='dataset_surface')
-            self.brain_surface_small = self.brain_surface_small.smooth_taubin(n_iter=50, pass_band=0.1)
-            self.background_full_zooms = future_full.result()
-
-        max_idx = int(self.atlaslabelsdf['IDX'].max())
-        self.rgba = np.zeros((max_idx + 1, 4))
-        rgba_background = np.zeros((max_idx + 1, 4))
-
-        for _, row in self.atlaslabelsdf.iterrows():
-            r, g, b = row['R']/255, row['G']/255, row['B']/255
-            rgba_background[int(row['IDX'])] = [r, g, b, 0.1]
-
-        self.cmap = ListedColormap(self.rgba)
-        self.cmap_background = ListedColormap(rgba_background)
-
-        self.plotter_co.add_axes()
-        self.plotter_sa.add_axes()
-        self.plotter_ax.add_axes()
-
     @staticmethod
     def _desaturate(rgb, factor):
         h, s, v = colorsys.rgb_to_hsv(*rgb)
@@ -470,11 +416,6 @@ class Visualisation3D:
         self.draw_electrode_lines(plotter, shank_number, only_shank=only_shank)
 
         if view in ('coronal', 'sagittal'):
-            # PDF export (file_input_output.py) passes show_plane_and_angle=
-            # False -- that panel now shows the reference plane/angle on the
-            # MRI-space panel instead (see FileOutput._draw_mri_reference_
-            # plane_and_angle), so the atlas panel's copy is switched off
-            # rather than drawn twice.
             self._draw_atlas_reference_plane(plotter, view, (x0, y0, z0), draw=show_plane_and_angle)
             self._draw_shank_angle_indicator(plotter, view, shank_number, draw=show_plane_and_angle)
 
@@ -486,7 +427,7 @@ class Visualisation3D:
         """Normal (unit vector) and a point (both mm) of the plane formed
         by sweeping the atlas bregma-lambda LINE -- sagittal's actual 2D
         reference, see compute_shank_reference_angle -- along the ML (x)
-        axis, rather than reusing the bregma/lambda/CC plane (which is
+        axis, rather than reusing the bregma/lambda plane (which is
         coronal's reference, not sagittal's). Sweeping along x means the
         plane contains both the bregma-lambda vector and the x-axis
         direction, so its normal is their cross product -- always of the
@@ -504,6 +445,26 @@ class Visualisation3D:
         if norm < 1e-9:
             return None, None
         return normal / norm, b
+
+    def _atlas_coronal_plane_normal_and_point(self, tp):
+        """Normal (unit vector) and a point (both mm) of coronal's
+        reference plane -- the RL axis of ap_rl_si_frame_from_misalignment
+        (bregma/lambda plus the user's own dialed-in coronal_misalignment_
+        deg), same frame compute_shank_reference_angle's coronal branch
+        uses, through bregma. The plane spanned by AP/SI (normal = RL) is
+        "the bregma-lambda reference plane"."""
+        bregma = getattr(tp, 'atlas_bregma_coords', None)
+        lam = getattr(tp, 'atlas_lambda_coords', None)
+        if bregma is None or lam is None:
+            return None, None
+        b = np.array(bregma, dtype=float) * self.spacing
+        l = np.array(lam, dtype=float) * self.spacing
+        misalignment_deg = getattr(tp, 'coronal_misalignment_deg', 0.0)
+        frame = tp.ap_rl_si_frame_from_misalignment(b, l, misalignment_deg)
+        if frame is None:
+            return None, None
+        _, rl_axis, _ = frame
+        return rl_axis, b
 
     def _draw_atlas_reference_plane(self, plotter, view, origin_mm, draw=True):
         """The full atlas reference plane -- not just its 1D crossing of
@@ -530,10 +491,7 @@ class Visualisation3D:
         if view == 'sagittal':
             normal, plane_point = self._atlas_sagittal_plane_normal_and_point(tp)
         else:
-            # _atlas_plane_normal_and_point already returns (None, None) on
-            # its own if bregma/lambda can't form a frame -- see the
-            # `if normal is None` bailout right below.
-            normal, plane_point = tp._atlas_plane_normal_and_point()
+            normal, plane_point = self._atlas_coronal_plane_normal_and_point(tp)
         if normal is None:
             if name in plotter.actors:
                 plotter.remove_actor(name, render=False)
@@ -782,10 +740,10 @@ class Visualisation3D:
             held_axis_vec[held_axis] = 1.0
             bisector_dir = np.cross(held_axis_vec, point1_dir)
         label_pt = pv.PolyData((center + bisector_dir * radius).reshape(1, 3))
-        label_text = f"{angle:.1f}°(MRI)"
+        label_text = f"{angle:.1f}°"
         plotter.add_point_labels(
             label_pt, [label_text],
-            text_color='white', font_size=16, shape=None, bold=True, shadow=False,
+            text_color='white', font_size=20, shape=None, bold=True, shadow=False,
             show_points=False, always_visible=True,
             name=f'shank_angle_label_{view}', render=False, reset_camera=False,
         )

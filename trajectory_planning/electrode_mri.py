@@ -49,10 +49,12 @@ class ElecGeometryMri(ElecGeometry):
                 self.update_oblique_coronal_view()
                 self.update_oblique_coronal_crossing_line()
                 self.ui.stackedWidget_coronal.setCurrentIndex(1)
+                self.force_oblique_repaint('coronal')
             if rl_on:
                 self.update_oblique_sagittal_view()
                 self.update_oblique_sagittal_crossing_line()
                 self.ui.stackedWidget_sagittal.setCurrentIndex(1)
+                self.force_oblique_repaint('sagittal')
 
     def _refresh_oblique_views_for_insert(self, shank_number):
         """Re-anchor the oblique constraint view(s) on this shank's
@@ -75,17 +77,34 @@ class ElecGeometryMri(ElecGeometry):
         somehow ended up back on the normal page (index 0) with the
         checkbox still checked: the constraint view needs to actually be
         the thing on screen the moment insertion is set, not just correct
-        in the background."""
+        in the background.
+
+        No-op entirely while picking_insertion_point is True (the final
+        skull-point-click refinement step, page_31) -- same guard create_
+        channel_list (above) and check_points_in_slice (rendering.py) use.
+        This method is called from _switch_insertion_shank_mri on every
+        shank-entry/NEXT within that same refinement page, and forcing the
+        oblique page onto screen there (with update_oblique_coronal_view/
+        _sagittal_view's own unconditional ResetCamera()) fights the
+        "always show the plain, undistorted skull surface here" behavior
+        pick_insertion_point_from_click already deliberately restores
+        AFTER a click (see its own comment) -- without this guard, the
+        window between switching to a shank and actually clicking it
+        showed the oblique/constrained view with a reset camera instead."""
+        if getattr(self.LoadMRI, 'picking_insertion_point', False):
+            return
         if shank_number != self.shank_number:
             return
         if self.ui.checkBox_constraint_90deg.isChecked():
             self.update_oblique_coronal_view()
             self.update_oblique_coronal_crossing_line()
             self.ui.stackedWidget_coronal.setCurrentIndex(1)
+            self.force_oblique_repaint('coronal')
         if self.ui.checkBox_constraint_90deg_coronal.isChecked():
             self.update_oblique_sagittal_view()
             self.update_oblique_sagittal_crossing_line()
             self.ui.stackedWidget_sagittal.setCurrentIndex(1)
+            self.force_oblique_repaint('sagittal')
 
     def enforce_constraint_90deg(self, checked):
         """checkBox_constraint_90deg.toggled: snap every already-placed
@@ -117,6 +136,7 @@ class ElecGeometryMri(ElecGeometry):
             self.update_oblique_coronal_view()
             self.update_oblique_coronal_crossing_line()
             self.ui.stackedWidget_coronal.setCurrentIndex(1)
+            self.force_oblique_repaint('coronal')
         else:
             self.ui.stackedWidget_coronal.setCurrentIndex(0)
             self.hide_oblique_coronal_crossing_line()
@@ -162,6 +182,7 @@ class ElecGeometryMri(ElecGeometry):
             self.update_oblique_sagittal_view()
             self.update_oblique_sagittal_crossing_line()
             self.ui.stackedWidget_sagittal.setCurrentIndex(1)
+            self.force_oblique_repaint('sagittal')
         else:
             self.ui.stackedWidget_sagittal.setCurrentIndex(0)
             self.hide_oblique_sagittal_crossing_line()
@@ -288,6 +309,26 @@ class ElecGeometryMri(ElecGeometry):
                 self.update_shank_angle_display()
                 self.update_coronal_plane_line()
 
+            # atlas_shank_end/coords_deepest_point (just recomputed above)
+            # are exactly what refresh_oblique_markers projects for the
+            # oblique views' own shank line/angle indicator -- without
+            # re-running update_oblique_coronal_view/update_oblique_
+            # sagittal_view here too, any change that goes through create_
+            # channel_list but ISN'T itself an insert-point move (channel
+            # count/separation, DXF geometry edits, add/remove shank, ...)
+            # left the oblique view's shank line pointing at the shank's
+            # PREVIOUS geometry until something else happened to force a
+            # refresh -- the "direction is super off until clicking on the
+            # view" symptom (a stale click elsewhere, e.g. a spinbox, was
+            # what actually fixed it, not the click on the oblique widget
+            # itself, which never recomputes shank geometry).
+            if self.ui.checkBox_constraint_90deg.isChecked():
+                self.update_oblique_coronal_view()
+                self.update_oblique_coronal_crossing_line()
+            if self.ui.checkBox_constraint_90deg_coronal.isChecked():
+                self.update_oblique_sagittal_view()
+                self.update_oblique_sagittal_crossing_line()
+
             if self.ui.stackedWidget_coronal.currentIndex() == 2:
                 self.change_view_coronal(checked=False, recenter=False)
             if self.ui.stackedWidget_sagittal.currentIndex() == 2:
@@ -407,6 +448,15 @@ class ElecGeometryMri(ElecGeometry):
         self._switch_insertion_shank_mri(0)
 
     def _enter_mri_space_for_insertion(self):
+        # Close the standalone 3D atlas/shank dock (TrajPlanning.tp3d_window,
+        # see trajectory_planning.py's open_3d_window; None if never opened
+        # this session, same guard main_window.py's restart_gui uses) --
+        # it isn't kept in sync with the insertion-point click picking
+        # below, so leaving it open while picking is misleading.
+        tp3d_window = getattr(self.LoadMRI.TrajPlanning, 'tp3d_window', None)
+        if tp3d_window is not None:
+            tp3d_window.close()
+
         self.LoadMRI.picking_insertion_point = True
 
         for w in (self.ui.comboBox_Shanks, self.ui.comboBox_geometry_shanks,
@@ -414,6 +464,12 @@ class ElecGeometryMri(ElecGeometry):
                   self.ui.pushButton_coronalView, self.ui.pushButton_sagittalView,
                   self.ui.pushButton_axialView):
             w.setEnabled(False)
+
+        # Hide Brain Regions/Forbidden Regions overlays as soon as picking
+        # mode starts, not just after the user's first click (previously
+        # only pick_insertion_point_from_click did this) -- so the raw
+        # skull surface is unobstructed for the very first click too.
+        self._set_insertion_refinement_layers_visible(False)
 
     def _return_to_atlas_space(self):
         self.LoadMRI.picking_insertion_point = False
@@ -467,6 +523,17 @@ class ElecGeometryMri(ElecGeometry):
         if deep is None or direction is None:
             return
 
+        # get_insert_point (page_6, before refinement) draws the edge-mask
+        # guess as a point_actor_insert disc via draw_point -- check_points_
+        # in_slice is short-circuited for the whole time picking_insertion_
+        # point is True (rendering.py), so that actor is never cleaned up
+        # on its own. Once the user manually picks a point here, drop it so
+        # only the freshly-clicked _mri_marker_actor dot (drawn below by
+        # _draw_mri_shank_markers) remains visible.
+        for view_name, actor in self.point_actor_insert.get(shank, {}).items():
+            self.LoadMRI.renderers[0][view_name].RemoveActor(actor)
+        self.point_actor_insert[shank] = {}
+
         click_pt = np.array(self.LoadMRI.slice_indices[0][::-1], dtype=float)
         deep_arr = np.array(deep, dtype=float)
         t = float(np.dot(click_pt - deep_arr, direction))
@@ -484,6 +551,18 @@ class ElecGeometryMri(ElecGeometry):
         # used mri_to_atlas_via_lookup here since coords_insert_point used
         # to be atlas-voxel).
         self.coords_insert_point[shank] = list(self.mri_insert[shank])
+        # Re-snap mri_deep to stay constraint-valid (perpendicular to
+        # bregma-lambda / RL=0) against this just-picked insert point --
+        # unlike get_insert_point/change_insert_point, this click handler
+        # never went through _apply_constraints, so a constrained shank's
+        # deep point was left anchored to the OLD insert point, throwing
+        # off both the on-screen deep marker and the distance/depth values
+        # set below. The page-revert further down (stackedWidget_coronal/
+        # sagittal back to index 0) still runs unconditionally after this,
+        # so this doesn't fight this function's own "always show the plain
+        # skull surface here" behavior -- only the underlying deep-point
+        # value is affected, not which page is displayed.
+        self._apply_constraints(shank)
 
         self.set_value(list(self.mri_insert[shank]), self.ui.spinBox_insertion_x,
                         self.ui.spinBox_insertion_y, self.ui.spinBox_insertion_z)

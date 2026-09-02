@@ -145,7 +145,6 @@ class RenderingMri(Rendering):
         for stale_attr in ('_bl_lookup_atlas', '_bl_lookup_mri', '_bl_lookup_tree',
                            '_bl_lookup_stride', '_bl_lookup_grid_shape',
                            '_bl_lookup_mri_grid', '_bl_lookup_interpolator',
-                           '_cc_mean_mri', '_cc_mean_atlas',
                            '_mri_not_background_mask', '_mri_not_background_mask_key'):
             if hasattr(self, stale_attr):
                 delattr(self, stale_attr)
@@ -408,20 +407,20 @@ class RenderingMri(Rendering):
                 bisector_dir = np.array([-point1_dir[1], point1_dir[0]])
             pos = arc_center + bisector_dir * radius
 
-        caption_text = f"{angle:.1f}°(MRI)"
+        caption_text = f"{angle:.1f}°"
         caption = vtk.vtkCaptionActor2D()
         caption.SetCaption(caption_text)
         caption.SetAttachmentPoint(pos[0], pos[1], 1.15)
         caption.BorderOff()
         caption.LeaderOff()
         caption.GetCaptionTextProperty().SetColor(1, 1, 1)
-        caption.GetCaptionTextProperty().SetFontSize(30)
+        caption.GetCaptionTextProperty().SetFontSize(40)
         caption.GetCaptionTextProperty().SetBold(True)
         caption.GetCaptionTextProperty().ShadowOff()
         caption.GetCaptionTextProperty().BoldOff()
         caption.SetPosition(3, 3)
-        caption.SetWidth(0.12)
-        caption.SetHeight(0.035)
+        caption.SetWidth(0.16)
+        caption.SetHeight(0.045)
         renderer.AddActor(caption)
         self.shank_angle_text_actors[view_name] = caption
 
@@ -451,9 +450,28 @@ class RenderingMri(Rendering):
         pb = b * spacing
         mid = (pa + pb) / 2
 
+        # dim_line's endpoints are clamped to the volume's own voxel box --
+        # point_b is often atlas_shank_end (electrode_mri.py's
+        # create_channel_list), an extrapolation (num_channels-1)*separation
+        # past the deepest point, or a loaded probe design's own farthest
+        # channel, neither of which is checked against the MRI's FOV. Left
+        # unclamped, this line's real vtkActor bounds can land far outside
+        # the visible slice, which Zoom.fit_to_window's renderer.
+        # ComputeVisiblePropBounds() then has to zoom out to include --
+        # shrinking the actual slice to a tiny image in an otherwise-black
+        # frame (same class of bug already fixed for the oblique renderer's
+        # crosshair/canvas, see _draw_oblique_crosshair/_oblique_output_
+        # geometry). The crossing-detection math below (t_min/t_max) still
+        # uses the true, unclamped a/b -- only this faint full-length
+        # indicator line's drawn geometry is clamped.
+        a_dim = np.clip(a, 0, shape - 1)
+        b_dim = np.clip(b, 0, shape - 1)
+        pa_dim = a_dim * spacing
+        pb_dim = b_dim * spacing
+
         dim_line = vtk.vtkLineSource()
-        dim_line.SetPoint1(pa[xi], pa[yi], height - 0.1)
-        dim_line.SetPoint2(pb[xi], pb[yi], height - 0.1)
+        dim_line.SetPoint1(pa_dim[xi], pa_dim[yi], height - 0.1)
+        dim_line.SetPoint2(pb_dim[xi], pb_dim[yi], height - 0.1)
         dim_mapper = vtk.vtkPolyDataMapper()
         dim_mapper.SetInputConnection(dim_line.GetOutputPort())
         dim_actor = vtk.vtkActor()
@@ -868,6 +886,169 @@ class RenderingMri(Rendering):
             actors.append(actor)
         return actors
 
+    def _oblique_shank_angle_actors(self, kind, mri_spacing):
+        """Angle arc + caption for the currently selected shank on the
+        oblique view -- same visual style (vtkArcSource + vtkCaptionActor2D)
+        as _update_shank_angle_display_view's own arc/caption for the real
+        axis-aligned views, but far simpler to compute: this view's own
+        local (x_out, y_out) axes from _oblique_project ARE the roll/pitch
+        reference frame (ap_rl_si_frame_from_misalignment) by construction,
+        so the reference direction is just a fixed local axis -- local +Y
+        (SI) for roll (oblique coronal), local +X (AP) for pitch (oblique
+        sagittal) -- instead of a projected/clipped reference line. The
+        angle NUMBER is still compute_shank_roll_pitch_mri, the same single
+        source of truth as the real 2D views' captions and the PDF report,
+        so it can't disagree with them.
+
+        Anchored on coords_deepest_point/atlas_shank_end -- the SAME two
+        points refresh_oblique_markers projects for the shank line itself
+        (NOT mri_insert/mri_deep, which can sit visibly short of the drawn
+        line's own far end -- see create_channel_list's own note on
+        atlas_shank_end sitting further out than the marked insertion
+        point) -- so the arc always lands centered exactly on the visible
+        green line instead of floating off near wherever the marked
+        insertion point happens to be. Returns [] (nothing to draw) if the
+        current shank has no deep point/geometry yet."""
+        deep_point = getattr(self, 'coords_deepest_point', {}).get(self.shank_number)
+        shank_end = getattr(self, 'atlas_shank_end', {}).get(self.shank_number)
+        if deep_point is None or shank_end is None:
+            return []
+        roll_pitch = self.compute_shank_roll_pitch_mri(self.shank_number)
+        if roll_pitch is None:
+            return []
+        angle = roll_pitch[0] if kind == 'coronal' else roll_pitch[1]
+
+        deep_xy = self._oblique_project(kind, np.array(deep_point, dtype=float) * mri_spacing)
+        end_xy = self._oblique_project(kind, np.array(shank_end, dtype=float) * mri_spacing)
+        if deep_xy is None or end_xy is None:
+            return []
+        shank_dir = np.array(end_xy) - np.array(deep_xy)
+        shank_norm = np.linalg.norm(shank_dir)
+        if shank_norm < 1e-9:
+            return []
+        shank_dir = shank_dir / shank_norm
+        ref_dir = np.array([0.0, 1.0]) if kind == 'coronal' else np.array([1.0, 0.0])
+
+        # the reference is a line, not a directed ray -- draw the acute
+        # wedge (matching compute_shank_roll_pitch_mri's own arctan2(abs,
+        # abs), which is always in [0, 90] deg) instead of whichever of the
+        # two supplementary angles the arbitrary axis sign happened to pick.
+        if np.dot(shank_dir, ref_dir) < 0:
+            ref_dir = -ref_dir
+
+        renderer = self.oblique_renderer if kind == 'coronal' else self.oblique_sagittal_renderer
+        center = np.array(deep_xy)
+        radius = 3.0  # mm -- fixed so the indicator stays a consistent, readable size regardless of shank length
+
+        arc = vtk.vtkArcSource()
+        arc.SetCenter(center[0], center[1], 1.13)
+        arc.SetPoint1(center[0] + shank_dir[0] * radius, center[1] + shank_dir[1] * radius, 1.13)
+        arc.SetPoint2(center[0] + ref_dir[0] * radius, center[1] + ref_dir[1] * radius, 1.13)
+        arc.SetResolution(20)
+        arc_mapper = vtk.vtkPolyDataMapper()
+        arc_mapper.SetInputConnection(arc.GetOutputPort())
+        arc_actor = vtk.vtkActor()
+        arc_actor.SetMapper(arc_mapper)
+        arc_actor.GetProperty().SetColor(1, 1, 1)
+        arc_actor.GetProperty().SetLineWidth(2)
+        renderer.AddActor(arc_actor)
+
+        bisector = shank_dir + ref_dir
+        bisector_norm = np.linalg.norm(bisector)
+        bisector_dir = bisector / bisector_norm if bisector_norm > 1e-9 else np.array([-shank_dir[1], shank_dir[0]])
+        pos = center + bisector_dir * (radius + 1.0)
+
+        label = "Roll" if kind == 'coronal' else "Pitch"
+        caption = vtk.vtkCaptionActor2D()
+        caption.SetCaption(f"{label}: {angle:.1f}°")
+        caption.SetAttachmentPoint(pos[0], pos[1], 1.15)
+        caption.BorderOff()
+        caption.LeaderOff()
+        caption.GetCaptionTextProperty().SetColor(1, 1, 1)
+        caption.GetCaptionTextProperty().SetFontSize(36)
+        caption.GetCaptionTextProperty().SetBold(True)
+        caption.GetCaptionTextProperty().ShadowOff()
+        caption.GetCaptionTextProperty().BoldOff()
+        caption.SetPosition(3, 3)
+        caption.SetWidth(0.22)
+        caption.SetHeight(0.05)
+        renderer.AddActor(caption)
+
+        return [arc_actor, caption]
+
+    def _register_zoom_camera(self, camera):
+        """Adds camera to the cross-view zoom-link group -- a ModifiedEvent
+        observer that copies this camera's parallel scale onto every other
+        REGISTERED camera whenever it changes, so zooming/panning any one
+        of axial, the real coronal/sagittal views, or their oblique
+        constraint-view counterparts keeps every other one in step
+        ("connect them altogether", not just a real<->its own oblique
+        handoff). Purely additive -- a new observer layered on top of each
+        renderer's own existing camera -- so it doesn't touch the shared
+        Zoom/Cursor machinery used everywhere else in the app; nothing
+        outside this trajectory-planning screen is affected, and it only
+        starts applying once a constraint checkbox is used for the first
+        time (see _ensure_all_views_zoom_linked, the only caller)."""
+        if not hasattr(self, '_zoom_linked_cameras'):
+            self._zoom_linked_cameras = []
+            self._zoom_sync_in_progress = False
+        if any(c is camera for c in self._zoom_linked_cameras):
+            return
+        self._zoom_linked_cameras.append(camera)
+
+        def on_modified(caller, event):
+            if self._zoom_sync_in_progress:
+                return
+            self._zoom_sync_in_progress = True
+            try:
+                scale = caller.GetParallelScale()
+                for cam in self._zoom_linked_cameras:
+                    if cam is not caller and cam.GetParallelScale() != scale:
+                        cam.SetParallelScale(scale)
+                self.render()
+                for r in (getattr(self, 'oblique_renderer', None), getattr(self, 'oblique_sagittal_renderer', None)):
+                    if r is not None:
+                        r.GetRenderWindow().Render()
+            finally:
+                self._zoom_sync_in_progress = False
+
+        camera.AddObserver('ModifiedEvent', on_modified)
+
+    def _ensure_all_views_zoom_linked(self):
+        """Registers whichever of axial/coronal/sagittal/oblique-coronal/
+        oblique-sagittal cameras currently exist into the zoom-link group
+        (_register_zoom_camera already no-ops on a camera registered
+        twice) -- called from both setup_oblique_coronal_view and setup_
+        oblique_sagittal_view so the group ends up complete regardless of
+        which constraint checkbox the user tries first."""
+        for vn in ('axial', 'coronal', 'sagittal'):
+            renderer = self.LoadMRI.renderers.get(0, {}).get(vn)
+            if renderer is not None:
+                self._register_zoom_camera(renderer.GetActiveCamera())
+        if getattr(self, 'oblique_renderer', None) is not None:
+            self._register_zoom_camera(self.oblique_renderer.GetActiveCamera())
+        if getattr(self, 'oblique_sagittal_renderer', None) is not None:
+            self._register_zoom_camera(self.oblique_sagittal_renderer.GetActiveCamera())
+
+    def force_oblique_repaint(self, kind):
+        """Extra deferred repaint once the oblique page has just become the
+        VISIBLE stackedWidget page (checkBox_constraint_90deg/_coronal's
+        toggle handlers, called right after their own setCurrentIndex(1))
+        -- VTK doesn't always paint a freshly (re)shown render window until
+        something forces it after Qt finishes the page-swap layout, same
+        class of bug already documented/worked around elsewhere in this
+        codebase (registration.py's do_get_shank_line, update_oblique_
+        coronal_view's own trailing QTimer.singleShot) -- the symptom here
+        being the oblique view showing a stale/wrong-looking cut until the
+        user's first click on it forces a repaint. Unlike those one-time
+        page arrivals, this page is entered/left repeatedly by toggling the
+        same checkbox, so it needs its own nudge on every entry rather than
+        only once at initial setup."""
+        renderer = self.oblique_renderer if kind == 'coronal' else self.oblique_sagittal_renderer
+        if renderer is None:
+            return
+        QTimer.singleShot(0, renderer.GetRenderWindow().Render)
+
     def refresh_oblique_markers(self, kind):
         """Redraw the insert/deep point markers (red/green, matching the
         real 2D views' own draw_point colors) and the shank line itself
@@ -917,6 +1098,8 @@ class RenderingMri(Rendering):
         cursor_xy = getattr(self, '_oblique_cursor_xy' if kind == 'coronal' else '_oblique_sagittal_cursor_xy', None)
         if cursor_xy is not None:
             new_actors.extend(self._draw_oblique_crosshair(kind, cursor_xy))
+
+        new_actors.extend(self._oblique_shank_angle_actors(kind, mri_spacing))
 
         if kind == 'coronal':
             self._oblique_marker_actors = new_actors
@@ -1171,6 +1354,7 @@ class RenderingMri(Rendering):
         actor = vtk.vtkImageActor()
         actor.GetMapper().SetInputConnection(reslice.GetOutputPort())
         actor.GetProperty().SetInterpolationTypeToCubic()
+        self._link_oblique_actor_to_contrast(actor)
         renderer.AddActor(actor)
         self.oblique_actor = actor
 
@@ -1182,6 +1366,134 @@ class RenderingMri(Rendering):
 
         self._wire_oblique_zoom_controls('coronal')
         self.update_oblique_coronal_view()
+        self._draw_oblique_reference_line('coronal')
+        self._setup_oblique_scale_bar('coronal')
+        self._ensure_all_views_zoom_linked()
+
+    def _link_oblique_actor_to_contrast(self, actor):
+        """Share the base MRI's own live vtkLookupTable (utils/contrast.py's
+        Contrast, data_index 0/image_index 0 -- the same LUT core/image_
+        layer.py's ImageLayer attaches to the 3 real axis-aligned views)
+        with an oblique-view image actor, same technique/object, so
+        dragging the contrast/brightness sliders or hitting Auto/Reset
+        repaints this view too instead of it staying stuck at VTK's plain
+        default window/level forever. Contrast.update_lut_window_level
+        mutates this same table object in place (SetTableRange/Build) and
+        then separately triggers the actual repaint -- see its own
+        oblique_renderer/oblique_sagittal_renderer render calls, which is
+        what this sharing is paired with. No-op (falls back to VTK's
+        default grayscale mapping) if Contrast hasn't been set up yet for
+        this dataset."""
+        contrast = getattr(self.LoadMRI, 'contrast', {}).get(0)
+        lut = getattr(contrast, 'lut_vtk', {}).get(0) if contrast is not None else None
+        if lut is None:
+            return
+        actor.GetProperty().SetLookupTable(lut)
+        actor.GetProperty().UseLookupTableScalarRangeOn()
+
+    def _draw_oblique_reference_line(self, kind):
+        """Yellow line marking the true SI axis within the oblique view's
+        own local coordinate frame -- since the reslice's own X axis IS
+        the RL axis (coronal) or AP axis (sagittal) and Y axis IS the SI
+        axis (see update_oblique_coronal_view/update_oblique_sagittal_
+        view's own SetResliceAxesDirectionCosines calls), this is just a
+        vertical line through local x=0, unlike the real axis-aligned
+        coronal view's update_atlas_plane_line (which needs actual
+        plane-vs-slice clipping math since its own display axes aren't
+        the reslice's own axes). Drawn once at setup time since the output
+        canvas geometry (_oblique_output_geometry) -- and so this line's
+        own position within it -- never changes after that; only the
+        reslice's CONTENT moves as the anchor/misalignment change."""
+        renderer = self.oblique_renderer if kind == 'coronal' else self.oblique_sagittal_renderer
+        _sx, sy, _n_px_x, n_px_y = self._oblique_output_geometry(kind)
+        half_h = (n_px_y - 1) * sy / 2.0
+
+        line = vtk.vtkLineSource()
+        line.SetPoint1(0, -half_h, 1.06)
+        line.SetPoint2(0, half_h, 1.06)
+        mapper = vtk.vtkPolyDataMapper()
+        mapper.SetInputConnection(line.GetOutputPort())
+        actor = vtk.vtkActor()
+        actor.SetMapper(mapper)
+        actor.GetProperty().SetColor(1, 1, 0)
+        actor.GetProperty().SetLineWidth(1)
+        actor.GetProperty().SetLineStipplePattern(0xF0F0)  # dashed, same pattern as core/measurement.py
+        actor.GetProperty().SetLineStippleRepeatFactor(10)
+        renderer.AddActor(actor)
+        return actor
+
+    def _setup_oblique_scale_bar(self, kind):
+        """Self-contained scale bar for the oblique view -- deliberately
+        NOT utils/scale_bar.py's shared Scale class, which re-fetches its
+        target renderer via self.LoadMRI.renderers[image_index][view_name]
+        internally regardless of the renderer passed in, so it would
+        silently draw onto the wrong (real axis-aligned) renderer here --
+        see setup_oblique_coronal_view's own note on why this view's
+        renderer is deliberately kept out of that shared registry. Redraws
+        on every camera change (zoom/pan/reset) via a ModifiedEvent
+        observer, same live-updating behaviour as the real views' own
+        scale bar, without touching any of that shared machinery."""
+        renderer = self.oblique_renderer if kind == 'coronal' else self.oblique_sagittal_renderer
+        if not hasattr(self, '_oblique_scale_bar_actors'):
+            self._oblique_scale_bar_actors = {}
+        camera = renderer.GetActiveCamera()
+        camera.AddObserver('ModifiedEvent', lambda *_: self._update_oblique_scale_bar(kind))
+        self._update_oblique_scale_bar(kind)
+
+    def _update_oblique_scale_bar(self, kind, length_cm=1.0, color=(0, 1, 0)):
+        """(Re)draws the oblique view's scale bar to match its current
+        zoom level -- same bounds-to-display-fraction technique as utils/
+        scale_bar.py's Scale.create_bar/update_bar, just against this
+        view's own renderer directly instead of a shared per-view-name
+        registry lookup."""
+        renderer = self.oblique_renderer if kind == 'coronal' else self.oblique_sagittal_renderer
+        xmin, xmax, ymin, ymax, zmin, zmax = renderer.ComputeVisiblePropBounds()
+        window_width, _ = renderer.GetSize()
+        if not window_width or xmax == xmin:
+            return
+
+        renderer.SetWorldPoint(xmin, ymin, zmin, 1.0)
+        renderer.WorldToDisplay()
+        x_nmin = renderer.GetDisplayPoint()[0] / window_width
+        renderer.SetWorldPoint(xmax, ymax, zmax, 1.0)
+        renderer.WorldToDisplay()
+        x_nmax = renderer.GetDisplayPoint()[0] / window_width
+
+        length_mm = length_cm * 10
+        length_x = (x_nmax - x_nmin) / (xmax - xmin) * length_mm
+        use_mm = length_x > 0.45
+        if use_mm:
+            length_x /= 10
+
+        old = self._oblique_scale_bar_actors.get(kind)
+        if old is not None:
+            renderer.RemoveActor2D(old['line'])
+            renderer.RemoveActor(old['text'])
+
+        line = vtk.vtkLineSource()
+        line.SetPoint1(0, 0, 0)
+        line.SetPoint2(length_x * window_width, 0, 0)
+        mapper = vtk.vtkPolyDataMapper2D()
+        mapper.SetInputConnection(line.GetOutputPort())
+        actor = vtk.vtkActor2D()
+        actor.SetMapper(mapper)
+        actor.GetProperty().SetColor(*color)
+        actor.GetProperty().SetLineWidth(3)
+        actor.SetPositionCoordinate(vtk.vtkCoordinate())
+        actor.GetPositionCoordinate().SetCoordinateSystemToNormalizedDisplay()
+        offset = (0.95 - length_x, 0.05)
+        actor.GetPositionCoordinate().SetValue(*offset)
+
+        text = vtk.vtkTextActor()
+        text.SetInput(f"{length_cm} mm" if use_mm else f"{length_cm} cm")
+        text.GetPositionCoordinate().SetValue(0.83, offset[1] + 0.03)
+        text.GetTextProperty().SetColor(*color)
+        text.GetTextProperty().SetFontSize(14)
+        text.GetPositionCoordinate().SetCoordinateSystemToNormalizedDisplay()
+
+        renderer.AddActor2D(actor)
+        renderer.AddActor(text)
+        self._oblique_scale_bar_actors[kind] = {'line': actor, 'text': text}
 
     def update_oblique_coronal_view(self):
         """Recompute the oblique reslice's cutting plane: origin at the
@@ -1368,6 +1680,7 @@ class RenderingMri(Rendering):
         actor = vtk.vtkImageActor()
         actor.GetMapper().SetInputConnection(reslice.GetOutputPort())
         actor.GetProperty().SetInterpolationTypeToCubic()
+        self._link_oblique_actor_to_contrast(actor)
         renderer.AddActor(actor)
         self.oblique_sagittal_actor = actor
 
@@ -1379,6 +1692,9 @@ class RenderingMri(Rendering):
 
         self._wire_oblique_zoom_controls('sagittal')
         self.update_oblique_sagittal_view()
+        self._draw_oblique_reference_line('sagittal')
+        self._setup_oblique_scale_bar('sagittal')
+        self._ensure_all_views_zoom_linked()
 
     def update_oblique_sagittal_view(self):
         """Recompute the oblique sagittal reslice's cutting plane: origin
