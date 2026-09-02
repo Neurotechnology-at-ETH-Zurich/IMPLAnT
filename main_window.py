@@ -1,7 +1,24 @@
 # This Python file uses the following encoding: utf-8
 # Important: You need to run the following command to generate the ui_form.py file: pyside6-uic form.ui -o ui_form.py
+import multiprocessing
 import os
 import sys
+
+# Standalone ripple-detection worker mode: must be checked and exited before
+# any GUI import (PySide6/VTK/SimpleITK etc). ephys/init_ephys.py's
+# _finish_ripple_detection re-invokes a frozen (PyInstaller) build of this
+# same exe with these args, since a frozen app has no separate python3 binary
+# to shell out to run_rippl.py the way a source checkout does. Importing
+# tensorflow into the SAME process as the already-loaded GUI stack segfaults
+# (confirmed) -- this branch keeps that process completely clean of Qt/VTK by
+# exiting before any of it is ever imported.
+if len(sys.argv) > 1 and sys.argv[1] == '--ripple-worker':
+    _worker_base_dir = getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__)))
+    sys.path.insert(0, os.path.join(_worker_base_dir, 'rippl-AI'))
+    import run_rippl
+    run_rippl.main(sys.argv[2:])
+    sys.exit(0)
+
 # xcb (X11) is Linux-only -- forcing it unconditionally crashed PySide6 on
 # macOS/Windows, which don't ship that plugin at all (they use their own
 # native cocoa/windows plugins by default and don't need this override).
@@ -15,7 +32,7 @@ warnings.filterwarnings(
     category=DeprecationWarning,
 )
 import json as _json
-from paths_config import _base_dir, _exe_dir, _paths
+from paths_config import _base_dir, _exe_dir, _paths, get_raw_base
 _session_state_path = os.path.join(_exe_dir, 'last_session.json')
 from PySide6.QtWidgets import QApplication, QMainWindow
 from ui_form import Ui_MainWindow
@@ -27,6 +44,10 @@ import SimpleITK as sitk
 from gui_utils.busy_overlay import BusyOverlay
 from PySide6 import QtWidgets
 from ephys.init_ephys import InitEphys
+from ephys.ui_dock_ephys import Ui_Dock_ephys
+from ephys.ui_tab_popups_ephys import Ui_tab as Ui_tab_popups_ephys
+from gui_utils.ui_tab_popups_4d import Ui_tab_15 as Ui_tab_popups_4d
+from file_handling.ui_tab_popups_4d_ii import Ui_tab_6 as Ui_tab_popups_4d_ii
 from PySide6.QtCore import Qt, QCoreApplication, QResource, QSize
 from PySide6.QtWidgets import QLayout
 import qdarkstyle
@@ -42,8 +63,8 @@ from trajectory_planning.trajectory_planning import TrajectoryPlanning
 from trajectory_planning.trajectory_planning_mri import TrajectoryPlanningMri
 from trajectory_planning.file_input_output import FileInput
 from mrid_utils.atlas_fetch import ensure_atlas_available
-from during_surgery.load_surgery_plan import LoadSurgeryPlan
-from during_surgery.surgery_controller import SurgeryController
+from intraoperative.load_surgery_plan import LoadSurgeryPlan
+from intraoperative.surgery_controller import SurgeryController
 from pypdf import PdfReader
 import vtk
 import pandas as pd
@@ -82,6 +103,24 @@ class MainWindow(QMainWindow):
         self._ephys_session_view_cache = {}
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
+        self._load_split_ui(Ui_Dock_ephys, self.ui.dockWidget_ephys.setWidget)
+        # tabWidget pages split out of form.ui: after setupUi, tabWidget only has
+        # [0]PostSurgery, [1]tab_ephys, [2]tab_samri, [3]surgery (in that order).
+        # Re-inserting at these original tabWidget indices, in ascending order, restores
+        # the original 7-tab layout: 0 PostSurgery, 1 tab_15, 2 tab_6, 3 tab_ephys,
+        # 4 tab, 5 tab_samri, 6 surgery.
+        self._load_split_ui(
+            Ui_tab_popups_4d,
+            lambda w: self.ui.tabWidget.insertTab(1, w, "Popups for 4D Data"),
+        )
+        self._load_split_ui(
+            Ui_tab_popups_4d_ii,
+            lambda w: self.ui.tabWidget.insertTab(2, w, "Popups for 4D Data II"),
+        )
+        self._load_split_ui(
+            Ui_tab_popups_ephys,
+            lambda w: self.ui.tabWidget.insertTab(4, w, "Popups for ephys"),
+        )
         # nothing cached yet at startup -- hide until there's another file/recording to switch to
         #self.ui.comboBox_cache.setVisible(False)
         #self.ui.comboBox_cache_2.setVisible(False)
@@ -90,12 +129,33 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("IMPLAnT")
         self.setWindowIcon(QIcon(os.path.join(_base_dir, "Icons/Github/IMPLAnT_quad.png")))
         # Lives for the whole app session (unlike TrajectoryPlanning, which
-        # only exists while an MRI is loaded) -- see during_surgery/
+        # only exists while an MRI is loaded) -- see intraoperative/
         # surgery_controller.py for why the Surgery tab has no MRI/
         # TrajectoryPlanning dependency at all.
         self.surgery = SurgeryController(self)
         self.add_actions()
         self.ui.tabWidget.setCurrentIndex(0)
+
+    def _load_split_ui(self, ui_class, attach):
+        """
+        Loads a Designer form that was split out of form.ui into its own .ui file
+        (e.g. ephys/dock_ephys.ui) and attaches it via `attach(content_widget)` --
+        a dock's setWidget, or a tab widget's insertTab bound to the right index/title.
+        Widget attributes are flattened onto self.ui so existing self.ui.<name>
+        references elsewhere in the codebase keep working unchanged.
+        """
+        content = QWidget()
+        sub_ui = ui_class()
+        sub_ui.setupUi(content)
+        attach(content)
+        # setupUi names the container after the original page/dock widget (e.g. "page_3D") --
+        # expose it under that name too, so self.ui.<original_name> keeps working, not just
+        # self.ui.<name-of-a-child-inside-it>.
+        setattr(self.ui, content.objectName(), content)
+        for name, value in vars(sub_ui).items():
+            if not name.startswith("_"):
+                setattr(self.ui, name, value)
+        return sub_ui
 
     def add_actions(self):
         """
@@ -149,12 +209,12 @@ class MainWindow(QMainWindow):
         self.ui.actionNew_Window.triggered.connect(self.open_new_window)
         self.ui.actionStart_SAMRI_process.triggered.connect(lambda: self.load_previous_session(['samri']))
         self.ui.actionTrajectory_Planning_2.triggered.connect(lambda: self.load_previous_session(['trajectory']))
-        self.ui.actionDuring_Surgery.triggered.connect(lambda: self.load_previous_session(['surgery']))
+        self.ui.actionIntraoperative.triggered.connect(lambda: self.load_previous_session(['surgery']))
         # Surgery tab's measured-mm bregma/lambda fields: "sag"/"cor" match
         # the same sagittal/coronal slice-index convention as the voxel-
         # cursor spinboxes elsewhere (x=sag=ML/RL, y=cor=AP) -- DV/"ax" was
         # dropped entirely (no longer measured), so reproject_target_to_null
-        # (during_surgery/reprojection.py) is now a pure 2D (ML/RL, AP)
+        # (intraoperative/reprojection.py) is now a pure 2D (ML/RL, AP)
         # reprojection with no vertical/leveling component.
         for sb in (self.ui.doubleSpinBox_sag_b, self.ui.doubleSpinBox_cor_b,
                    self.ui.doubleSpinBox_sag_l, self.ui.doubleSpinBox_cor_l):
@@ -173,8 +233,10 @@ class MainWindow(QMainWindow):
         # Not defined in form.ui -- created here rather than hand-editing
         # that generated file for one menu entry. Lets the user pick the
         # active reference atlas (see mrid_utils/atlas_registry.py) before
-        # opening ephys/electrode localization; trajectory planning gets its
-        # own live in-view switcher instead (TpRegistration.reload_atlas_view).
+        # opening electrode localization, which has no in-view switcher of
+        # its own; trajectory planning and the ephys 3D view instead get
+        # their own live in-view switchers (TpRegistration.reload_atlas_view,
+        # Visualisation3D.reload_atlas_view in ephys/visualisation3D.py).
         self.ui.actionAtlas = QAction("Atlas…", self)
         self.ui.menuGUI.insertAction(self.ui.actionLoad_Prev_Session, self.ui.actionAtlas)
         self.ui.actionAtlas.triggered.connect(self.show_atlas_selector)
@@ -454,7 +516,7 @@ class MainWindow(QMainWindow):
         file_name, _ = QFileDialog.getOpenFileName(
             None,
             "Open ephys Data File",
-            _paths['raw_base'],
+            get_raw_base(self),
             "Data files (*.dat)"
         )
 
@@ -725,7 +787,7 @@ class MainWindow(QMainWindow):
         # onto an empty Surgery tab with nothing loaded.
         #
         # Deliberately independent of LoadMRI/TrajectoryPlanning -- see
-        # during_surgery/surgery_controller.py -- so no MRI/registration
+        # intraoperative/surgery_controller.py -- so no MRI/registration
         # state is required or touched here.
         dlg = LoadSurgeryPlan(self, parent=self)
         if dlg.exec() == QtWidgets.QDialog.DialogCode.Accepted:
@@ -817,6 +879,35 @@ class MainWindow(QMainWindow):
     def start_registration(self,samri_input):
         if not ensure_atlas_available(self):
             return
+
+        if samri_input['register']:
+            from samri import memory_guard
+            atlas_path = os.path.join(samri_input['atlas_folder'], _paths['atlas_template'])
+            try:
+                ok, required_gb, avail_gb = memory_guard.check(atlas_path)
+            except Exception:
+                ok = True
+            if not ok:
+                msg_box = QMessageBox(self)
+                msg_box.setWindowTitle("Low memory for registration")
+                msg_box.setText(
+                    f"This registration is estimated to need ~{required_gb:.0f}GB of free RAM, "
+                    f"but only ~{avail_gb:.0f}GB is currently available.\n\n"
+                    "Running anyway risks the registration (and possibly the whole "
+                    "application) being killed by the system if memory runs out.\n\n"
+                    "To free up memory before proceeding:\n"
+                    "  • Close unused applications (web browsers and IDEs are usually "
+                    "the biggest RAM users)\n"
+                    "  • Restart this application if it's been open a long time\n"
+                    "  • Reboot the computer if it's been on for many days -- long "
+                    "uptimes accumulate memory that a simple app close won't release"
+                )
+                btn_proceed = msg_box.addButton("Proceed anyway", QMessageBox.ActionRole)
+                msg_box.addButton("Cancel", QMessageBox.ActionRole)
+                msg_box.exec()
+                if msg_box.clickedButton() != btn_proceed:
+                    return
+
         def work_registration():
             self.ui.dockWidget_ephys.setEnabled(False)
             self.Samri.output_filepath =  self.Samri.start_registration(samri_input)
@@ -832,20 +923,28 @@ class MainWindow(QMainWindow):
             if os.path.exists(csv_path):
                 df = pd.read_csv(csv_path, index_col=0)
 
-                idx = df.loc[df['session'] == samri_input['working_session'][0]].index[0] #original_path?
-                path = f"{self.Samri.bids_base}/results/generic_work/_ind_type_{idx}/s_register"
-                if os.path.exists(path):
-                    #pop up asking for the view if 4D data used
-                    msg_box = QMessageBox()
-                    msg_box.setWindowTitle("Registration found")
-                    msg_box.setText("Registration already found!")
-                    msg_box.addButton("Cancel", QMessageBox.ActionRole)
-                    btn_ok = msg_box.addButton("Re-Run", QMessageBox.ActionRole)
-                    msg_box.exec()
-                    if msg_box.clickedButton()==btn_ok:
-                        shutil.rmtree(path)
-                    else:
-                        return
+                # data_selection.csv is left over from whichever run last wrote it --
+                # it can predate the session selected here (a previous attempt for a
+                # different session, or one that matched no scans at all), so there's
+                # no guarantee it has a row for this session. Skip the "already
+                # registered" check rather than crashing on an empty match: if this
+                # session was never in it, there's nothing to check for yet either.
+                matches = df.loc[df['session'] == samri_input['working_session'][0]]
+                if not matches.empty:
+                    idx = matches.index[0] #original_path?
+                    path = f"{self.Samri.bids_base}/results/generic_work/_ind_type_{idx}/s_register"
+                    if os.path.exists(path):
+                        #pop up asking for the view if 4D data used
+                        msg_box = QMessageBox()
+                        msg_box.setWindowTitle("Registration found")
+                        msg_box.setText("Registration already found!")
+                        msg_box.addButton("Cancel", QMessageBox.ActionRole)
+                        btn_ok = msg_box.addButton("Re-Run", QMessageBox.ActionRole)
+                        msg_box.exec()
+                        if msg_box.clickedButton()==btn_ok:
+                            shutil.rmtree(path)
+                        else:
+                            return
             def on_registration_failed(tb, threads):
                 logging.error(tb)
                 oom_keywords = ['memoryerror', 'out of memory', 'cannot allocate', 'std::bad_alloc', 'killed']
@@ -1348,6 +1447,23 @@ class MainWindow(QMainWindow):
 
 
 if __name__ == "__main__":
+    # Required for a frozen (PyInstaller) build on Windows: multiprocessing's
+    # default 'spawn' start method there re-invokes this same exe to bootstrap
+    # each worker (nipype's MultiProc plugin, electrode_localization.py's
+    # ProcessPoolExecutor); without this, each "worker" would instead relaunch
+    # the whole GUI from scratch. Must be the first thing that runs. A no-op
+    # on Linux/macOS (default start method there is 'fork', which doesn't
+    # re-invoke the executable), so this is a self-contained safety net that
+    # can't affect the dev workflow.
+    multiprocessing.freeze_support()
+
+    from gui_utils.instance_guard import reap_stale_instances, register_instance, start_heartbeat, unregister_instance
+    # Kill any other launch's process tree that's dead or (like the render()
+    # hangs found while debugging a SAMRI run) alive but frozen -- before
+    # this instance claims any of its own resources.
+    reap_stale_instances()
+    _instance_pid_file = register_instance()
+
     # Register the .qrc file dynamically
 
     script_dir = os.path.dirname(__file__)
@@ -1358,6 +1474,8 @@ if __name__ == "__main__":
     #to mix vtk and QtQuick3D
     QCoreApplication.setAttribute(Qt.AA_ShareOpenGLContexts)
     app = QApplication(sys.argv)
+    _instance_heartbeat_timer = start_heartbeat(app, _instance_pid_file)
+    app.aboutToQuit.connect(lambda: unregister_instance(_instance_pid_file))
     app.setStyle(QuickTooltipStyle(app.style()))
     # app-wide default text size -- widgets with their own explicit QFont
     # (various setFont(...) calls in ui_form.py, from Qt Designer) keep
@@ -1379,6 +1497,12 @@ if __name__ == "__main__":
         }
     """)
     app.setApplicationName("IMPLAnT")
+    # GNOME Shell (esp. under Wayland) resolves the taskbar/dash/alt-tab icon
+    # by matching this app id to an installed .desktop file's Icon=, not by
+    # reading the pixmap passed to setWindowIcon below -- without it, running
+    # from source (where the process is python3, not IMPLAnT.desktop's Exec
+    # target) shows a generic icon even though the QIcon itself loads fine.
+    app.setDesktopFileName("IMPLAnT")
     app.setWindowIcon(QIcon(os.path.join(_base_dir, "Icons/Github/IMPLAnT_quad.png")))
     widget = MainWindow()
     widget.show()

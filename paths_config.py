@@ -56,3 +56,29 @@ def save_paths(**updates):
     with open(_user_config_path, 'w') as f:
         json.dump(base, f, indent=4)
     _paths.update(updates)
+
+
+def get_raw_base(parent_widget=None):
+    """_paths['raw_base'], resolved to a directory that actually exists, to
+    hand a QFileDialog as its starting folder. raw_base has no dedicated
+    settings field anywhere in the GUI (unlike mrid_library/raw_base_samri/
+    the atlas bundle, which all check-and-prompt already) -- it's only ever
+    used as an "open file" dialog's default location, so a wrong/placeholder
+    value (e.g. straight from paths_config.example.json) isn't a blocker,
+    just an unhelpful starting folder. Prompt once for the real folder and
+    persist it via save_paths, same pattern as those others. Falls back to
+    the home directory if there's no parent_widget to prompt with, or the
+    user cancels, so callers always get a real, existing directory."""
+    if os.path.isdir(_paths['raw_base']):
+        return _paths['raw_base']
+    if parent_widget is not None:
+        from PySide6.QtWidgets import QFileDialog, QMessageBox
+        QMessageBox.information(
+            parent_widget, "Raw data folder",
+            "Where's your raw data folder? Pick it once and IMPLAnT will remember it."
+        )
+        chosen = QFileDialog.getExistingDirectory(parent_widget, "Select raw data folder")
+        if chosen:
+            save_paths(raw_base=chosen)
+            return chosen
+    return os.path.expanduser('~')

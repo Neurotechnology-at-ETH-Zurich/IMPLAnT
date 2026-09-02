@@ -7,8 +7,13 @@ __pycache__/
 *.pyc
 .qtc_clangd/
 
+# Qt Creator per-machine project state (interpreter path, build/run
+# directories -- see README's Qt Creator section for what to set these to)
+*.creator.user
+
 # Virtual environments
 venv/
+.venv/
 .venv10/
 .env/
 

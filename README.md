@@ -3,16 +3,16 @@
 
 
 Intracranial electrode implantation involves three distinct workflows: surgical planning, post-implant electrode localisation, and electrophysiological analysis. Currently, these steps are carried out through disconnected tools and custom scripts.
-IMPLAnT is an open-source graphical user interface (GUI) that unifies all three stages into one single, cohesive platform improving both reproducibility and efficiency.
+IMPLAnT is an open-source graphical user interface (GUI) that unifies all three stages into one single, cohesive platform, improving both reproducibility and efficiency.
 
-Currently, the GUI contains the following functions:
+The GUI currently provides:
 
-- **Pre-surgical planning** - register subject MRI data to the WHS brain atlas, letting you plan and visualise electrode trajectories before surgery — switch between the bundled MRI/DTI atlas and a higher-resolution microscopy atlas at any time (see [Atlas](#atlas))
-- **Post-implant localisation** - uses semi-supervised pipeline for MR identification tags to localise electrodes after implantation and automatically assign atlas-defined region labels to each channel to facilitate a more accurate analysis 
-- **Electrophysiology data visualisation** - visualises and curates signal data channel-by-channel, directly linked to the anatomical labels from previous steps
+- **Pre-surgical planning** — register subject MRI data to the WHS brain atlas, letting you plan and visualise electrode trajectories before surgery — switch between the bundled MRI/DTI atlas and a higher-resolution microscopy atlas at any time (see [Atlas](#atlas))
+- **Post-implant localisation** — uses a semi-supervised pipeline for MR identification tags to localise electrodes after implantation and automatically assign atlas-defined region labels to each channel to facilitate a more accurate analysis
+- **Electrophysiology data visualisation** — visualises and curates signal data channel-by-channel, directly linked to the anatomical labels from previous steps
 
-Electrophysiology data preprocessing and analysis is planned for a future release.
-As far as we are aware, IMPLAnT is the first open-source tool to bridge this entire pipeline in one interface. It is released fully open-source and designed to adapt to a range of experimental protocols.
+Electrophysiology data preprocessing and analysis are planned for a future release.
+As far as we are aware, IMPLAnT is the first open-source tool to bridge this entire pipeline in one interface. It's designed to adapt to a range of experimental protocols.
 
 
 ## Screenshots
@@ -36,21 +36,17 @@ As far as we are aware, IMPLAnT is the first open-source tool to bridge this ent
 
 - **OS**: Linux (tested on Ubuntu 24) or macOS (dependencies pinned for both; from source only for now — no macOS standalone build yet)
 - **Python**: 3.10 (from source only)
-- **ANTs**: required to build from source or to build the standalone executable yourself (see [Dependencies](#dependencies)) — NOT required just to run a pre-built release, its binaries are bundled in
+- **ANTs**: required to build from source or to build the standalone executable yourself (see [Dependencies](#dependencies)) — **not** required just to run a pre-built release, its binaries are bundled in
 - **Internet connection**: needed the *first* time you open ephys data, start SAMRI registration, or start trajectory planning — IMPLAnT downloads and caches the ~1.3GB reference atlas automatically at that point (see [Atlas files](#atlas-files)). Not needed to just browse a 3D/4D MRI volume, and not needed again once the atlas is cached locally.
-
-## Release
-
-Pre-built standalone executables for **Linux** are available on the [Releases page](../../releases). No Python installation and no separate ANTs install are required — download the executable and configure `paths_config.json` as described in [Configuration](#configuration).
 
 ## Installation
 
 Choose one of two options:
-- **Download the release** from the [Releases page](../../releases) — no Python installation or separate ANTs install needed
+- **Download the release** from the [Releases page](../../releases) — pre-built standalone executables for **Linux**; no Python installation or separate ANTs install needed. Configure `paths_config.json` as described in [Configuration](#configuration).
 - **Run from source** — requires Python 3.10, all dependencies, and a local ANTs install (see [Dependencies](#dependencies))
 
 ### Dependencies
-IMPLAnT requires **ANTs** (Advanced Normalization Tools) for MRI registration. ANTs is not a Python package. Running from source, or building the standalone executable yourself, needs a local ANTs install; the pre-built releases already bundle the specific ANTs tools they call, so someone just downloading a release doesn't need this section at all.
+IMPLAnT requires **ANTs** (Advanced Normalization Tools) for MRI registration. ANTs is not a Python package. Running from source, or building the standalone executable yourself, needs a local ANTs install; the pre-built releases already bundle the specific ANTs tools they call, so if you're just downloading a release you can skip this section.
 
 1. Download ANTs from the [ANTs releases page](https://github.com/ANTsX/ANTs/releases)
 2. Place the ANTs binaries so that the folder structure looks like this — this is the same layout whether you're running from source directly or building the standalone executable (`MRID_GUI.spec` reads its ANTs binaries from here at build time):
@@ -101,7 +97,7 @@ To open the project in Qt Creator, e.g. on a new machine:
 
 These settings are stored per-machine in `MRID-GUI.creator.user`, so redo steps 2–4 on each new machine.
 
-### Standalone application
+### Building the standalone application
 
 1. Install ANTs as described above — this is a build-time requirement for whoever runs the steps below, not for whoever later downloads/runs the resulting `dist/IMPLAnT`; `MRID_GUI.spec` bundles the specific ANTs tools the app calls straight into the build automatically
 2. Build the executable
@@ -183,7 +179,7 @@ cp samri/bruker_info.example.json samri/bruker_info.json
 ```
 `samri/bruker_info.json` is gitignored, never shared, and explicitly excluded from standalone builds (`MRID_GUI.spec` skips it by name when bundling `samri/`) — it never leaves your machine. If you don't use a Bruker scanner, you can skip this entirely — the fields will simply be left blank in the UI.
 
-## Data Folder Structure
+## Data folder structure
 
 IMPLAnT expects your session data to follow this folder structure. The app derives paths automatically from the file you load, so keeping this layout is important for registration and localisation to work correctly.
 
@@ -211,12 +207,12 @@ IMPLAnT follows a four-stage workflow:
 
 **2. During surgery**
 
-On the day of surgery, real bregma/lambda measurements taken on the animal rarely match exactly what was picked on the pre-op MRI. *File → During Surgery* opens the same Load Previous Session picker used throughout the app — pick a prior surgery session, or use *Load New File...* to load a saved Trajectory Report PDF instead. Type the manipulator's measured Bregma/Lambda (RL/AP, in mm from your rig's null point) to get an updated target position for each shank, shown against a fixed dorsal skull reference photo marked with Bregma, Lambda, and each shank's planned insertion point. See [`docs/surgery_workflow.md`](docs/surgery_workflow.md) for the full walkthrough.
+On the day of surgery, real bregma/lambda measurements taken on the animal rarely match exactly what was picked on the pre-op MRI. *File → Intraoperative* opens the same Load Previous Session picker used throughout the app — pick a prior surgery session, or use *Load New File...* to load a saved Trajectory Report PDF instead. Type the manipulator's measured Bregma/Lambda (RL/AP, in mm from your rig's null point) to get an updated target position for each shank, shown against a fixed dorsal skull reference photo marked with Bregma, Lambda, and each shank's planned insertion point. See [`docs/surgery_workflow.md`](docs/surgery_workflow.md) for the full walkthrough.
 
 **3. Post-implant electrode localisation**
 1. Load the pre-surgical MRI via *File → Load MRI Image*.
 2. Add the post-implant MRI via *File → Load Another MRI Image*.
-3. Use *3D Tools → Resample* to resample the post-implant image to 50 µm, then *3D Tools → Register* to register it to the pre-surgical data. The resulting transform file is saved automatically to the `anat/` folder. For the Registration at least 4 slices in each direction is needed.
+3. Use *3D Tools → Resample* to resample the post-implant image to 50 µm, then *3D Tools → Register* to register it to the pre-surgical data. The resulting transform file is saved automatically to the `anat/` folder. Registration needs at least 4 slices in each direction.
 4. Re-open the GUI via *File → Load MRI Image* and load the 4D post-implant MRI (containing multiple timestamps).
 5. Start the localisation via *4D Tools → MRID-tag label creation*. First paint the anatomical regions, then the electrode traces to generate a heatmap.
 6. Combined with the atlas registration and the implanted shank's `.pkl` file, IMPLAnT automatically assigns each channel to its atlas-defined brain region.

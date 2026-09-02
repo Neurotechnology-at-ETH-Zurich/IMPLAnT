@@ -10906,7 +10906,7 @@ background-color: rgb(131, 131, 131);
       <string>Trajectory Planning</string>
      </property>
      <addaction name="actionTrajectory_Planning_2"/>
-     <addaction name="actionDuring_Surgery"/>
+     <addaction name="actionIntraoperative"/>
     </widget>
     <addaction name="actionStart_SAMRI_process"/>
     <addaction name="menuTrajectory_Planning"/>
@@ -11192,9 +11192,9 @@ background-color: rgb(131, 131, 131);
     <string>Reopen any previously loaded MRI file, ephys recording, or SAMRI animal ID.</string>
    </property>
   </action>
-  <action name="actionDuring_Surgery">
+  <action name="actionIntraoperative">
    <property name="text">
-    <string>During Surgery</string>
+    <string>Intraoperative</string>
    </property>
   </action>
   <action name="actionTrajectory_Planning_2">
