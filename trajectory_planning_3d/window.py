@@ -12,6 +12,7 @@ from PySide6.QtWidgets import (
 )
 
 from gui_utils.busy_overlay import BusyOverlay
+from gui_utils.busy_worker import BusyWorker, show_worker_error
 from trajectory_planning.shank import NEON_COLORS, _make_color_icon
 from trajectory_planning_3d.add_region_dialog import AddRegionDialog
 from ui_form_tp_3d import Ui_Form
@@ -702,16 +703,14 @@ class TrajectoryPlanning3DWindow(QDockWidget):
 
     # ---- background context mesh -------------------------------------------
 
-    def _rebuild_background_mesh(self):
+    def _rebuild_background_mesh(self, downsample=3):
         """(Re)builds the background shell behind a BusyOverlay -- it's a
-        real, ~seconds-long blocking operation (full-volume threshold +
-        surface extraction + decimation + smoothing), so show a "loading"
-        overlay while it runs instead of the window just appearing to
-        hang."""
-        BusyOverlay(self.widget(), "Loading atlas…").run(self._build_background_mesh)
+        real, ~seconds-long operation (full-volume threshold + surface
+        extraction + decimation + smoothing), so show a "loading" overlay
+        while it runs (in a background thread, so the GUI stays responsive)
+        instead of the window just appearing to hang.
 
-    def _build_background_mesh(self, downsample=3):
-        """Translucent context shell, built the same way as add_background in
+        Translucent context shell, built the same way as add_background in
         ephys/visualisation3D.py: threshold the volume, extract+clean+fill
         the outer surface, Taubin-smooth it, and cull the front faces so you
         can see the highlighted regions/shanks inside. Built directly on the
@@ -722,64 +721,93 @@ class TrajectoryPlanning3DWindow(QDockWidget):
         positions are true MRI physical-mm coordinates from the moment
         they're created -- no separate atlas->MRI warp step needed, just
         colour by the subject's own MRI intensity at those same positions."""
-        mri_spacing = np.array(self.tp.movingImg_resampled.GetSpacing())
-        data_zyx = self.tp.mri_label_vol[::downsample, ::downsample, ::downsample]
-        data_xyz = np.transpose(data_zyx, (2, 1, 0))
-        vol = pv.ImageData()
-        vol.dimensions = np.array(data_xyz.shape) + 1
-        vol.spacing = tuple(s * downsample for s in mri_spacing)
-        vol.origin = (0.0, 0.0, 0.0)
-        vol.cell_data['NIFTI'] = data_xyz.flatten(order='F')
+        result = {}
 
-        background = vol.threshold(value=0.5)
-        background = background.extract_surface(algorithm='dataset_surface')
-        background = background.clean().triangulate()
-        background = background.fill_holes(hole_size=1e10)
-        background = background.clean().triangulate()
-        # this is just a translucent context shell, not something that needs
-        # to be geometrically precise -- decimating BEFORE smoothing caps its
-        # triangle count (which otherwise scales with atlas resolution) so
-        # camera rotation stays cheap every frame; smoothing afterwards hides
-        # the facets decimation introduces.
-        background = background.decimate(0.75)
-        smoothed = background.smooth_taubin(n_iter=50, pass_band=0.1)
+        def work():
+            mri_spacing = np.array(self.tp.movingImg_resampled.GetSpacing())
+            data_zyx = self.tp.mri_label_vol[::downsample, ::downsample, ::downsample]
+            data_xyz = np.transpose(data_zyx, (2, 1, 0))
+            vol = pv.ImageData()
+            vol.dimensions = np.array(data_xyz.shape) + 1
+            vol.spacing = tuple(s * downsample for s in mri_spacing)
+            vol.origin = (0.0, 0.0, 0.0)
+            vol.cell_data['NIFTI'] = data_xyz.flatten(order='F')
 
-        mesh_kwargs = dict(
-            opacity=self.opacityBackground,
-            style='surface',
-            line_width=0.5,
-            pickable=False,
-            name='background',
-            reset_camera=False,
-            render=False,
-            culling='front',
-        )
+            background = vol.threshold(value=0.5)
+            background = background.extract_surface(algorithm='dataset_surface')
+            background = background.clean().triangulate()
+            background = background.fill_holes(hole_size=1e10)
+            background = background.clean().triangulate()
+            # this is just a translucent context shell, not something that needs
+            # to be geometrically precise -- decimating BEFORE smoothing caps its
+            # triangle count (which otherwise scales with atlas resolution) so
+            # camera rotation stays cheap every frame; smoothing afterwards hides
+            # the facets decimation introduces.
+            background = background.decimate(0.75)
+            smoothed = background.smooth_taubin(n_iter=50, pass_band=0.1)
 
-        # Already true MRI physical-mm coordinates (vol was built at the
-        # MRI's own spacing/origin above) -- just divide back to a voxel
-        # index to sample this subject's own MRI intensity there.
-        mri_arr = sitk.GetArrayFromImage(self.tp.movingImg_resampled)  # zyx
-        mri_shape = mri_arr.shape
-        idx = smoothed.points / mri_spacing  # (N,3) float xyz
-        rounded = np.round(idx).astype(int)
-        in_bounds = (
-            (rounded[:, 0] >= 0) & (rounded[:, 0] < mri_shape[2]) &
-            (rounded[:, 1] >= 0) & (rounded[:, 1] < mri_shape[1]) &
-            (rounded[:, 2] >= 0) & (rounded[:, 2] < mri_shape[0])
-        )
-        clipped = np.clip(rounded, 0, np.array(mri_shape[::-1]) - 1)
-        intensity = np.where(
-            in_bounds, mri_arr[clipped[:, 2], clipped[:, 1], clipped[:, 0]], 0
-        ).astype(float)
-        smoothed.point_data['intensity'] = intensity
-        # stretch contrast to the actual (non-background) intensity range
-        # instead of mapping the raw scanner range 0..max onto gray --
-        # otherwise real tissue, which rarely reaches the data's true max,
-        # renders far darker than it needs to.
-        nonzero = intensity[intensity > 0]
-        clim = [float(np.percentile(nonzero, 1)), float(np.percentile(nonzero, 99))] if nonzero.size else None
-        self.background_actor = self.plotter.add_mesh(
-            smoothed, scalars='intensity', cmap='gray', clim=clim, show_scalar_bar=False, **mesh_kwargs)
+            # Already true MRI physical-mm coordinates (vol was built at the
+            # MRI's own spacing/origin above) -- just divide back to a voxel
+            # index to sample this subject's own MRI intensity there.
+            mri_arr = sitk.GetArrayFromImage(self.tp.movingImg_resampled)  # zyx
+            mri_shape = mri_arr.shape
+            idx = smoothed.points / mri_spacing  # (N,3) float xyz
+            rounded = np.round(idx).astype(int)
+            in_bounds = (
+                (rounded[:, 0] >= 0) & (rounded[:, 0] < mri_shape[2]) &
+                (rounded[:, 1] >= 0) & (rounded[:, 1] < mri_shape[1]) &
+                (rounded[:, 2] >= 0) & (rounded[:, 2] < mri_shape[0])
+            )
+            clipped = np.clip(rounded, 0, np.array(mri_shape[::-1]) - 1)
+            intensity = np.where(
+                in_bounds, mri_arr[clipped[:, 2], clipped[:, 1], clipped[:, 0]], 0
+            ).astype(float)
+            smoothed.point_data['intensity'] = intensity
+            # stretch contrast to the actual (non-background) intensity range
+            # instead of mapping the raw scanner range 0..max onto gray --
+            # otherwise real tissue, which rarely reaches the data's true max,
+            # renders far darker than it needs to.
+            nonzero = intensity[intensity > 0]
+            clim = [float(np.percentile(nonzero, 1)), float(np.percentile(nonzero, 99))] if nonzero.size else None
+            result['smoothed'] = smoothed
+            result['clim'] = clim
+
+        def on_done():
+            # overlay stays up through add_mesh/reset_camera -- overlay.run()
+            # used to cover this whole call, closing only after it returned
+            mesh_kwargs = dict(
+                opacity=self.opacityBackground,
+                style='surface',
+                line_width=0.5,
+                pickable=False,
+                name='background',
+                reset_camera=False,
+                render=False,
+                culling='front',
+            )
+            self.background_actor = self.plotter.add_mesh(
+                result['smoothed'], scalars='intensity', cmap='gray', clim=result['clim'],
+                show_scalar_bar=False, **mesh_kwargs)
+            # the background shell can change the scene's overall bounds
+            # substantially -- reframe now that it has actually arrived,
+            # instead of leaving whatever framing _maybe_reset_camera
+            # settled on before this (now backgrounded) build finished.
+            self.plotter.reset_camera()
+            overlay.close()
+
+        def on_failed(tb):
+            overlay.close()
+            show_worker_error(self.MW, "Loading atlas failed", tb)
+
+        overlay = BusyOverlay(self.widget(), "Loading atlas…")
+        overlay.setGeometry(self.widget().rect())
+        overlay.raise_()
+        overlay.show()
+
+        self._background_mesh_worker = BusyWorker(work, self.widget())
+        self._background_mesh_worker.done.connect(on_done)
+        self._background_mesh_worker.failed.connect(on_failed)
+        self._background_mesh_worker.start()
 
     # ---- bregma/lambda landmarks + roll/pitch reference planes -------------
 
