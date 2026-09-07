@@ -617,6 +617,7 @@ class FileOutput(QtWidgets.QDialog):
         saved_region_layers = self._save_and_hide_region_layers(tp)
         saved_insertion_guide = self._save_and_hide_insertion_guide(tp)
         saved_oblique_labels = []
+        saved_crossing_line = None
         try:
             if oblique:
                 widget = tp.ui.vtkWidget_data_coronal_3 if view == 'coronal' else tp.ui.vtkWidget_data_sagittal_3
@@ -639,7 +640,32 @@ class FileOutput(QtWidgets.QDialog):
                 deep = tp.coords_deepest_point[shank_num]
                 mid = int(round((insert[point_axis] + deep[point_axis]) / 2))
                 self.MW.Cursor.scroll_slice(view, 0, 0, val=mid)
-                tp.check_points_in_slice()
+                # check_points_in_slice no-ops entirely while picking_insertion_
+                # point is True (rendering.py:25-26) -- true for this whole
+                # export, since _return_to_atlas_space only runs after this
+                # dialog closes. That guard exists to stop atlas-space
+                # coordinates from being redrawn onto the MRI renderer during
+                # the earlier bregma/forbidden-areas MRI steps; coords_insert_
+                # point/coords_deepest_point are already MRI-voxel space by
+                # now, so it's safe to actually run it here -- without this,
+                # every shank's page keeps showing whichever shank was still
+                # selected back on page_6 (its line/markers, at its own
+                # stale slice, AND its own stale angle text/arc -- update_
+                # shank_angle_display is normally only called from create_
+                # channel_list's own picking_insertion_point-guarded block),
+                # never the shank_num this panel is for.
+                tp.LoadMRI.picking_insertion_point = False
+                try:
+                    tp.check_points_in_slice()
+                    tp.update_shank_angle_display()
+                finally:
+                    tp.LoadMRI.picking_insertion_point = True
+                # The OTHER axis's oblique-constraint crossing line (if that
+                # constraint is checked) lands on THIS view's renderer and,
+                # spanning most of the slice by design, blows up the bounds
+                # fit_to_window frames around -- see
+                # _save_and_hide_crossing_line_actor.
+                saved_crossing_line = self._save_and_hide_crossing_line_actor(tp, view)
                 Zoom.fit_to_window(widget, tp.LoadMRI.vtk_widgets.values(), tp.LoadMRI.scale_bar,
                                     tp.LoadMRI.vtk_widgets, 0, data_3d=True)
             QtWidgets.QApplication.processEvents()
@@ -650,9 +676,19 @@ class FileOutput(QtWidgets.QDialog):
             self._restore_region_layers(saved_region_layers)
             self._restore_insertion_guide(saved_insertion_guide)
             self._restore_oblique_label_actors(saved_oblique_labels)
+            self._restore_crossing_line_actor(saved_crossing_line)
             if not oblique:
                 self.MW.Cursor.scroll_slice(view, 0, 0, val=prev_slice)
-                tp.check_points_in_slice()
+                # Same picking_insertion_point guard-flip as above -- restore
+                # the ORIGINALLY selected shank's (prev_shank, just restored
+                # onto tp.shank_number) markers/line/angle text, not leave
+                # shank_num's still showing.
+                tp.LoadMRI.picking_insertion_point = False
+                try:
+                    tp.check_points_in_slice()
+                    tp.update_shank_angle_display()
+                finally:
+                    tp.LoadMRI.picking_insertion_point = True
                 self._restore_view_cameras(tp, saved_cameras)
             if stacked.currentIndex() != prev_index:
                 stacked.setCurrentIndex(prev_index)
@@ -793,6 +829,37 @@ class FileOutput(QtWidgets.QDialog):
     def _restore_insertion_guide(self, saved):
         for actor, was_visible in saved:
             actor.SetVisibility(was_visible)
+
+    def _save_and_hide_crossing_line_actor(self, tp, view):
+        """Temporarily hide the OTHER axis's oblique-crossing indicator
+        line that lands on this view's own renderer -- checkBox_constraint_
+        90deg's white dashed line (rendering_mri.py's oblique_crossing_
+        line_actor) is drawn on the SAGITTAL renderer to show where the
+        constrained coronal reslice cuts it, and checkBox_constraint_90deg_
+        coronal's counterpart (oblique_sagittal_crossing_line_actor) is
+        drawn on the CORONAL renderer the same way. Either one spans most of
+        the slice by design (it's a reference line, not a point), so left
+        visible during this view's own PLAIN (non-oblique) capture, it
+        inflates Zoom.fit_to_window's ComputeVisiblePropBounds() the same
+        way the insertion guide line/dim_line could (see
+        _save_and_hide_insertion_guide/draw_electrode_line) -- shrinking
+        the actual MRI slice down to a near-invisible speck in the
+        screenshot. Only relevant to the "else" (non-oblique) branch of
+        _capture_mri_screenshot; the oblique branch captures the view this
+        line actually belongs to, where it's meant to be visible."""
+        attr = 'oblique_crossing_line_actor' if view == 'sagittal' else 'oblique_sagittal_crossing_line_actor'
+        actor = getattr(tp, attr, None)
+        if actor is None:
+            return None
+        was_visible = actor.GetVisibility()
+        actor.SetVisibility(False)
+        return (actor, was_visible)
+
+    def _restore_crossing_line_actor(self, saved):
+        if saved is None:
+            return
+        actor, was_visible = saved
+        actor.SetVisibility(was_visible)
 
     def _grab_widget(self, widget):
         pixmap = widget.grab()

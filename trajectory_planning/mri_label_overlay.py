@@ -22,6 +22,7 @@ import shlex
 import numpy as np
 import SimpleITK as sitk
 import vtk
+from scipy.ndimage import distance_transform_edt
 
 _FIXED_IDX_FILENAME = "fixed_img-indeces.npy"
 _MOVING_IDX_RAW_FILENAME = "moving_img_resampled25um-indeces.npy"
@@ -110,12 +111,14 @@ def load_or_build_mri_grid_correspondence(session_registration_dir, moving_img, 
 def scatter_atlas_labels_to_mri_grid(atlas_label_path, fixed_idx, mri_grid_idx, mri_shape_zyx):
     """Forward-scatter the atlas' own label volume onto the MRI's voxel
     grid: for every atlas voxel (fixed_idx), place its label value at the
-    corresponding MRI voxel (mri_grid_idx). This is a forward scatter, not a
-    pull/resample -- small speckle gaps at label boundaries are expected
-    where no atlas voxel happens to land exactly on a given MRI voxel; no
-    hole-filling is done here. Returns a zyx uint16 array shaped
-    mri_shape_zyx (0 = background, matching the atlas' own "Clear Label"
-    convention)."""
+    corresponding MRI voxel (mri_grid_idx). Since the MRI grid is finer than
+    the atlas grid, most MRI voxels never get hit by this scatter and would
+    otherwise be indistinguishable from real label-0 ("Clear Label") voxels
+    -- so every unhit MRI voxel is then filled with its nearest scattered
+    neighbor's label (nearest-neighbor pull, the same effect as resampling
+    MRI-voxel -> nearest atlas-voxel without needing to invert the atlas<->
+    MRI SyN transform). Returns a zyx uint16 array shaped mri_shape_zyx
+    (0 = background, matching the atlas' own "Clear Label" convention)."""
     atlas_img = sitk.ReadImage(atlas_label_path)
     atlas_labels = sitk.GetArrayFromImage(atlas_img)  # zyx
 
@@ -127,6 +130,11 @@ def scatter_atlas_labels_to_mri_grid(atlas_label_path, fixed_idx, mri_grid_idx, 
 
     mri_label_vol = np.zeros(mri_shape_zyx, dtype=np.uint16)
     mri_label_vol[mi[:, 2], mi[:, 1], mi[:, 0]] = labels_at_fixed[in_bounds]
+
+    hit = np.zeros(mri_shape_zyx, dtype=bool)
+    hit[mi[:, 2], mi[:, 1], mi[:, 0]] = True
+    nearest_idx = distance_transform_edt(~hit, return_distances=False, return_indices=True)
+    mri_label_vol = mri_label_vol[tuple(nearest_idx)]
     return mri_label_vol
 
 

@@ -8,6 +8,7 @@ from PySide6.QtWidgets import QDialog, QMessageBox
 from gui_utils.busy_overlay import BusyOverlay
 from trajectory_planning.shank_setup_dialog import ShankSetupDialog
 from core.registration import Registration
+from gui_utils.busy_worker import run_off_thread
 
 class TpRegistration:
     def register_to_main_img(self,filename):
@@ -16,6 +17,44 @@ class TpRegistration:
         self.LoadMRI.coarsest_index = 1 #comboBox_coarsest
         self.LoadMRI.finest_index = 0 #comboBox_finest
 
+        # Registration() (a real rigid registration) and apply_transforms/
+        # image_write (a full-volume warp) are pure sitk/ants/numpy work --
+        # no Qt/VTK object touched -- so that whole (first-time-only,
+        # exists-check-guarded) computation runs off the GUI thread via
+        # run_off_thread; this is still called synchronously from
+        # TrajectoryPlanning.__init__, already covered by
+        # _start_trajectory_planning_work's BusyOverlay.
+        new_name = run_off_thread(lambda: self._register_to_main_img_compute(filename))
+
+        # initialize_file's "add another file" branch (loader.py) actually
+        # keys self.MW.Layers[0] by len(self.MW.Layers[0]) at call time, not
+        # by the layer_index passed in below -- capture that same key here
+        # so paint_red_areas can find this layer again afterwards.
+        self.second_file_layer_index = len(self.MW.Layers[0])
+        self.MW.FileLoader.layer_index += 1
+        self.MW.FileLoader.initialize_file(new_name,self.MW.FileLoader.layer_index,'coronal',0)
+        #add to registration combobox
+        self.MW.ui.comboBox_movingimg.addItem(os.path.basename(new_name))
+        self.LoadMRI.movingimg_filename.append(new_name)
+        self.LoadMRI.combo_Regimgname = self.MW.ui.comboBox_movingimg
+
+        #original_path = f"{'_'.join(self.LoadMRI.volumes[0].file_path.split('_')[:-1])}.nii.gz"
+        #mask_path = original_path[:-7] + "-mask.nii.gz"
+        #if os.path.exists(mask_path):
+        #    self.MW.FileLoader.layer_index += 1
+        #    self.MW.FileLoader.initialize_file(mask_path,self.MW.FileLoader.layer_index,'coronal',0)
+        #    #add to registration combobox
+        #    self.MW.ui.comboBox_movingimg.addItem(os.path.basename(mask_path))
+        #    self.LoadMRI.movingimg_filename.append(mask_path)
+        #    self.mask_idx = self.MW.FileLoader.layer_index
+
+        return new_name
+
+    def _register_to_main_img_compute(self, filename):
+        """Pure sitk/ants half of register_to_main_img -- no Qt/VTK object
+        touched -- safe to run off the GUI thread (see run_off_thread
+        above). Returns new_name (the aligned volume's path, writing it to
+        disk first if it doesn't already exist)."""
         m = re.search(r"ind_(\d+)", self.main_file)
         fixed_ind = int(m.group(1))
         moving_ind = int(filename.split("ind_")[1].split(".")[0])
@@ -42,28 +81,6 @@ class TpRegistration:
             )
 
             ants.image_write(img_aligned, new_name)
-
-        # initialize_file's "add another file" branch (loader.py) actually
-        # keys self.MW.Layers[0] by len(self.MW.Layers[0]) at call time, not
-        # by the layer_index passed in below -- capture that same key here
-        # so paint_red_areas can find this layer again afterwards.
-        self.second_file_layer_index = len(self.MW.Layers[0])
-        self.MW.FileLoader.layer_index += 1
-        self.MW.FileLoader.initialize_file(new_name,self.MW.FileLoader.layer_index,'coronal',0)
-        #add to registration combobox
-        self.MW.ui.comboBox_movingimg.addItem(os.path.basename(new_name))
-        self.LoadMRI.movingimg_filename.append(new_name)
-        self.LoadMRI.combo_Regimgname = self.MW.ui.comboBox_movingimg
-
-        #original_path = f"{'_'.join(self.LoadMRI.volumes[0].file_path.split('_')[:-1])}.nii.gz"
-        #mask_path = original_path[:-7] + "-mask.nii.gz"
-        #if os.path.exists(mask_path):
-        #    self.MW.FileLoader.layer_index += 1
-        #    self.MW.FileLoader.initialize_file(mask_path,self.MW.FileLoader.layer_index,'coronal',0)
-        #    #add to registration combobox
-        #    self.MW.ui.comboBox_movingimg.addItem(os.path.basename(mask_path))
-        #    self.LoadMRI.movingimg_filename.append(mask_path)
-        #    self.mask_idx = self.MW.FileLoader.layer_index
 
         return new_name
 

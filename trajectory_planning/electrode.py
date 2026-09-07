@@ -244,9 +244,13 @@ class ElecGeometry:
 
     def _refresh_next_shank_button(self):
         """pushButton_nextShank is dual-purpose: it cycles through shanks
-        still awaiting a click-confirmed insertion point, then once every
-        shank has one, relabels itself to trigger the actual PDF export
-        (what pushButton_SaveTraj used to do directly)."""
+        not yet visited on this page, then once every shank has been (each
+        either left as-is with its page_6 auto-guessed insertion point, or
+        refined by clicking its skull surface), relabels itself to trigger
+        the actual PDF export (what pushButton_SaveTraj used to do
+        directly). Clicking a skull point is an optional refinement, not a
+        requirement -- on_next_shank_clicked marks a shank confirmed the
+        moment you move off it, whether or not you clicked anywhere."""
         all_confirmed = (self.ui.comboBox_Shanks.count() > 0
                          and len(self._insertion_confirmed) >= self.ui.comboBox_Shanks.count())
         if all_confirmed:
@@ -272,5 +276,11 @@ class ElecGeometry:
             self.MW.overlay.run(self._return_to_atlas_space)
             return
         if count > 0:
+            # Leaving this shank counts as confirming it even with no click
+            # on its skull surface -- it already has a valid insertion point
+            # (the page_6 auto-guess, or a click-refined one), and requiring
+            # a click here would gate the PDF export on a purely optional
+            # refinement step.
+            self._insertion_confirmed.add(self.shank_number)
             next_index = (self.shank_number + 1) % count
             self._switch_insertion_shank_mri(next_index)

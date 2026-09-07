@@ -21,6 +21,7 @@ from PySide6.QtWidgets import QDockWidget
 import nibabel as nib
 
 from paths_config import _paths
+from mrid_utils.atlas_registry import ATLASES, DEFAULT_ATLAS
 from trajectory_planning.registration import TpRegistration
 from trajectory_planning.visualisation3D_mri import VisualisationMri
 from trajectory_planning.mri_label_overlay import (
@@ -30,13 +31,21 @@ from trajectory_planning.mri_label_overlay import (
     build_discrete_label_lut,
 )
 from core.image_layer import ImageLayer
+from gui_utils.busy_overlay import BusyOverlay
+from gui_utils.busy_worker import run_off_thread
+
+# The atlas-region-label overlay this workflow builds is always warped from
+# WHS specifically, never whatever _paths['active_atlas'] happens to be --
+# see samri/samri_main.py's same pin for why (a global, switchable atlas
+# leaking into a persistent, per-subject analysis result).
+_WHS_ATLAS_FILES = ATLASES[DEFAULT_ATLAS]['files']
 
 
 class TpRegistrationMri(TpRegistration):
     def build_mri_label_overlay(self):
-        """Builds (first call) or refreshes (subsequent calls, e.g. an
-        atlas switch via reload_atlas_view) the atlas-region-label overlay
-        on the MRI's own grid: self.mri_label_vol (the raw zyx label array,
+        """Builds (first call) or refreshes (subsequent calls) the
+        atlas-region-label overlay on the MRI's own grid: self.mri_label_vol
+        (the raw zyx label array,
         used everywhere region-index lookups used to read self.atlas_vol)
         and self.tp_labels (the same {index: (r,g,b,a,name)} dict
         build_label_lut used to populate, read unmodified by
@@ -47,30 +56,18 @@ class TpRegistrationMri(TpRegistration):
         pattern), NOT through file_handling/loader.py's initialize_file
         "add another file" branch -- that path resamples with BSpline and
         builds a continuous grayscale LUT, both wrong for this categorical
-        label data."""
+        label data.
+
+        The correspondence lookup (first call only) and the label scatter
+        (every call -- a real, uncached full-volume distance_transform_edt)
+        are pure sitk/numpy/scipy work, no Qt/VTK object touched -- that
+        part runs off the GUI thread via run_off_thread. Callers
+        (do_get_shank_line, reload_atlas_view) keep calling this exactly as
+        before and still get everything fully computed before it returns."""
         session_registration_dir = os.path.dirname(self.transform_path)
-        if not hasattr(self, '_mri_grid_fixed_idx'):
-            # samri_main.py's start_registration now builds moving_img_resampled25um-
-            # indeces.npy against ResampleData.resampling25um's actual output
-            # (<data_pre_resampled>_resampled.nii.gz), not self.movingImg's own
-            # native/anisotropic grid -- read that same file here so
-            # reconcile_raw_to_display_indices interprets the indices correctly.
-            movingImg_25um_path = self.MW.data_pre_resampled[:-len('.nii.gz')] + '_resampled.nii.gz'
-            # plain read, matching samri_main.py's own plain read of this file --
-            # reconcile_raw_to_display_indices's physical-space math already
-            # handles the orientation difference against self.movingImg_resampled
-            # (which does stay "RAS", since that's what's actually displayed).
-            movingImg_25um = sitk.ReadImage(movingImg_25um_path)
-            self._mri_grid_fixed_idx, self._mri_grid_mri_idx = load_or_build_mri_grid_correspondence(
-                session_registration_dir, movingImg_25um, self.movingImg_resampled)
-
-        atlas_label_volume_path = os.path.join(_paths['atlas_folder'], _paths['atlas_volume'])
-        mri_shape = self.LoadMRI.volumes[0].slices[0].shape  # zyx
-        self.mri_label_vol = scatter_atlas_labels_to_mri_grid(
-            atlas_label_volume_path, self._mri_grid_fixed_idx, self._mri_grid_mri_idx, mri_shape)
-
-        label_file_path = os.path.join(_paths['atlas_folder'], _paths['atlas_labels'])
-        self.tp_labels = parse_itk_snap_label_file(label_file_path)
+        (self._mri_grid_fixed_idx, self._mri_grid_mri_idx,
+         self.mri_label_vol, self.tp_labels) = run_off_thread(
+            lambda: self._build_mri_label_overlay_compute(session_registration_dir))
 
         if not hasattr(self, '_mri_label_overlay_layer_index'):
             lut_vtk = build_discrete_label_lut(self.tp_labels)
@@ -117,6 +114,39 @@ class TpRegistrationMri(TpRegistration):
             data_view = getattr(self.LoadMRI, 'data_view', 'coronal')
             self.LoadMRI.update_slices(0, data_view)
 
+    def _build_mri_label_overlay_compute(self, session_registration_dir):
+        """Pure sitk/numpy/scipy half of build_mri_label_overlay -- no
+        Qt/VTK object touched -- safe to run off the GUI thread (see
+        run_off_thread above). Returns (mri_grid_fixed_idx, mri_grid_mri_idx,
+        mri_label_vol, tp_labels)."""
+        if not hasattr(self, '_mri_grid_fixed_idx'):
+            # samri_main.py's start_registration now builds moving_img_resampled25um-
+            # indeces.npy against ResampleData.resampling25um's actual output
+            # (<data_pre_resampled>_resampled.nii.gz), not self.movingImg's own
+            # native/anisotropic grid -- read that same file here so
+            # reconcile_raw_to_display_indices interprets the indices correctly.
+            movingImg_25um_path = self.MW.data_pre_resampled[:-len('.nii.gz')] + '_resampled.nii.gz'
+            # plain read, matching samri_main.py's own plain read of this file --
+            # reconcile_raw_to_display_indices's physical-space math already
+            # handles the orientation difference against self.movingImg_resampled
+            # (which does stay "RAS", since that's what's actually displayed).
+            movingImg_25um = sitk.ReadImage(movingImg_25um_path)
+            mri_grid_fixed_idx, mri_grid_mri_idx = load_or_build_mri_grid_correspondence(
+                session_registration_dir, movingImg_25um, self.movingImg_resampled)
+        else:
+            mri_grid_fixed_idx = self._mri_grid_fixed_idx
+            mri_grid_mri_idx = self._mri_grid_mri_idx
+
+        atlas_label_volume_path = os.path.join(_paths['atlas_folder'], _WHS_ATLAS_FILES['atlas_volume'])
+        mri_shape = self.LoadMRI.volumes[0].slices[0].shape  # zyx
+        mri_label_vol = scatter_atlas_labels_to_mri_grid(
+            atlas_label_volume_path, mri_grid_fixed_idx, mri_grid_mri_idx, mri_shape)
+
+        label_file_path = os.path.join(_paths['atlas_folder'], _WHS_ATLAS_FILES['atlas_labels'])
+        tp_labels = parse_itk_snap_label_file(label_file_path)
+
+        return mri_grid_fixed_idx, mri_grid_mri_idx, mri_label_vol, tp_labels
+
     def do_get_shank_line(self):
         self.ui.stackedWidget_trajectoryplanning.setCurrentIndex(1)
         # The misalignment guide line (dial_missalignment) only belongs on
@@ -154,6 +184,16 @@ class TpRegistrationMri(TpRegistration):
         # restart_gui, no atlas swap. Build the atlas-region-label overlay
         # on the MRI's own grid instead of loading the atlas itself as the
         # label_file=True base image.
+        #
+        # build_mri_label_overlay does a real, uncached full-volume distance
+        # transform every single call (see its own docstring) -- this had no
+        # busy indication at all before, even though its heavy half now runs
+        # off the GUI thread (run_off_thread inside it).
+        overlay = BusyOverlay(self.MW, "Building region overlay, please wait…")
+        overlay.setGeometry(self.MW.rect())
+        overlay.raise_()
+        overlay.show()
+
         self.build_mri_label_overlay()
         self.update_voxel_spinbox_ranges()
 
@@ -164,6 +204,7 @@ class TpRegistrationMri(TpRegistration):
             self.create_edge_mask()
 
         self.draw_atlas_reference_points()
+        overlay.close()
 
         # See TpRegistration.do_get_shank_line's own comment: VTK sometimes
         # doesn't paint a freshly (re)shown render window until something
@@ -218,8 +259,8 @@ class TpRegistrationMri(TpRegistration):
         # sampled at a handful of channel points via the existing
         # mri_to_atlas_via_lookup approximation (see ElecGeometryMri.
         # check_CA1_or_2), not displayed as a full volume.
-        if not hasattr(self, 'dwi') and _paths.get('atlas_dwi'):
-            dwi_path = os.path.join(_paths['atlas_folder'], _paths['atlas_dwi'])
+        if not hasattr(self, 'dwi') and _WHS_ATLAS_FILES.get('atlas_dwi'):
+            dwi_path = os.path.join(_paths['atlas_folder'], _WHS_ATLAS_FILES['atlas_dwi'])
             nii_dwi = nib.load(dwi_path)
             dwi = np.asanyarray(nii_dwi.dataobj)
             self.dwi = dwi[:, :, :, 0]

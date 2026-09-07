@@ -50,6 +50,7 @@ from trajectory_planning.rendering import Rendering
 from trajectory_planning.visualisation3D_mri import VisualisationMri
 from core.image_layer import ImageLayer
 from core.interactor_style import ObliqueInteractorStyle
+from gui_utils.busy_worker import run_off_thread
 
 
 class RenderingMri(Rendering):
@@ -166,9 +167,14 @@ class RenderingMri(Rendering):
             del self.dwi
         if _paths.get('atlas_dwi'):
             dwi_path = os.path.join(_paths['atlas_folder'], _paths['atlas_dwi'])
-            nii_dwi = nib.load(dwi_path)
-            dwi = np.asanyarray(nii_dwi.dataobj)
-            self.dwi = dwi[:, :, :, 0]
+            # nib.load + materializing .dataobj is pure nibabel/numpy file-IO,
+            # no Qt/VTK object touched -- backgrounded via run_off_thread;
+            # covered by _on_atlas_selector_changed's BusyOverlay.
+            def _load_dwi():
+                nii_dwi = nib.load(dwi_path)
+                dwi = np.asanyarray(nii_dwi.dataobj)
+                return dwi[:, :, :, 0]
+            self.dwi = run_off_thread(_load_dwi)
 
         self.draw_atlas_reference_points()
         self._sync_atlas_selector_widget()
@@ -497,8 +503,17 @@ class RenderingMri(Rendering):
         t_max = min(1.0, t_max)
 
         if t_min < t_max:
-            p1 = (a + t_min * (b - a)) * spacing
-            p2 = (a + t_max * (b - a)) * spacing
+            # Same out-of-FOV risk dim_line's a_dim/b_dim guards against
+            # above: a/b themselves can sit outside the volume (b especially,
+            # being an extrapolation past the last channel), and while t_min/
+            # t_max keep this segment within the volume along the slice axis,
+            # nothing constrained its in-plane (xi/yi) position -- a steep
+            # enough trajectory can still cross this slice far outside the
+            # MRI's actual extent, blowing up this actor's real VTK bounds
+            # and, with them, Zoom.fit_to_window's framing (the PDF export's
+            # "why is this screenshot zoomed out to a tiny image" symptom).
+            p1 = np.clip(a + t_min * (b - a), 0, shape - 1) * spacing
+            p2 = np.clip(a + t_max * (b - a), 0, shape - 1) * spacing
             bright_line = vtk.vtkLineSource()
             bright_line.SetPoint1(p1[xi], p1[yi], height)
             bright_line.SetPoint2(p2[xi], p2[yi], height)
@@ -537,13 +552,14 @@ class RenderingMri(Rendering):
         report's masked MRI render, file_input_output.py), whereas
         mri_label_vol is already the exact, full-resolution per-voxel
         scatter and is guaranteed built by this point (do_get_shank_line
-        calls build_mri_label_overlay before this)."""
-        fg = self.mri_label_vol != 0
-        fg_filled = ndimage.binary_fill_holes(fg)
-        struct = np.ones((3, 3, 3), dtype=bool)
-        eroded = ndimage.binary_erosion(fg_filled, structure=struct)
-        border = fg_filled & ~eroded
-        edge_mask = border.astype(np.uint8)
+        calls build_mri_label_overlay before this).
+
+        The morphology itself (binary_fill_holes/binary_erosion over a
+        full-resolution volume) is pure scipy/numpy, no Qt/VTK object
+        touched -- runs off the GUI thread via run_off_thread. Both callers
+        (do_get_shank_line, reload_atlas_view) already have a BusyOverlay up
+        around this call."""
+        edge_mask = run_off_thread(self._create_edge_mask_compute)
         self.edge_mask = edge_mask
 
         # See build_mri_label_overlay's identical note (registration_mri.py)
@@ -573,6 +589,17 @@ class RenderingMri(Rendering):
         self.LoadMRI.setup_layer('coronal', 0, layer_index, visibility_at_start=False)
         self.LoadMRI.MW.Layers[0][layer_index].visibility_btn = self.LoadMRI.intensity_table[0].update_table(
             "Brain Edge", edge_mask, 0, layer_index, visibility_enabled=False)
+
+    def _create_edge_mask_compute(self):
+        """Pure scipy/numpy half of create_edge_mask -- no Qt/VTK object
+        touched -- safe to run off the GUI thread (see run_off_thread
+        above)."""
+        fg = self.mri_label_vol != 0
+        fg_filled = ndimage.binary_fill_holes(fg)
+        struct = np.ones((3, 3, 3), dtype=bool)
+        eroded = ndimage.binary_erosion(fg_filled, structure=struct)
+        border = fg_filled & ~eroded
+        return border.astype(np.uint8)
 
     def setup_misalignment_controls(self):
         """One-time setup for dial_missalignment/doubleSpinBox_missalignment
@@ -1366,6 +1393,7 @@ class RenderingMri(Rendering):
 
         self._wire_oblique_zoom_controls('coronal')
         self.update_oblique_coronal_view()
+        self.oblique_renderer.ResetCamera()
         self._draw_oblique_reference_line('coronal')
         self._setup_oblique_scale_bar('coronal')
         self._ensure_all_views_zoom_linked()
@@ -1559,7 +1587,6 @@ class RenderingMri(Rendering):
             self._oblique_label_reslice.SetResliceAxesOrigin(plane_origin_mm[0], plane_origin_mm[1], plane_origin_mm[2])
             self._oblique_label_reslice.Update()
 
-        self.oblique_renderer.ResetCamera()
         self.refresh_oblique_markers('coronal')
         # self.render() only touches the 3 known axis-aligned widgets (see
         # main_window.py's own render()), so it never repaints vtkWidget_
@@ -1692,6 +1719,7 @@ class RenderingMri(Rendering):
 
         self._wire_oblique_zoom_controls('sagittal')
         self.update_oblique_sagittal_view()
+        self.oblique_sagittal_renderer.ResetCamera()
         self._draw_oblique_reference_line('sagittal')
         self._setup_oblique_scale_bar('sagittal')
         self._ensure_all_views_zoom_linked()
@@ -1751,7 +1779,6 @@ class RenderingMri(Rendering):
             self._oblique_sagittal_label_reslice.SetResliceAxesOrigin(plane_origin_mm[0], plane_origin_mm[1], plane_origin_mm[2])
             self._oblique_sagittal_label_reslice.Update()
 
-        self.oblique_sagittal_renderer.ResetCamera()
         self.refresh_oblique_markers('sagittal')
         QTimer.singleShot(0, self.ui.vtkWidget_data_sagittal_3.GetRenderWindow().Render)
 

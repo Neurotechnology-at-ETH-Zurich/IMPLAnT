@@ -273,8 +273,26 @@ class ElecGeometryMri(ElecGeometry):
         self.ui.pushButton_sagittalView.setEnabled(True)
         self.ui.pushButton_axialView.setEnabled(True)
 
-        self.direction_atlas[self.shank_number] = (np.array(self.coords_insert_point[self.shank_number]) - np.array(self.coords_deepest_point[self.shank_number]))
-        self.direction_atlas[self.shank_number] = self.direction_atlas[self.shank_number] / np.linalg.norm(self.direction_atlas[self.shank_number])
+        raw_direction = np.array(self.coords_insert_point[self.shank_number]) - np.array(self.coords_deepest_point[self.shank_number])
+        direction_norm = np.linalg.norm(raw_direction)
+        if direction_norm == 0:
+            # Insert and deepest point landed on the exact same voxel (e.g.
+            # get_point_at_edge's edge_mask had no crossing on this column and
+            # fell back to the clicked point, which coincided with the
+            # already-placed deep point). Dividing by a zero norm here used to
+            # scatter NaN through channel_points/atlas_shank_end and on into
+            # the VTK line actors below, which crashes the process natively
+            # (no Python traceback) rather than raising -- bail out before
+            # that happens.
+            msg_box = QMessageBox(self.MW)
+            msg_box.setWindowTitle("Invalid Trajectory")
+            msg_box.setText(
+                f"Shank {self.shank_number + 1}'s insertion and deepest points "
+                "are identical -- move one of them apart before continuing.")
+            msg_box.addButton("OK", QMessageBox.ActionRole)
+            msg_box.exec()
+            return
+        self.direction_atlas[self.shank_number] = raw_direction / direction_norm
         physical_per_atlas_voxel = np.linalg.norm(self.direction_atlas[self.shank_number] * np.array(self.movingImg_resampled.GetSpacing()))
 
         dfx_shank = self.dfx_shank_data.get(self.shank_number)
@@ -336,8 +354,14 @@ class ElecGeometryMri(ElecGeometry):
 
         # region-name lookup now samples the atlas-labels-on-MRI-grid overlay
         # (mri_label_vol, built in TpRegistrationMri.build_mri_label_overlay)
-        # instead of the atlas' own native-grid array (atlas_vol).
-        mri_values = [self.mri_label_vol[tuple(np.round(p[::-1]).astype(int))] for p in self.channel_points[self.shank_number]]
+        # instead of the atlas' own native-grid array (atlas_vol). Points can
+        # extrapolate slightly outside the volume (deep/insert point near the
+        # FOV edge) -- clip to valid indices instead of indexing out of bounds.
+        vol_shape = np.array(self.mri_label_vol.shape)
+        mri_values = [
+            self.mri_label_vol[tuple(np.clip(np.round(p[::-1]).astype(int), 0, vol_shape - 1))]
+            for p in self.channel_points[self.shank_number]
+        ]
         region_name = [self.tp_labels[val][4] for val in mri_values]
         self.check_CA1_or_2(region_name, self.channel_points[self.shank_number], num_channels)
         self.check_region_to_avoid()

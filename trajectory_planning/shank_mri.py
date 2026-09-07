@@ -38,7 +38,14 @@ class ShankRenderingMri(ShankRendering):
         n_steps = int(np.max(np.abs(top_arr - deep_arr))) + 1
         line_points = np.linspace(top_arr, deep_arr, n_steps)  # shallow -> deep
         line_depths = np.linalg.norm((line_points - top_arr) * spacing, axis=1)
-        line_mri_values = [self.mri_label_vol[tuple(np.round(p[::-1]).astype(int))] for p in line_points]
+        # points can extrapolate slightly outside the volume (deep/insert point
+        # near the FOV edge) -- clip to valid indices instead of indexing out
+        # of bounds (see electrode_mri.py's create_channel_list for the same fix)
+        vol_shape = np.array(self.mri_label_vol.shape)
+        line_mri_values = [
+            self.mri_label_vol[tuple(np.clip(np.round(p[::-1]).astype(int), 0, vol_shape - 1))]
+            for p in line_points
+        ]
 
         contact_depths = np.linalg.norm((np.asarray(points) - top_arr) * spacing, axis=1)
 
