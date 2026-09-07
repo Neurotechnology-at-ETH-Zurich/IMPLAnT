@@ -4,6 +4,8 @@ import pyqtgraph as pg
 from PySide6.QtCore import Qt
 import os
 
+from gui_utils.busy_overlay import BusyOverlay
+
 # Overlay styling per event kind. Ripples are gold and theta green so both can
 # be on screen at once and still be told apart; half_width is the starting
 # half-span when the user adds one by hand (ripples are tens of ms, theta
@@ -171,13 +173,77 @@ class VisualisationEphys:
 
     def prewarm_tabs(self):
         """Force-compute the LFP spectrogram, CSD and all-channels spectrogram
-        once regardless of which tabWidget_LFP tab is currently in front. Called
-        once right after a file/tag finishes loading (see InitEphys.open_dat),
+        once regardless of which tabWidget_LFP tab is currently in front,
+        right after a file/tag finishes loading (see InitEphys.open_dat) --
         so the first click on any of those tabs shows an already-computed map
-        instead of triggering the compute right then."""
-        self.update_spectrogram(force=True)
-        self.update_csd(force=True)
-        self.update_channel_spectrogram(force=True)
+        instead of triggering the compute right then.
+
+        Calls each widget's own prewarm() (see their class docstrings)
+        instead of update_view(force=True): a tag/file load already has
+        enough synchronous GUI rebuilding to do without piling a multi-
+        second wavelet/kCSD computation on top of it, so prewarm backgrounds
+        the actual computation on its own worker thread and applies the
+        result once it's ready, instead of blocking here.
+
+        Backgrounding it doesn't make the CPU cost disappear -- up to three
+        heavy computations (a full-probe CWT, a kCSD cross-validation, ...)
+        now run concurrently right after the tag-load overlay closes, and
+        contend with the GUI thread for the GIL enough that the window can
+        still feel briefly unresponsive. An overlay stays up for exactly
+        that window (tracked via each prewarm's on_finished callback) so it
+        reads as "still working", not as a hang."""
+        channels = getattr(self, 'displayed_channels', []) or []
+        specs = getattr(self, 'spectrograms', [])
+        csd = getattr(self, 'csd_widget', None)
+        channel_spec = getattr(self, 'channel_spectrogram', None)
+
+        pending = len(specs) + (1 if csd is not None else 0) + (1 if channel_spec is not None else 0)
+        if pending == 0:
+            return
+
+        overlay = BusyOverlay(self.MW, "Computing spectrograms…")
+        overlay.setGeometry(self.MW.rect())
+        overlay.raise_()
+        overlay.show()
+        remaining = [pending]
+
+        def on_one_finished():
+            remaining[0] -= 1
+            if remaining[0] <= 0:
+                overlay.close()
+
+        for spec in specs:
+            channel = spec.channel
+            if channel is None or (channels and channel not in channels):
+                channel = channels[0] if channels else None
+            spec.prewarm(
+                self.Ephys.ephys_data.lfp_memmap,
+                self.Ephys.ephys_data.lfp_sample_rate,
+                self.time_start, self.time_end, channel=channel,
+                on_finished=on_one_finished,
+            )
+
+        if csd is not None:
+            active_channels, ele_pos_1d = self._csd_inputs()
+            csd.prewarm(
+                self.Ephys.ephys_data.lfp_memmap,
+                self.Ephys.ephys_data.lfp_sample_rate,
+                self.time_start, self.time_end,
+                active_channels, ele_pos_1d=ele_pos_1d,
+                on_finished=on_one_finished,
+            )
+
+        if channel_spec is not None:
+            active_channels, ele_pos_1d = self._csd_inputs()
+            channel_spec.prewarm(
+                self.Ephys.ephys_data.lfp_memmap,
+                self.Ephys.ephys_data.lfp_sample_rate,
+                self.time_start, self.time_end,
+                active_channels, ele_pos_1d=ele_pos_1d,
+                ripple_events=self.events.get('ripple'),
+                ripple_channels=self._ripple_detection_channels(),
+                on_finished=on_one_finished,
+            )
 
     def update_spectrogram(self, force=False):
         """Redraw the LFP spectrogram for the window currently shown in the ephys

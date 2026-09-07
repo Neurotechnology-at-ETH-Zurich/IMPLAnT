@@ -18,6 +18,7 @@ from core.dfx_geometry_4d import Dfx4DGeometry
 from file_handling.mri_volume import MRIVolume
 from utils.zoom import Zoom
 from gui_utils.busy_overlay import BusyOverlay
+from gui_utils.busy_worker import BusyWorker, show_worker_error
 
 
 def process_in_parallel(args):
@@ -84,7 +85,16 @@ class ElectrodeLoc:
         """
         1. Warping heatmaps, segmentation and 4D volume at first-timestamp
         2. Getting Gaussian Centers or Electrodes
+
+        Pure computation -- no Qt object is touched -- so this is safe to
+        run off the GUI thread (see activate_get_gaussian_analysis). Returns
+        a list of (data_view, FileNotFoundError) pairs for views whose ROI
+        loop hit a missing resampled image (skipped, not fatal) for the
+        caller to warn about once back on the GUI thread; raises
+        FileNotFoundError itself if labels.txt (get_roinames) is missing,
+        since there is nothing to iterate over in that case.
         """
+        skipped = []
         for idx in range(len(self.LoadMRI.vtk_widgets[0])):
             data_view = list(self.LoadMRI.vtk_widgets[0].keys())[idx]
             self.filename = os.path.basename(self.LoadMRI.volumes[idx].file_path[:-7])
@@ -118,13 +128,10 @@ class ElectrodeLoc:
                         volume3d_resampled = np.asanyarray(nib.load(fixed_path).dataobj)
                         gauss_aux.run_gaussian_analysis(self.filename, savepath, roi_name, data_view, volume3d_resampled, self.labelsdf)
             except FileNotFoundError as e:
-                msg = QtWidgets.QMessageBox(self.MW)
-                msg.setIcon(QtWidgets.QMessageBox.Warning)
-                msg.setWindowTitle("Missing resampled image")
-                msg.setText(f"Gaussian analysis for the {data_view} view was skipped:\n\n{e}")
-                msg.addButton("OK", QtWidgets.QMessageBox.ActionRole)
-                msg.exec()
+                skipped.append((data_view, e))
                 continue
+
+        return skipped
 
 
     def getCoordinates(self,on_done):
@@ -150,64 +157,77 @@ class ElectrodeLoc:
 
             # buttons_gui_time_series closed its own overlay before this, to keep the
             # geometry dock clickable -- raise a fresh one now that the
-            # (blocking) localisation work actually starts
+            # localisation work actually starts
             overlay = BusyOverlay(self.MW, message="Localising Electrodes, please wait…")
             overlay.raise_()
             overlay.show()
-            overlay.repaint()
-            QtWidgets.QApplication.processEvents()
 
-            with open(pklfile_path, 'rb') as f:
-                mrid_dict = pickle.load(f)
+            worker_result = {}
 
-            #totalregionNumbers = []
-            totalmrid = []
-            totaldf = []
-            totalbarcode_d = []
-            totalbarcode_r = []
-            totalfitted_points = []
-            totalCA1 =  []
-            totaldwi1Dsignal = []
-            totalregionNames= []
-            totalpyrChIdx= []
-            totalchMap = []
-            totalatlasCoordinates_pkl = []
+            def work():
+                with open(pklfile_path, 'rb') as f:
+                    mrid_dict = pickle.load(f)
 
+                #totalregionNumbers = []
+                totalmrid = []
+                totaldf = []
+                totalbarcode_d = []
+                totalbarcode_r = []
+                totalfitted_points = []
+                totalCA1 =  []
+                totaldwi1Dsignal = []
+                totalregionNames= []
+                totalpyrChIdx= []
+                totalchMap = []
+                totalatlasCoordinates_pkl = []
 
-            #over all tags -> "Pre-defined" gives a per-tag total_ch list
-            #(equal-spacing path) and no channel_depths_um; "User-defined"
-            #gives committed DXF-bent depths and no total_ch (chmap.main
-            #only falls back to channel_separation/total_ch when
-            #channel_depths_um is None)
-            args_list = [
-                (mrid, mrid_dict, self.sessionpath, atlas, atlaslabelsdf,
-                 dwi_path,t2s_path,mask_path,fixed_coordinates_path, moving_coordinates_path,
-                 channel_separation, total_ch[i] if total_ch is not None else None,chMap_file,
-                 channel_depths_um.get(mrid) if channel_depths_um else None)
-                for i, mrid in enumerate(roi_names)
-            ]
+                #over all tags -> "Pre-defined" gives a per-tag total_ch list
+                #(equal-spacing path) and no channel_depths_um; "User-defined"
+                #gives committed DXF-bent depths and no total_ch (chmap.main
+                #only falls back to channel_separation/total_ch when
+                #channel_depths_um is None)
+                args_list = [
+                    (mrid, mrid_dict, self.sessionpath, atlas, atlaslabelsdf,
+                     dwi_path,t2s_path,mask_path,fixed_coordinates_path, moving_coordinates_path,
+                     channel_separation, total_ch[i] if total_ch is not None else None,chMap_file,
+                     channel_depths_um.get(mrid) if channel_depths_um else None)
+                    for i, mrid in enumerate(roi_names)
+                ]
 
+                with ProcessPoolExecutor() as executor:
+                    futures = [executor.submit(process_in_parallel, args) for args in args_list]
 
-            with ProcessPoolExecutor() as executor:
-                futures = [executor.submit(process_in_parallel, args) for args in args_list]
+                    for future in as_completed(futures):
+                        fitted_points,regionNames,regionNumbers,df,barcode_r,barcode_d,mrid,CA1,dwi1Dsignal,pyrChIdx,chMap,atlasCoordinates_pkl = future.result()
+                        totalfitted_points.append(fitted_points)
+                        totaldf.append(df)
+                        totalbarcode_r.append(barcode_r)
+                        totalbarcode_d.append(barcode_d)
+                        totalmrid.append(mrid)
+                        totalCA1.append(CA1)
+                        totaldwi1Dsignal.append(dwi1Dsignal)
+                        totalregionNames.append(regionNames)
+                        totalpyrChIdx.append(pyrChIdx)
+                        totalchMap.append(chMap)
+                        totalatlasCoordinates_pkl.append(atlasCoordinates_pkl)
 
-                for future in as_completed(futures):
-                    fitted_points,regionNames,regionNumbers,df,barcode_r,barcode_d,mrid,CA1,dwi1Dsignal,pyrChIdx,chMap,atlasCoordinates_pkl = future.result()
-                    totalfitted_points.append(fitted_points)
-                    totaldf.append(df)
-                    totalbarcode_r.append(barcode_r)
-                    totalbarcode_d.append(barcode_d)
-                    totalmrid.append(mrid)
-                    totalCA1.append(CA1)
-                    totaldwi1Dsignal.append(dwi1Dsignal)
-                    totalregionNames.append(regionNames)
-                    totalpyrChIdx.append(pyrChIdx)
-                    totalchMap.append(chMap)
-                    totalatlasCoordinates_pkl.append(atlasCoordinates_pkl)
+                worker_result['payload'] = (
+                    roi_names,totaldf,totalbarcode_r,totalbarcode_d,totalmrid,totalCA1,
+                    totaldwi1Dsignal,totalregionNames,totalpyrChIdx,totalfitted_points,
+                    totalchMap,totalatlasCoordinates_pkl)
 
+            def on_worker_done():
+                overlay.close()
+                on_done(worker_result['payload'])
 
-            overlay.close()
-            on_done((roi_names,totaldf,totalbarcode_r,totalbarcode_d,totalmrid,totalCA1,totaldwi1Dsignal,totalregionNames,totalpyrChIdx,totalfitted_points,totalchMap,totalatlasCoordinates_pkl))
+            def on_worker_failed(tb):
+                overlay.close()
+                show_worker_error(self.MW, "Electrode localisation failed", tb)
+
+            self._localisation_worker = BusyWorker(work, self.MW)
+            self._localisation_worker.done.connect(on_worker_done)
+            self._localisation_worker.failed.connect(on_worker_failed)
+            self._localisation_worker.start()
 
         self.get_atlas_points(roi_names, _continue)
 
@@ -644,13 +664,19 @@ class ElectrodeLoc:
             return
 
         pklfile, mode, channel_separation, total_ch, moving_coordinates_path, fixed_coordinates_path, chMap_file = dlg.get_values()
-        self.atlas_path=os.path.join(_paths['atlas_folder'], _paths['atlas_volume'])
+        # Channel-to-region mapping is always built against WHS specifically,
+        # never whatever _paths['active_atlas'] happens to be -- same pin as
+        # samri/samri_main.py and trajectory_planning/registration_mri.py (a
+        # global, switchable atlas must never leak into a persistent,
+        # per-subject analysis result).
+        whs_atlas = atlas_registry.ATLASES[atlas_registry.DEFAULT_ATLAS]
+        whs_files = whs_atlas['files']
+        self.atlas_path=os.path.join(_paths['atlas_folder'], whs_files['atlas_volume'])
         nii_atlas=nib.load(self.atlas_path)
         atlas=np.asanyarray(nii_atlas.dataobj)
 
-        labels_path=os.path.join(_paths['atlas_folder'], _paths['atlas_labels'])
-        active_atlas = atlas_registry.get_active_atlas(_paths)
-        if active_atlas['label_format'] == 'whs_legacy':
+        labels_path=os.path.join(_paths['atlas_folder'], whs_files['atlas_labels'])
+        if whs_atlas['label_format'] == 'whs_legacy':
             atlaslabelsdf=handlers.read_whs_labels(labels_path)
         else:
             itk_labels = handlers.read_itk_snap_labels(labels_path)
@@ -662,9 +688,9 @@ class ElectrodeLoc:
         # None here, rather than a path to a nonexistent file, so downstream
         # consumers (channel_mapper.map_channels_to_atlas) can skip the
         # DWI-marker step gracefully.
-        dwi_path=os.path.join(_paths['atlas_folder'], _paths['atlas_dwi']) if _paths.get('atlas_dwi') else None
-        t2s_path=os.path.join(_paths['atlas_folder'], _paths['atlas_template'])
-        mask_path=os.path.join(_paths['atlas_folder'], _paths['atlas_mask'])
+        dwi_path=os.path.join(_paths['atlas_folder'], whs_files['atlas_dwi']) if whs_atlas['has_dwi'] else None
+        t2s_path=os.path.join(_paths['atlas_folder'], whs_files['atlas_template'])
+        mask_path=os.path.join(_paths['atlas_folder'], whs_files['atlas_mask'])
 
         if mode == "uniform":
             on_done((pklfile,atlas,atlaslabelsdf,dwi_path,t2s_path,mask_path,

@@ -2,17 +2,28 @@
 """Single entry point for making a different registry atlas
 (mrid_utils/atlas_registry.py) the active one -- ensures its files exist
 (fetching/converting if needed), then repoints every _paths['atlas_*'] key
-every existing consumer already reads. Used both by AtlasSelectorDialog below
-(the non-live surface, reachable via File -> Atlas... whenever the user
+for the REST OF THIS SESSION ONLY (see switch_active_atlas: it updates the
+in-memory _paths dict directly, deliberately never save_paths-ing the switch
+to paths_config.json). WHS is always what a fresh launch starts on --
+paths_config.py forces _paths['active_atlas'] back to DEFAULT_ATLAS right
+after loading the file, regardless of what's on disk -- so persisting a
+switch here would only ever be a silent no-op next launch, while still
+needlessly rewriting the user's config file. Used both by AtlasSelectorDialog
+below (the non-live surface, reachable via File -> Atlas... whenever the user
 isn't already inside trajectory planning or the ephys 3D view) and by those
 two screens' own live in-view switchers (trajectory_planning/registration.py's
 TpRegistration.reload_atlas_view and ephys/visualisation3D.py's
-Visualisation3D.reload_atlas_view)."""
+Visualisation3D.reload_atlas_view). Persistent, per-subject pipelines (SAMRI
+registration, the trajectory-planning label overlay, channel-to-region
+mapping) never read _paths['active_atlas'] at all -- they always pin WHS
+directly (see samri/samri_main.py's _WHS_ATLAS_FILES pattern), so a switch
+made here can only ever affect live visualization, never an analysis
+result."""
 import os
 
 from PySide6.QtWidgets import QComboBox, QDialog, QDialogButtonBox, QLabel, QVBoxLayout
 
-from paths_config import _paths, save_paths
+from paths_config import _paths
 from mrid_utils import atlas_fetch, atlas_fetch_brainglobe
 from mrid_utils.atlas_registry import ATLASES, get_active_atlas_id
 
@@ -27,7 +38,9 @@ def _file_path(entry, key):
 
 def switch_active_atlas(atlas_id, parent_widget):
     """Returns True once atlas_id's files are available and _paths has been
-    repointed + persisted to it. Returns False (leaving the previously
+    repointed to it, IN MEMORY ONLY -- deliberately not save_paths'd to
+    paths_config.json, so the switch lasts only this session (see this
+    module's own docstring for why). Returns False (leaving the previously
     active atlas untouched in _paths) if the user cancels or the fetch
     fails."""
     entry = ATLASES[atlas_id]
@@ -42,7 +55,7 @@ def switch_active_atlas(atlas_id, parent_widget):
     if not available:
         return False
 
-    save_paths(
+    _paths.update(
         active_atlas=atlas_id,
         atlas_volume=_file_path(entry, 'atlas_volume'),
         atlas_labels=_file_path(entry, 'atlas_labels'),
@@ -62,7 +75,9 @@ class AtlasSelectorDialog(QDialog):
     needed inside trajectory planning or the ephys 3D view, which each get
     their own live in-view combo (see TpRegistration.reload_atlas_view and
     Visualisation3D.reload_atlas_view) -- this is for choosing the active
-    atlas before entering one of the screens that don't."""
+    atlas before entering one of the screens that don't. Either way the
+    switch is session-only (see switch_active_atlas) and only ever affects
+    visualization, never SAMRI registration or a saved analysis result."""
 
     def __init__(self, parent=None):
         super().__init__(parent)

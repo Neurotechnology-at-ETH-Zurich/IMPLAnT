@@ -18,6 +18,7 @@ from mplwidget import MplWidget
 from ephys.visualisation3D import Visualisation3D
 import time
 from gui_utils.busy_overlay import BusyOverlay
+from gui_utils.busy_worker import BusyWorker, show_worker_error
 from PySide6.QtGui import QKeySequence, QShortcut
 
 class PopupDialog(QDialog):
@@ -362,7 +363,7 @@ class ButtonsGUI_TimeSeries:
             combobox.valueChanged.connect(lambda val, i=idx: self.timestamp4D_changed(val, i, data_index,data_view))
 
             groupBox = getattr(self.ui, f"groupBox_time{data_index}{idx}")
-            title = f"Timestamp t={self.LoadMRI.volumes[data_index].timestamp4D[idx]}"
+            title = f"Echo {self.LoadMRI.volumes[data_index].timestamp4D[idx]}"
             groupBox.setTitle(title)
             tabBox = getattr(self.ui, f"tabWidget_time{data_index}")
             tabBox.setTabText(idx, title)
@@ -403,7 +404,7 @@ class ButtonsGUI_TimeSeries:
         self.LoadMRI.update_slices(data_index,data_view)
 
         groupBox = getattr(self.ui, f"groupBox_time{data_index}{image_index}")
-        title = f"Timestamp t={value}"
+        title = f"Echo {value}"
         groupBox.setTitle(title)
         tabBox = getattr(self.ui, f"tabWidget_time{data_index}")
         index = tabBox.currentIndex()
@@ -659,41 +660,69 @@ class ButtonsGUI_TimeSeries:
 
     def activate_get_gaussian_analysis(self):
         self.LoadMRI.ElectrodeLoc = ElectrodeLoc(self.LoadMRI,self.MW)
-        try:
-            self.LoadMRI.ElectrodeLoc.get_gaussian_centers(self.transformation_files)
-        except FileNotFoundError as e:
-            self.overlay.close()
-            msg_box = QMessageBox(self.MW)
-            msg_box.setWindowTitle("Missing file for Gaussian analysis")
-            msg_box.setText(str(e))
-            btn_goto = msg_box.addButton("Go to MRID-tag label creation", QMessageBox.ActionRole)
-            msg_box.addButton("Cancel", QMessageBox.ActionRole)
+
+        result = {}
+
+        def work():
+            try:
+                result['skipped'] = self.LoadMRI.ElectrodeLoc.get_gaussian_centers(self.transformation_files)
+            except FileNotFoundError as e:
+                result['missing_error'] = e
+
+        def on_done():
+            # the overlay stays open (behind these modal dialogs) through all
+            # of this, exactly like it did before this was a worker -- it
+            # only actually gets closed below on the missing-file/cancel
+            # paths, or reused (not recreated) on Continue
+            if 'missing_error' in result:
+                self.overlay.close()
+                e = result['missing_error']
+                msg_box = QMessageBox(self.MW)
+                msg_box.setWindowTitle("Missing file for Gaussian analysis")
+                msg_box.setText(str(e))
+                btn_goto = msg_box.addButton("Go to MRID-tag label creation", QMessageBox.ActionRole)
+                msg_box.addButton("Cancel", QMessageBox.ActionRole)
+                msg_box.exec()
+                if msg_box.clickedButton() == btn_goto:
+                    self.open_input_dialog()
+                return
+
+            for data_view, e in result['skipped']:
+                msg_box = QMessageBox(self.MW)
+                msg_box.setIcon(QMessageBox.Warning)
+                msg_box.setWindowTitle("Missing resampled image")
+                msg_box.setText(f"Gaussian analysis for the {data_view} view was skipped:\n\n{e}")
+                msg_box.addButton("OK", QMessageBox.ActionRole)
+                msg_box.exec()
+
+            #POPUP
+            msg_box = QMessageBox()
+            msg_box.setWindowTitle("Electrode Localization")
+            msg_box.setText("All Files warped and Gaussian Centers Warped. \n Press CONTINUE to recieve final Electrode Localization.")
+            btn_cont = msg_box.addButton("CONTINUE", QMessageBox.ActionRole)
+            btn_cancel = msg_box.addButton("Cancel", QMessageBox.ActionRole)
             msg_box.exec()
-            if msg_box.clickedButton() == btn_goto:
-                self.open_input_dialog()
-            return
-        #dock.close()
-        #POPUP
-        msg_box = QMessageBox()
-        msg_box.setWindowTitle("Electrode Localization")
-        msg_box.setText("All Files warped and Gaussian Centers Warped. \n Press CONTINUE to recieve final Electrode Localization.")
-        btn_cont = msg_box.addButton("CONTINUE", QMessageBox.ActionRole)
-        btn_cancel = msg_box.addButton("Cancel", QMessageBox.ActionRole)
-        msg_box.exec()
-        if msg_box.clickedButton()==btn_cancel:
+            if msg_box.clickedButton()==btn_cancel:
+                self.overlay.close()
+                return
+            if msg_box.clickedButton()==btn_cont:
+                # this reuses the still-open Gaussian Analysis overlay instead of
+                # going through electrode_localisation() (which would create a
+                # fresh one) - the modal msg_box above can leave it stacked behind
+                # other widgets, so it needs both a message update and a re-raise
+                self.overlay.set_message("Localising Electrodes, please wait…")
+                self.overlay.raise_()
+                self.overlay.show()
+                self.activate_electrode_localisation()
+
+        def on_failed(tb):
             self.overlay.close()
-            return
-        if msg_box.clickedButton()==btn_cont:
-            # this reuses the still-open Gaussian Analysis overlay instead of
-            # going through electrode_localisation() (which would create a
-            # fresh one) - the modal msg_box above can leave it stacked behind
-            # other widgets, so it needs both a message update and a re-raise
-            self.overlay.set_message("Localising Electrodes, please wait…")
-            self.overlay.raise_()
-            self.overlay.show()
-            self.overlay.repaint()
-            QApplication.processEvents()
-            self.activate_electrode_localisation()
+            show_worker_error(self.MW, "Gaussian analysis failed", tb)
+
+        self._gaussian_worker = BusyWorker(work, self.MW)
+        self._gaussian_worker.done.connect(on_done)
+        self._gaussian_worker.failed.connect(on_failed)
+        self._gaussian_worker.start()
 
 
     def electrode_localisation(self):

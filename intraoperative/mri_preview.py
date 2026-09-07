@@ -25,6 +25,7 @@ from PySide6.QtGui import QIcon
 from PySide6.QtCore import QTimer
 from mrid_utils.handlers import find_ind_data
 from paths_config import _paths
+from gui_utils.busy_worker import run_off_thread
 
 # Same palette as trajectory_planning/shank.py's NEON_COLORS (vtk-color
 # tuples only, not reusing that module directly to avoid pulling in its
@@ -379,10 +380,11 @@ class SurgeryMRIPreview:
             self.clear()
             return False
 
-    def _render(self, mri_path, data, downsample):
-        self._render_generation += 1
-        generation = self._render_generation
-        self.plotter.clear()
+    def _compute_shell(self, mri_path, downsample):
+        """Pure sitk/numpy/scipy/skimage/pyvista half of _render -- no
+        Qt/VTK scene object touched -- safe to run off the GUI thread (see
+        run_off_thread in _render above). Returns (smoothed, orig_spacing,
+        clim, point_opacity)."""
         img = sitk.ReadImage(mri_path)
         # mri_insert/mri_deep are voxel indices into movingImg_resampled,
         # which is the RAW resampled file reoriented to canonical RAS
@@ -425,6 +427,22 @@ class SurgeryMRIPreview:
         # look identical to the plain black pv.global_theme.background,
         # with no visual signal that anything is wrong.
         point_opacity = np.where(intensity > 0, 0.5, 0.0)
+
+        return smoothed, orig_spacing, clim, point_opacity
+
+    def _render(self, mri_path, data, downsample):
+        self._render_generation += 1
+        generation = self._render_generation
+        self.plotter.clear()
+
+        # sitk read/orient + shell building (_build_atlas_warped_shell /
+        # _build_otsu_shell) is pure sitk/numpy/scipy/skimage/pyvista work,
+        # no Qt/VTK scene object touched (these meshes aren't attached to
+        # self.plotter yet) -- backgrounded via run_off_thread. Both callers
+        # (main_window.py, intraoperative/load_surgery_plan.py) already have
+        # a BusyOverlay up around load_plan.
+        smoothed, orig_spacing, clim, point_opacity = run_off_thread(
+            lambda: self._compute_shell(mri_path, downsample))
 
         self.plotter.add_mesh(smoothed, scalars='MRI', cmap='gray', clim=clim, show_scalar_bar=False,
                               opacity=point_opacity, style='surface', culling='front', pickable=False,

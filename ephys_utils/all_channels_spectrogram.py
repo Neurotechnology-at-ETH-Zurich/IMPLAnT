@@ -7,6 +7,7 @@ from PySide6.QtWidgets import QWidget, QVBoxLayout
 from PySide6.QtCore import QRectF, Qt, QThread, QObject, Signal, Slot
 
 from gui_utils.busy_overlay import BusyOverlay
+from gui_utils.busy_worker import BusyWorker
 
 
 class AllChannelsSpectrogram(QWidget):
@@ -24,7 +25,7 @@ class AllChannelsSpectrogram(QWidget):
     from Peter's Wavlet_All_Channels_Plot.mlx: mean wavelet power over the
     interval, plus the sharp-wave and ripple depth profiles on top.
 
-    pushButton_Timeframe_spectogram flips this to the MATLAB script's other
+    pushButton_Timeframe_spectrogram flips this to the MATLAB script's other
     mode (CWT_TOTAL): instead of the current window, average over every
     detected ripple in the whole recording, each contributing its own
     ±RIPPLE_HALF_WINDOW_S around its true peak — the sample of maximum
@@ -70,7 +71,7 @@ class AllChannelsSpectrogram(QWidget):
     # windows are cropped to this many seconds around the centre time point.
     MAX_INTERVAL_S = 10.0
 
-    # Ripple-triggered mode (pushButton_Timeframe_spectogram): half-span around
+    # Ripple-triggered mode (pushButton_Timeframe_spectrogram): half-span around
     # each ripple's centre, in seconds. 25 ms is the MATLAB script's window
     # (CWT_TOTAL averages samples 1000-50:1000+50 of a 2000 Hz recording).
     RIPPLE_HALF_WINDOW_S = 0.025
@@ -118,7 +119,7 @@ class AllChannelsSpectrogram(QWidget):
         #                          figure), False = linear Hz. Toggled by button.
         self.ripple_mode = False # False = entire visible window (default),
         #                          True = session-wide ripple-triggered average.
-        #                          Toggled by pushButton_Timeframe_spectogram.
+        #                          Toggled by pushButton_Timeframe_spectrogram.
         # {log_freq: (spec, n_used)}, for the current _ripple_cache_base_key
         # (id(ripple_events), channels, ripple-detection channels -- everything
         # about a ripple-triggered run EXCEPT log_freq). Toggling the frequency
@@ -150,6 +151,8 @@ class AllChannelsSpectrogram(QWidget):
         # instead of rerunning the CWT -- see set_log_frequency.
         self._window_cache_base_key = None
         self._window_cache = {}
+        self._prewarm_worker = None
+        self._last_prewarm_request = None
 
         self.wavelet = f"cmor{self.BANDWIDTH}-{self.CENTER}"
         # central frequency of the mother wavelet, needed to turn frequencies
@@ -269,7 +272,7 @@ class AllChannelsSpectrogram(QWidget):
 
     # ------------------------------------------------------------------
     # Timeframe: entire window <-> ripple-triggered
-    # (pushButton_Timeframe_spectogram)
+    # (pushButton_Timeframe_spectrogram)
     # ------------------------------------------------------------------
 
     def set_ripple_mode(self, enabled):
@@ -377,6 +380,11 @@ class AllChannelsSpectrogram(QWidget):
             self._window_cache_base_key = base_key
             self._window_cache = {}
 
+        # this is the authoritative request now -- a prewarm computation
+        # still in flight for an older one must not draw over whatever
+        # this call is about to show (see prewarm's on_done)
+        self._last_prewarm_request = None
+
         cached = self._window_cache.get(self.log_freq)
         if cached is not None:
             cached_spec, cached_freqs, cached_channel_ids, cached_title = cached
@@ -384,13 +392,120 @@ class AllChannelsSpectrogram(QWidget):
             self._finish_update_view(cached_spec, cached_freqs, cached_channel_ids)
             return
 
-        spec = self._window_spec(lfp_memmap, fs, freqs, channel_ids,
-                                  t_start, t_end)
+        spec, title = self._window_spec(lfp_memmap, fs, freqs, channel_ids,
+                                        t_start, t_end)
         if spec is None:
             self._clear()
             return
-        self._window_cache[self.log_freq] = (spec, freqs, channel_ids, self._title)
+        self._title = title
+        self._window_cache[self.log_freq] = (spec, freqs, channel_ids, title)
         self._finish_update_view(spec, freqs, channel_ids)
+
+    def prewarm(self, lfp_memmap, lfp_sample_rate, t_start, t_end, active_channels,
+               ele_pos_1d=None, ripple_events=None, ripple_channels=None,
+               on_finished=None):
+        """Async counterpart of update_view(force=True), for VisEphys.
+        prewarm_tabs: runs the CWT off the GUI thread instead of blocking it
+        right after a file/tag load ("most of a second on a 64-channel
+        probe" -- see the class docstring). Only the window-mode path is
+        backgrounded here -- ripple-triggered mode already runs on its own
+        worker thread (_update_ripple_triggered/_RippleSpecWorker) with its
+        own overlay, so that case is just left to update_view as before.
+        Falls through to the normal (cheap) synchronous path on a cache hit
+        or a nothing-to-show case -- only the real computation, when needed,
+        is backgrounded.
+
+        on_finished(), if given, is called exactly once (synchronously below
+        for the fast path, or from the worker's done/failed slot otherwise)
+        -- prewarm_tabs uses this to know when it can drop its overlay."""
+        if self.ripple_mode:
+            self.update_view(lfp_memmap, lfp_sample_rate, t_start, t_end,
+                             active_channels, ele_pos_1d=ele_pos_1d,
+                             ripple_events=ripple_events, ripple_channels=ripple_channels,
+                             force=True)
+            if on_finished is not None:
+                on_finished()
+            return
+
+        def fall_back():
+            self.update_view(lfp_memmap, lfp_sample_rate, t_start, t_end,
+                             active_channels, ele_pos_1d=ele_pos_1d,
+                             ripple_events=ripple_events, ripple_channels=ripple_channels,
+                             force=True)
+            if on_finished is not None:
+                on_finished()
+
+        if lfp_memmap is None or len(active_channels) < 2 or t_end <= t_start:
+            fall_back()
+            return
+
+        fs = float(lfp_sample_rate)
+        fmax = min(self.F_MAX, fs / 2.0 * 0.99)
+        if fmax <= self.F_MIN:
+            fall_back()
+            return
+
+        # rows in depth order, so row 0 is the shallowest contact -- same as
+        # update_view
+        channel_ids = np.asarray(active_channels, dtype=int)
+        if ele_pos_1d is not None and np.asarray(ele_pos_1d).shape[0] == len(channel_ids):
+            depths = np.asarray(ele_pos_1d, dtype=float).ravel()
+            channel_ids = channel_ids[np.argsort(depths)]
+
+        log_freq = self.log_freq
+        if log_freq:
+            freqs = np.logspace(np.log10(self.F_MIN), np.log10(fmax), self.N_FREQS)
+        else:
+            freqs = np.linspace(self.F_MIN, fmax, self.N_FREQS)
+
+        base_key = (id(lfp_memmap), t_start, t_end, tuple(int(c) for c in channel_ids))
+        if base_key == self._window_cache_base_key and log_freq in self._window_cache:
+            fall_back()  # cache hit -- cheap, just render it synchronously
+            return
+
+        request = base_key + (log_freq,)
+        result_holder = {}
+
+        def work():
+            spec, title = self._window_spec(lfp_memmap, fs, freqs, channel_ids,
+                                            t_start, t_end)
+            if spec is None:
+                result_holder['payload'] = None
+                return
+            result_holder['spec'] = spec
+            result_holder['title'] = title
+            result_holder['payload'] = self._compute_display(
+                spec, freqs, channel_ids, log_freq, False, title)
+
+        def on_done():
+            try:
+                # the widget may have moved on (scrolled, channel change, tag
+                # switch, mode/axis toggle) while this was computing -- drop a
+                # stale result instead of drawing over whatever is now on screen
+                if self._last_prewarm_request != request or self.ripple_mode:
+                    return
+                payload = result_holder['payload']
+                if payload is None:
+                    self._clear()
+                    return
+                self._window_cache_base_key = base_key
+                self._window_cache[log_freq] = (
+                    result_holder['spec'], freqs, channel_ids, result_holder['title'])
+                self._apply_display(payload)
+            finally:
+                if on_finished is not None:
+                    on_finished()
+
+        def on_failed(tb):
+            print(f"AllChannelsSpectrogram prewarm failed:\n{tb}", flush=True)
+            if on_finished is not None:
+                on_finished()
+
+        self._last_prewarm_request = request
+        self._prewarm_worker = BusyWorker(work, self)
+        self._prewarm_worker.done.connect(on_done)
+        self._prewarm_worker.failed.connect(on_failed)
+        self._prewarm_worker.start()
 
     def _finish_update_view(self, spec, freqs, channel_ids):
         """Render `spec` (n_channels, n_freqs raw power): FOOOF-flatten it,
@@ -398,28 +513,44 @@ class AllChannelsSpectrogram(QWidget):
 
         Shared tail of update_view for the window path (synchronous) and the
         ripple-triggered path (synchronous on a cache hit, or from the
-        _RippleSpecWorker "finished" callback otherwise)."""
+        _RippleSpecWorker "finished" callback otherwise). Thin synchronous
+        wrapper around _compute_display/_apply_display -- see those for the
+        actual work; kept so these existing callers don't need to change."""
+        payload = self._compute_display(spec, freqs, channel_ids, self.log_freq,
+                                        self.ripple_mode, self._title)
+        if payload is None:
+            self._clear()
+            return
+        self._apply_display(payload)
+
+    def _compute_display(self, spec, freqs, channel_ids, log_freq, ripple_mode, title):
+        """Pure computation half of _finish_update_view -- no Qt/pyqtgraph
+        object touched, so this is safe to call off the GUI thread (see
+        prewarm). log_freq/ripple_mode are passed explicitly (snapshotted
+        before a background call starts) rather than read from self, since
+        those can change while a prewarm computation is still in flight.
+        Returns a payload dict for _apply_display, or None if there's
+        nothing to show."""
         # flatten each channel's raw power against its own FOOOF 1/f fit, then
         # scale the colour bar adaptively to whatever dB range this map holds
         flat_db = self._fooof_flatten(freqs, spec)
         finite = flat_db[np.isfinite(flat_db)]
         if finite.size == 0:
-            self._clear()
-            return
+            return None
         v = float(np.percentile(np.abs(finite), 99.9))
         v = float(np.clip(v, self.DB_CLIM_MIN, self.CLIM_DB))
         # ripple-triggered mode floors the colour scale at 0 dB (each channel's
         # own 1/f background) -- below-background dips aren't the point of that
         # map. The entire-window mode keeps the symmetric +-v range.
-        lo = 0.0 if self.ripple_mode else -v
+        lo = 0.0 if ripple_mode else -v
 
-        self._rows = [int(c) for c in channel_ids]
-        n_ch = len(self._rows)
+        rows = [int(c) for c in channel_ids]
+        n_ch = len(rows)
 
         # column coordinate of the image: Hz on the linear axis, log10(Hz) on the
         # log one. freqs is evenly spaced in that coordinate either way (lin- /
         # logspace above), so the single rect maps the columns correctly.
-        x = np.log10(freqs) if self.log_freq else freqs
+        x = np.log10(freqs) if log_freq else freqs
 
         # display-only interpolation between channels and frequencies; the grid
         # keeps the same endpoints, so the rect below still spans the data
@@ -427,6 +558,27 @@ class AllChannelsSpectrogram(QWidget):
         disp = self._resample(disp, self.DISPLAY_COLS, axis=1)
         dy = (n_ch - 1) / max(disp.shape[0] - 1, 1)
         dx = (x[-1] - x[0]) / max(disp.shape[1] - 1, 1)
+
+        return dict(flat_db=flat_db, freqs=freqs, rows=rows, n_ch=n_ch, x=x,
+                   disp=disp, dy=dy, dx=dx, lo=lo, v=v, log_freq=log_freq,
+                   title=title)
+
+    def _apply_display(self, payload):
+        """GUI-thread half of _finish_update_view: draw a _compute_display
+        result (used by the synchronous path, prewarm's on_done, and the
+        ripple-triggered worker's finished callback via _finish_update_view)."""
+        flat_db = payload['flat_db']
+        freqs = payload['freqs']
+        self._rows = payload['rows']
+        n_ch = payload['n_ch']
+        x = payload['x']
+        disp = payload['disp']
+        dy = payload['dy']
+        dx = payload['dx']
+        lo = payload['lo']
+        v = payload['v']
+        log_freq = payload['log_freq']
+        self._title = payload['title']
 
         self.img.setImage(disp, autoLevels=False, levels=(lo, v))
         self.img.setRect(QRectF(x[0] - dx / 2.0, -dy / 2.0,
@@ -436,7 +588,7 @@ class AllChannelsSpectrogram(QWidget):
         # plain-Hz tick labels on the log axis (10, 20, 30 …, not 10^1); the
         # linear axis keeps pyqtgraph's automatic Hz ticks
         self.plot.getAxis('bottom').setTicks(
-            self._log_ticks(freqs[0], freqs[-1]) if self.log_freq else None)
+            self._log_ticks(freqs[0], freqs[-1]) if log_freq else None)
 
         self._draw_profiles(flat_db, freqs)
 
@@ -538,9 +690,9 @@ class AllChannelsSpectrogram(QWidget):
 
         The time point is the middle of the window, with the whole window as
         the averaging interval (cropped around that point if it is very long).
-        Returns (n_channels, n_freqs), or None if the window is unusable. Sets
-        self._title.
-        """
+        Pure computation -- no Qt object touched -- so this is safe to call
+        off the GUI thread (see prewarm). Returns (spec, title); spec is None
+        if the window is unusable (title is then a harmless placeholder)."""
         t_mid = 0.5 * (t_start + t_end)
         half = min(0.5 * (t_end - t_start), 0.5 * self.MAX_INTERVAL_S)
         a0, a1 = t_mid - half, t_mid + half
@@ -549,7 +701,7 @@ class AllChannelsSpectrogram(QWidget):
         s0 = max(0, int(a0 * fs))
         s1 = min(n_samples, int(a1 * fs))
         if s1 - s0 < 32:
-            return None
+            return None, ''
 
         # The lowest frequency has the widest wavelet, so it sets how far past
         # each edge we read. Cropped off again below, so the cone of influence
@@ -563,11 +715,11 @@ class AllChannelsSpectrogram(QWidget):
 
         spec = self._mean_power(traces, fs, freqs, s0 - p0, s1 - p0)
         if spec is None:
-            return None
+            return None, ''
 
         cropped = '' if half >= 0.5 * (t_end - t_start) else ' (window cropped)'
-        self._title = f't = {t_mid:.3f} s ± {1000 * half:.0f} ms{cropped}'
-        return spec
+        title = f't = {t_mid:.3f} s ± {1000 * half:.0f} ms{cropped}'
+        return spec, title
 
     def _ripple_peak_times(self, lfp_memmap, fs, ripple_events, ripple_channels):
         """Peak time of every ripple event: the sample of maximum ripple-band

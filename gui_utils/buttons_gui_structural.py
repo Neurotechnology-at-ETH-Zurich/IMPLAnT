@@ -11,7 +11,7 @@ from gui_utils.paintbrush_gui import PaintbrushGUI
 from core.registration import Registration
 from gui_utils.segmentation_gui import SegmentationGUI
 from gui_utils.busy_overlay import BusyOverlay
-from samri.samri_logging import SamriWorker
+from gui_utils.busy_worker import BusyWorker, show_worker_error
 from PySide6.QtGui import QColor
 # This Python file uses the following encoding: utf-8
 from PySide6.QtWidgets import QDockWidget,QDialog,QVBoxLayout
@@ -402,13 +402,30 @@ class ButtonsGUI_Structural:
                 self.LoadMRI.Resample.file_name100um = default_name
                 return
 
-        overlay = BusyOverlay(self.MW, message="Resampling, please wait…")
-        overlay.run(self._do_resample100um, index)
+        result = {}
 
-    def _do_resample100um(self, index):
-        default_name = self.LoadMRI.Resample.resampling100um(index)
-        self.ui.textEdit_resample100.setText(f"Resampling Done, saved as \n {default_name}")
-        self.ui.pushButton_openfile100um.setEnabled(True)
+        def work():
+            result['default_name'] = self.LoadMRI.Resample.resampling100um(index)
+
+        def on_done():
+            default_name = result['default_name']
+            self.ui.textEdit_resample100.setText(f"Resampling Done, saved as \n {default_name}")
+            self.ui.pushButton_openfile100um.setEnabled(True)
+            overlay.close()
+
+        def on_failed(tb):
+            overlay.close()
+            show_worker_error(self.MW, "Resampling failed", tb)
+
+        overlay = BusyOverlay(self.MW, message="Resampling, please wait…")
+        overlay.setGeometry(self.MW.rect())
+        overlay.raise_()
+        overlay.show()
+
+        self._resample100_worker = BusyWorker(work, self.MW)
+        self._resample100_worker.done.connect(on_done)
+        self._resample100_worker.failed.connect(on_failed)
+        self._resample100_worker.start()
 
     def resample25um(self,index):
         filename_end = 'resampled.nii.gz'
@@ -428,12 +445,29 @@ class ButtonsGUI_Structural:
                 self.ui.textEdit_resample25.setText(f"Existing file \n {default_name}")
                 return
 
-        overlay = BusyOverlay(self.MW, message="Resampling, please wait…")
-        overlay.run(self._do_resample25um, index)
+        result = {}
 
-    def _do_resample25um(self, index):
-        default_name = self.LoadMRI.Resample.resampling25um(index)
-        self.ui.textEdit_resample25.setText(f"Resampling Done, saved as \n {default_name}")
+        def work():
+            result['default_name'] = self.LoadMRI.Resample.resampling25um(index)
+
+        def on_done():
+            default_name = result['default_name']
+            self.ui.textEdit_resample25.setText(f"Resampling Done, saved as \n {default_name}")
+            overlay.close()
+
+        def on_failed(tb):
+            overlay.close()
+            show_worker_error(self.MW, "Resampling failed", tb)
+
+        overlay = BusyOverlay(self.MW, message="Resampling, please wait…")
+        overlay.setGeometry(self.MW.rect())
+        overlay.raise_()
+        overlay.show()
+
+        self._resample25_worker = BusyWorker(work, self.MW)
+        self._resample25_worker.done.connect(on_done)
+        self._resample25_worker.failed.connect(on_failed)
+        self._resample25_worker.start()
 
 
     def initialize_registration(self):
@@ -574,7 +608,7 @@ class ButtonsGUI_Structural:
         overlay.raise_()
         overlay.show()
 
-        self._reg_worker = SamriWorker(work, self.MW)
+        self._reg_worker = BusyWorker(work, self.MW)
         self._reg_worker.done.connect(on_done)
         self._reg_worker.failed.connect(overlay.close)
         self._reg_worker.failed.connect(self._on_registration_failed)
@@ -636,19 +670,7 @@ class ButtonsGUI_Structural:
         self._start_registration()
 
     def _on_registration_failed(self, tb):
-        from PySide6.QtWidgets import QMessageBox, QLayout
-        from PySide6.QtCore import Qt
-        import logging
-        logging.error(tb)
-        msg = QMessageBox(self.MW)
-        msg.setWindowTitle("Registration failed")
-        msg.setText("Registration encountered an error.")
-        msg.setDetailedText(tb)
-        msg.addButton("OK", QMessageBox.ActionRole)
-        msg.setWindowFlags(msg.windowFlags() & ~Qt.MSWindowsFixedSizeDialogHint)
-        msg.setSizeGripEnabled(True)
-        msg.layout().setSizeConstraint(QLayout.SetNoConstraint)
-        msg.exec()
+        show_worker_error(self.MW, "Registration failed", tb)
 
     def cancel_reg(self):
         self.popup.close()

@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>2184</width>
+    <width>2000</width>
     <height>2307</height>
    </rect>
   </property>
@@ -24,7 +24,7 @@
   </property>
   <property name="maximumSize">
    <size>
-    <width>16777215</width>
+    <width>2000</width>
     <height>16777215</height>
    </size>
   </property>
@@ -112,7 +112,7 @@
                </size>
               </property>
               <property name="toolTip">
-               <string>Axial view comparison panel: one or more 4D timestamps of the axial slice shown side by side, each with its own cursor, pan/zoom, and contrast controls.</string>
+               <string>Axial view comparison panel: one or more 4D echoes of the axial slice shown side by side, each with its own cursor, pan/zoom, and contrast controls.</string>
               </property>
               <property name="title">
                <string>View AXIAL</string>
@@ -247,13 +247,13 @@
                   </font>
                  </property>
                  <property name="toolTip">
-                  <string>Timestamp panel for one 4D frame: the title updates to the frame's actual timestamp, and it holds this frame's own pan/zoom controls.</string>
+                  <string>Echo panel for one 4D frame: the title updates to the frame's actual echo, and it holds this frame's own pan/zoom controls.</string>
                  </property>
                  <property name="styleSheet">
                   <string notr="true"/>
                  </property>
                  <property name="title">
-                  <string>Timestamp t=0</string>
+                  <string>Echo 0</string>
                  </property>
                  <layout class="QGridLayout" name="gridLayout_97" rowstretch="0">
                   <item row="0" column="0" colspan="2">
@@ -430,7 +430,7 @@ background-color: rgb(0, 153, 255);</string>
                  </property>
                  <widget class="QWidget" name="tabWidget_time20">
                   <attribute name="title">
-                   <string>Timestamp 1</string>
+                   <string>Echo 1</string>
                   </attribute>
                   <layout class="QGridLayout" name="gridLayout_116">
                    <item row="1" column="0">
@@ -442,16 +442,16 @@ background-color: rgb(0, 153, 255);</string>
                       </font>
                      </property>
                      <property name="toolTip">
-                      <string>Choose which 4D timestamp (frame) is displayed in this panel.</string>
+                      <string>Choose which 4D echo (frame) is displayed in this panel.</string>
                      </property>
                      <property name="title">
-                      <string>Timestamp Slider</string>
+                      <string>Echo Slider</string>
                      </property>
                      <layout class="QGridLayout" name="gridLayout_125">
                       <item row="0" column="0">
                        <widget class="QSlider" name="changetimestamp_data20">
                         <property name="toolTip">
-                         <string>Slide to choose which 4D timestamp (frame) is displayed in this panel.</string>
+                         <string>Slide to choose which 4D echo (frame) is displayed in this panel.</string>
                         </property>
                         <property name="styleSheet">
                          <string notr="true"/>
@@ -476,7 +476,7 @@ background-color: rgb(0, 153, 255);</string>
                       <item row="0" column="1">
                        <widget class="QSpinBox" name="displaytimestamp_data20">
                         <property name="toolTip">
-                         <string>Index of the 4D timestamp (frame) currently displayed in this panel; type a value to jump to it.</string>
+                         <string>Index of the 4D echo (frame) currently displayed in this panel; type a value to jump to it.</string>
                         </property>
                         <property name="buttonSymbols">
                          <enum>QAbstractSpinBox::UpDownArrows</enum>
@@ -534,7 +534,7 @@ background-color: rgb(0, 153, 255);</string>
                  </widget>
                  <widget class="QWidget" name="tabWidget_time21">
                   <attribute name="title">
-                   <string>Timestamp 2</string>
+                   <string>Echo 2</string>
                   </attribute>
                   <layout class="QGridLayout" name="gridLayout_127">
                    <item row="0" column="0">
@@ -546,16 +546,16 @@ background-color: rgb(0, 153, 255);</string>
                       </font>
                      </property>
                      <property name="toolTip">
-                      <string>Choose which 4D timestamp (frame) is displayed in this panel.</string>
+                      <string>Choose which 4D echo (frame) is displayed in this panel.</string>
                      </property>
                      <property name="title">
-                      <string>Timestamp Slider</string>
+                      <string>Echo Slider</string>
                      </property>
                      <layout class="QGridLayout" name="gridLayout_128">
                       <item row="0" column="0">
                        <widget class="QSlider" name="changetimestamp_data21">
                         <property name="toolTip">
-                         <string>Slide to choose which 4D timestamp (frame) is displayed in this panel.</string>
+                         <string>Slide to choose which 4D echo (frame) is displayed in this panel.</string>
                         </property>
                         <property name="styleSheet">
                          <string notr="true"/>
@@ -580,7 +580,7 @@ background-color: rgb(0, 153, 255);</string>
                       <item row="0" column="1">
                        <widget class="QSpinBox" name="displaytimestamp_data21">
                         <property name="toolTip">
-                         <string>Index of the 4D timestamp (frame) currently displayed in this panel; type a value to jump to it.</string>
+                         <string>Index of the 4D echo (frame) currently displayed in this panel; type a value to jump to it.</string>
                         </property>
                         <property name="buttonSymbols">
                          <enum>QAbstractSpinBox::UpDownArrows</enum>
@@ -638,7 +638,7 @@ background-color: rgb(0, 153, 255);</string>
                  </widget>
                  <widget class="QWidget" name="tabWidget_time22">
                   <attribute name="title">
-                   <string>Timestamp 3</string>
+                   <string>Echo 3</string>
                   </attribute>
                   <layout class="QGridLayout" name="gridLayout_130">
                    <item row="0" column="0">
@@ -650,16 +650,16 @@ background-color: rgb(0, 153, 255);</string>
                       </font>
                      </property>
                      <property name="toolTip">
-                      <string>Choose which 4D timestamp (frame) is displayed in this panel.</string>
+                      <string>Choose which 4D echo (frame) is displayed in this panel.</string>
                      </property>
                      <property name="title">
-                      <string>Timestamp Slider</string>
+                      <string>Echo Slider</string>
                      </property>
                      <layout class="QGridLayout" name="gridLayout_131">
                       <item row="0" column="0">
                        <widget class="QSlider" name="changetimestamp_data22">
                         <property name="toolTip">
-                         <string>Slide to choose which 4D timestamp (frame) is displayed in this panel.</string>
+                         <string>Slide to choose which 4D echo (frame) is displayed in this panel.</string>
                         </property>
                         <property name="styleSheet">
                          <string notr="true"/>
@@ -684,7 +684,7 @@ background-color: rgb(0, 153, 255);</string>
                       <item row="0" column="1">
                        <widget class="QSpinBox" name="displaytimestamp_data22">
                         <property name="toolTip">
-                         <string>Index of the 4D timestamp (frame) currently displayed in this panel; type a value to jump to it.</string>
+                         <string>Index of the 4D echo (frame) currently displayed in this panel; type a value to jump to it.</string>
                         </property>
                         <property name="buttonSymbols">
                          <enum>QAbstractSpinBox::UpDownArrows</enum>
@@ -1043,10 +1043,10 @@ background-color: rgb(0, 153, 255);</string>
                   </font>
                  </property>
                  <property name="toolTip">
-                  <string>Timestamp panel for one 4D frame: the title updates to the frame's actual timestamp, and it holds this frame's own pan/zoom controls.</string>
+                  <string>Echo panel for one 4D frame: the title updates to the frame's actual echo, and it holds this frame's own pan/zoom controls.</string>
                  </property>
                  <property name="title">
-                  <string>Timestamp t=4</string>
+                  <string>Echo 4</string>
                  </property>
                  <layout class="QGridLayout" name="gridLayout_91">
                   <item row="0" column="1" colspan="2">
@@ -1224,7 +1224,7 @@ background-color: rgb(0, 153, 255);</string>
                   </font>
                  </property>
                  <property name="title">
-                  <string>Timestamp t=8</string>
+                  <string>Echo 8</string>
                  </property>
                  <layout class="QGridLayout" name="gridLayout_95">
                   <item row="0" column="0" colspan="2">
@@ -1554,7 +1554,7 @@ background-color: rgb(131, 131, 131);
                      </property>
                      <widget class="QWidget" name="tabWidget_time00">
                       <attribute name="title">
-                       <string>Timestamp t=0</string>
+                       <string>Echo 0</string>
                       </attribute>
                       <layout class="QGridLayout" name="gridLayout_72">
                        <item row="1" column="0">
@@ -1569,7 +1569,7 @@ background-color: rgb(131, 131, 131);
                           <string>Scrub through this panel's timepoint independently of the other two orthogonal views, so you can compare different frames of the same 4D scan side by side.</string>
                          </property>
                          <property name="title">
-                          <string>Timestamp Slider</string>
+                          <string>Echo Slider</string>
                          </property>
                          <layout class="QGridLayout" name="gridLayout_57">
                           <item row="0" column="0">
@@ -1658,7 +1658,7 @@ background-color: rgb(131, 131, 131);
                      </widget>
                      <widget class="QWidget" name="tabWidget_time01">
                       <attribute name="title">
-                       <string>Timestamp t=4</string>
+                       <string>Echo 4</string>
                       </attribute>
                       <layout class="QGridLayout" name="gridLayout_62">
                        <item row="0" column="0">
@@ -1673,7 +1673,7 @@ background-color: rgb(131, 131, 131);
                           <string>Scrub through this panel's timepoint independently of the other two orthogonal views, so you can compare different frames of the same 4D scan side by side.</string>
                          </property>
                          <property name="title">
-                          <string>Timestamp Slider</string>
+                          <string>Echo Slider</string>
                          </property>
                          <layout class="QGridLayout" name="gridLayout_60">
                           <item row="0" column="0">
@@ -1762,7 +1762,7 @@ background-color: rgb(131, 131, 131);
                      </widget>
                      <widget class="QWidget" name="tabWidget_time02">
                       <attribute name="title">
-                       <string>Timestamp  t=8</string>
+                       <string>Echo 8</string>
                       </attribute>
                       <layout class="QGridLayout" name="gridLayout_73">
                        <item row="0" column="0">
@@ -1777,7 +1777,7 @@ background-color: rgb(131, 131, 131);
                           <string>Scrub through this panel's timepoint independently of the other two orthogonal views, so you can compare different frames of the same 4D scan side by side.</string>
                          </property>
                          <property name="title">
-                          <string>Timestamp Slider</string>
+                          <string>Echo Slider</string>
                          </property>
                          <layout class="QGridLayout" name="gridLayout_59">
                           <item row="0" column="0">
@@ -1971,7 +1971,7 @@ background-color: rgb(131, 131, 131);
                       <string notr="true"/>
                      </property>
                      <property name="title">
-                      <string>Timestamp t=0</string>
+                      <string>Echo 0</string>
                      </property>
                      <layout class="QGridLayout" name="gridLayout_53" rowstretch="0">
                       <item row="0" column="0" colspan="2">
@@ -2175,7 +2175,7 @@ background-color: rgb(0, 153, 255);</string>
                       <string>Coronal/sagittal/axial panel currently showing timepoint 4 of the 4D scan, with its own pan/zoom controls.</string>
                      </property>
                      <property name="title">
-                      <string>Timestamp t=4</string>
+                      <string>Echo 4</string>
                      </property>
                      <layout class="QGridLayout" name="gridLayout_54">
                       <item row="0" column="0" colspan="2">
@@ -2482,7 +2482,7 @@ background-color: rgb(0, 153, 255);</string>
                       <string>Coronal/sagittal/axial panel currently showing timepoint 8 of the 4D scan, with its own pan/zoom controls.</string>
                      </property>
                      <property name="title">
-                      <string>Timestamp t=8</string>
+                      <string>Echo 8</string>
                      </property>
                      <layout class="QGridLayout" name="gridLayout_55">
                       <item row="0" column="0" colspan="2">
@@ -2811,7 +2811,7 @@ background-color: rgb(131, 131, 131);
                    <item row="1" column="3" rowspan="3">
                     <widget class="QStackedWidget" name="stackedWidget_3d">
                      <property name="currentIndex">
-                      <number>1</number>
+                      <number>0</number>
                      </property>
                      <widget class="QWidget" name="page">
                       <layout class="QGridLayout" name="gridLayout_141">
@@ -2833,7 +2833,7 @@ background-color: rgb(131, 131, 131);
                              </size>
                             </property>
                             <property name="currentIndex">
-                             <number>0</number>
+                             <number>1</number>
                             </property>
                             <widget class="QWidget" name="page_5">
                              <layout class="QGridLayout" name="gridLayout_75" rowstretch="0,0,0,0,0,0,0,0,0,0,0,0,0">
@@ -7245,7 +7245,7 @@ background-color: rgb(131, 131, 131);
                   <string>Coronal/sagittal/axial panel currently showing timepoint 4 of the 4D scan, with its own pan/zoom controls.</string>
                  </property>
                  <property name="title">
-                  <string>Timestamp t=4</string>
+                  <string>Echo 4</string>
                  </property>
                  <layout class="QGridLayout" name="gridLayout_85">
                   <item row="0" column="1">
@@ -7823,10 +7823,10 @@ background-color: rgb(0, 153, 255);</string>
                   </font>
                  </property>
                  <property name="toolTip">
-                  <string>Timestamp panel for one 4D frame: the title updates to the frame's actual timestamp, and it holds this frame's own pan/zoom controls.</string>
+                  <string>Echo panel for one 4D frame: the title updates to the frame's actual echo, and it holds this frame's own pan/zoom controls.</string>
                  </property>
                  <property name="title">
-                  <string>Timestamp t=8</string>
+                  <string>Echo 8</string>
                  </property>
                  <layout class="QGridLayout" name="gridLayout_83">
                   <item row="0" column="0">
@@ -7996,7 +7996,7 @@ background-color: rgb(0, 153, 255);</string>
                  </property>
                  <widget class="QWidget" name="tabWidget_time12">
                   <attribute name="title">
-                   <string>Timestamp 1</string>
+                   <string>Echo 1</string>
                   </attribute>
                   <layout class="QGridLayout" name="gridLayout_78">
                    <item row="1" column="0">
@@ -8008,16 +8008,16 @@ background-color: rgb(0, 153, 255);</string>
                       </font>
                      </property>
                      <property name="toolTip">
-                      <string>Choose which 4D timestamp (frame) is displayed in this panel.</string>
+                      <string>Choose which 4D echo (frame) is displayed in this panel.</string>
                      </property>
                      <property name="title">
-                      <string>Timestamp Slider</string>
+                      <string>Echo Slider</string>
                      </property>
                      <layout class="QGridLayout" name="gridLayout_63">
                       <item row="0" column="0">
                        <widget class="QSlider" name="changetimestamp_data10">
                         <property name="toolTip">
-                         <string>Slide to choose which 4D timestamp (frame) is displayed in this panel.</string>
+                         <string>Slide to choose which 4D echo (frame) is displayed in this panel.</string>
                         </property>
                         <property name="styleSheet">
                          <string notr="true"/>
@@ -8042,7 +8042,7 @@ background-color: rgb(0, 153, 255);</string>
                       <item row="0" column="1">
                        <widget class="QSpinBox" name="displaytimestamp_data10">
                         <property name="toolTip">
-                         <string>Index of the 4D timestamp (frame) currently displayed in this panel; type a value to jump to it.</string>
+                         <string>Index of the 4D echo (frame) currently displayed in this panel; type a value to jump to it.</string>
                         </property>
                         <property name="buttonSymbols">
                          <enum>QAbstractSpinBox::UpDownArrows</enum>
@@ -8100,7 +8100,7 @@ background-color: rgb(0, 153, 255);</string>
                  </widget>
                  <widget class="QWidget" name="tabWidget_time10">
                   <attribute name="title">
-                   <string>Timestamp 2</string>
+                   <string>Echo 2</string>
                   </attribute>
                   <layout class="QGridLayout" name="gridLayout_107">
                    <item row="0" column="0">
@@ -8112,16 +8112,16 @@ background-color: rgb(0, 153, 255);</string>
                       </font>
                      </property>
                      <property name="toolTip">
-                      <string>Choose which 4D timestamp (frame) is displayed in this panel.</string>
+                      <string>Choose which 4D echo (frame) is displayed in this panel.</string>
                      </property>
                      <property name="title">
-                      <string>Timestamp Slider</string>
+                      <string>Echo Slider</string>
                      </property>
                      <layout class="QGridLayout" name="gridLayout_108">
                       <item row="0" column="0">
                        <widget class="QSlider" name="changetimestamp_data11">
                         <property name="toolTip">
-                         <string>Slide to choose which 4D timestamp (frame) is displayed in this panel.</string>
+                         <string>Slide to choose which 4D echo (frame) is displayed in this panel.</string>
                         </property>
                         <property name="styleSheet">
                          <string notr="true"/>
@@ -8146,7 +8146,7 @@ background-color: rgb(0, 153, 255);</string>
                       <item row="0" column="1">
                        <widget class="QSpinBox" name="displaytimestamp_data11">
                         <property name="toolTip">
-                         <string>Index of the 4D timestamp (frame) currently displayed in this panel; type a value to jump to it.</string>
+                         <string>Index of the 4D echo (frame) currently displayed in this panel; type a value to jump to it.</string>
                         </property>
                         <property name="buttonSymbols">
                          <enum>QAbstractSpinBox::UpDownArrows</enum>
@@ -8204,7 +8204,7 @@ background-color: rgb(0, 153, 255);</string>
                  </widget>
                  <widget class="QWidget" name="tabWidget_time11">
                   <attribute name="title">
-                   <string>Timestamp 3</string>
+                   <string>Echo 3</string>
                   </attribute>
                   <layout class="QGridLayout" name="gridLayout_110">
                    <item row="0" column="0">
@@ -8216,16 +8216,16 @@ background-color: rgb(0, 153, 255);</string>
                       </font>
                      </property>
                      <property name="toolTip">
-                      <string>Choose which 4D timestamp (frame) is displayed in this panel.</string>
+                      <string>Choose which 4D echo (frame) is displayed in this panel.</string>
                      </property>
                      <property name="title">
-                      <string>Timestamp Slider</string>
+                      <string>Echo Slider</string>
                      </property>
                      <layout class="QGridLayout" name="gridLayout_111">
                       <item row="0" column="0">
                        <widget class="QSlider" name="changetimestamp_data12">
                         <property name="toolTip">
-                         <string>Slide to choose which 4D timestamp (frame) is displayed in this panel.</string>
+                         <string>Slide to choose which 4D echo (frame) is displayed in this panel.</string>
                         </property>
                         <property name="styleSheet">
                          <string notr="true"/>
@@ -8250,7 +8250,7 @@ background-color: rgb(0, 153, 255);</string>
                       <item row="0" column="1">
                        <widget class="QSpinBox" name="displaytimestamp_data12">
                         <property name="toolTip">
-                         <string>Index of the 4D timestamp (frame) currently displayed in this panel; type a value to jump to it.</string>
+                         <string>Index of the 4D echo (frame) currently displayed in this panel; type a value to jump to it.</string>
                         </property>
                         <property name="buttonSymbols">
                          <enum>QAbstractSpinBox::UpDownArrows</enum>
@@ -8329,13 +8329,13 @@ background-color: rgb(0, 153, 255);</string>
                   </font>
                  </property>
                  <property name="toolTip">
-                  <string>Timestamp panel for one 4D frame: the title updates to the frame's actual timestamp, and it holds this frame's own pan/zoom controls.</string>
+                  <string>Echo panel for one 4D frame: the title updates to the frame's actual echo, and it holds this frame's own pan/zoom controls.</string>
                  </property>
                  <property name="styleSheet">
                   <string notr="true"/>
                  </property>
                  <property name="title">
-                  <string>Timestamp t=0</string>
+                  <string>Echo 0</string>
                  </property>
                  <layout class="QGridLayout" name="gridLayout_66" rowstretch="0">
                   <item row="0" column="1">
@@ -8590,7 +8590,7 @@ background-color: rgb(0, 153, 255);</string>
                  </property>
                  <property name="maximumSize">
                   <size>
-                   <width>721</width>
+                   <width>2000</width>
                    <height>383</height>
                   </size>
                  </property>
@@ -9552,16 +9552,16 @@ background-color: rgb(131, 131, 131);
                       </widget>
                       <widget class="QWidget" name="tab_14">
                        <attribute name="title">
-                        <string>Spectogram</string>
+                        <string>Spectrogram</string>
                        </attribute>
                        <layout class="QGridLayout" name="gridLayout_202">
                         <item row="1" column="0" colspan="4">
-                         <widget class="QWidget" name="widget_Spectogram_ripple" native="true"/>
+                         <widget class="QWidget" name="widget_Spectrogram_ripple" native="true"/>
                         </item>
                         <item row="0" column="0">
                          <widget class="QLineEdit" name="lineEdit_64">
                           <property name="text">
-                           <string>Spectogram of selected Channel in same time window as ephys data displayed</string>
+                           <string>Spectrogram of selected Channel in same time window as ephys data displayed</string>
                           </property>
                           <property name="readOnly">
                            <bool>true</bool>
@@ -9622,7 +9622,7 @@ background-color: rgb(131, 131, 131);
                       </widget>
                       <widget class="QWidget" name="tab_9">
                        <attribute name="title">
-                        <string>Spectogram all Channels</string>
+                        <string>Spectrogram all Channels</string>
                        </attribute>
                        <layout class="QGridLayout" name="gridLayout_207">
                         <item row="0" column="1">
@@ -9636,7 +9636,7 @@ background-color: rgb(131, 131, 131);
                          </widget>
                         </item>
                         <item row="1" column="0" colspan="2">
-                         <widget class="QPushButton" name="pushButton_Timeframe_spectogram">
+                         <widget class="QPushButton" name="pushButton_Timeframe_spectrogram">
                           <property name="toolTip">
                            <string>Switch the all-channels spectrogram between the full recording and a window centered on a detected ripple.</string>
                           </property>
@@ -9648,7 +9648,7 @@ background-color: rgb(131, 131, 131);
                         <item row="0" column="0">
                          <widget class="QLineEdit" name="lineEdit_66">
                           <property name="text">
-                           <string>Spectogram at selected time over all channels</string>
+                           <string>Spectrogram at selected time over all channels</string>
                           </property>
                           <property name="readOnly">
                            <bool>true</bool>
@@ -9656,7 +9656,7 @@ background-color: rgb(131, 131, 131);
                          </widget>
                         </item>
                         <item row="2" column="0" colspan="2">
-                         <widget class="QWidget" name="widget_Spectogram_allChannels" native="true"/>
+                         <widget class="QWidget" name="widget_Spectrogram_allChannels" native="true"/>
                         </item>
                        </layout>
                       </widget>
@@ -10893,7 +10893,7 @@ background-color: rgb(131, 131, 131);
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>2184</width>
+     <width>2000</width>
      <height>23</height>
     </rect>
    </property>
@@ -11238,21 +11238,21 @@ background-color: rgb(131, 131, 131);
   <tabstop>changetimestamp_data02</tabstop>
   <tabstop>displaytimestamp_data02</tabstop>
   <tabstop>pushButton_reset_data02</tabstop>
-  <tabstop>pushButton_auto_data02</tabstop>
-  <tabstop>vtkWidget_data03</tabstop>
-  <tabstop>fit_to_zoom_data00</tabstop>
-  <tabstop>vtkWidget_data00</tabstop>
-  <tabstop>go_down_data00</tabstop>
-  <tabstop>go_up_data00</tabstop>
+  <tabstop>spinBox_x_data3d_2</tabstop>
+  <tabstop>spinBox_y_data3d_2</tabstop>
+  <tabstop>spinBox_z_data3d_2</tabstop>
+  <tabstop>spinBox_tp_insert_x</tabstop>
+  <tabstop>spinBox_tp_insert_y</tabstop>
+  <tabstop>spinBox_tp_insert_z</tabstop>
   <tabstop>go_left_data00</tabstop>
   <tabstop>go_right_data00</tabstop>
   <tabstop>zoom_in_data00</tabstop>
   <tabstop>zoom_out_data00</tabstop>
   <tabstop>zoom_in_data01</tabstop>
   <tabstop>zoom_out_data01</tabstop>
-  <tabstop>fit_to_zoom_data01</tabstop>
-  <tabstop>go_down_data01</tabstop>
-  <tabstop>go_up_data01</tabstop>
+  <tabstop>spinBox_tp_deep_x</tabstop>
+  <tabstop>spinBox_tp_deep_y</tabstop>
+  <tabstop>spinBox_tp_deep_z</tabstop>
   <tabstop>go_left_data01</tabstop>
   <tabstop>go_right_data01</tabstop>
   <tabstop>vtkWidget_data01</tabstop>
@@ -11521,6 +11521,185 @@ background-color: rgb(131, 131, 131);
   <tabstop>vtkWidget_vis3D</tabstop>
   <tabstop>pushButton_Noslicing_vis3D</tabstop>
   <tabstop>tableWidget_vis3D</tabstop>
+  <tabstop>tabWidget</tabstop>
+  <tabstop>lineEdit_98</tabstop>
+  <tabstop>lineEdit_99</tabstop>
+  <tabstop>lineEdit_100</tabstop>
+  <tabstop>lineEdit_87</tabstop>
+  <tabstop>lineEdit_104</tabstop>
+  <tabstop>lineEdit_105</tabstop>
+  <tabstop>textEdit</tabstop>
+  <tabstop>lineEdit_95</tabstop>
+  <tabstop>lineEdit_96</tabstop>
+  <tabstop>lineEdit_97</tabstop>
+  <tabstop>textEdit_4</tabstop>
+  <tabstop>lineEdit_92</tabstop>
+  <tabstop>lineEdit_93</tabstop>
+  <tabstop>lineEdit_94</tabstop>
+  <tabstop>dial_missalignment</tabstop>
+  <tabstop>doubleSpinBox_missalignment</tabstop>
+  <tabstop>pushButton_SaveTraj</tabstop>
+  <tabstop>pushButton_geometry_dfx</tabstop>
+  <tabstop>lineEdit_21</tabstop>
+  <tabstop>spinBox_tp_channels</tabstop>
+  <tabstop>lineEdit_22</tabstop>
+  <tabstop>spinBox_tp_separation</tabstop>
+  <tabstop>pushButton_tp_3d</tabstop>
+  <tabstop>pushButton_insertionPoint</tabstop>
+  <tabstop>spinBox_depth</tabstop>
+  <tabstop>spinBox_insertion_y</tabstop>
+  <tabstop>lineEdit_107</tabstop>
+  <tabstop>spinBox_insertion_z</tabstop>
+  <tabstop>spinBox_insertion_x</tabstop>
+  <tabstop>comboBox_insertion_shank</tabstop>
+  <tabstop>pushButton_nextShank</tabstop>
+  <tabstop>lineEdit_108</tabstop>
+  <tabstop>lineEdit_106</tabstop>
+  <tabstop>textEdit_14</tabstop>
+  <tabstop>textEdit_5</tabstop>
+  <tabstop>textEdit_16</tabstop>
+  <tabstop>zoom_in_data3d1_3</tabstop>
+  <tabstop>zoom_out_data3d1_3</tabstop>
+  <tabstop>fit_to_zoom_data3d1_3</tabstop>
+  <tabstop>go_down_data3d1_3</tabstop>
+  <tabstop>go_up_data3d1_3</tabstop>
+  <tabstop>go_left_data3d1_3</tabstop>
+  <tabstop>go_right_data3d1_3</tabstop>
+  <tabstop>vtkWidget_data_sagittal_3</tabstop>
+  <tabstop>textEdit_15</tabstop>
+  <tabstop>zoom_in_data3d2_3</tabstop>
+  <tabstop>zoom_out_data3d2_3</tabstop>
+  <tabstop>fit_to_zoom_data3d2_3</tabstop>
+  <tabstop>vtkWidget_data_coronal_3</tabstop>
+  <tabstop>go_down_data3d2_3</tabstop>
+  <tabstop>go_up_data3d2_3</tabstop>
+  <tabstop>go_left_data3d2_3</tabstop>
+  <tabstop>go_right_data3d2_3</tabstop>
+  <tabstop>textEdit_7</tabstop>
+  <tabstop>textEdit_12</tabstop>
+  <tabstop>vtkWidget_data_sagittal_2</tabstop>
+  <tabstop>go_down_data3d1_2</tabstop>
+  <tabstop>go_up_data3d1_2</tabstop>
+  <tabstop>go_left_data3d1_2</tabstop>
+  <tabstop>go_right_data3d1_2</tabstop>
+  <tabstop>zoom_in_data3d1_2</tabstop>
+  <tabstop>zoom_out_data3d1_2</tabstop>
+  <tabstop>fit_to_zoom_data3d1_2</tabstop>
+  <tabstop>vtkWidget_trajPlan_3</tabstop>
+  <tabstop>pushButton_resetAxial</tabstop>
+  <tabstop>lineEdit_59</tabstop>
+  <tabstop>horizontalSlider_axial3D</tabstop>
+  <tabstop>textEdit_13</tabstop>
+  <tabstop>lineEdit_68</tabstop>
+  <tabstop>lineEdit_67</tabstop>
+  <tabstop>lineEdit_77</tabstop>
+  <tabstop>pushButton_auto_data02</tabstop>
+  <tabstop>lineEdit_80</tabstop>
+  <tabstop>fit_to_zoom_data00</tabstop>
+  <tabstop>vtkWidget_data03</tabstop>
+  <tabstop>lineEdit_78</tabstop>
+  <tabstop>lineEdit_79</tabstop>
+  <tabstop>doubleSpinBox_distance_shank</tabstop>
+  <tabstop>textEdit_distance_shank</tabstop>
+  <tabstop>pushButton_tp_deep</tabstop>
+  <tabstop>go_up_data01</tabstop>
+  <tabstop>fit_to_zoom_data01</tabstop>
+  <tabstop>go_down_data01</tabstop>
+  <tabstop>lineEdit_89</tabstop>
+  <tabstop>lineEdit_90</tabstop>
+  <tabstop>lineEdit_91</tabstop>
+  <tabstop>tableintensity_data3d_2</tabstop>
+  <tabstop>pushButton_contrastAdjustments</tabstop>
+  <tabstop>checkBox_brain_region</tabstop>
+  <tabstop>pushButton_tp_insert</tabstop>
+  <tabstop>vtkWidget_data00</tabstop>
+  <tabstop>go_down_data00</tabstop>
+  <tabstop>go_up_data00</tabstop>
+  <tabstop>lineEdit_19</tabstop>
+  <tabstop>lineEdit_30</tabstop>
+  <tabstop>lineEdit_88</tabstop>
+  <tabstop>pushButton_removeShank</tabstop>
+  <tabstop>comboBox_Shanks</tabstop>
+  <tabstop>comboBox_tpColor</tabstop>
+  <tabstop>pushButton_addShank</tabstop>
+  <tabstop>lineEdit_83</tabstop>
+  <tabstop>comboBox_atlas</tabstop>
+  <tabstop>pushButton_axialView</tabstop>
+  <tabstop>checkBox_constraint_90deg</tabstop>
+  <tabstop>pushButton_coronalView</tabstop>
+  <tabstop>pushButton_sagittalView</tabstop>
+  <tabstop>checkBox_constraint_90deg_coronal</tabstop>
+  <tabstop>pushButton_dfx_ok</tabstop>
+  <tabstop>pushButton_plot_probe</tabstop>
+  <tabstop>doubleSpinBox_bundle_ratio</tabstop>
+  <tabstop>pushButton_xml</tabstop>
+  <tabstop>pushButton_dfx_run</tabstop>
+  <tabstop>lineEdit_76</tabstop>
+  <tabstop>lineEdit_73</tabstop>
+  <tabstop>textEdit_channels_xml</tabstop>
+  <tabstop>spinBox_max_bend_angle</tabstop>
+  <tabstop>lineEdit_74</tabstop>
+  <tabstop>lineEdit_72</tabstop>
+  <tabstop>lineEdit_70</tabstop>
+  <tabstop>lineEdit_69</tabstop>
+  <tabstop>spinBox_bend_r1</tabstop>
+  <tabstop>spinBox_first_bend_distance</tabstop>
+  <tabstop>pushButton_export</tabstop>
+  <tabstop>spinBox_um_per_unit</tabstop>
+  <tabstop>spinBox_bend_r2</tabstop>
+  <tabstop>checkBox_defaultchannels</tabstop>
+  <tabstop>spinBox_arc_points</tabstop>
+  <tabstop>lineEdit_71</tabstop>
+  <tabstop>spinBox_artificial_extension</tabstop>
+  <tabstop>lineEdit_75</tabstop>
+  <tabstop>pushButton_dfx</tabstop>
+  <tabstop>comboBox_geometry_shanks</tabstop>
+  <tabstop>pushButton_metadata</tabstop>
+  <tabstop>lineEdit_101</tabstop>
+  <tabstop>lineEdit_102</tabstop>
+  <tabstop>lineEdit_103</tabstop>
+  <tabstop>pushButton_questionmark</tabstop>
+  <tabstop>pushButton_showChannels</tabstop>
+  <tabstop>pushButton_anatRegion</tabstop>
+  <tabstop>lineEdit_60</tabstop>
+  <tabstop>tabWidget_ephys</tabstop>
+  <tabstop>comboBox_atlas_2</tabstop>
+  <tabstop>lineEdit_86</tabstop>
+  <tabstop>lineEdit_13</tabstop>
+  <tabstop>tabWidget_LFP</tabstop>
+  <tabstop>lineEdit_61</tabstop>
+  <tabstop>lineEdit_62</tabstop>
+  <tabstop>doubleSpinBox_ClusterLimits</tabstop>
+  <tabstop>lineEdit_64</tabstop>
+  <tabstop>pushButton_axisLog</tabstop>
+  <tabstop>pushButton_colorMap</tabstop>
+  <tabstop>lineEdit_65</tabstop>
+  <tabstop>pushButton_exportCSD</tabstop>
+  <tabstop>pushButton_allChannels_axis</tabstop>
+  <tabstop>pushButton_Timeframe_spectrogram</tabstop>
+  <tabstop>lineEdit_66</tabstop>
+  <tabstop>pushButton_register</tabstop>
+  <tabstop>pushButton_biascorrection</tabstop>
+  <tabstop>pushButton_paths</tabstop>
+  <tabstop>pushButton_questionmark_samri</tabstop>
+  <tabstop>pushButton_credentials</tabstop>
+  <tabstop>lineEdit_4</tabstop>
+  <tabstop>plainTextEdit_SAMRI</tabstop>
+  <tabstop>lineEdit_109</tabstop>
+  <tabstop>resetCamera_vis3D_2</tabstop>
+  <tabstop>change_perspective_vis3D_2</tabstop>
+  <tabstop>doubleSpinBox_sag_l</tabstop>
+  <tabstop>doubleSpinBox_cor_l</tabstop>
+  <tabstop>lineEdit_84</tabstop>
+  <tabstop>lineEdit_85</tabstop>
+  <tabstop>lineEdit_82</tabstop>
+  <tabstop>doubleSpinBox_sag_b</tabstop>
+  <tabstop>doubleSpinBox_cor_b</tabstop>
+  <tabstop>lineEdit_81</tabstop>
+  <tabstop>pushButton_questionmark_2</tabstop>
+  <tabstop>tableWidget</tabstop>
+  <tabstop>lineEdit_110</tabstop>
+  <tabstop>comboBox_atlas_3</tabstop>
  </tabstops>
  <resources/>
  <connections/>

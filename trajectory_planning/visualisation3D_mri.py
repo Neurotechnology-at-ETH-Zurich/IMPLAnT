@@ -43,10 +43,33 @@ from matplotlib.colors import ListedColormap
 from paths_config import _paths
 from mrid_utils import handlers
 from trajectory_planning.visualisation3D import Visualisation3D
+from gui_utils.busy_worker import run_off_thread
 
 
 class VisualisationMri(Visualisation3D):
     def load_atlas(self):
+        # The ThreadPoolExecutor below (three parallel file reads) doesn't
+        # actually free the GUI thread by itself -- .result() still blocks
+        # this call without pumping the Qt event loop, and smooth_taubin
+        # runs fully synchronously after it regardless. The whole pure
+        # nibabel/numpy/pyvista/sitk computation (no Qt/VTK scene object
+        # touched -- these meshes/colormaps aren't attached to
+        # self.plotter_co/sa/ax yet) runs off the GUI thread via
+        # run_off_thread instead; only the final add_axes() calls stay here.
+        (self.atlaslabelsdf, self.background_small, self.brain_surface_small,
+         self.background_full_zooms, self.rgba, self.cmap,
+         self.cmap_background) = run_off_thread(self._load_atlas_compute)
+
+        self.plotter_co.add_axes()
+        self.plotter_sa.add_axes()
+        self.plotter_ax.add_axes()
+
+    def _load_atlas_compute(self):
+        """Pure nibabel/numpy/pyvista/sitk half of load_atlas -- no Qt/VTK
+        scene object touched -- safe to run off the GUI thread (see
+        run_off_thread in load_atlas above). Returns (atlaslabelsdf,
+        background_small, brain_surface_small, background_full_zooms,
+        rgba, cmap, cmap_background)."""
         def load_background_mesh(scale):
             background_path = os.path.join(_paths['atlas_folder'], _paths['atlas_volume'])
             img = nib.load(background_path)
@@ -73,31 +96,30 @@ class VisualisationMri(Visualisation3D):
             future_full = executor.submit(load_background_full_numpy)
             future_labels = executor.submit(load_labels)
 
-            self.atlaslabelsdf = future_labels.result()
-            self.background_small = future_small.result().threshold(value=0.5)
-            self.brain_surface_small = self.background_small.extract_surface(algorithm='dataset_surface')
-            self.brain_surface_small = self.brain_surface_small.smooth_taubin(n_iter=50, pass_band=0.1)
-            self.background_full_zooms = future_full.result()
+            atlaslabelsdf = future_labels.result()
+            background_small = future_small.result().threshold(value=0.5)
+            brain_surface_small = background_small.extract_surface(algorithm='dataset_surface')
+            brain_surface_small = brain_surface_small.smooth_taubin(n_iter=50, pass_band=0.1)
+            background_full_zooms = future_full.result()
 
         # Reproject vertex positions only -- NIFTI cell data (atlas region
         # indices) stays exactly as built, so render_clipped/pick_label/
         # _bg_colors_for_shank need no changes of their own.
         tp = self.MW.LoadMRI.TrajPlanning
         mri_spacing = np.array(tp.movingImg_resampled.GetSpacing())
-        self.background_small.points = tp.atlas_points_to_mri_indices(self.background_small.points) * mri_spacing
-        self.brain_surface_small.points = tp.atlas_points_to_mri_indices(self.brain_surface_small.points) * mri_spacing
+        background_small.points = tp.atlas_points_to_mri_indices(background_small.points) * mri_spacing
+        brain_surface_small.points = tp.atlas_points_to_mri_indices(brain_surface_small.points) * mri_spacing
 
-        max_idx = int(self.atlaslabelsdf['IDX'].max())
-        self.rgba = np.zeros((max_idx + 1, 4))
+        max_idx = int(atlaslabelsdf['IDX'].max())
+        rgba = np.zeros((max_idx + 1, 4))
         rgba_background = np.zeros((max_idx + 1, 4))
 
-        for _, row in self.atlaslabelsdf.iterrows():
+        for _, row in atlaslabelsdf.iterrows():
             r, g, b = row['R'] / 255, row['G'] / 255, row['B'] / 255
             rgba_background[int(row['IDX'])] = [r, g, b, 0.1]
 
-        self.cmap = ListedColormap(self.rgba)
-        self.cmap_background = ListedColormap(rgba_background)
+        cmap = ListedColormap(rgba)
+        cmap_background = ListedColormap(rgba_background)
 
-        self.plotter_co.add_axes()
-        self.plotter_sa.add_axes()
-        self.plotter_ax.add_axes()
+        return (atlaslabelsdf, background_small, brain_surface_small,
+                background_full_zooms, rgba, cmap, cmap_background)

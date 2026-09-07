@@ -148,6 +148,16 @@ def _warn_incomplete_scans(raw_base):
 
 
 from paths_config import _base_dir, _exe_dir, _paths, save_paths
+from mrid_utils.atlas_registry import ATLASES, DEFAULT_ATLAS
+
+# SAMRI registration always runs against WHS specifically, never whatever
+# atlas happens to be _paths['active_atlas'] -- that key is a same-session,
+# visualization-only override for the live in-view atlas switchers in
+# trajectory planning / the ephys 3D view (see mrid_utils/atlas_switch.py);
+# it must never silently steer an actual registration run onto e.g. the
+# microscopic whs_sd_swc_female_rat atlas, whose annotation/reference files
+# aren't meant to be used as SAMRI's registration target.
+_WHS_ATLAS_FILES = ATLASES[DEFAULT_ATLAS]['files']
 
 def _resolve_ants_bin(raw):
     if os.path.isabs(raw):
@@ -265,10 +275,10 @@ class InitSAMRI:
                 if filename.split("ses-")[-1] != samri_input['working_session'][0]:
                     sessions.append(filename.split("ses-")[-1])
 
-        atlas = os.path.join(samri_input['atlas_folder'], _paths['atlas_template'])
+        atlas = os.path.join(samri_input['atlas_folder'], _WHS_ATLAS_FILES['atlas_template'])
         atlas_mask = []
         if samri_input['atlas_mask']:
-            atlas_mask = os.path.join(samri_input['atlas_folder'], _paths['atlas_mask'])
+            atlas_mask = os.path.join(samri_input['atlas_folder'], _WHS_ATLAS_FILES['atlas_mask'])
 
         filepath = biascorrect_only(bids_base=self.bids_base+'/bids',
             template=atlas,
@@ -316,10 +326,10 @@ class InitSAMRI:
         if samri_input['moving_mask']:
             moving_img_mask_path = samri_input['moving_img_mask_name']
 
-        atlas = os.path.join(samri_input['atlas_folder'], _paths['atlas_template'])
+        atlas = os.path.join(samri_input['atlas_folder'], _WHS_ATLAS_FILES['atlas_template'])
         atlas_mask = []
         if samri_input['atlas_mask']:
-            atlas_mask = os.path.join(samri_input['atlas_folder'], _paths['atlas_mask'])
+            atlas_mask = os.path.join(samri_input['atlas_folder'], _WHS_ATLAS_FILES['atlas_mask'])
 
         if register:
             filepath = structural(
@@ -341,7 +351,7 @@ class InitSAMRI:
 
 
             #copy h5 file to registration folder
-            fixedImg = sitk.ReadImage(os.path.join(samri_input['atlas_folder'], _paths['atlas_volume']))
+            fixedImg = sitk.ReadImage(os.path.join(samri_input['atlas_folder'], _WHS_ATLAS_FILES['atlas_volume']))
             # actually call ResampleData.resampling25um (file_handling/resample_data.py)
             # instead of reimplementing it -- it only needs a LoadMRI-shaped
             # object exposing .volumes[index].file_path/.raw_DICOMOrient and
@@ -386,7 +396,7 @@ class InitSAMRI:
 
         MW.ui.stackedWidget_3d.setVisible(False)
 
-        path_main = os.path.join(_paths['atlas_folder'], _paths['atlas_volume'])
+        path_main = os.path.join(_paths['atlas_folder'], _WHS_ATLAS_FILES['atlas_volume'])
         MW.restart_gui(path_main, full_restart=False,label_file=True,data_view='coronal')
         MW.ui.dockWidget_ephys.setVisible(False)
         MW.ui.textEdit_SAMRI_reg.setVisible(True)

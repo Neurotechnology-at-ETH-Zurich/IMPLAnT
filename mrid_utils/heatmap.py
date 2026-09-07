@@ -2,6 +2,9 @@ import numpy as np
 import os
 from mrid_utils import handlers,roi
 import scipy
+DUMP_TRACES = True
+DUMP_PATH = "traces.pkl"
+_DUMP = {}
 
 def get_relaxation_unsupervised(filename_data, sessionpath, basestructs, slice_orientation, te=[4.0, 4.09], r=1, savepath=""):
     """
@@ -147,6 +150,15 @@ def segment_relaxation(data, segmentation, anat, basestructs, labelsdf, roi_inde
             mask = mask * (anat == base_seg)
         _, meanVals, stdVals = roi.get_echo_vals(data, mask)
 
+        if DUMP_TRACES:
+            _cand = {"echos": np.asarray(echos),
+                     "meanVals": np.asarray(meanVals),
+                     "stdVals": np.asarray(stdVals),
+                     "baseline": np.asarray(baseline),
+                     "struct": str(struct),
+                     "index": tuple(int(v) for v in index[:2]),
+                     "r": r}
+
         try:
             paramsBase, paramsData, _, _ = fit_relaxation(meanVals, stdVals, baseline, echos)
 
@@ -159,6 +171,17 @@ def segment_relaxation(data, segmentation, anat, basestructs, labelsdf, roi_inde
             diff = 0
 
         heatmap[index[0], index[1]] = abs(diff)
+
+        if DUMP_TRACES and abs(diff) > _DUMP.get(roi_index, {}).get("dr2", -1):
+            _cand["dr2"] = abs(diff)
+            _DUMP[roi_index] = _cand
+
+    if DUMP_TRACES:
+        import pickle
+        with open(DUMP_PATH, "wb") as fh:
+            pickle.dump(_DUMP, fh)
+        print(f"dumped island {roi_index} -> {DUMP_PATH}")
+
 
     return heatmap
 

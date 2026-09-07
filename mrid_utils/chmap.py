@@ -33,8 +33,12 @@ def main(mrid_dict,mrid, savepath, sessionpath,atlas,atlaslabelsdf,dwi,t2s,mask,
                                                     contrast_intensities_axial,
                                                     savepath)
 
-    fitted_points = register_bundle(gaussian_centers_3d, mrid_dict[mrid], bundle_start, weighted_loss_f=weighted_loss_f,
+    fitted_points,fit_res = register_bundle(gaussian_centers_3d, mrid_dict[mrid], bundle_start, weighted_loss_f=weighted_loss_f,
                                            visualization=True)
+
+    np.save(os.path.join(savepath, "fitted_mrid_points.npy"), fitted_points)
+    np.save(os.path.join(savepath, "bundle_fit_diagnostics.npy"),
+    np.array([fit_res.fun, float(fit_res.success), fit_res.nit]))
 
     if map_channels_boolean:
         # Mapping the channels to physical coordinate indeces (integers) in MRI space
@@ -69,6 +73,9 @@ def main(mrid_dict,mrid, savepath, sessionpath,atlas,atlaslabelsdf,dwi,t2s,mask,
     ref_barcodes = ["duo", "trio", "quad", "penta"]
     barcode_reconstructed, ticks, tickLabels = barcode.gen_barcode_mrid(max_sigmas * 2 * px_size, com.get_dist(gaussian_centers_3d, px_size))
     probs, similarities, sigma = barcode.barcode_probability(ref_barcodes, test_array=barcode_reconstructed[0, :], mrid_dict=mrid_dict)
+
+    np.save(os.path.join(savepath, "ref_barcodes.npy"), np.asarray(ref_barcodes))
+    np.save(os.path.join(savepath, "barcode_reconstructed.npy"),np.asarray(barcode_reconstructed))
 
     # --- SAVING BARCODE MATCHING RESULTS
     df = pd.DataFrame({
@@ -116,7 +123,7 @@ def register_bundle(gaussian_centers_3d, mrid_dict, bundle_start, weighted_loss_
     # filename = "fitted_mrid_points.npy"
     # np.save(os.path.join(analysedpath, mrid_type, filename), fitted_mrid_points)
 
-    return fitted_mrid_points
+    return fitted_mrid_points,res
 
 
 def pointsetreg(gaussian_centers_3d, pattern_dist, pattern_lengths):

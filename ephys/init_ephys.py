@@ -23,6 +23,7 @@ from ephys_utils.hierarchical_clustering import (
     hierarchical_clustering, load_custom_colormap
 )
 from gui_utils.busy_overlay import BusyOverlay
+from gui_utils.busy_worker import BusyWorker, show_worker_error, run_off_thread
 import pyqtgraph as pg
 from PySide6.QtWidgets import QApplication
 from PySide6.QtGui import QBrush, QColor
@@ -81,7 +82,12 @@ class InitEphys:
 
         self.MW.ui.pushButton_AddVideo.clicked.connect(self.add_video)
 
-        self.mrid_info = MRIDInfo.from_file(filename,self.session_path,group_idx=0)
+        # MRIDInfo.from_file loops pd.read_excel over every mrid tag in the
+        # session (get_mrid_tag) -- pure pandas/numpy/file-IO, no Qt/VTK
+        # object touched -- so it runs off the GUI thread via run_off_thread.
+        # Already covered by main_window.py's "Loading ephys data" overlay
+        # (do_ephys_heavy is wrapped in overlay.run()).
+        self.mrid_info = run_off_thread(lambda: MRIDInfo.from_file(filename,self.session_path,group_idx=0))
         self.ephys_data = EphysRecording.from_file(filename,group_idx=0)
 
         self.Visualisation3D = Visualisation3D(self.session_path,self.MW,chMap=self.ephys_data.all_channels,Ephys=self)
@@ -109,10 +115,10 @@ class InitEphys:
         raster_layout.addWidget(self.spike_ruster)
         self.VisEphys.spike_ruster = self.spike_ruster
 
-        # one LFP spectrogram over the whole band, in the "Spectogram" tab of
+        # one LFP spectrogram over the whole band, in the "Spectrogram" tab of
         # tabWidget_LFP. Kept in a list because the timeline/channel-follow code
         # in pgwidget and VisEphys iterates VisEphys.spectrograms.
-        container = self.MW.ui.widget_Spectogram_ripple
+        container = self.MW.ui.widget_Spectrogram_ripple
         self.lfp_spectrogram = LFPSpectrogram(
             container, label=getattr(self.MW.ui, 'lineEdit_ripple', None))
         spec_layout = container.layout()
@@ -144,8 +150,8 @@ class InitEphys:
         self.VisEphys.csd_widget = self.csd_widget
 
         # frequency x channel map at the middle of the visible window, in the
-        # "Spectogram all Channels" tab
-        container = self.MW.ui.widget_Spectogram_allChannels
+        # "Spectrogram all Channels" tab
+        container = self.MW.ui.widget_Spectrogram_allChannels
         self.channel_spectrogram = AllChannelsSpectrogram(container)
         all_ch_layout = container.layout()
         if all_ch_layout is None:
@@ -165,13 +171,13 @@ class InitEphys:
             self._set_allChannels_log_axis)
         self._set_allChannels_log_axis(self.channel_spectrogram.log_freq)
 
-        # pushButton_Timeframe_spectogram flips the all-channels map between
+        # pushButton_Timeframe_spectrogram flips the all-channels map between
         # the current window and the session-wide ripple-triggered average
         # (±25 ms around every detected ripple), like Peter's MATLAB script.
-        self.MW.ui.pushButton_Timeframe_spectogram.setCheckable(True)
-        self.MW.ui.pushButton_Timeframe_spectogram.setChecked(
+        self.MW.ui.pushButton_Timeframe_spectrogram.setCheckable(True)
+        self.MW.ui.pushButton_Timeframe_spectrogram.setChecked(
             self.channel_spectrogram.ripple_mode)
-        self.MW.ui.pushButton_Timeframe_spectogram.toggled.connect(self._set_allChannels_ripple_mode)
+        self.MW.ui.pushButton_Timeframe_spectrogram.toggled.connect(self._set_allChannels_ripple_mode)
         self._set_allChannels_ripple_mode(self.channel_spectrogram.ripple_mode)
 
         # ripple-triggered mode runs on a background thread (can take minutes on
@@ -228,17 +234,17 @@ class InitEphys:
             "Axis: log Hz" if checked else "Axis: linear Hz")
 
     def _set_allChannels_ripple_mode(self, checked):
-        """pushButton_Timeframe_spectogram: entire visible window vs.
+        """pushButton_Timeframe_spectrogram: entire visible window vs.
         session-wide ripple-triggered average on the all-channels spectrogram."""
         self.channel_spectrogram.set_ripple_mode(checked)
-        self.MW.ui.pushButton_Timeframe_spectogram.setText(
+        self.MW.ui.pushButton_Timeframe_spectrogram.setText(
             "Timeframe: Around Ripple (±25ms)" if checked
             else "Timeframe: Entire Frame")
 
     def _set_allChannels_busy(self, busy):
         """channel_spectrogram.busyChanged: block the buttons that would start
         another ripple-triggered computation while one is already running."""
-        self.MW.ui.pushButton_Timeframe_spectogram.setEnabled(not busy)
+        self.MW.ui.pushButton_Timeframe_spectrogram.setEnabled(not busy)
         self.MW.ui.pushButton_allChannels_axis.setEnabled(not busy)
 
     def _cycle_spectrogram_colormap(self):
@@ -675,59 +681,68 @@ class InitEphys:
             )
             return
 
-        # a bare show()+processEvents() isn't reliably painted before the
-        # blocking subprocess call starves the event loop -- overlay.run()
-        # defers the heavy work by one event-loop turn so the overlay is
-        # actually on screen first (same pattern used elsewhere, e.g.
-        # trajectory_planning_3d/window.py's atlas loading)
+        result = {}
+
+        def work():
+            with tempfile.TemporaryDirectory() as tmp:
+                input_path  = str(pathlib.Path(tmp) / "lfp_in.npy")
+                output_path = str(pathlib.Path(tmp) / "events_out.npy")
+                numpy.save(input_path, lfp_slice)
+
+                # frozen: re-invoke this same exe in worker mode (sys.executable
+                # IS the frozen app there, not a python3 binary you can point at
+                # an arbitrary script) -- dev/source: unchanged, real interpreter
+                # running the real script file.
+                cmd = [sys.executable, '--ripple-worker'] if frozen else [sys.executable, script]
+                cmd += ["--input",     input_path,
+                        "--output",    output_path,
+                        "--sf",        str(self.ephys_data.lfp_sample_rate),
+                        "--arch",      arch,
+                        "--threshold", str(threshold)]
+                proc = subprocess.run(cmd, capture_output=True, text=True)
+                print("---- run_rippl stdout ----\n", proc.stdout, flush=True)
+                print("---- run_rippl stderr ----\n", proc.stderr, flush=True)
+
+                if proc.returncode != 0:
+                    raise RuntimeError(proc.stderr[-1000:])
+
+                result['count_msg'] = proc.stdout.strip().split('\n')[-1]
+                result['events'] = numpy.load(output_path)
+
+        def on_done():
+            # overlay stays up through the results dialog too, matching what
+            # overlay.run() used to cover before this was a worker (it closed
+            # only after _finish_ripple_detection returned completely)
+            events = result['events']
+            # persist the settings used so a re-run (or reopening this session) pre-fills them
+            self._save_ripple_settings(settings_path, channels, arch, threshold, pyr, above, below)
+
+            self.MW.ui.stackedWidget_ripplAI.setCurrentIndex(0)
+            self.VisEphys.draw_ripple_events(events, save_path=save_path)
+
+            msg = QtWidgets.QMessageBox(self.MW)
+            msg.setWindowTitle("Ripple detection")
+            msg.setText(f"{result['count_msg']}\n\nFalse positives can be deleted by right-clicking on a highlighted region.")
+            msg.addButton("Close", QtWidgets.QMessageBox.RejectRole)
+            rerun_btn = msg.addButton("Re-run", QtWidgets.QMessageBox.ActionRole)
+            msg.exec()
+            overlay.close()
+            if msg.clickedButton() == rerun_btn:
+                self.detect_ripples()
+
+        def on_failed(tb):
+            overlay.close()
+            show_worker_error(self.MW, "Detection failed", tb)
+
         overlay = BusyOverlay(self.MW, f"Running ripple detection ({arch})…")
-        overlay.run(
-            self._finish_ripple_detection, lfp_slice, script, frozen, arch, threshold,
-            save_path, settings_path, channels, pyr, above, below
-        )
+        overlay.setGeometry(self.MW.rect())
+        overlay.raise_()
+        overlay.show()
 
-    def _finish_ripple_detection(self, lfp_slice, script, frozen, arch, threshold,
-                                  save_path, settings_path, channels, pyr, above, below):
-        with tempfile.TemporaryDirectory() as tmp:
-            input_path  = str(pathlib.Path(tmp) / "lfp_in.npy")
-            output_path = str(pathlib.Path(tmp) / "events_out.npy")
-            numpy.save(input_path, lfp_slice)
-
-            # frozen: re-invoke this same exe in worker mode (sys.executable
-            # IS the frozen app there, not a python3 binary you can point at
-            # an arbitrary script) -- dev/source: unchanged, real interpreter
-            # running the real script file.
-            cmd = [sys.executable, '--ripple-worker'] if frozen else [sys.executable, script]
-            cmd += ["--input",     input_path,
-                    "--output",    output_path,
-                    "--sf",        str(self.ephys_data.lfp_sample_rate),
-                    "--arch",      arch,
-                    "--threshold", str(threshold)]
-            result = subprocess.run(cmd, capture_output=True, text=True)
-            print("---- run_rippl stdout ----\n", result.stdout, flush=True)
-            print("---- run_rippl stderr ----\n", result.stderr, flush=True)
-
-            if result.returncode != 0:
-                QtWidgets.QMessageBox.critical(self.MW, "Detection failed", result.stderr[-1000:])
-                return
-
-            count_msg = result.stdout.strip().split('\n')[-1]
-            events = numpy.load(output_path)
-
-        # persist the settings used so a re-run (or reopening this session) pre-fills them
-        self._save_ripple_settings(settings_path, channels, arch, threshold, pyr, above, below)
-
-        self.MW.ui.stackedWidget_ripplAI.setCurrentIndex(0)
-        self.VisEphys.draw_ripple_events(events, save_path=save_path)
-
-        msg = QtWidgets.QMessageBox(self.MW)
-        msg.setWindowTitle("Ripple detection")
-        msg.setText(f"{count_msg}\n\nFalse positives can be deleted by right-clicking on a highlighted region.")
-        msg.addButton("Close", QtWidgets.QMessageBox.RejectRole)
-        rerun_btn = msg.addButton("Re-run", QtWidgets.QMessageBox.ActionRole)
-        msg.exec()
-        if msg.clickedButton() == rerun_btn:
-            self.detect_ripples()
+        self._ripple_worker = BusyWorker(work, self.MW)
+        self._ripple_worker.done.connect(on_done)
+        self._ripple_worker.failed.connect(on_failed)
+        self._ripple_worker.start()
 
     def _load_ripple_settings(self, settings_path):
         """Return the saved ripple-detection settings dict, or None if absent/unreadable."""
@@ -1005,13 +1020,10 @@ class InitEphys:
         save_path, info_path, settings_path = self._theta_paths()
         channels = [channel, neighbour]
 
-        overlay = BusyOverlay(self.MW, "Running theta detection…")
-        overlay.setGeometry(self.MW.rect())
-        overlay.raise_()
-        overlay.show()
-        QApplication.processEvents()
-        try:
-            result = theta_detection.detect_theta(
+        result_holder = {}
+
+        def work():
+            result_holder['result'] = theta_detection.detect_theta(
                 self.ephys_data.lfp_path,
                 self.ephys_data.n_channels,
                 self.ephys_data.lfp_sample_rate,
@@ -1026,33 +1038,45 @@ class InitEphys:
                 consensus=consensus,
                 progress=lambda m: print("theta:", m, flush=True),
             )
-        except Exception as exc:                      # noqa: BLE001 - surfaced to the user
-            QtWidgets.QMessageBox.critical(self.MW, "Detection failed", str(exc))
-            return
-        finally:
+
+        def on_done():
             overlay.close()
+            result = result_holder['result']
+            events = result['segments_s']
+            self._save_theta_info(info_path, result)
+            self._save_theta_settings(settings_path, channel, result)
 
-        events = result['segments_s']
-        self._save_theta_info(info_path, result)
-        self._save_theta_settings(settings_path, channel, result)
+            self.MW.ui.stackedWidget_theta.setCurrentIndex(0)
+            self.VisEphys.draw_theta_events(events, save_path=save_path)
+            self.VisEphys.set_theta_cycles(theta_detection.theta_cycle_starts(
+                result['theta_phase'], result['work_fs'],
+                sel_channel_idx=result['sel_channel_idx']))
 
-        self.MW.ui.stackedWidget_theta.setCurrentIndex(0)
-        self.VisEphys.draw_theta_events(events, save_path=save_path)
-        self.VisEphys.set_theta_cycles(theta_detection.theta_cycle_starts(
-            result['theta_phase'], result['work_fs'],
-            sel_channel_idx=result['sel_channel_idx']))
+            total = float(numpy.sum(events[:, 1] - events[:, 0])) if len(events) else 0.0
+            msg = QtWidgets.QMessageBox(self.MW)
+            msg.setWindowTitle("Theta detection")
+            msg.setText(
+                f"{len(events)} theta segments detected ({total:.1f} s total).\n\n"
+                "False positives can be deleted by right-clicking on a highlighted region.")
+            msg.addButton("Close", QtWidgets.QMessageBox.RejectRole)
+            rerun_btn = msg.addButton("Re-run", QtWidgets.QMessageBox.ActionRole)
+            msg.exec()
+            if msg.clickedButton() == rerun_btn:
+                self.detect_theta()
 
-        total = float(numpy.sum(events[:, 1] - events[:, 0])) if len(events) else 0.0
-        msg = QtWidgets.QMessageBox(self.MW)
-        msg.setWindowTitle("Theta detection")
-        msg.setText(
-            f"{len(events)} theta segments detected ({total:.1f} s total).\n\n"
-            "False positives can be deleted by right-clicking on a highlighted region.")
-        msg.addButton("Close", QtWidgets.QMessageBox.RejectRole)
-        rerun_btn = msg.addButton("Re-run", QtWidgets.QMessageBox.ActionRole)
-        msg.exec()
-        if msg.clickedButton() == rerun_btn:
-            self.detect_theta()
+        def on_failed(tb):
+            overlay.close()
+            show_worker_error(self.MW, "Detection failed", tb)
+
+        overlay = BusyOverlay(self.MW, "Running theta detection…")
+        overlay.setGeometry(self.MW.rect())
+        overlay.raise_()
+        overlay.show()
+
+        self._theta_worker = BusyWorker(work, self.MW)
+        self._theta_worker.done.connect(on_done)
+        self._theta_worker.failed.connect(on_failed)
+        self._theta_worker.start()
 
     def _save_theta_info(self, info_path, result):
         """Write the full result, mirroring the MATLAB .theta_info_new.mat struct.
@@ -1219,34 +1243,50 @@ class InitEphys:
 
     def _load_spike_sorting_file(self, path):
         """Load the spike sorting result at `path` into the spike raster."""
+        prm_path = path[:-len('_res.mat')] + '.prm' if path.endswith('_res.mat') \
+            else os.path.splitext(path)[0] + '.prm'
+        self._spike_sorting_path = path
+
+        result = {}
+
+        def work():
+            region_map, color_map = self._channel_maps()
+            unit_channel_all, all_spike_times, all_spike_units = \
+                self.spike_ruster.read_and_filter_matlab_files(
+                    path, self.ephys_data.sample_rate, prm_path=prm_path,
+                )
+            result['region_map'] = region_map
+            result['color_map'] = color_map
+            result['unit_channel_all'] = unit_channel_all
+            result['all_spike_times'] = all_spike_times
+            result['all_spike_units'] = all_spike_units
+
+        def on_done():
+            # overlay stays up through apply_group/update_view/the tab switch --
+            # closing it before those (like this used to) leaves a gap with no
+            # overlay at all until run_hierarchical_clustering raises its own
+            self.spike_ruster.apply_matlab_files(
+                result['unit_channel_all'], result['all_spike_times'], result['all_spike_units'],
+                result['region_map'], result['color_map'])
+            self.spike_ruster.update_view(self.VisEphys.time_start, self.VisEphys.time_end)
+            self.MW.ui.tabWidget_ephys.setCurrentIndex(2)
+            overlay.close()
+
+            self.run_hierarchical_clustering()
+
+        def on_failed(tb):
+            overlay.close()
+            show_worker_error(self.MW, "Load failed", tb)
+
         overlay = BusyOverlay(self.MW, "Loading spike sorting data…")
         overlay.setGeometry(self.MW.rect())
         overlay.raise_()
         overlay.show()
-        QApplication.processEvents()
 
-        try:
-            region_map, color_map = self._channel_maps()
-
-            prm_path = path[:-len('_res.mat')] + '.prm' if path.endswith('_res.mat') \
-                else os.path.splitext(path)[0] + '.prm'
-            self._spike_sorting_path = path
-
-            self.spike_ruster.load_matlab_files(
-                path, self.ephys_data.sample_rate,
-                region_map, color_map,
-                prm_path=prm_path,
-            )
-            self.spike_ruster.update_view(self.VisEphys.time_start, self.VisEphys.time_end)
-            self.MW.ui.tabWidget_ephys.setCurrentIndex(2)
-
-            self.run_hierarchical_clustering()
-        except Exception as e:
-            overlay.close()
-            QtWidgets.QMessageBox.critical(self.MW, "Load failed", str(e))
-            return
-
-        overlay.close()
+        self._spike_sorting_worker = BusyWorker(work, self.MW)
+        self._spike_sorting_worker.done.connect(on_done)
+        self._spike_sorting_worker.failed.connect(on_failed)
+        self._spike_sorting_worker.start()
 
     def run_hierarchical_clustering(self):
         if self.spike_ruster._spike_times is None:
@@ -1260,13 +1300,9 @@ class InitEphys:
         clim_val = self.MW.ui.doubleSpinBox_ClusterLimits.value()
         clim = (-clim_val, clim_val)
 
-        overlay = BusyOverlay(self.MW, "Computing hierarchical clustering…")
-        overlay.setGeometry(self.MW.rect())
-        overlay.raise_()
-        overlay.show()
-        QApplication.processEvents()
+        result = {}
 
-        try:
+        def work():
             sr = self.spike_ruster
             spike_times_samples = (sr._spike_times * self.ephys_data.sample_rate).astype(np.int64)
 
@@ -1278,24 +1314,36 @@ class InitEphys:
 
             # try to load Peter's custom colormap; fall back to magma
             cmap_path = os.path.join(self.session_path, 'CustomColormap.mat')
-            colormap = load_custom_colormap(cmap_path, key='CustomColormap3')
+            result['colormap'] = load_custom_colormap(cmap_path, key='CustomColormap3')
 
-            region_map, color_map = self._channel_maps()
-            cluster_labels, reordered = hierarchical_clustering(
+            result['region_map'], result['color_map'] = self._channel_maps()
+            cluster_labels, result['reordered'] = hierarchical_clustering(
                 corr_matrix, list(sr._unit_labels)
             )
-            unit_labels_reordered = [lbl for lbl, _ in cluster_labels]
-            channels_reordered = [sr._unit_channel[int(sr._unit_ids[i])]
-                                   for i in range(len(sr._unit_ids))]
-        except Exception as e:
-            overlay.close()
-            QtWidgets.QMessageBox.critical(self.MW, "Clustering failed", str(e))
-            return
+            result['unit_labels_reordered'] = [lbl for lbl, _ in cluster_labels]
+            result['channels_reordered'] = [sr._unit_channel[int(sr._unit_ids[i])]
+                                             for i in range(len(sr._unit_ids))]
 
-        overlay.close()
-        self._embed_clustering_heatmap(reordered, unit_labels_reordered, clim, colormap,
-                                       channels_reordered=channels_reordered,
-                                       region_map=region_map, color_map=color_map)
+        def on_done():
+            overlay.close()
+            self._embed_clustering_heatmap(
+                result['reordered'], result['unit_labels_reordered'], clim, result['colormap'],
+                channels_reordered=result['channels_reordered'],
+                region_map=result['region_map'], color_map=result['color_map'])
+
+        def on_failed(tb):
+            overlay.close()
+            show_worker_error(self.MW, "Clustering failed", tb)
+
+        overlay = BusyOverlay(self.MW, "Computing hierarchical clustering…")
+        overlay.setGeometry(self.MW.rect())
+        overlay.raise_()
+        overlay.show()
+
+        self._clustering_worker = BusyWorker(work, self.MW)
+        self._clustering_worker.done.connect(on_done)
+        self._clustering_worker.failed.connect(on_failed)
+        self._clustering_worker.start()
 
     def _embed_clustering_heatmap(self, reordered, unit_labels, clim, colormap,
                                   channels_reordered=None, region_map=None, color_map=None):

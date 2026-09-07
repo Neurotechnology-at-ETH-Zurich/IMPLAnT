@@ -19,6 +19,29 @@ if not os.path.exists(_config_path):
 with open(_config_path) as _f:
     _paths = json.load(_f)
 
+# Whichever atlas a previous session ended up on (e.g. the microscopic
+# whs_sd_swc_female_rat, picked via one of the live in-view atlas switchers
+# -- see mrid_utils/atlas_switch.py) is only ever a same-session override,
+# never a lasting default: every fresh process start forces the active
+# atlas back to the registry's own DEFAULT_ATLAS (WHS) in memory, regardless
+# of what got persisted to paths_config.json by the last switch. Users can
+# still switch away for that session; it just never sticks past a restart.
+from mrid_utils.atlas_registry import ATLASES, DEFAULT_ATLAS
+
+_default_atlas_entry = ATLASES[DEFAULT_ATLAS]
+_paths['active_atlas'] = DEFAULT_ATLAS
+for _key in ('atlas_volume', 'atlas_labels', 'atlas_template', 'atlas_mask'):
+    _filename = _default_atlas_entry['files'][_key]
+    _paths[_key] = (
+        os.path.join(_default_atlas_entry['subfolder'], _filename)
+        if _default_atlas_entry['subfolder'] else _filename
+    )
+_paths['atlas_dwi'] = _default_atlas_entry['files']['atlas_dwi'] if _default_atlas_entry['has_dwi'] else None
+_paths['atlas_bregma_coords'] = _default_atlas_entry['bregma_coords']
+_paths['atlas_lambda_coords'] = _default_atlas_entry['lambda_coords']
+_paths['atlas_ca1_region_name'] = _default_atlas_entry['ca1_region_name']
+del _default_atlas_entry, _key, _filename
+
 # atlas_folder is a fixed, shared reference dataset (unlike raw_base/
 # raw_base_samri, which point at large, user-specific, often-elsewhere
 # scan data, and so stay absolute/user-provided) -- safe to default to a

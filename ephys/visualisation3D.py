@@ -25,6 +25,7 @@ import colorsys
 from mrid_utils import atlas_switch
 from mrid_utils.atlas_registry import ATLASES, get_active_atlas_id
 from gui_utils.busy_overlay import BusyOverlay
+from gui_utils.busy_worker import run_off_thread
 
 class Visualisation3D:
     def __init__(self,session_path,MW,electrode_localisation=False,chMap=None,Ephys=None):
@@ -659,7 +660,39 @@ class Visualisation3D:
 
 
     def load_atlas(self,filepath,force_background=False):
-        # Define the two independent loading tasks
+        # The three file reads + background_small computation are pure
+        # nibabel/numpy/pyvista work -- no Qt/VTK scene object touched (the
+        # meshes built here are just data objects, not attached to
+        # self.plotter yet) -- so that part runs off the GUI thread via
+        # run_off_thread; the rest (touches self.plotter/self.combobox)
+        # stays here on the GUI thread, unchanged.
+        vol_small, background_mesh = run_off_thread(lambda: self._load_atlas_compute(filepath))
+
+        if force_background or 'background' not in self.plotter.actors:
+            self.add_background(background_mesh)  # pass mesh directly
+        self._rebuild_colormap()
+
+        if self.combobox is not None:
+            self.combobox.addItems(self.atlaslabelsdf['LABEL'].values)
+        self.opacity = np.full(len(self.atlaslabelsdf), 0.5)
+        self.opacity[0]=0
+
+        self.plotter.add_axes()
+
+        nifti_vals = np.round(vol_small.cell_data['NIFTI']).astype(int)
+        colors = np.array([self.cmap.colors[int(v)] for v in nifti_vals])
+        vol_small.cell_data['colors'] = (colors[:, :3] * 255).astype(np.uint8)
+        self.mesh_atlas = vol_small
+        self.mesh_atlas = self.mesh_atlas.threshold(value=[1, 502], scalars='NIFTI')
+        self.mesh_atlas.set_active_scalars('NIFTI')
+
+    def _load_atlas_compute(self, filepath):
+        """Pure nibabel/numpy/pyvista half of load_atlas -- no Qt/VTK scene
+        object touched -- safe to run off the GUI thread (see
+        run_off_thread in load_atlas above). Sets self.unique_vals/
+        self.atlaslabelsdf/self.background_mesh/self.background_small
+        exactly as this used to do inline; returns (vol_small,
+        background_mesh) for load_atlas's GUI-thread tail."""
         def load_atlas_mesh():
             img = nib.load(filepath)
             # No downsampling — atlas-regions.nii.gz only has electrode regions,
@@ -708,27 +741,18 @@ class Visualisation3D:
                 background_small = background_small.threshold(value=[val - 0.5, val + 0.5],invert=True)
             self.background_small = background_small
 
-
-        if force_background or 'background' not in self.plotter.actors:
-            self.add_background(background_mesh)  # pass mesh directly
-        self._rebuild_colormap()
-
-        if self.combobox is not None:
-            self.combobox.addItems(self.atlaslabelsdf['LABEL'].values)
-        self.opacity = np.full(len(self.atlaslabelsdf), 0.5)
-        self.opacity[0]=0
-
-        self.plotter.add_axes()
-
-        nifti_vals = np.round(vol_small.cell_data['NIFTI']).astype(int)
-        colors = np.array([self.cmap.colors[int(v)] for v in nifti_vals])
-        vol_small.cell_data['colors'] = (colors[:, :3] * 255).astype(np.uint8)
-        self.mesh_atlas = vol_small
-        self.mesh_atlas = self.mesh_atlas.threshold(value=[1, 502], scalars='NIFTI')
-        self.mesh_atlas.set_active_scalars('NIFTI')
+        return vol_small, background_mesh
 
     def _reload_mesh_atlas(self):
-        """Reload self.mesh_atlas from the current atlas-regions.nii.gz (called after tag switch)."""
+        """Reload self.mesh_atlas from the current atlas-regions.nii.gz (called
+        after tag switch). Pure nibabel/numpy/pyvista work -- no Qt/VTK scene
+        object touched (mesh_atlas is a data object, not attached to
+        self.plotter) -- so it runs off the GUI thread via run_off_thread;
+        callers keep calling this exactly as before, already covered by
+        their own BusyOverlay."""
+        run_off_thread(self._reload_mesh_atlas_impl)
+
+    def _reload_mesh_atlas_impl(self):
         img = nib.load(self.filepath_atlas)
         data = img.get_fdata().astype(int)[::3, ::3, ::3]
         vol_small = pv.ImageData()
@@ -1086,9 +1110,18 @@ class Visualisation3D:
     def render_clipped(self,normal):
         self.render_normal = normal
 
-        x0 = (self.coord_x.value()-1)*self.spacing
-        y0 = (self.coord_y.value()-1)*self.spacing
-        z0 = (self.coord_z.value()-1)*self.spacing
+        if self.coord_x is not None:
+            x0 = (self.coord_x.value()-1)*self.spacing
+            y0 = (self.coord_y.value()-1)*self.spacing
+            z0 = (self.coord_z.value()-1)*self.spacing
+        else:
+            # electrode-localisation view has no x/y/z spinboxes (removed in
+            # favor of table-driven coordinate display -- see on_table_click/
+            # no_slicing): slice through whichever electrode row is
+            # currently selected, or the first electrode if none is.
+            items = self.table_excel.selectedItems()
+            row = items[0].row() if items else 0
+            x0, y0, z0 = self.coords_list[row]
         #base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
         axis_map = {'x': 0, 'y': 1, 'z': 2}
@@ -1458,6 +1491,14 @@ class Visualisation3D:
         self.opacityRegions = val/100
 
     def create_atlas_region_file(self,mrid,force=False):
+        # Pure file-IO/sitk/numpy work -- no Qt/VTK object touched -- so the
+        # whole thing runs off the GUI thread via run_off_thread; callers
+        # (__init__, reload_atlas_view) keep calling this exactly as before,
+        # already covered by their own BusyOverlay, and still get a fully
+        # up-to-date self.filepath_atlas back before this returns.
+        run_off_thread(lambda: self._create_atlas_region_file_impl(mrid, force))
+
+    def _create_atlas_region_file_impl(self,mrid,force=False):
         #new atlas with the new label
         self.filepath_atlas = os.path.join(self.session_path,"analysed",'atlas-regions.nii.gz')
         points_electrodes_path = os.path.join(os.path.join(self.session_path,"analysed"),mrid,'channel_atlas_coordinates.xlsx')

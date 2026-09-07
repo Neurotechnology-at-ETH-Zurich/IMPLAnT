@@ -6,7 +6,7 @@ import sys
 
 # Standalone ripple-detection worker mode: must be checked and exited before
 # any GUI import (PySide6/VTK/SimpleITK etc). ephys/init_ephys.py's
-# _finish_ripple_detection re-invokes a frozen (PyInstaller) build of this
+# _run_ripple_detection re-invokes a frozen (PyInstaller) build of this
 # same exe with these args, since a frozen app has no separate python3 binary
 # to shell out to run_rippl.py the way a source checkout does. Importing
 # tensorflow into the SAME process as the already-loaded GUI stack segfaults
@@ -54,7 +54,8 @@ import qdarkstyle
 from utils.zoom import Zoom
 import shutil
 from samri.samri_main import InitSAMRI,SAMRI_InputDialog,SAMRI_InputDock,_ShimLoadMRI
-from samri.samri_logging import LogAdapter,SamriWorker
+from samri.samri_logging import LogAdapter
+from gui_utils.busy_worker import BusyWorker, show_worker_error
 import nibabel as nib
 from file_handling.mri_volume import MRIVolume
 import logging
@@ -486,8 +487,7 @@ class MainWindow(QMainWindow):
             if not ensure_atlas_available(self):
                 return
             data = (path, entry.get('another') or [], entry.get('spacing', 0.05))
-            self.overlay = BusyOverlay(self, message="Initializing trajectory planning, please wait…")
-            self.overlay.run(self.finish_trajectory_work, data, transform_path)
+            self._start_trajectory_planning_work(data, transform_path)
 
         elif kind == 'surgery':
             path = entry.get('path')
@@ -639,7 +639,7 @@ class MainWindow(QMainWindow):
         to -- either no other recording was ever opened, or none has been
         left yet (nothing gets cached until you switch away from it).
         """
-        #combo = self.ui.comboBox_cache_2
+        combo = self.ui.comboBox_cache_2
         current_path = self.Ephys.ephys_data.file_path if getattr(self, 'Ephys', None) else None
         combo.blockSignals(True)
         combo.clear()
@@ -827,7 +827,7 @@ class MainWindow(QMainWindow):
         overlay.show()
         QApplication.processEvents()
 
-        self.worker = SamriWorker(work_init, self)
+        self.worker = BusyWorker(work_init, self)
         self.worker.done.connect(lambda: logging.info("Ready for Biascorrection or Registration"))
         self.worker.done.connect(self._on_bruker2bids_done)
         self.worker.done.connect(overlay.close)
@@ -973,7 +973,7 @@ class MainWindow(QMainWindow):
                     msg_box.layout().setSizeConstraint(QLayout.SetNoConstraint)
                     msg_box.exec()
 
-            self.worker = SamriWorker(work_registration, self)
+            self.worker = BusyWorker(work_registration, self)
             overlay = BusyOverlay(self, message="Registering, please wait…")
             overlay.setGeometry(self.rect())
             overlay.raise_()
@@ -1014,7 +1014,7 @@ class MainWindow(QMainWindow):
                 msg_box.layout().setSizeConstraint(QLayout.SetNoConstraint)
                 msg_box.exec()
 
-            self.worker = SamriWorker(work_bias, self)
+            self.worker = BusyWorker(work_bias, self)
             self.worker.done.connect(overlay.close)
             self.worker.done.connect(self._on_biascorrection_done)
             self.worker.failed.connect(overlay.close)
@@ -1115,8 +1115,7 @@ class MainWindow(QMainWindow):
             self._save_session_state(
                 'trajectory', path=data[0], another=data[1], spacing=data[2],
                 transform_path=transformPath)
-            self.overlay = BusyOverlay(self, message="Initializing trajectory planning, please wait…")
-            self.overlay.run(self.finish_trajectory_work,data, transformPath)
+            self._start_trajectory_planning_work(data, transformPath)
 
     def show_step_instructions(self):
         """
@@ -1161,8 +1160,47 @@ class MainWindow(QMainWindow):
         msg_box.addButton("OK", QMessageBox.ActionRole)
         msg_box.exec()
 
-    def finish_trajectory_work(self, data, transformPath):
-        self.data_pre_resampled = data[0]
+    def _start_trajectory_planning_work(self, data, transformPath):
+        """Shows the overlay, runs the (potentially first-time-only, real)
+        resampling step off the GUI thread, then runs the rest of
+        finish_trajectory_work (VTK/GUI rebuild) once that's done. Shared by
+        initialize_trajectory_planning and the "trajectory" branch of
+        load_previous_session -- both used to just do
+        overlay.run(self.finish_trajectory_work, data, transformPath)."""
+        overlay = BusyOverlay(self, message="Initializing trajectory planning, please wait…")
+        overlay.setGeometry(self.rect())
+        overlay.raise_()
+        overlay.show()
+
+        result = {}
+
+        def work():
+            result['resampled_path'] = self._resample_for_trajectory_planning(data)
+
+        def on_done():
+            # keep the overlay up through the VTK/GUI rebuild too -- that part
+            # is still fully synchronous and can take a while (FileLoader.
+            # initialize_file, restart_gui, building TrajectoryPlanningMri),
+            # so closing it before this would leave that whole stretch with
+            # no overlay at all, same mistake as prewarm_tabs
+            self.finish_trajectory_work(data, transformPath, result['resampled_path'])
+            overlay.close()
+
+        def on_failed(tb):
+            overlay.close()
+            show_worker_error(self, "Trajectory planning setup failed", tb)
+
+        self._traj_resample_worker = BusyWorker(work, self)
+        self._traj_resample_worker.done.connect(on_done)
+        self._traj_resample_worker.failed.connect(on_failed)
+        self._traj_resample_worker.start()
+
+    def _resample_for_trajectory_planning(self, data):
+        """Pure resample step of finish_trajectory_work -- no Qt/VTK object
+        touched, so this is safe to call off the GUI thread (see
+        _start_trajectory_planning_work). Returns resampled_path; a no-op
+        (the file already exists) after the first call for a given
+        path/spacing."""
         if abs(data[2] - 0.025) < 1e-9:
             # reuse the exact file/function samri_main.py's start_registration
             # uses to build the atlas<->MRI correspondence (ResampleData.
@@ -1182,6 +1220,10 @@ class MainWindow(QMainWindow):
             resampled_path = f"{data[0][:-7]}_resampled{data[2]*1000:.10g}um.nii.gz"
             if not os.path.exists(resampled_path):
                 ResampleData.resampling50um_trajectoryPlanning(data[0], new_spacing_mm=data[2])
+        return resampled_path
+
+    def finish_trajectory_work(self, data, transformPath, resampled_path):
+        self.data_pre_resampled = data[0]
         if not hasattr(self,'LoadMRI'):
             self.FileLoader = FileLoader(self)
             self.FileLoader.is_4d = False #3d file
@@ -1207,8 +1249,6 @@ class MainWindow(QMainWindow):
         layout.setColumnStretch(1, 2)
         layout.setColumnStretch(2, 2)
         layout.setColumnStretch(3, 1)
-
-        #self.overlay.close()
 
     def open_new_window(self):
         subprocess.Popen([sys.executable] + sys.argv)
@@ -1352,6 +1392,19 @@ class MainWindow(QMainWindow):
             self.resize_bool=False
             self.ui = Ui_MainWindow()
             self.ui.setupUi(self)
+            self._load_split_ui(Ui_Dock_ephys, self.ui.dockWidget_ephys.setWidget)
+            self._load_split_ui(
+                Ui_tab_popups_time_series,
+                lambda w: self.ui.tabWidget.insertTab(1, w, "Popups for Time-Series Data"),
+            )
+            self._load_split_ui(
+                Ui_tab_popups_time_series_ii,
+                lambda w: self.ui.tabWidget.insertTab(2, w, "Popups for Time-Series Data II"),
+            )
+            self._load_split_ui(
+                Ui_tab_popups_ephys,
+                lambda w: self.ui.tabWidget.insertTab(4, w, "Popups for ephys"),
+            )
             self.add_actions()
             self.show()
             # setupUi() creates a brand new stackedWidget_3d_tp with none of
@@ -1443,7 +1496,30 @@ class MainWindow(QMainWindow):
             self._restore_session_entry('mri', {'path': path})
 
     def quit(self):
-        QtWidgets.QApplication.quit()
+        self.close()
+
+    def closeEvent(self, event):
+        from gui_utils.busy_worker import any_running
+        if any_running():
+            reply = QMessageBox.question(
+                self, "Background task running",
+                "A background task (registration, resampling, spectrogram, ripple "
+                "detection, ...) is still running. Quitting now will abandon it. "
+                "Quit anyway?",
+                QMessageBox.Yes | QMessageBox.No, QMessageBox.No,
+            )
+            if reply != QMessageBox.Yes:
+                event.ignore()
+                return
+        event.accept()
+        # A BusyWorker's run_callable has no cancellation point, so there is no
+        # graceful way to wait for it -- QApplication.quit() alone only stops the
+        # Qt event loop, leaving that QThread's native thread still executing
+        # Python code underneath, which keeps the process alive (sometimes for as
+        # long as the callable takes to finish on its own). Hard-exit instead; any
+        # child processes it left behind (nipype/ProcessPoolExecutor) get reaped by
+        # the next launch's reap_stale_instances(), same as a crash would be.
+        os._exit(0)
 
 
 if __name__ == "__main__":

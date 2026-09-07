@@ -94,11 +94,12 @@ class SpikeRuster(QWidget):
     # Load JRCLUST _res.mat
     # ------------------------------------------------------------------
 
-    def load_matlab_files(self, path, sample_rate, channel_region_map, channel_color_map,
-                          good_only=True, prm_path=None):
-        """
-        channel_region_map : {xml_channel_id: region_label} for the current tag.
-        channel_color_map  : {xml_channel_id: (r, g, b, a)} matching the ephys colors.
+    def read_and_filter_matlab_files(self, path, sample_rate, good_only=True, prm_path=None):
+        """Pure file-IO/numpy half of load_matlab_files -- no pyqtgraph object
+        is touched, so this part alone is safe to run off the GUI thread.
+        Returns (unit_channel_all, all_spike_times, all_spike_units); apply
+        with apply_matlab_files below (on the GUI thread) once ready.
+
         prm_path : JRCLUST .prm; its `siteMap` maps site index -> channel (1-based,
             so we subtract 1 to match the 0-based ephys XML channel IDs).
         """
@@ -109,14 +110,36 @@ class SpikeRuster(QWidget):
 
         # channel of every good unit (cluster -> site -> channel); kept so the
         # raster can be re-filtered to another group when the tag changes
-        self._unit_channel_all = {
+        unit_channel_all = {
             uid: int(site_map[int(cluster_sites[uid - 1]) - 1]) for uid in valid_ids
         }
         keep = np.isin(spike_clusters, valid_ids)
-        self._all_spike_times = spike_times_raw[keep].astype(np.float64) / sample_rate
-        self._all_spike_units = spike_clusters[keep]
+        all_spike_times = spike_times_raw[keep].astype(np.float64) / sample_rate
+        all_spike_units = spike_clusters[keep]
+        return unit_channel_all, all_spike_times, all_spike_units
 
+    def apply_matlab_files(self, unit_channel_all, all_spike_times, all_spike_units,
+                           channel_region_map, channel_color_map):
+        """GUI-thread half of load_matlab_files: stash the parsed arrays and
+        filter/label them onto the raster (apply_group touches pyqtgraph)."""
+        self._unit_channel_all = unit_channel_all
+        self._all_spike_times = all_spike_times
+        self._all_spike_units = all_spike_units
         self.apply_group(channel_region_map, channel_color_map)
+
+    def load_matlab_files(self, path, sample_rate, channel_region_map, channel_color_map,
+                          good_only=True, prm_path=None):
+        """
+        channel_region_map : {xml_channel_id: region_label} for the current tag.
+        channel_color_map  : {xml_channel_id: (r, g, b, a)} matching the ephys colors.
+        prm_path : JRCLUST .prm; its `siteMap` maps site index -> channel (1-based,
+            so we subtract 1 to match the 0-based ephys XML channel IDs).
+        """
+        unit_channel_all, all_spike_times, all_spike_units = self.read_and_filter_matlab_files(
+            path, sample_rate, good_only=good_only, prm_path=prm_path)
+        self.apply_matlab_files(
+            unit_channel_all, all_spike_times, all_spike_units,
+            channel_region_map, channel_color_map)
 
     def apply_group(self, channel_region_map, channel_color_map):
         """Filter/sort/label the loaded units to the current tag's group. Call

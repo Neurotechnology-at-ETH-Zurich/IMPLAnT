@@ -6,6 +6,7 @@ from PySide6.QtWidgets import QWidget, QVBoxLayout
 from PySide6.QtCore import QRectF
 
 from ephys_utils.spiking_ruster import TimeAxisItem
+from gui_utils.busy_worker import BusyWorker
 
 
 class HzAxisItem(pg.AxisItem):
@@ -297,6 +298,100 @@ class LFPSpectrogram(QWidget):
             self._render(cached, t_start, t_end)
             return
 
+        payload = self._compute_payload(lfp_memmap, fs, t_start, t_end, s0, s1,
+                                        fmax, self._channel, self.log_freq)
+        if payload is None:
+            self._clear()
+            return
+        self._cache[self.log_freq] = payload
+        self._render(payload, t_start, t_end)
+
+    def prewarm(self, lfp_memmap, lfp_sample_rate, t_start, t_end, channel=None,
+               on_finished=None):
+        """Async counterpart of update_view(force=True), for VisEphys.
+        prewarm_tabs: runs the CWT off the GUI thread instead of blocking it
+        right after a file/tag load, which already has enough synchronous
+        widget rebuilding to do without a ~second-long transform piled on
+        top. Falls through to the normal (cheap) synchronous path on a cache
+        hit or a nothing-to-show case -- only the real computation, when
+        needed, is backgrounded.
+
+        on_finished(), if given, is called exactly once (synchronously below
+        for the fast path, or from the worker's done/failed slot otherwise)
+        -- prewarm_tabs uses this to know when it can drop its overlay."""
+        ch = channel if channel is not None else self._channel
+        fs = float(lfp_sample_rate) if lfp_memmap is not None else None
+        fmax = min(self.F_MAX, fs / 2.0 * 0.99) if fs else None
+
+        needs_compute = (
+            lfp_memmap is not None and ch is not None and t_end > t_start and fmax is not None
+            and fmax > self.F_MIN
+        )
+        if needs_compute:
+            n_samples = lfp_memmap.shape[1]
+            s0 = max(0, int(t_start * fs))
+            s1 = min(n_samples, int(t_end * fs))
+            needs_compute = s1 - s0 >= 32
+
+        base_key = (id(lfp_memmap), t_start, t_end, ch) if needs_compute else None
+        if needs_compute and base_key == self._cache_base_key and self.log_freq in self._cache:
+            needs_compute = False  # already cached -- cheap, just render it below
+
+        if not needs_compute:
+            self.update_view(lfp_memmap, lfp_sample_rate, t_start, t_end,
+                             channel=channel, force=True)
+            if on_finished is not None:
+                on_finished()
+            return
+
+        if channel is not None:
+            self._channel = channel
+        self._last_args = (lfp_memmap, lfp_sample_rate, t_start, t_end)
+        log_freq = self.log_freq
+
+        result = {}
+
+        def work():
+            result['payload'] = self._compute_payload(
+                lfp_memmap, fs, t_start, t_end, s0, s1, fmax, ch, log_freq)
+
+        def on_done():
+            try:
+                # the widget may have moved on (scrolled, switched channel/tag)
+                # while this was computing -- drop a result that no longer
+                # matches what should be on screen instead of drawing over it
+                if base_key != (id(lfp_memmap), t_start, t_end, self._channel) or log_freq != self.log_freq:
+                    return
+                self._cache_base_key = base_key
+                payload = result['payload']
+                if payload is None:
+                    self._cache = {}
+                    self._clear()
+                    return
+                self._cache[log_freq] = payload
+                self._render(payload, t_start, t_end)
+            finally:
+                if on_finished is not None:
+                    on_finished()
+
+        def on_failed(tb):
+            print(f"LFPSpectrogram prewarm failed:\n{tb}", flush=True)
+            if on_finished is not None:
+                on_finished()
+
+        self._prewarm_worker = BusyWorker(work, self)
+        self._prewarm_worker.done.connect(on_done)
+        self._prewarm_worker.failed.connect(on_failed)
+        self._prewarm_worker.start()
+
+    def _compute_payload(self, lfp_memmap, fs, t_start, t_end, s0, s1, fmax,
+                         channel, log_freq):
+        """Pure computation half of update_view -- no Qt/pyqtgraph object is
+        touched, so this is safe to call off the GUI thread (see prewarm).
+        channel/log_freq are passed explicitly (snapshotted before a
+        background call starts) rather than read from self, since those can
+        change while a prewarm computation is still in flight. Returns the
+        cache-shaped payload dict, or None if there's nothing to show."""
         # The lowest frequency has the widest wavelet, so it sets how far past
         # each edge we read (in samples). At F_MIN = 1 Hz that is seconds, not
         # milliseconds — the price of covering the slow end in the same map. The
@@ -304,16 +399,16 @@ class LFPSpectrogram(QWidget):
         # never reaches the shown window.
         sigma_t_max = self._sigma_t(self.F_MIN)
         pad = int(np.ceil(self.EDGE_SIGMAS * sigma_t_max * fs))
+        n_samples = lfp_memmap.shape[1]
         p0 = max(0, s0 - pad)
         p1 = min(n_samples, s1 + pad)
 
-        trace = lfp_memmap[self._channel, p0:p1].astype(np.float32) * self.BIT_TO_UV
+        trace = lfp_memmap[channel, p0:p1].astype(np.float32) * self.BIT_TO_UV
         trace = trace - trace.mean()
 
-        freqs, power = self._morlet_cwt(trace, fs, fmax)   # power [n_freqs, n_trace]
+        freqs, power = self._morlet_cwt(trace, fs, fmax, log_freq)   # power [n_freqs, n_trace]
         if power.shape[1] == 0:
-            self._clear()
-            return
+            return None
 
         # absolute time of every column, then decimate to the column budget
         t_abs = (p0 + np.arange(power.shape[1])) / fs
@@ -339,7 +434,7 @@ class LFPSpectrogram(QWidget):
         # The rows are evenly spaced in whatever the axis shows — log10(f) in log
         # mode, Hz in linear mode — so the vertical extent is computed in those
         # same units and maps linearly onto the axis.
-        f_ax = np.log10(freqs) if self.log_freq else freqs
+        f_ax = np.log10(freqs) if log_freq else freqs
         dt = t_abs[1] - t_abs[0] if t_abs.size > 1 else (trace.size / fs)
         df = f_ax[1] - f_ax[0] if f_ax.size > 1 else 1.0
         x0 = t_abs[0] - dt / 2.0
@@ -360,10 +455,8 @@ class LFPSpectrogram(QWidget):
         v = float(np.percentile(np.abs(ref_db), 99.9))
         v = float(np.clip(v, self.DB_CLIM_MIN, self.CLIM_DB))
 
-        payload = dict(flat_db=flat_db, t_abs=t_abs, f_ax=f_ax, dt=dt, df=df,
-                       x0=x0, y0=y0, v=v, fmax=fmax)
-        self._cache[self.log_freq] = payload
-        self._render(payload, t_start, t_end)
+        return dict(flat_db=flat_db, t_abs=t_abs, f_ax=f_ax, dt=dt, df=df,
+                   x0=x0, y0=y0, v=v, fmax=fmax)
 
     def _render(self, payload, t_start, t_end):
         """Draw an already-computed CWT result -- freshly computed, or a hit
@@ -447,7 +540,7 @@ class LFPSpectrogram(QWidget):
             baseline = psd
         return np.maximum(baseline, 1e-20).reshape(-1, 1)
 
-    def _morlet_cwt(self, trace, fs, fmax):
+    def _morlet_cwt(self, trace, fs, fmax, log_freq):
         """Complex Morlet CWT via PyWavelets. Returns (freqs, power) with power
         shape [N_FREQS, len(trace)], freqs ascending and evenly spaced in whatever
         the axis currently shows (log10 or Hz) so the image rect stays valid.
@@ -456,9 +549,13 @@ class LFPSpectrogram(QWidget):
         almost every row above 30 Hz, and even-in-log10 matches the constant-Q
         wavelet, whose relative bandwidth is the same at every frequency.
 
+        log_freq is passed explicitly rather than read from self.log_freq (see
+        _compute_payload) so a prewarm computation in flight on a background
+        thread isn't affected by the axis being toggled on the GUI thread.
+
         Absolute wavelet normalisation is irrelevant here — the aperiodic baseline
         in update_view divides any constant scaling straight back out."""
-        if self.log_freq:
+        if log_freq:
             freqs = np.logspace(np.log10(self.F_MIN), np.log10(fmax), self.N_FREQS)
         else:
             freqs = np.linspace(self.F_MIN, fmax, self.N_FREQS)

@@ -69,7 +69,6 @@ class SegmentationEvolution(QObject):
 
     def on_play_pause(self):
         self.MAX_ITERS    = 10000
-        print('self.running',self.running,flush=True)
         if self.running:
             self.button.setIcon(self._pause_icon)
             self.stop_evolution()

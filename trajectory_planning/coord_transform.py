@@ -6,6 +6,7 @@ from scipy.interpolate import RegularGridInterpolator
 import os
 import sys
 from paths_config import _paths
+from gui_utils.busy_worker import run_off_thread
 
 class CoordTransform:
     def get_bregma(self):
@@ -77,6 +78,15 @@ class CoordTransform:
 
 
     def get_atlas_coords(self,vol,transformPath,bregma_coords=None,lamdba_coords=None):
+        # Pure sitk/numpy work -- no Qt/VTK object touched -- so the whole
+        # thing runs off the GUI thread via run_off_thread. Callers
+        # (TrajectoryPlanning.__init__, rendering_mri.py) keep calling this
+        # exactly as before, already covered by their own BusyOverlay, and
+        # still get the fully-computed result back before this returns.
+        return run_off_thread(
+            lambda: self._get_atlas_coords_impl(vol, transformPath, bregma_coords, lamdba_coords))
+
+    def _get_atlas_coords_impl(self,vol,transformPath,bregma_coords=None,lamdba_coords=None):
         # Per-atlas voxel coordinates -- defaults fall back to WHS's own
         # values when the active atlas doesn't override them (see
         # mrid_utils/atlas_registry.py).

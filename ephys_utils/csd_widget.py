@@ -13,6 +13,7 @@ if not hasattr(scipy.integrate, 'simps'):
 from kcsd import KCSD1D
 
 from ephys_utils.spiking_ruster import TimeAxisItem
+from gui_utils.busy_worker import BusyWorker
 
 
 class CSDWidget(QWidget):
@@ -75,6 +76,7 @@ class CSDWidget(QWidget):
         self._cv_key = None
         self._cv_R = None
         self._cv_lambd = None
+        self._last_prewarm_request = None
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -184,6 +186,96 @@ class CSDWidget(QWidget):
             self._clear()
             return
 
+        result = self._compute_csd(lfp_memmap, fs, t_start, t_end, active_channels,
+                                   ele_pos_1d, s0, s1,
+                                   self._cv_key, self._cv_R, self._cv_lambd)
+        if result is None:
+            self._clear()
+            return
+        self._apply_csd(result)
+
+    def prewarm(self, lfp_memmap, lfp_sample_rate, t_start, t_end, active_channels,
+               ele_pos_1d=None, on_finished=None):
+        """Async counterpart of update_view(force=True), for VisEphys.
+        prewarm_tabs: runs the kCSD solve off the GUI thread instead of
+        blocking it right after a file/tag load ("kCSD solves every column,
+        and a long window would otherwise stall the GUI" -- see update_view).
+        Falls through to the normal (cheap) synchronous path for a
+        nothing-to-show case -- only the real solve, when needed, is
+        backgrounded.
+
+        on_finished(), if given, is called exactly once (synchronously below
+        for the fast path, or from the worker's done/failed slot otherwise)
+        -- prewarm_tabs uses this to know when it can drop its overlay."""
+        if lfp_memmap is None or len(active_channels) < 2 or t_end <= t_start:
+            self.update_view(lfp_memmap, lfp_sample_rate, t_start, t_end,
+                             active_channels, ele_pos_1d=ele_pos_1d, force=True)
+            if on_finished is not None:
+                on_finished()
+            return
+
+        fs = float(lfp_sample_rate)
+        n_samples = lfp_memmap.shape[1]
+        s0 = max(0, int(t_start * fs))
+        s1 = min(n_samples, int(t_end * fs))
+        if s1 - s0 < 4:
+            self.update_view(lfp_memmap, lfp_sample_rate, t_start, t_end,
+                             active_channels, ele_pos_1d=ele_pos_1d, force=True)
+            if on_finished is not None:
+                on_finished()
+            return
+
+        self._pending = None
+        # a snapshot of everything the request depends on, so a later call
+        # (scroll, channel change, tag switch) that arrives while this is
+        # still computing can be detected as superseding it -- see on_done
+        request = (id(lfp_memmap), t_start, t_end, tuple(int(c) for c in active_channels))
+        cv_key, cv_R, cv_lambd = self._cv_key, self._cv_R, self._cv_lambd
+
+        result_holder = {}
+
+        def work():
+            result_holder['result'] = self._compute_csd(
+                lfp_memmap, fs, t_start, t_end, active_channels, ele_pos_1d,
+                s0, s1, cv_key, cv_R, cv_lambd)
+
+        def on_done():
+            try:
+                if self._last_prewarm_request != request:
+                    return  # superseded by a later call while this was computing
+                result = result_holder['result']
+                if result is None:
+                    self._clear()
+                    return
+                self._apply_csd(result)
+            finally:
+                if on_finished is not None:
+                    on_finished()
+
+        def on_failed(tb):
+            print(f"CSDWidget prewarm failed:\n{tb}", flush=True)
+            if on_finished is not None:
+                on_finished()
+
+        self._last_prewarm_request = request
+        self._prewarm_worker = BusyWorker(work, self)
+        self._prewarm_worker.done.connect(on_done)
+        self._prewarm_worker.failed.connect(on_failed)
+        self._prewarm_worker.start()
+
+    def _compute_csd(self, lfp_memmap, fs, t_start, t_end, active_channels, ele_pos_1d,
+                     s0, s1, cv_key, cv_R, cv_lambd):
+        """Pure computation half of update_view -- the kCSD solve itself, no
+        Qt/pyqtgraph object touched, so this is safe to call off the GUI
+        thread (see prewarm). cv_key/cv_R/cv_lambd are passed explicitly
+        (snapshotted before a background call starts) rather than read from
+        or written to self, since those can change while a prewarm
+        computation is still in flight -- the caller (_apply_csd) writes the
+        possibly-refreshed cv_* fields from the returned payload once the
+        result is actually used.
+
+        Returns a payload dict for _apply_csd, or None if there's nothing to
+        show (mirrors every self._clear() case in the old inline code)."""
         # keep the number of time columns bounded — kCSD solves every column,
         # and a long window would otherwise stall the GUI
         step = max(1, int(np.ceil((s1 - s0) / self.MAX_COLUMNS)))
@@ -215,8 +307,7 @@ class CSDWidget(QWidget):
             channel_ids = channel_ids[unique_idx]
 
         if len(ele_pos_1d) < 2:
-            self._clear()
-            return
+            return None
 
         try:
             span = float(ele_pos_1d[-1, 0] - ele_pos_1d[0, 0])
@@ -234,13 +325,13 @@ class CSDWidget(QWidget):
 
             # CV depends only on the probe geometry here, so run it once per
             # channel layout and reuse the (R, λ) it found on every later scroll
-            cv_key = (tuple(int(c) for c in channel_ids),
-                      tuple(np.round(ele_pos_1d[:, 0], 6).tolist()))
+            new_cv_key = (tuple(int(c) for c in channel_ids),
+                          tuple(np.round(ele_pos_1d[:, 0], 6).tolist()))
 
-            if cv_key == self._cv_key and self._cv_R is not None:
-                k = KCSD1D(ele_pos_1d, pots, gdx=gdx, R_init=self._cv_R,
+            if new_cv_key == cv_key and cv_R is not None:
+                k = KCSD1D(ele_pos_1d, pots, gdx=gdx, R_init=cv_R,
                            n_src_init=n_src, ext_x=ext)
-                k.lambd = self._cv_lambd   # absolute λ, reused as-is
+                k.lambd = cv_lambd   # absolute λ, reused as-is
             else:
                 k = KCSD1D(ele_pos_1d, pots, gdx=gdx, R_init=ext,
                            n_src_init=n_src, ext_x=ext)
@@ -251,17 +342,16 @@ class CSDWidget(QWidget):
                 lambdas = scale * np.logspace(*self.CV_LAMBDA_LOGSPACE)
                 cv_R, cv_lambd = k.cross_validate(lambdas=lambdas, Rs=Rs)
                 # cross_validate already set the solver to (cv_R, cv_lambd)
-                self._cv_key = cv_key
-                self._cv_R = float(cv_R)
-                self._cv_lambd = float(cv_lambd)
+                cv_key = new_cv_key
+                cv_R = float(cv_R)
+                cv_lambd = float(cv_lambd)
 
             csd = k.values()   # (n_depth_pts, n_time)
             depth_axis = np.asarray(k.estm_x).ravel()
         except Exception:
             import traceback
             traceback.print_exc()
-            self._clear()
-            return
+            return None
 
         times = np.linspace(t_start, t_end, csd.shape[1])
         n_ch = len(ele_pos_1d)
@@ -271,10 +361,35 @@ class CSDWidget(QWidget):
         # washing the whole map out to green.
         v = self.CLIM_GAIN * float(np.percentile(np.abs(csd), self.CLIM_PCT))
         if v < 1e-12:
-            self._clear()
-            return
+            return None
 
         csd_norm = np.clip(csd / v, -1.0, 1.0)
+
+        return dict(
+            csd_norm=csd_norm, times=times, depth_axis=depth_axis, pots=pots,
+            ele_pos_1d=ele_pos_1d, channel_ids=channel_ids, spacing=spacing,
+            n_ch=n_ch, gdx=gdx, t_start=t_start, t_end=t_end,
+            cv_key=cv_key, cv_R=cv_R, cv_lambd=cv_lambd,
+        )
+
+    def _apply_csd(self, result):
+        """GUI-thread half of update_view: draw a _compute_csd result (used
+        by both the synchronous update_view path and prewarm's on_done)."""
+        self._cv_key = result['cv_key']
+        self._cv_R = result['cv_R']
+        self._cv_lambd = result['cv_lambd']
+
+        csd_norm = result['csd_norm']
+        times = result['times']
+        depth_axis = result['depth_axis']
+        pots = result['pots']
+        ele_pos_1d = result['ele_pos_1d']
+        channel_ids = result['channel_ids']
+        spacing = result['spacing']
+        n_ch = result['n_ch']
+        gdx = result['gdx']
+        t_start = result['t_start']
+        t_end = result['t_end']
 
         dt = times[1] - times[0] if len(times) > 1 else (t_end - t_start)
         dd = depth_axis[1] - depth_axis[0] if len(depth_axis) > 1 else gdx

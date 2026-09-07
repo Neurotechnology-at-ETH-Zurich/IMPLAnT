@@ -1,25 +1,8 @@
 import logging
 import sys
-from PySide6.QtCore import QObject, Signal, Qt,QThread
+from PySide6.QtCore import QObject, Signal, Qt
 from PySide6.QtGui import QTextCursor
 import re
-# core/gui/samri_worker.py
-import traceback
-
-class SamriWorker(QThread):
-    done = Signal()
-    failed = Signal(str)
-
-    def __init__(self, run_callable, parent=None):
-        super().__init__(parent)
-        self._run_callable = run_callable           # function that does the actual work
-
-    def run(self):
-        try:
-            self._run_callable()
-            self.done.emit()
-        except Exception:
-            self.failed.emit(traceback.format_exc())
 
 
 class _Signals(QObject):

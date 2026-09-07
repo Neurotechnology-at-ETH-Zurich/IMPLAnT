@@ -9,6 +9,7 @@ from PySide6.QtWidgets import (
 from ephys_utils.downsample_filter_LFP import downsample_filter_LFP
 from ephys.ephysrecording import EphysRecording
 from gui_utils.busy_overlay import BusyOverlay
+from gui_utils.busy_worker import BusyWorker, show_worker_error
 
 _DS_FACTOR = 10          # downsample factor is always 10 (e.g. 20 kHz -> 2 kHz)
 _PASSBAND = 250          # Hz: lowpass passband edge (fixed, matches MATLAB)
@@ -106,12 +107,7 @@ class LFPCreationDialog(QDialog):
         self.hide()
         QApplication.processEvents()
 
-        overlay = BusyOverlay(self.MW, "Creating LFP file, please wait…")
-        overlay.setGeometry(self.MW.rect())
-        overlay.raise_()
-        overlay.show()
-        QApplication.processEvents()
-        try:
+        def work():
             raw_dir = os.path.dirname(self.ephys_data.file_path)
             dat_name = os.path.basename(self.ephys_data.file_path)
             downsample_filter_LFP(
@@ -122,15 +118,32 @@ class LFPCreationDialog(QDialog):
                 stopband=_STOPBAND,
                 filter_order=filter_order,
             )
-        finally:
+
+        def on_done():
             overlay.close()
+            # keep the recording metadata consistent with the values actually used
+            self.ephys_data.n_channels = num_channels
+            self.ephys_data.sample_rate = sample_rate
+            self.ephys_data.lfp_sample_rate = lfp_rate
+            self.ephys_data.lfp_memmap = EphysRecording._load_lfp_memmap(
+                self.ephys_data.lfp_path, num_channels)
 
-        # keep the recording metadata consistent with the values actually used
-        self.ephys_data.n_channels = num_channels
-        self.ephys_data.sample_rate = sample_rate
-        self.ephys_data.lfp_sample_rate = lfp_rate
-        self.ephys_data.lfp_memmap = EphysRecording._load_lfp_memmap(
-            self.ephys_data.lfp_path, num_channels)
+            self.created = True
+            self.accept()
 
-        self.created = True
-        self.accept()
+        def on_failed(tb):
+            overlay.close()
+            show_worker_error(self.MW, "LFP creation failed", tb)
+            # the popup was hidden for the overlay -- bring it back so the
+            # still-open modal dialog is usable again instead of stuck hidden
+            self.show()
+
+        overlay = BusyOverlay(self.MW, "Creating LFP file, please wait…")
+        overlay.setGeometry(self.MW.rect())
+        overlay.raise_()
+        overlay.show()
+
+        self._lfp_worker = BusyWorker(work, self.MW)
+        self._lfp_worker.done.connect(on_done)
+        self._lfp_worker.failed.connect(on_failed)
+        self._lfp_worker.start()
