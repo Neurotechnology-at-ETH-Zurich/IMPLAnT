@@ -1,11 +1,20 @@
 title: IMPLAnT
-description: Integrated Multimodal Planning, Localisation, Analysis Toolbox — an open-source GUI unifying surgical planning, post-implant electrode localisation, and electrophysiology visualisation.
+description: >-
+  IMPLAnT (Integrated Multimodal Planning, Localisation, Analysis Toolbox) is an open-source GUI for
+  intracranial electrode implantation research — MRI-guided stereotaxic trajectory planning against
+  the Waxholm Space rat brain atlas, intraoperative bregma/lambda correction, post-implant MRI
+  electrode localisation, and electrophysiology visualisation and analysis, all in one tool.
+lang: en
 url: "https://neurotechnology-at-eth-zurich.github.io"
 baseurl: "/IMPLAnT"
+image: "/assets/images/IMPLAnT.png"
 
 remote_theme: just-the-docs/just-the-docs
 plugins:
   - jekyll-remote-theme
+  - jekyll-seo-tag
+  - jekyll-sitemap
+  - jekyll-include-cache
 
 color_scheme: light
 search_enabled: true

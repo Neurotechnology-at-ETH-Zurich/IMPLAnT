@@ -1,18 +1,18 @@
 ---
-title: During surgery
+title: Intraoperative
 parent: Tutorials
 nav_order: 2
 ---
 
-# During surgery
+# Intraoperative
 
-On the day of surgery, real bregma/lambda measurements taken on the animal rarely match exactly what was picked on the pre-op MRI. **File → During Surgery** lets you pick up a saved plan and correct bregma/lambda from your manipulator's measured values to get an updated target position (in mm) for each shank.
+On the day of surgery, real bregma/lambda measurements taken on the animal rarely match exactly what was picked on the pre-op MRI. **File → Intraoperative** lets you pick up a saved plan and correct bregma/lambda from your manipulator's measured values to get an updated target position (in mm) for each shank.
 
 ```
  Pre-op                                    Surgery day
 ┌──────────────┐    ┌──────────────┐      ┌──────────────┐    ┌──────────────┐
-│ Load MRI +   │───▶│ Save         │─────▶│ During       │───▶│ Measure &    │
-│ plan shanks  │    │ Trajectory   │      │ Surgery:     │    │ correct      │
+│ Load MRI +   │───▶│ Save         │─────▶│ Intra        │───▶│ Measure &    │
+│ plan shanks  │    │ Trajectory   │      │ operative:   │    │ correct      │
 │ (bregma/     │    │ Report       │      │ pick session │    │ bregma/      │
 │ lambda,      │    │ (one PDF)    │      │ or PDF       │    │ lambda       │
 │ insertion    │    │              │      │              │    │ (RL/AP)      │
@@ -29,14 +29,14 @@ On the day of surgery, real bregma/lambda measurements taken on the animal rarel
 
 ## 1. Load the plan
 
-Click **During Surgery** in the menu. This opens the same **Load Previous Session** picker used throughout the app — pick a prior surgery session from the list, or use **Load New File...** to browse for the saved [Trajectory Report](pre-surgical-planning) PDF instead. From there it's fully automatic:
+Click **Intraoperative** in the menu. This opens the same **Load Previous Session** picker used throughout the app — pick a prior surgery session from the list, or use **Load New File...** to browse for the saved [Trajectory Report](pre-surgical-planning) PDF instead. From there it's fully automatic:
 
-- The Surgery tab opens immediately, showing the plan's shanks marked on a fixed dorsal skull reference photo (Bregma in red, Lambda in blue, each shank's planned insertion point in its own color) — this needs no MRI file at all.
-- In the background, IMPLAnT also tries to locate the corresponding resampled MRI scan (reusing the registration already done pre-op) to additionally render the original planned trajectories in 3D. This is best-effort: if the PDF and the scan are no longer in the same folder, the 3D view is simply left empty — it doesn't block or error out, since the skull-photo view and the numeric target table are what the Surgery tab is actually for.
+- The Intraoperative tab opens immediately, showing the plan's shanks marked on a fixed dorsal skull reference diagram (Bregma in red, Lambda in blue, each shank's planned insertion point in its own color) — this needs no MRI file at all.
+- In the background, IMPLAnT also tries to locate the corresponding resampled MRI scan (reusing the registration already done pre-op) to additionally render the original planned trajectories in 3D. This is best-effort: if the PDF and the scan are no longer in the same folder, the 3D view is simply left empty — it doesn't block or error out, since the skull-diagram view and the numeric target table are what the Intraoperative tab is actually for.
 
 ## 2. Measure and correct bregma/lambda
 
-This is the actual point of the Surgery tab. The pre-op plan picked bregma/lambda **on the MRI** — on the day, the surgeon locates them physically, on the animal, using the stereotaxic manipulator zeroed at an arbitrary reference point ("null point"). Those two measurements rarely match exactly.
+This is the actual point of the Intraoperative tab. The pre-op plan picked bregma/lambda **on the MRI** — on the day, the surgeon locates them physically, on the animal, using the stereotaxic manipulator zeroed at an arbitrary reference point ("null point"). Those two measurements rarely match exactly.
 
 Type the measured values into the **Bregma** and **Lambda** groups — **RL / AP**, in mm, signed (negative values are expected and fine). These are offsets from your manipulator's null point, not anything picked on the MRI. There's no third (depth) field here — depth is carried over from the pre-op plan unchanged, since there's no intraoperative measurement to re-level it against.
 
@@ -47,7 +47,7 @@ Type the measured values into the **Bregma** and **Lambda** groups — **RL / AP
 
 - **The target table** (RL / AP per shank) updates live as you type — these are the numbers to dial into the manipulator to reach each shank's planned target, re-anchored to your measured bregma/lambda.
 - **The 3D view** (when the MRI could be located) shows the *original* planned shank positions and bregma/lambda for visual reference — it does **not** update with your correction (there's no way to place the manipulator's null point inside the MRI's own coordinate space, so this is orientation only, not a live preview of the correction).
-- **The skull reference photo** shows Bregma, Lambda, and each shank's planned insertion point at a glance, plus a black dot for your manipulator's null point once you've entered measured values — a quick visual sanity check, though it's a fixed generic reference image, not the animal's own anatomy.
+- **The skull reference diagram** shows Bregma, Lambda, and each shank's planned insertion point at a glance, plus a black dot for your manipulator's null point once you've entered measured values — a quick visual sanity check, though it's a fixed generic schematic, not the animal's own anatomy.
 
 ## Troubleshooting
 

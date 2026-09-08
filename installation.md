@@ -11,9 +11,10 @@ nav_order: 2
 
 ## Requirements
 
-- **OS**: Linux (tested on Ubuntu 24) or macOS (dependencies pinned for both; from source only for now — no macOS standalone build yet)
+- **OS**: Linux (tested on Ubuntu 24) or macOS (dependencies pinned for both; pre-built releases are Linux-only for now, but building a standalone `.app` yourself on macOS is supported — see [Building the standalone application](#building-the-standalone-application))
 - **Python**: 3.10 (from source only)
 - **ANTs**: required to build from source or to build the standalone executable yourself — **not** required just to run a pre-built release, its binaries are bundled in
+- **ffprobe** (part of FFmpeg): required to run from source, for video frame-rate detection in the electrophysiology visualisation tab — **not** required for a pre-built release, it's bundled in the same way as ANTs
 - **Internet connection**: needed the *first* time you open ephys data, start SAMRI registration, or start trajectory planning — IMPLAnT downloads and caches the ~1.3GB reference atlas automatically at that point (see [Configuration](configuration#atlas-files)). Not needed to just browse a 3D/4D MRI volume, and not needed again once the atlas is cached locally.
 
 ## Choose an option
@@ -36,6 +37,14 @@ IMPLAnT requires **ANTs** (Advanced Normalization Tools) for MRI registration. A
          antsApplyTransforms
          ...
    ```
+
+## Dependencies: ffprobe
+
+IMPLAnT also uses **ffprobe** (part of FFmpeg) to read a video's frame rate/frame count in the electrophysiology visualisation tab's video player. This is separate from video *playback* itself, which goes through Qt's own bundled multimedia backend and needs nothing extra.
+
+- **Running from source**: install FFmpeg via your OS package manager, e.g. `sudo apt install ffmpeg` (Ubuntu/Debian) or `brew install ffmpeg` (macOS) — this puts `ffprobe` on your `PATH`, which is all IMPLAnT needs.
+- **Building the standalone executable yourself**: place a copy of the `ffprobe` binary at `IMPLAnT/ffmpeg/bin/ffprobe` (same convention as `ants/bin/` above; `MRID_GUI.spec` reads it from here at build time).
+- **Downloading a pre-built release**: nothing to do, `ffprobe` is already bundled in.
 
 ## Running from source
 
@@ -70,14 +79,14 @@ IMPLAnT requires **ANTs** (Advanced Normalization Tools) for MRI registration. A
 
 ## Building the standalone application
 
-1. Install ANTs as described above — a build-time requirement only; `MRID_GUI.spec` bundles the specific ANTs tools the app calls straight into the build automatically.
+1. Install ANTs and ffprobe as described above — build-time requirements only; `MRID_GUI.spec` bundles the specific ANTs tools and ffprobe the app calls straight into the build automatically.
 2. Build the executable:
 
    ```bash
    pyinstaller MRID_GUI.spec
    ```
 
-3. The app is created at `dist/IMPLAnT`, ready to distribute as-is.
+3. On Linux, the app is created at `dist/IMPLAnT`, ready to distribute as-is. On macOS, building also produces `dist/IMPLAnT.app`; it's unsigned (no Apple Developer ID certificate involved), so the first launch needs a right-click → Open (or `xattr -cr` if macOS still reports it as damaged/quarantined after being copied to another machine) — distributing it further would need signing and notarization.
 
 ---
 
