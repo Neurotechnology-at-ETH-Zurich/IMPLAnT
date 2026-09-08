@@ -188,7 +188,13 @@ a = Analysis(
     # it doesn't change behavior, just cuts dead weight from the standalone
     # build -- tensorflow's own GPU-detection code already handles no GPU
     # being available gracefully.
-    excludes=['nvidia'],
+    # pyarrow: pandas' optional Arrow-backed dtype / parquet I/O support --
+    # nothing in this app reads/writes parquet or uses Arrow-backed pandas
+    # dtypes, pandas' PyInstaller hook just bundles it unconditionally
+    # whenever it's importable. grpc: tensorflow's distributed-training/
+    # -serving RPC support, irrelevant to local single-process CPU inference.
+    # Neither is imported anywhere in this codebase (verified via grep).
+    excludes=['nvidia', 'pyarrow', 'grpc'],
     noarchive=False,
     optimize=0,
 )
