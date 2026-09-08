@@ -103,7 +103,7 @@ IMPLAnT also uses **ffprobe** (part of FFmpeg) to read a video's frame rate/fram
 To open the project in Qt Creator, e.g. on a new machine:
 
 1. Open `MRID-GUI.creator` (double-click it, or File → Open File or Project, then select `MRID-GUI.creator` as the project file — not one of the other `MRID-GUI.*` files alongside it, e.g. `.files`/`.includes`/`.config`, which are supporting files Qt Creator reads automatically once `.creator` is opened) — Qt Creator picks up `MRID-GUI.files` alongside it automatically as a Generic Project.
-2. **Projects → Build Settings → Build Directory**: set this to the repository root. A Python project has no real build step, but Qt Creator's Generic Project Manager still requires a value here.
+2. Click the **Projects** icon in the left sidebar (wrench icon) to open the Build & Run settings, then on the **Build Settings** tab set **Build Directory** to the repository root. This has nothing to do with `pyinstaller`/`MRID_GUI.spec`, and doesn't build anything — it's Qt Creator's Generic Project Manager requiring this field for every project type, Python included, even though there's no real build step to point it at here.
 3. **Projects → Run Settings**, on the "Custom Executable" run configuration, set:
    - **Executable**: `.venv/bin/python` (the virtual environment created above)
    - **Arguments**: `main_window.py`
