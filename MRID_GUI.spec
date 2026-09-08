@@ -1,5 +1,6 @@
 # -*- mode: python ; coding: utf-8 -*-
 import os
+import sys
 from PyInstaller.utils.hooks import collect_all, collect_data_files
 
 datas = []
@@ -32,6 +33,24 @@ for _tool in _ANTS_TOOLS:
         binaries.append((_tool_path, _ANTS_BIN_DIR))
     else:
         print(f"WARNING: {_tool_path} not found -- built app will be missing this ANTs tool")
+
+# ephys/videoplayer.py shells out to ffprobe (container-header frame-rate
+# probing, not decoding -- Qt's own bundled FFmpeg plugin handles playback
+# separately). It's a system binary, not a Python package, so it has to be
+# bundled explicitly the same way as the ANTs tools above -- otherwise a
+# bare `subprocess.run(["ffprobe", ...])` only ever works by accident, on
+# whichever machine happens to have system ffmpeg on PATH. Requires a local
+# ffprobe next to this .spec (e.g. via `paths_config.json`'s "ffprobe_bin"),
+# but the resulting dist/IMPLAnT/ffmpeg/bin/ is then self-contained for
+# whoever runs the built app. Placed at 'ffmpeg/bin' to match
+# get_ffprobe_path's exe-relative lookup in paths_config.py.
+_FFPROBE_BIN_DIR = os.path.join('ffmpeg', 'bin')
+_FFPROBE_PATH = os.path.join(_FFPROBE_BIN_DIR, 'ffprobe')
+if os.path.isfile(_FFPROBE_PATH):
+    binaries.append((_FFPROBE_PATH, _FFPROBE_BIN_DIR))
+else:
+    print(f"WARNING: {_FFPROBE_PATH} not found -- built app will be missing ffprobe "
+          f"(video frame-rate detection in the Electrophysiology visualisation tab)")
 
 tmp_ret = collect_all('vtk')
 datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
@@ -95,6 +114,7 @@ datas += _samri_datas + _rippl_ai_datas + [
     ('Icons', 'Icons'),
     ('core', 'core'),
     ('ephys', 'ephys'),
+    ('ephys_utils', 'ephys_utils'),
     ('file_handling', 'file_handling'),
     ('gui_utils', 'gui_utils'),
     ('mrid_utils', 'mrid_utils'),
@@ -134,6 +154,12 @@ pyz = PYZ(a.pure)
 # fresh temp dir on every launch, which would mean paying that full cost on
 # every ripple-detection click. onedir sits already-unpacked on disk, so
 # re-invoking it is just launching an existing binary.
+# UPX-modified Mach-O binaries routinely break macOS's auto-applied ad-hoc
+# code signature (Gatekeeper then reports the app as "damaged"), for the
+# same marginal size benefit that already isn't worth the risk for the ANTs
+# binaries below -- so no UPX at all on darwin, not just excluded by name.
+_USE_UPX = sys.platform != 'darwin'
+
 exe = EXE(
     pyz,
     a.scripts,
@@ -143,7 +169,7 @@ exe = EXE(
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
-    upx=True,
+    upx=_USE_UPX,
     # UPX-compressing these large, correctness-critical ANTs binaries risks
     # a corrupted/broken executable for marginal size benefit -- exclude by
     # filename (upx_exclude matches on basename, not full path).
@@ -162,7 +188,24 @@ coll = COLLECT(
     a.binaries,
     a.datas,
     strip=False,
-    upx=True,
+    upx=_USE_UPX,
     upx_exclude=_ANTS_TOOLS,
     name='IMPLAnT',
 )
+
+if sys.platform == 'darwin':
+    # Without this, macOS gets the same COLLECT onedir output as Linux --
+    # a plain folder with a Unix executable inside, not a double-clickable,
+    # Gatekeeper/Launchpad-recognized .app. Unsigned (codesign_identity=
+    # None, matching EXE above): fine for running the build you just made
+    # yourself (first launch needs right-click -> Open, or `xattr -cr` if
+    # macOS flags it as quarantined/damaged after a transfer); distributing
+    # this to other people would need an actual Apple Developer ID
+    # certificate to sign and notarize with, which is a cost/process
+    # decision for whoever owns the release, not something to assume here.
+    app = BUNDLE(
+        coll,
+        name='IMPLAnT.app',
+        icon='Icons/Github/IMPLAnT_quad.png',
+        bundle_identifier=None,
+    )

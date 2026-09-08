@@ -28,6 +28,9 @@ samri_bindata/
 #Ants
 ants/
 
+#ffprobe (video frame-rate detection, see paths_config's "ffprobe_bin")
+ffmpeg/
+
 #Atlas bundle
 atlas_bundle/
 

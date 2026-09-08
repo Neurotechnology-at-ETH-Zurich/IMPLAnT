@@ -8,6 +8,7 @@ of them. Import _paths (and _base_dir/_exe_dir, if a module also derives
 other exe-relative paths of its own) from here instead."""
 import json
 import os
+import shutil
 import sys
 
 _base_dir = getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__)))
@@ -51,7 +52,35 @@ del _default_atlas_entry, _key, _filename
 if not os.path.isabs(_paths['atlas_folder']):
     _paths['atlas_folder'] = os.path.join(_exe_dir, _paths['atlas_folder'])
 
+# Unlike atlas_folder (a user manually places files next to the executable,
+# so _exe_dir is correct there), ffprobe is bundled BY PyInstaller itself
+# (MRID_GUI.spec's `binaries` list) -- in a onedir build PyInstaller's own
+# COLLECT step puts bundled binaries/datas under _internal/ (its default
+# --contents-directory), not next to the exe. _base_dir (sys._MEIPASS when
+# frozen) is what actually points there; _exe_dir would silently resolve to
+# a directory that doesn't exist.
+if not os.path.isabs(_paths['ffprobe_bin']):
+    _paths['ffprobe_bin'] = os.path.join(_base_dir, _paths['ffprobe_bin'])
+
 _user_config_path = os.path.join(_exe_dir, 'paths_config.json')
+
+
+def get_ffprobe_path():
+    """Absolute path to the bundled ffprobe binary if a standalone build
+    shipped one (see MRID_GUI.spec), otherwise the bare command name so
+    subprocess resolves it via PATH -- the normal case when running from
+    source with a system ffmpeg install (see README's Dependencies section)."""
+    bundled = os.path.join(_paths['ffprobe_bin'], 'ffprobe')
+    return bundled if os.path.isfile(bundled) else 'ffprobe'
+
+
+def ffprobe_available():
+    """Whether get_ffprobe_path() actually resolves to something runnable --
+    checked up front (e.g. when the video tab is opened) so a missing ffprobe
+    is reported as one clear message there, instead of only surfacing as a
+    subprocess error the first time a video's frame rate is read."""
+    path = get_ffprobe_path()
+    return os.path.isfile(path) or shutil.which(path) is not None
 
 
 def save_paths(**updates):

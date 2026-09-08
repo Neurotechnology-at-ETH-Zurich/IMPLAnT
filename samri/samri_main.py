@@ -163,9 +163,16 @@ def _resolve_ants_bin(raw):
     if os.path.isabs(raw):
         return raw
     if getattr(sys, 'frozen', False):
-        # check next to executable (dist/ants/bin), then one level up (project root ants/bin)
+        # MRID_GUI.spec bundles ants/bin via PyInstaller's own `binaries` --
+        # in a onedir build that lands under _internal/ (PyInstaller's
+        # default --contents-directory), which is exactly what _MEIPASS
+        # points at, not the top-level dir next to the executable. Check
+        # that first; keep the old exe-relative candidates as a fallback
+        # (e.g. a build made with --contents-directory . to disable the
+        # _internal split).
         exe_dir = os.path.dirname(sys.executable)
-        candidates = [os.path.join(exe_dir, raw), os.path.join(os.path.dirname(exe_dir), raw)]
+        candidates = [os.path.join(_base_dir, raw),
+                      os.path.join(exe_dir, raw), os.path.join(os.path.dirname(exe_dir), raw)]
     else:
         candidates = [os.path.join(_base_dir, raw)]
     return next((c for c in candidates if os.path.isdir(c)), candidates[0])

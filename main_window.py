@@ -1043,8 +1043,29 @@ class MainWindow(QMainWindow):
             logging.error(f"Failed to copy sub folder to DATA: {e}")
 
     def _on_registration_done(self, samri_input):
-        self._copy_sub_to_data()
+        # _copy_sub_to_data is plain filesystem I/O (shutil copy/copytree) --
+        # no Qt/VTK object is touched, so unlike visualize_results below it's
+        # safe to run off the GUI thread instead of freezing it silently for
+        # however long the copy of a subject's data takes.
+        copy_overlay = BusyOverlay(self, message="Copying registration results, please wait…")
+        copy_overlay.setGeometry(self.rect())
+        copy_overlay.raise_()
+        copy_overlay.show()
 
+        def on_copy_done():
+            copy_overlay.close()
+            self._verify_and_finish_registration(samri_input)
+
+        def on_copy_failed(tb):
+            copy_overlay.close()
+            show_worker_error(self, "Copying registration results failed", tb)
+
+        self._copy_worker = BusyWorker(self._copy_sub_to_data, self)
+        self._copy_worker.done.connect(on_copy_done)
+        self._copy_worker.failed.connect(on_copy_failed)
+        self._copy_worker.start()
+
+    def _verify_and_finish_registration(self, samri_input):
         verify_overlay = BusyOverlay(self, message="Verifying atlas registration…")
         verify_overlay.setGeometry(self.rect())
         verify_overlay.raise_()

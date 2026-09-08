@@ -221,7 +221,13 @@ class ElectrodeLoc:
                 worker_result['unconverged_mrids'] = unconverged_mrids
 
             def on_worker_done():
-                overlay.close()
+                # Keep the overlay up through the warning below and through on_done
+                # itself -- on_done (_finish_electrode_localisation) still does real,
+                # synchronous work (barcode plotting, GUI updates) on this thread, so
+                # closing here (right when the compute loop finishes, before any of
+                # that has run) would uncover the GUI while it's still busy. A failed
+                # convergence check is not a reason to cut that indication short either
+                # -- close only once everything on_done does is actually done.
                 unconverged_mrids = worker_result.get('unconverged_mrids') or []
                 if unconverged_mrids:
                     # fit_res.success/fun were already computed by chmap.register_bundle
@@ -233,7 +239,10 @@ class ElectrodeLoc:
                         + ", ".join(unconverged_mrids)
                         + "\n\nThe fitted channel positions for these tags may be unreliable."
                     )
-                on_done(worker_result['payload'])
+                try:
+                    on_done(worker_result['payload'])
+                finally:
+                    overlay.close()
 
             def on_worker_failed(tb):
                 overlay.close()

@@ -1,5 +1,6 @@
 {
     "ants_bin": "ants/bin",
+    "ffprobe_bin": "ffmpeg/bin",
     "raw_base": "/path/to/raw/data/",
     "raw_base_samri": "/path/to/raw/data/Samri_Registration/",
     "atlas_folder": "atlas",

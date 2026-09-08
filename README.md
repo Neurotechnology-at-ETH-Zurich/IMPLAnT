@@ -9,9 +9,9 @@ The GUI currently provides:
 
 - **Pre-surgical planning** — register subject MRI data to the WHS brain atlas, letting you plan and visualise electrode trajectories before surgery — switch between the bundled MRI/DTI atlas and a higher-resolution microscopy atlas at any time (see [Atlas](#atlas))
 - **Post-implant localisation** — uses a semi-supervised pipeline for MR identification tags to localise electrodes after implantation and automatically assign atlas-defined region labels to each channel to facilitate a more accurate analysis
-- **Electrophysiology data visualisation** — visualises and curates signal data channel-by-channel, directly linked to the anatomical labels from previous steps
+- **Electrophysiology data visualisation & analysis** — visualises and curates signal data channel-by-channel, directly linked to the anatomical labels from previous steps; includes theta-event detection, ripple detection (Rippl AI), and a spike-raster view for externally computed spike-sorting results
 
-Electrophysiology data preprocessing and analysis are planned for a future release.
+Further electrophysiology preprocessing and analysis features are planned for future releases.
 As far as we are aware, IMPLAnT is the first open-source tool to bridge this entire pipeline in one interface. It's designed to adapt to a range of experimental protocols.
 
 
@@ -28,15 +28,18 @@ As far as we are aware, IMPLAnT is the first open-source tool to bridge this ent
 
 **Electrophysiology visualisation** — view raw signal traces colour-coded by atlas region alongside a 3D rendering of the implanted electrodes, with per-channel anatomical labels and coordinates.
 
+![Ephys](Icons/Github/Ephys.png)
+
 ![Demo](Icons/Github/output.gif)
 
 
 
 ## Requirements
 
-- **OS**: Linux (tested on Ubuntu 24) or macOS (dependencies pinned for both; from source only for now — no macOS standalone build yet)
+- **OS**: Linux (tested on Ubuntu 24) or macOS (dependencies pinned for both; pre-built releases are Linux-only — building a standalone `.app` yourself on macOS is supported, see [Building the standalone application](#building-the-standalone-application), but it's unsigned/not notarized)
 - **Python**: 3.10 (from source only)
 - **ANTs**: required to build from source or to build the standalone executable yourself (see [Dependencies](#dependencies)) — **not** required just to run a pre-built release, its binaries are bundled in
+- **ffprobe** (part of FFmpeg): required to run from source, for video frame-rate detection in the Electrophysiology visualisation tab (see [Dependencies](#dependencies)) — **not** required for a pre-built release, it's bundled in the same way as ANTs
 - **Internet connection**: needed the *first* time you open ephys data, start SAMRI registration, or start trajectory planning — IMPLAnT downloads and caches the ~1.3GB reference atlas automatically at that point (see [Atlas files](#atlas-files)). Not needed to just browse a 3D/4D MRI volume, and not needed again once the atlas is cached locally.
 
 ## Installation
@@ -58,6 +61,18 @@ IMPLAnT requires **ANTs** (Advanced Normalization Tools) for MRI registration. A
          antsApplyTransforms
          ...
    ```
+
+IMPLAnT also uses **ffprobe** (part of FFmpeg) to read a video's frame rate/frame count in the Electrophysiology visualisation tab's video player. This is separate from video *playback* itself, which goes through Qt's own bundled multimedia backend and needs nothing extra.
+
+- **Running from source**: install FFmpeg via your OS package manager, e.g. `sudo apt install ffmpeg` (Ubuntu/Debian) or `brew install ffmpeg` (macOS) — this puts `ffprobe` on your `PATH`, which is all IMPLAnT needs.
+- **Building the standalone executable yourself**: place a copy of the `ffprobe` binary so the folder structure looks like this (same convention as `ants/bin/` above; `MRID_GUI.spec` reads it from here at build time):
+  ```
+  IMPLAnT/
+    ffmpeg/
+      bin/
+        ffprobe
+  ```
+- **Downloading a pre-built release**: nothing to do, `ffprobe` is already bundled in.
 
 ### From source
 1. Clone the repository, including its submodules (`electrode2geometry`, `rippl-AI`)
@@ -87,7 +102,7 @@ IMPLAnT requires **ANTs** (Advanced Normalization Tools) for MRI registration. A
 
 To open the project in Qt Creator, e.g. on a new machine:
 
-1. Open `MRID-GUI.creator` (double-click it, or File → Open File or Project) — Qt Creator picks up `MRID-GUI.files` alongside it automatically as a Generic Project.
+1. Open `MRID-GUI.creator` (double-click it, or File → Open File or Project, then select `MRID-GUI.creator` as the project file — not one of the other `MRID-GUI.*` files alongside it, e.g. `.files`/`.includes`/`.config`, which are supporting files Qt Creator reads automatically once `.creator` is opened) — Qt Creator picks up `MRID-GUI.files` alongside it automatically as a Generic Project.
 2. **Projects → Build Settings → Build Directory**: set this to the repository root. A Python project has no real build step, but Qt Creator's Generic Project Manager still requires a value here.
 3. **Projects → Run Settings**, on the "Custom Executable" run configuration, set:
    - **Executable**: `.venv/bin/python` (the virtual environment created above)
@@ -99,12 +114,12 @@ These settings are stored per-machine in `MRID-GUI.creator.user`, so redo steps 
 
 ### Building the standalone application
 
-1. Install ANTs as described above — this is a build-time requirement for whoever runs the steps below, not for whoever later downloads/runs the resulting `dist/IMPLAnT`; `MRID_GUI.spec` bundles the specific ANTs tools the app calls straight into the build automatically
+1. Install ANTs and ffprobe as described above — these are build-time requirements for whoever runs the steps below, not for whoever later downloads/runs the resulting `dist/IMPLAnT`; `MRID_GUI.spec` bundles the specific ANTs tools and ffprobe the app calls straight into the build automatically
 2. Build the executable
    ```
    pyinstaller MRID_GUI.spec
    ```
-3. The app is created at `dist/IMPLAnT`, ready to distribute as-is
+3. On Linux, the app is created at `dist/IMPLAnT`, ready to distribute as-is. On macOS, building also produces `dist/IMPLAnT.app`; it's unsigned (no Apple Developer ID certificate involved), so the first launch needs a right-click → Open (or `xattr -cr` if macOS still reports it as damaged/quarantined after being copied to another machine) — distributing it further would need signing and notarization.
 
 ## Configuration
 
@@ -217,12 +232,15 @@ On the day of surgery, real bregma/lambda measurements taken on the animal rarel
 5. Start the localisation via *Time-Series Tools → MRID-tag label creation*. First paint the anatomical regions, then the electrode traces to generate a heatmap.
 6. Combined with the atlas registration and the implanted shank's `.pkl` file, IMPLAnT automatically assigns each channel to its atlas-defined brain region.
 
-**4. Electrophysiology visualisation**
+**4. Electrophysiology visualisation & analysis**
 1. Load your recording via *File → Load ephys data*.
 2. Channels are displayed with their anatomical labels from the localisation step, allowing direct comparison of signal traces across brain regions.
-3. Electrophysiology data analysis features are planned for a future release.
+3. Use the *Ephys Analysis* menu for signal analysis: *Theta Detection* and *Rippl AI* run detection directly on the loaded recording, and *Show Spiking Raster Plot* overlays externally computed spike-sorting results (a JRCLUST `_res.mat` file).
+4. Further preprocessing and analysis features are planned for future releases.
 
 ## License
 
 This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
+
+It vendors [SAMRI](https://github.com/IBT-FMI/SAMRI) (`samri/`), which is licensed under the GPLv3 (see [`samri/LICENSE`](samri/LICENSE)) — see [NOTICE.md](NOTICE.md) for what that means for the standalone build.
 
