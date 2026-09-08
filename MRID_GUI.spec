@@ -54,20 +54,25 @@ else:
 
 tmp_ret = collect_all('vtk')
 datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
-tmp_ret = collect_all('PySide6')
-datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
+# NOT collect_all('PySide6') (and NOT collect_all('PySide6.QtSvg') either,
+# for the same reason): PyInstaller ships its own actively-maintained
+# hook-PySide6.py, which already forces in every Qt6 submodule the app
+# might use and correctly collects each one's own binaries/plugins/frameworks
+# (visible in the build log as a long run of "Processing standard module
+# hook 'hook-PySide6.QtXxx.py'" lines) -- that runs automatically the moment
+# PySide6 is imported, with no collect_all needed. Our own collect_all
+# ('PySide6') call was walking the same PySide6 tree A SECOND TIME, in
+# parallel with that hook, and queuing the exact same files twice under the
+# same destination path. Harmless on Linux, but a macOS .framework's
+# internal Versions/Current symlink is a real filesystem symlink, and
+# COLLECT's os.symlink() has no existence check -- crashes with
+# FileExistsError the second time the same destination comes through.
+# 'PySide6.QtSvg'/'PySide6.QtXml' stay in hiddenimports below so those two
+# specific modules are still forced in, independent of this.
 tmp_ret = collect_all('SimpleITK')
 datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
 tmp_ret = collect_all('qdarkstyle')
 datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
-# NOT also collect_all('PySide6.QtSvg') here: QtSvg is a submodule of PySide6,
-# so collect_all('PySide6') above already walks its entire .framework bundle.
-# The redundant separate call duplicated every file in it into datas/binaries
-# -- harmless on Linux, but on macOS a .framework's internal Versions/Current
-# symlink is a real filesystem symlink, and COLLECT tries to os.symlink() it
-# twice (once per duplicate entry), which crashes with FileExistsError on the
-# second attempt. 'PySide6.QtSvg' stays in hiddenimports below so the module
-# itself is still forced in, independent of this datas/binaries collection.
 
 # rippl-AI's actual runtime deps (see rippl-AI/aux_fcn.py's imports) --
 # tensorflow/xgboost are notorious for incomplete static-import discovery
@@ -132,29 +137,31 @@ datas += _samri_datas + _rippl_ai_datas + [
     ('mrid_library.pkl', '.'),
 ]
 
-# Multiple collect_all() calls above can independently walk overlapping
-# parts of the same package (e.g. PyInstaller's own built-in PySide6 hook
-# already does an extensive collection pass on top of our collect_all
-# ('PySide6') call) and queue the exact same file twice under the same
-# destination path. Harmless on Linux, but a macOS .framework's internal
-# Versions/Current symlink is a real filesystem symlink -- COLLECT does a
-# bare os.symlink() per queued entry with no existence check, so a
-# duplicate destination crashes with FileExistsError on the second attempt.
-# Deduplicate by destination path (keeping the first occurrence) so this
-# can't happen regardless of which collection produced the duplicate.
-def _dedupe_by_dest(entries):
+# Defense in depth against multiple collect_all() calls independently
+# walking overlapping parts of the same package and queuing the exact same
+# (source file, destination dir) pair twice -- harmless on Linux, but a
+# macOS .framework's internal Versions/Current symlink is a real filesystem
+# symlink, and COLLECT's os.symlink() has no existence check, so a truly
+# duplicate entry crashes with FileExistsError on the second attempt.
+# Dedupe by the FULL (src, dest) pair, NOT dest alone -- datas/binaries
+# tuples are (source_file, destination_DIRECTORY), and many different files
+# legitimately share the same destination directory (every file under
+# samri/samri/pipelines/ maps to dest 'samri/samri/pipelines', for example);
+# keying on dest alone would keep only the first file per directory and
+# silently drop every other one.
+def _dedupe_entries(entries):
     seen = set()
     out = []
     for entry in entries:
-        dest = entry[1]
-        if dest in seen:
+        key = (entry[0], entry[1])
+        if key in seen:
             continue
-        seen.add(dest)
+        seen.add(key)
         out.append(entry)
     return out
 
-datas = _dedupe_by_dest(datas)
-binaries = _dedupe_by_dest(binaries)
+datas = _dedupe_entries(datas)
+binaries = _dedupe_entries(binaries)
 
 a = Analysis(
     ['main_window.py'],

@@ -178,7 +178,22 @@ Switch between them via **File → Atlas…**, or live from the dropdown on the 
 
 The electrode localization feature requires `mrid_library.pkl`, a lookup file specific to your experimental setup. Place it in the repository root (next to `main_window.py`) or next to the `IMPLAnT` executable. If no file is found, you will be prompted to browse for it manually — click **Save** next to the browse field to remember that path in `paths_config.json` (as `mrid_library`) so it's the default on future runs too.
 
-A dummy `mrid_library.pkl` is included in this repository for testing. It contains placeholder entries for all four supported MRID types (`duo`, `trio`, `quad`, `penta`) with uniform geometry values and can be used to verify the localisation pipeline without real calibration data. Replace it with your own calibrated file before running actual experiments.
+A dummy `mrid_library.pkl` is included in this repository for testing. It contains placeholder entries for all four supported MRID types (`duo`, `trio`, `quad`, `penta` — bundles of 2, 3, 4, and 5 shanks respectively) with uniform geometry values and can be used to verify the localisation pipeline without real calibration data. Replace it with your own calibrated file before running actual experiments.
+
+### Custom (bent) shank geometry (optional)
+
+IMPLAnT is built for flexible, high-density electrode bundles whose individual shanks physically bend toward a common shaft as they're implanted, rather than the fixed, straight layout of a rigid silicon probe. To plan trajectories and localise channels correctly for this kind of probe, IMPLAnT needs to know its actual *bent* geometry, not just a nominal straight one.
+
+This is handled by the vendored [electrode2geometry](electrode2geometry/README.md) submodule (see [From source](#from-source) above), exposed in-app as the **Edit User-defined Shank Geometry** panel:
+
+1. Load a **DXF file** — a CAD drawing of the probe's contact sites, exported from your probe's design files.
+2. Load an **amplifier.xml** (Neuroscope-style channel map) — each channel group in it becomes one shank, with its channel IDs read automatically.
+3. Tune the bending model's parameters (bend distance/angle, bundle ratio, bend radii, …) and click **Run bending model** to compute and preview that shank's bent contact positions.
+4. **Add current run as shank**, repeating for each shank in the bundle, to assemble the full probe.
+
+The same panel (and the geometry it produces) is shared between two places in the app: **Trajectory Planning**'s Shank Info sidebar (so planned trajectories/depths account for the real bent shape) and **post-implant electrode localisation** (so channel depths are computed against that same geometry per MRID tag). It can also **Export as json** in a Kilosort4-compatible format for downstream spike sorting.
+
+If your probes are standard rigid, straight shanks, you can ignore this entirely — it's an optional refinement for bundle-style probes only.
 
 ### Bruker scanner (optional)
 
@@ -222,7 +237,7 @@ IMPLAnT follows a four-stage workflow:
 
 **2. Intraoperative**
 
-On the day of surgery, real bregma/lambda measurements taken on the animal rarely match exactly what was picked on the pre-op MRI. *File → Intraoperative* opens the same Load Previous Session picker used throughout the app — pick a prior surgery session, or use *Load New File...* to load a saved Trajectory Report PDF instead. Type the manipulator's measured Bregma/Lambda (RL/AP, in mm from your rig's null point) to get an updated target position for each shank, shown against a fixed dorsal skull reference photo marked with Bregma, Lambda, and each shank's planned insertion point. See [`docs/surgery_workflow.md`](docs/surgery_workflow.md) for the full walkthrough.
+On the day of surgery, real bregma/lambda measurements taken on the animal rarely match exactly what was picked on the pre-op MRI. *File → Intraoperative* opens the same Load Previous Session picker used throughout the app — pick a prior surgery session, or use *Load New File...* to load a saved Trajectory Report PDF instead. Type the manipulator's measured Bregma/Lambda (RL/AP, in mm from your rig's null point) to get an updated target position for each shank, shown against a fixed dorsal skull reference diagram marked with Bregma, Lambda, and each shank's planned insertion point. See [`docs/surgery_workflow.md`](docs/surgery_workflow.md) for the full walkthrough.
 
 **3. Post-implant electrode localisation**
 1. Load the pre-surgical MRI via *File → Load MRI Image*.

@@ -62,7 +62,7 @@ from the list, or use **Load New File...** to browse for the saved report
 PDF instead. From there it's fully automatic:
 
 - The Intraoperative tab opens immediately, showing the plan's shanks marked on
-  a fixed dorsal skull reference photo (Bregma in red, Lambda in blue,
+  a fixed dorsal skull reference diagram (Bregma in red, Lambda in blue,
   each shank's planned insertion point in its own color) — this needs no
   MRI file at all.
 - In the background, IMPLAnT also tries to locate the corresponding
@@ -70,7 +70,7 @@ PDF instead. From there it's fully automatic:
   additionally render the original planned trajectories in 3D. This is
   best-effort: if the PDF and the scan are no longer in the same folder,
   the 3D view is simply left empty — it does not block or error out,
-  since the skull-photo view and the numeric target table are what the
+  since the skull-diagram view and the numeric target table are what the
   Intraoperative tab is actually for.
 
 ## 4. Measure and correct bregma/lambda
@@ -105,7 +105,7 @@ intraoperative measurement to re-level it against.
   does **not** update with your correction above (there's no way to place
   the manipulator's null point inside the MRI's own coordinate space, so
   this is orientation only, not a live preview of the correction).
-- **The skull reference photo** shows Bregma, Lambda, and each shank's
+- **The skull reference diagram** shows Bregma, Lambda, and each shank's
   planned insertion point at a glance, plus a black dot for your
   manipulator's null point once you've entered measured values — useful
   as a quick visual sanity check, though it's a fixed generic reference
@@ -118,7 +118,7 @@ intraoperative measurement to re-level it against.
   Pre-surgery Planning.
 - **3D view stays empty** — the PDF and the MRI scan are no longer in the
   same folder, or the animal's `ind_N` id couldn't be matched to exactly
-  one file there. This doesn't block anything else — the skull-photo view
+  one file there. This doesn't block anything else — the skull-diagram view
   and target table still work without it; load the MRI manually via
   Pre-surgery Planning first if you specifically need the 3D reference.
 - **Numbers look mirrored or backwards** — the manipulator's own axis
