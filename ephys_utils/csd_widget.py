@@ -10,7 +10,19 @@ from PySide6.QtCore import QRectF
 import scipy.integrate
 if not hasattr(scipy.integrate, 'simps'):
     scipy.integrate.simps = scipy.integrate.simpson
-from kcsd import KCSD1D
+try:
+    from kcsd import KCSD1D
+except ImportError as _kcsd_err:
+    # Caught here rather than left to propagate: this module is imported
+    # unconditionally by ephys/init_ephys.py, so an uncaught ImportError
+    # (kcsd missing, or some future scipy/kcsd incompatibility the patch
+    # above doesn't cover) would otherwise take down the whole app at
+    # startup instead of just disabling this one tab. _compute_csd checks
+    # KCSD1D below and reports through the same "nothing to show" path
+    # every other empty-input case already uses.
+    KCSD1D = None
+    print(f"CSDWidget: kcsd unavailable, kCSD tab will stay blank ({_kcsd_err})",
+          flush=True)
 
 from ephys_utils.spiking_ruster import TimeAxisItem
 from gui_utils.busy_worker import BusyWorker
@@ -276,6 +288,9 @@ class CSDWidget(QWidget):
 
         Returns a payload dict for _apply_csd, or None if there's nothing to
         show (mirrors every self._clear() case in the old inline code)."""
+        if KCSD1D is None:
+            return None
+
         # keep the number of time columns bounded — kCSD solves every column,
         # and a long window would otherwise stall the GUI
         step = max(1, int(np.ceil((s1 - s0) / self.MAX_COLUMNS)))

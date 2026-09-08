@@ -284,7 +284,8 @@ class ResampleData:
     @staticmethod
     def resampling50um_trajectoryPlanning(file_name,new_spacing_mm=0.05):
         """
-            Resample the main MRI image to a 100umx100umx100um MRI image.
+            Resample the main MRI image to new_spacing_mm isotropic (50um by
+            default, hence the function's name).
             Applies padding at the end to avoid black slices after resampling.
         """
         img = sitk.ReadImage(file_name)

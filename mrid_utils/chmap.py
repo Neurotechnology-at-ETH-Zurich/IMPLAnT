@@ -34,7 +34,7 @@ def main(mrid_dict,mrid, savepath, sessionpath,atlas,atlaslabelsdf,dwi,t2s,mask,
                                                     savepath)
 
     fitted_points,fit_res = register_bundle(gaussian_centers_3d, mrid_dict[mrid], bundle_start, weighted_loss_f=weighted_loss_f,
-                                           visualization=True)
+                                           visualization=True, px_size=px_size)
 
     np.save(os.path.join(savepath, "fitted_mrid_points.npy"), fitted_points)
     np.save(os.path.join(savepath, "bundle_fit_diagnostics.npy"),
@@ -95,10 +95,10 @@ def main(mrid_dict,mrid, savepath, sessionpath,atlas,atlaslabelsdf,dwi,t2s,mask,
     barcode_design, ticks2, tickLabels2 = barcode.gen_barcode_mrid(mrid_dict[mrid_detected]["dimensions"][:,-1], c2c)
     barcode_d = [barcode_design, ticks2, tickLabels2]
 
-    return fitted_points,regionNames,regionNumbers,df,barcode_r,barcode_d,CA1,dwi1Dsignal,pyrChIdx,chMap,atlasCoordinates_pkl
+    return fitted_points,regionNames,regionNumbers,df,barcode_r,barcode_d,CA1,dwi1Dsignal,pyrChIdx,chMap,atlasCoordinates_pkl,bool(fit_res.success)
 
 
-def register_bundle(gaussian_centers_3d, mrid_dict, bundle_start, weighted_loss_f, visualization=False):
+def register_bundle(gaussian_centers_3d, mrid_dict, bundle_start, weighted_loss_f, visualization=False, px_size=25):
     # gaussian_centers_3d = np.load(os.path.join(analysedpath, mrid_type, "3D-gaussian-centers-mrid.npy"))
     print('bundlestart ', bundle_start)
     mrid_design_dist, mrid_design_points, pattern_lengths, ionp_amount = handlers.get_mrid_dimensions(mrid_dict, bundle_start)
@@ -113,12 +113,12 @@ def register_bundle(gaussian_centers_3d, mrid_dict, bundle_start, weighted_loss_
     elif weighted_loss_f == "iopn_amount":
         loss_f_weights = ionp_amount
 
-    res = pointsetreg(gaussian_centers_3d, mrid_design_dist, loss_f_weights)
+    res = pointsetreg(gaussian_centers_3d, mrid_design_dist, loss_f_weights, px_size)
 
     #reg_results = res.x
     #print("Registration resulsts: ")
     #print(reg_results)
-    fitted_mrid_points = get_fitted_points(res, mrid_design_dist)
+    fitted_mrid_points = get_fitted_points(res, mrid_design_dist, px_size)
 
     # filename = "fitted_mrid_points.npy"
     # np.save(os.path.join(analysedpath, mrid_type, filename), fitted_mrid_points)
@@ -126,12 +126,10 @@ def register_bundle(gaussian_centers_3d, mrid_dict, bundle_start, weighted_loss_
     return fitted_mrid_points,res
 
 
-def pointsetreg(gaussian_centers_3d, pattern_dist, pattern_lengths):
+def pointsetreg(gaussian_centers_3d, pattern_dist, pattern_lengths, px_size=25):
     """
     Registers bundle to the measured Gaussian centers in 3D.
     """
-    px_size = 25
-
     pInit = gaussian_centers_3d[0]
     sph_coord_gaussian_centers = get_spherical_coord(gaussian_centers_3d)
     x_init = np.append(pInit, sph_coord_gaussian_centers[:, 1:].flatten())
@@ -195,7 +193,7 @@ def bundle_fit3d_loss(x, *args):
     d = np.array(d)
     return np.sum(d)
 
-def get_fitted_points(reg_result, pattern_dist):
+def get_fitted_points(reg_result, pattern_dist, px_size=25):
     """
     Calculates the fitted point coordinates given the registration results and MRID dimensions.
     """
@@ -211,7 +209,7 @@ def get_fitted_points(reg_result, pattern_dist):
         gamma = x[2 * i + 4]
         # print(points[i])
         xprev, yprev, zprev = points[i]
-        r = pattern_dist[i] / 25
+        r = pattern_dist[i] / px_size
 
         newX = xprev + r * math.sin(theta) * math.cos(gamma)
         newY = yprev + r * math.sin(theta) * math.sin(gamma)

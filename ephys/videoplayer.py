@@ -8,6 +8,8 @@ from PySide6.QtWidgets import QMessageBox, QFileDialog
 import scipy.io
 from pymatreader import read_mat
 
+from paths_config import get_ffprobe_path, ffprobe_available
+
 
 class VideoPlayer:
     def __init__(self,MW):
@@ -17,6 +19,16 @@ class VideoPlayer:
         self.MW.ui.pushButton_videoPlay.clicked.connect(self.play_pause)
 
     def add_video(self):
+        if not ffprobe_available():
+            QMessageBox.warning(
+                None, "ffprobe not found",
+                "Video playback needs ffprobe (part of FFmpeg) to read frame rate/"
+                "frame count, and it isn't installed or on PATH. Install FFmpeg "
+                "(e.g. `sudo apt install ffmpeg`) and try again -- see the README's "
+                "Dependencies section."
+            )
+            return
+
         file_path, _ = QFileDialog.getOpenFileName(
             None,
             "Open Video File",
@@ -56,15 +68,21 @@ class VideoPlayer:
         self.synchronize_frames(file_path)
 
     def get_frame_rate(self,file_path):
-        result = subprocess.run(
-            ["ffprobe", "-v", "quiet", "-print_format", "json", "-show_streams", file_path],
-            capture_output=True, text=True
-        )
-        info = json.loads(result.stdout)
-        stream = info["streams"][0]
-        num, den = stream["r_frame_rate"].split("/")
-        self.frame_rate = int(num) / int(den)
-        self.MW.ui.spinBox_frame.setMaximum(int(stream["nb_frames"])) #total frames
+        try:
+            result = subprocess.run(
+                [get_ffprobe_path(), "-v", "quiet", "-print_format", "json", "-show_streams", file_path],
+                capture_output=True, text=True
+            )
+            stream = json.loads(result.stdout)["streams"][0]
+            num, den = stream["r_frame_rate"].split("/")
+            self.frame_rate = int(num) / int(den)
+            self.MW.ui.spinBox_frame.setMaximum(int(stream["nb_frames"])) #total frames
+        except (OSError, ValueError, KeyError, IndexError, ZeroDivisionError) as err:
+            QMessageBox.warning(
+                None, "Could not read video metadata",
+                f"ffprobe could not read frame rate/frame count from\n{file_path}\n\n{err}"
+            )
+            self.frame_rate = 1.0
 
     def play_pause(self):
         if self.currently_play:

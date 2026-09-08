@@ -3,7 +3,6 @@ import numpy as np
 from scipy.stats import zscore
 from scipy.spatial.distance import squareform
 from scipy.cluster.hierarchy import linkage, dendrogram, fcluster, optimal_leaf_ordering, leaves_list
-import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 
 
@@ -75,38 +74,8 @@ def find_optimal_threshold_elbow(linkage_matrix):
 
 
 # -----------------------------------------------------------------------
-# Figure 1: plain correlation matrix heatmap  (Peter's main-script figure)
+# Dendrogram-reordered heatmap
 # -----------------------------------------------------------------------
-
-def plot_correlation_matrix(corr_matrix, labels, colormap=None, clim=(-0.4, 0.4)):
-    """
-    Heatmap of the raw (unordered) correlation matrix — matches the first
-    figure produced before hierarchical clustering in Peter's main script.
-
-    Returns
-    -------
-    fig : matplotlib Figure
-    """
-    if colormap is None:
-        colormap = plt.cm.RdBu_r
-
-    n = corr_matrix.shape[0]
-    plot_corr = corr_matrix - np.diag(np.diag(corr_matrix))
-
-    fig, ax = plt.subplots(figsize=(10, 9))
-    im = ax.imshow(plot_corr, aspect='auto', cmap=colormap,
-                   vmin=clim[0], vmax=clim[1])
-    ax.set_xticks(range(n))
-    ax.set_xticklabels(labels, rotation=45, ha='right', fontsize=7)
-    ax.set_yticks(range(n))
-    ax.set_yticklabels(labels, fontsize=7)
-    ax.set_title('Pairwise Neuronal Spike-Count Correlation')
-    ax.set_aspect('equal')
-    fig.colorbar(im, ax=ax, fraction=0.03, pad=0.04)
-    fig.tight_layout()
-
-    return fig
-
 
 def plot_dendrogram_and_heatmap(corr_matrix, labels, p=9.5, clim=(-0.3, 0.3)):
     """

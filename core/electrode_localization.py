@@ -45,7 +45,7 @@ def process_in_parallel(args):
     mask=np.asanyarray(nii_mask.dataobj)
 
 
-    fitted_points,regionNames,regionNumbers,df,barcode_r,barcode_d,CA1,dwi1Dsignal,pyrChIdx,chMap,atlasCoordinates_pkl = chmap.main(
+    fitted_points,regionNames,regionNumbers,df,barcode_r,barcode_d,CA1,dwi1Dsignal,pyrChIdx,chMap,atlasCoordinates_pkl,bundle_fit_converged = chmap.main(
         mrid_dict,
         mrid,
         savepath,
@@ -63,7 +63,7 @@ def process_in_parallel(args):
         channel_depths_um=channel_depths_um
     )
 
-    return fitted_points,regionNames,regionNumbers,df,barcode_r,barcode_d, mrid,CA1,dwi1Dsignal,pyrChIdx,chMap,atlasCoordinates_pkl
+    return fitted_points,regionNames,regionNumbers,df,barcode_r,barcode_d, mrid,CA1,dwi1Dsignal,pyrChIdx,chMap,atlasCoordinates_pkl,bundle_fit_converged
 
 class ElectrodeLoc:
     """
@@ -180,6 +180,7 @@ class ElectrodeLoc:
                 totalpyrChIdx= []
                 totalchMap = []
                 totalatlasCoordinates_pkl = []
+                unconverged_mrids = []
 
                 #over all tags -> "Pre-defined" gives a per-tag total_ch list
                 #(equal-spacing path) and no channel_depths_um; "User-defined"
@@ -198,7 +199,9 @@ class ElectrodeLoc:
                     futures = [executor.submit(process_in_parallel, args) for args in args_list]
 
                     for future in as_completed(futures):
-                        fitted_points,regionNames,regionNumbers,df,barcode_r,barcode_d,mrid,CA1,dwi1Dsignal,pyrChIdx,chMap,atlasCoordinates_pkl = future.result()
+                        fitted_points,regionNames,regionNumbers,df,barcode_r,barcode_d,mrid,CA1,dwi1Dsignal,pyrChIdx,chMap,atlasCoordinates_pkl,bundle_fit_converged = future.result()
+                        if not bundle_fit_converged:
+                            unconverged_mrids.append(mrid)
                         totalfitted_points.append(fitted_points)
                         totaldf.append(df)
                         totalbarcode_r.append(barcode_r)
@@ -215,9 +218,21 @@ class ElectrodeLoc:
                     roi_names,totaldf,totalbarcode_r,totalbarcode_d,totalmrid,totalCA1,
                     totaldwi1Dsignal,totalregionNames,totalpyrChIdx,totalfitted_points,
                     totalchMap,totalatlasCoordinates_pkl)
+                worker_result['unconverged_mrids'] = unconverged_mrids
 
             def on_worker_done():
                 overlay.close()
+                unconverged_mrids = worker_result.get('unconverged_mrids') or []
+                if unconverged_mrids:
+                    # fit_res.success/fun were already computed by chmap.register_bundle
+                    # and saved to bundle_fit_diagnostics.npy per tag, but nothing read
+                    # that file back -- surface it here instead of silently discarding it.
+                    QtWidgets.QMessageBox.warning(
+                        self.MW, "Bundle registration did not converge",
+                        "The point-set registration reported failure to converge for: "
+                        + ", ".join(unconverged_mrids)
+                        + "\n\nThe fitted channel positions for these tags may be unreliable."
+                    )
                 on_done(worker_result['payload'])
 
             def on_worker_failed(tb):

@@ -435,6 +435,13 @@ class InitEphys:
 
             self.points_data.loc[channel_numb,'Channel Label'] = new_label
             self.points_data.loc[channel_numb,'Channel'] = new_idx
+            # flag this row as hand-corrected so a later reader can tell a
+            # judgement call from an atlas-assigned label -- see changeRegion's
+            # caller (fill_combobox lists the atlas's own nearest regions,
+            # this just records that one of them was picked over the atlas's)
+            if 'Manually Corrected' not in self.points_data.columns:
+                self.points_data['Manually Corrected'] = False
+            self.points_data.loc[channel_numb,'Manually Corrected'] = True
             #save back in excel
             df = pd.DataFrame(self.points_data)
             excel_path = os.path.join(os.path.join(self.session_path,"analysed"),self.mrid_info.mrid,'channel_atlas_coordinates.xlsx')
