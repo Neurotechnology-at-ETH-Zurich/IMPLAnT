@@ -179,7 +179,16 @@ a = Analysis(
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=[],
+    # nvidia-nccl-cu12 (multi-GPU communication) is a transitive tensorflow
+    # dependency on Linux, pulled in unconditionally regardless of whether a
+    # GPU is even present -- ~400MB for functionality this app never uses
+    # (rippl-AI's tf_keras model runs CPU-only; we've already seen tensorflow
+    # print "Could not find cuda drivers on your machine, GPU will not be
+    # used" and work fine every time we've launched this build). Excluding
+    # it doesn't change behavior, just cuts dead weight from the standalone
+    # build -- tensorflow's own GPU-detection code already handles no GPU
+    # being available gracefully.
+    excludes=['nvidia'],
     noarchive=False,
     optimize=0,
 )
