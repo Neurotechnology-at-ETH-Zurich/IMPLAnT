@@ -459,7 +459,9 @@ class ButtonsGUI_TimeSeries:
                         self.LoadMRI.mrid_tags.heatmap_unsuper = False
                         #directly generating supervised heatmap!
                         roi_indices = np.unique(self.MW.Paintbrush.label_volume[i])
-                        self.LoadMRI.mrid_tags.update_heatmap(data_view,idx,roi_indices)
+                        roi_indices = roi_indices[roi_indices > self.LoadMRI.mrid_tags.num_regions]
+                        if len(roi_indices):
+                            self.LoadMRI.mrid_tags.update_heatmap(data_view,i,roi_indices)
 
             self.LoadMRI.PaintbrushGUI.brush_4D(self.MW.ui.checkBox_Brush_MRID.isChecked(),label=False)
 
