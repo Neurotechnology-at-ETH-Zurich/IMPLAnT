@@ -132,6 +132,30 @@ datas += _samri_datas + _rippl_ai_datas + [
     ('mrid_library.pkl', '.'),
 ]
 
+# Multiple collect_all() calls above can independently walk overlapping
+# parts of the same package (e.g. PyInstaller's own built-in PySide6 hook
+# already does an extensive collection pass on top of our collect_all
+# ('PySide6') call) and queue the exact same file twice under the same
+# destination path. Harmless on Linux, but a macOS .framework's internal
+# Versions/Current symlink is a real filesystem symlink -- COLLECT does a
+# bare os.symlink() per queued entry with no existence check, so a
+# duplicate destination crashes with FileExistsError on the second attempt.
+# Deduplicate by destination path (keeping the first occurrence) so this
+# can't happen regardless of which collection produced the duplicate.
+def _dedupe_by_dest(entries):
+    seen = set()
+    out = []
+    for entry in entries:
+        dest = entry[1]
+        if dest in seen:
+            continue
+        seen.add(dest)
+        out.append(entry)
+    return out
+
+datas = _dedupe_by_dest(datas)
+binaries = _dedupe_by_dest(binaries)
+
 a = Analysis(
     ['main_window.py'],
     pathex=['.'],
