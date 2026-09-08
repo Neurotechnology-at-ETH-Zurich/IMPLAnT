@@ -31,8 +31,6 @@ methods that genuinely need overriding here:
 - reload_atlas_view: switching atlases now only re-scatters the label
   overlay (build_mri_label_overlay) in place -- no restart_gui, no base
   image swap.
-
-See /home/neurox/.claude/plans/wise-popping-nest.md for the full rationale.
 """
 
 import os

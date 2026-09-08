@@ -8,8 +8,6 @@ on which volume is displayed are overridden here; everything else
 (register_to_main_img, get_shank_line, init_page30_mirror,
 sync_page30_display, ask_paint_forbidden_areas, paint_red_areas) is
 inherited unchanged from TpRegistration.
-
-See /home/neurox/.claude/plans/wise-popping-nest.md for the full rationale.
 """
 
 import os

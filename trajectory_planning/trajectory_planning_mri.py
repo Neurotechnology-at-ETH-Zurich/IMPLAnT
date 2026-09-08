@@ -13,8 +13,7 @@ CoordTransform/DfxGeometry -- resolves through TrajectoryPlanning exactly
 as it always has. trajectory_planning.py itself is not modified by any of
 this; this class only reads it, same as every other file in this rewrite.
 
-See /home/neurox/.claude/plans/wise-popping-nest.md for the full rationale
-and https://docs.python.org/3/tutorial/classes.html#multiple-inheritance
+See https://docs.python.org/3/tutorial/classes.html#multiple-inheritance
 (C3 linearization) for why placing the *Mri mixins before TrajectoryPlanning
 resolves consistently even though TrajectoryPlanning itself is built from
 the very (non-Mri) classes those mixins subclass -- verified by hand for

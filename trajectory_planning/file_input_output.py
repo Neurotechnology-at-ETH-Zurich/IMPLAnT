@@ -6,6 +6,7 @@ import os
 import re
 import sys
 import io
+import time
 import json as _json
 import numpy as np
 import vtk
@@ -666,9 +667,31 @@ class FileOutput(QtWidgets.QDialog):
                 # fit_to_window frames around -- see
                 # _save_and_hide_crossing_line_actor.
                 saved_crossing_line = self._save_and_hide_crossing_line_actor(tp, view)
+                # Force the just-scrolled-to slice's image pipeline (and
+                # every actor touched above) to actually finish updating
+                # BEFORE fit_to_window computes its zoom from them --
+                # ComputeVisiblePropBounds() (unlike GetActors(), which only
+                # sees vtkActors) walks every prop including the image actor
+                # and forces it to catch up. Without this, fit_to_window's
+                # own internal ComputeVisiblePropBounds() call (utils/zoom.
+                # py) can run against stale/incomplete bounds and compute a
+                # zoom factor that's wrong for what actually ends up on
+                # screen -- this is what made the very first fix (running
+                # this same warm-up AFTER fit_to_window instead of before)
+                # still come out badly zoomed out despite the image itself
+                # finally appearing.
+                self._warm_up_render(widget)
                 Zoom.fit_to_window(widget, tp.LoadMRI.vtk_widgets.values(), tp.LoadMRI.scale_bar,
                                     tp.LoadMRI.vtk_widgets, 0, data_3d=True)
-            QtWidgets.QApplication.processEvents()
+            # Oblique/constrained views never call fit_to_window at all (their
+            # camera is set once at construction and assumed stable -- see
+            # rendering_mri.py's setup_oblique_coronal_view), but update_
+            # oblique_coronal_view/update_oblique_sagittal_view still repaint
+            # via QTimer.singleShot(0, ...Render) -- a queued Qt callback, not
+            # a synchronous VTK call -- so it's genuinely racy whether that
+            # repaint has actually run by the time _screenshot_render_window
+            # grabs the back buffer below. Same warm-up here guarantees it has.
+            self._warm_up_render(widget)
             return self._screenshot_render_window(widget.GetRenderWindow())
         finally:
             tp.shank_number = prev_shank
@@ -692,6 +715,35 @@ class FileOutput(QtWidgets.QDialog):
                 self._restore_view_cameras(tp, saved_cameras)
             if stacked.currentIndex() != prev_index:
                 stacked.setCurrentIndex(prev_index)
+
+    def _warm_up_render(self, widget):
+        """Force widget's renderer to fully catch up with whatever was just
+        changed (slice, camera, actor visibility, contrast) before anything
+        downstream reads its state -- see the two call sites in
+        _capture_mri_screenshot for why this is needed both before
+        Zoom.fit_to_window (so it computes its zoom from real, current
+        bounds) and again right before the actual screenshot (so the queued
+        QTimer.singleShot repaint the oblique views use has actually run).
+
+        A single ComputeVisiblePropBounds()/Render()/processEvents() pass
+        was NOT reliable on its own -- it fixed the black-image bug once,
+        then the very next export was back to it (plus a wrong zoom, from
+        computing fit_to_window's bounds too early). This looks like a
+        genuine async race between VTK's OpenGL command queue/GPU driver
+        and when the data actually lands, not a one-shot ordering bug --
+        so this loops the same pass a few times with a real (if tiny) sleep
+        between each, giving the driver actual wall-clock time to catch up,
+        rather than trusting one pass to be enough. Not fully root-caused;
+        if this still isn't reliable, the next step is forcing an update on
+        the specific image mapper (core/image_layer.py's ImageLayer) rather
+        than the whole renderer."""
+        renderer = widget.GetRenderWindow().GetRenderers().GetFirstRenderer()
+        for _ in range(3):
+            renderer.ComputeVisiblePropBounds()
+            QtWidgets.QApplication.processEvents()
+            widget.GetRenderWindow().Render()
+            QtWidgets.QApplication.processEvents()
+            time.sleep(0.05)
 
     _MRI_VIEW_NAMES = ('axial', 'coronal', 'sagittal')
 

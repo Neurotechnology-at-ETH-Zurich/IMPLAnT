@@ -63,7 +63,7 @@ class ShankSidebarWidget(QWidget):
             return None
         insert = self.tp.coords_insert_point.get(shank_idx)
         deep = self.tp.coords_deepest_point.get(shank_idx)
-        if insert is None or deep is None or not hasattr(self.tp, 'fixedImg'):
+        if insert is None or deep is None or not hasattr(self.tp, 'movingImg_resampled'):
             return None
         insert_arr = np.array(insert)
         deep_arr = np.array(deep)
@@ -73,7 +73,18 @@ class ShankSidebarWidget(QWidget):
             shank_end_arr = np.array(shank_end)
             if np.linalg.norm(shank_end_arr - deep_arr) > np.linalg.norm(insert_arr - deep_arr):
                 top_arr = shank_end_arr
-        spacing = np.array(self.tp.fixedImg.GetSpacing())
+        # coords_insert_point/coords_deepest_point/channel_points are MRI-
+        # voxel coordinates in this workflow (electrode_mri.py -- "the MRI
+        # never stops being the displayed volume"), same space compute_
+        # shank_regions (shank_mri.py) samples -- that function already uses
+        # movingImg_resampled's spacing to convert to mm; this one used
+        # fixedImg's (the ATLAS'S, a different voxel size, 0.0391mm vs.
+        # ~0.05mm here) instead, so every dot was drawn at the wrong depth
+        # relative to the correctly-scaled region bands -- compressed to
+        # ~78% of its real depth, making dots visually cluster into the
+        # wrong band even though each band's own #Ch count (computed
+        # separately, with the right spacing) was already correct.
+        spacing = np.array(self.tp.movingImg_resampled.GetSpacing())
         return np.linalg.norm((np.asarray(points) - top_arr) * spacing, axis=1)
 
     def paintEvent(self, event):
