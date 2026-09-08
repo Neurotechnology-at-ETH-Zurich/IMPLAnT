@@ -60,8 +60,14 @@ tmp_ret = collect_all('SimpleITK')
 datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
 tmp_ret = collect_all('qdarkstyle')
 datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
-tmp_ret = collect_all('PySide6.QtSvg')
-datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
+# NOT also collect_all('PySide6.QtSvg') here: QtSvg is a submodule of PySide6,
+# so collect_all('PySide6') above already walks its entire .framework bundle.
+# The redundant separate call duplicated every file in it into datas/binaries
+# -- harmless on Linux, but on macOS a .framework's internal Versions/Current
+# symlink is a real filesystem symlink, and COLLECT tries to os.symlink() it
+# twice (once per duplicate entry), which crashes with FileExistsError on the
+# second attempt. 'PySide6.QtSvg' stays in hiddenimports below so the module
+# itself is still forced in, independent of this datas/binaries collection.
 
 # rippl-AI's actual runtime deps (see rippl-AI/aux_fcn.py's imports) --
 # tensorflow/xgboost are notorious for incomplete static-import discovery
