@@ -17,7 +17,7 @@ As far as we are aware, IMPLAnT is the first open-source tool to bridge this ent
 
 ## Screenshots
 
-**Pre-surgical trajectory planning** — plan and visualise electrode trajectories across axial, sagittal, and coronal views of the WHS rat brain atlas, with individual shanks labelled directly in 3D.
+**Pre-surgical trajectory planning** — plan and visualise electrode trajectories across axial, sagittal, and coronal views of the subject's own MRI, registered to the WHS rat brain atlas for region labels, with individual shanks labelled directly in 3D.
 
 ![Trajectory Planning](Icons/Github/Trajectory_Planning.png)
 
