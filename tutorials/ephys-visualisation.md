@@ -14,3 +14,7 @@ nav_order: 4
 ![Screenshot of IMPLAnT's electrophysiology visualisation tab, showing a 3D rendering of implanted electrode shanks next to colour-coded raw signal traces labelled by brain region](../assets/images/Ephys.png)
 
 ![Animated demo of IMPLAnT's electrophysiology visualisation tab, browsing channel-by-channel signal traces linked to their atlas region labels](../assets/images/output.gif)
+
+**Ephys Analysis** — theta-event detection, ripple detection (Rippl AI), and spike-raster/correlation/spectrogram views:
+
+<video src="../assets/videos/Ephys_Analysis_Demo.mp4" controls muted loop playsinline style="max-width:100%"></video>

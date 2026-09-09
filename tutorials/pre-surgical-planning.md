@@ -22,7 +22,9 @@ The saved PDF does two things at once:
 {: .note }
 The PDF is named after the animal (e.g. `trajectory_planning-sub-X-ind_2.pdf`) and, importantly, is saved in the **same folder as the MRI scan it came from** — the Intraoperative tab locates the scan automatically using that folder plus the animal's `ind_N` id. Keep the PDF alongside the scan rather than moving it elsewhere.
 
-![Trajectory Planning](../assets/images/Trajectory_Planning.png)
+![Screenshot of IMPLAnT's trajectory planning view, showing three linked axial, sagittal, and coronal views of a subject's MRI registered to the rat brain atlas, with labelled electrode shanks and a live shank-composition sidebar](../assets/images/Trajectory_Planning.png)
+
+<video src="../assets/videos/Trajectory_Planning_Demo.mp4" controls muted loop playsinline style="max-width:100%"></video>
 
 **One page of a saved Trajectory Report** — atlas and real MRI coronal/sagittal views for a shank, with the insertion angle overlaid and a per-channel region breakdown:
 

@@ -60,6 +60,8 @@ IMPLAnT can register and plan against either of two atlases:
 
 Switch between them via **File → Atlas…**, or live from the dropdown on the [Pre-surgical planning](tutorials/pre-surgical-planning) screen itself. The first time you select the microscopy atlas, IMPLAnT downloads and converts it automatically (a one-time step, same idea as the initial WHS atlas download); every switch after that is instant.
 
+<video src="assets/videos/Atlas_Switch_Demo.mp4" controls muted loop playsinline style="max-width:100%"></video>
+
 ## MRID library file
 
 The electrode localisation feature requires `mrid_library.pkl`, a lookup file specific to your experimental setup. Place it in the repository root (next to `main_window.py`) or next to the `IMPLAnT` executable. If no file is found, you'll be prompted to browse for it manually — click **Save** next to the browse field to remember that path in `paths_config.json` (as `mrid_library`) so it's the default on future runs too.
@@ -79,6 +81,8 @@ This is handled by the vendored [electrode2geometry](https://github.com/Neurotec
 4. **Add current run as shank**, repeating for each shank in the bundle, to assemble the full probe.
 
 The same panel (and the geometry it produces) is shared between two places in the app: [Pre-surgical planning](tutorials/pre-surgical-planning)'s Shank Info sidebar (so planned trajectories/depths account for the real bent shape) and [post-implant electrode localisation](tutorials/post-implant-localisation) (so channel depths are computed against that same geometry per MRID tag). It can also **Export as json** in a Kilosort4-compatible format for downstream spike sorting.
+
+<video src="assets/videos/Shank_Geometry_Demo.mp4" controls muted loop playsinline style="max-width:100%"></video>
 
 {: .note }
 If your probes are standard rigid, straight shanks, you can ignore this entirely — it's an optional refinement for bundle-style probes only.

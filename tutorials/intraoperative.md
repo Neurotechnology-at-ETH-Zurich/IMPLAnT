@@ -34,6 +34,8 @@ Click **Intraoperative** in the menu. This opens the same **Load Previous Sessio
 - The Intraoperative tab opens immediately, showing the plan's shanks marked on a fixed dorsal skull reference diagram (Bregma in red, Lambda in blue, each shank's planned insertion point in its own color) — this needs no MRI file at all.
 - In the background, IMPLAnT also tries to locate the corresponding resampled MRI scan (reusing the registration already done pre-op) to additionally render the original planned trajectories in 3D. This is best-effort: if the PDF and the scan are no longer in the same folder, the 3D view is simply left empty — it doesn't block or error out, since the skull-diagram view and the numeric target table are what the Intraoperative tab is actually for.
 
+<video src="../assets/videos/Intraoperative_Demo.mp4" controls muted loop playsinline style="max-width:100%"></video>
+
 ## 2. Measure and correct bregma/lambda
 
 This is the actual point of the Intraoperative tab. The pre-op plan picked bregma/lambda **on the MRI** — on the day, the surgeon locates them physically, on the animal, using the stereotaxic manipulator zeroed at an arbitrary reference point ("null point"). Those two measurements rarely match exactly.

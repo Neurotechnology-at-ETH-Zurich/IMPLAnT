@@ -37,7 +37,9 @@ Further electrophysiology preprocessing and analysis features are planned for fu
 
 **Pre-surgical trajectory planning** — plan and visualise electrode trajectories across axial, sagittal, and coronal views of the subject's own MRI, registered to the WHS rat brain atlas for region labels, with individual shanks labelled directly in 3D.
 
-![Screenshot of IMPLAnT's trajectory planning view, showing three linked axial, sagittal, and coronal 3D views of the rat brain atlas with labelled electrode shanks](assets/images/Trajectory_Planning.png)
+![Screenshot of IMPLAnT's trajectory planning view, showing three linked axial, sagittal, and coronal views of a subject's MRI registered to the rat brain atlas, with labelled electrode shanks and a live shank-composition sidebar](assets/images/Trajectory_Planning.png)
+
+<video src="assets/videos/Trajectory_Planning_Demo.mp4" controls muted loop playsinline style="max-width:100%"></video>
 
 **Post-implant electrode localisation** — paint anatomical regions and electrode traces across the post-implant MRI, generating a heatmap used to automatically assign each recording channel to its atlas-defined brain region.
 
@@ -48,6 +50,10 @@ Further electrophysiology preprocessing and analysis features are planned for fu
 ![Screenshot of IMPLAnT's electrophysiology visualisation tab, showing a 3D rendering of implanted electrode shanks next to colour-coded raw signal traces labelled by brain region](assets/images/Ephys.png)
 
 ![Animated demo of IMPLAnT's electrophysiology visualisation tab, browsing channel-by-channel signal traces linked to their atlas region labels](assets/images/output.gif)
+
+**Electrophysiology analysis** — theta-event detection, ripple detection (Rippl AI), and spike-raster/correlation/spectrogram views, all linked to the same channel-region labels:
+
+<video src="assets/videos/Ephys_Analysis_Demo.mp4" controls muted loop playsinline style="max-width:100%"></video>
 
 ## License
 
