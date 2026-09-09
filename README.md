@@ -36,7 +36,7 @@ As far as we are aware, IMPLAnT is the first open-source tool to bridge this ent
 
 ## Requirements
 
-- **OS**: Linux (tested on Ubuntu 24) or macOS (dependencies pinned for both; pre-built releases are Linux-only — building a standalone `.app` yourself on macOS is supported, see [Building the standalone application](#building-the-standalone-application), but it's unsigned/not notarized)
+- **OS**: Linux (tested on Ubuntu 24) or macOS (dependencies pinned for both). Pre-built releases are available for both Linux and **Apple Silicon** Macs (M1/M2/M3+) — not Intel Macs, which need a from-source build instead. The macOS build is unsigned/not notarized, so the first launch needs a right-click → Open (or `xattr -cr` if macOS reports it as damaged after a transfer).
 - **Python**: 3.10 (from source only)
 - **ANTs**: required to build from source or to build the standalone executable yourself (see [Dependencies](#dependencies)) — **not** required just to run a pre-built release, its binaries are bundled in
 - **ffprobe** (part of FFmpeg): required to run from source, for video frame-rate detection in the Electrophysiology visualisation tab (see [Dependencies](#dependencies)) — **not** required for a pre-built release, it's bundled in the same way as ANTs
@@ -45,7 +45,7 @@ As far as we are aware, IMPLAnT is the first open-source tool to bridge this ent
 ## Installation
 
 Choose one of two options:
-- **Download the release** from the [Releases page](../../releases) — pre-built standalone executables for **Linux**; no Python installation or separate ANTs install needed. Configure `paths_config.json` as described in [Configuration](#configuration).
+- **Download the release** from the [Releases page](../../releases) — pre-built standalone executables for **Linux** and **macOS (Apple Silicon)**; no Python installation or separate ANTs install needed. Configure `paths_config.json` as described in [Configuration](#configuration).
 - **Run from source** — requires Python 3.10, all dependencies, and a local ANTs install (see [Dependencies](#dependencies))
 
 ### Dependencies
@@ -113,6 +113,8 @@ To open the project in Qt Creator, e.g. on a new machine:
 These settings are stored per-machine in `MRID-GUI.creator.user`, so redo steps 2–4 on each new machine.
 
 ### Building the standalone application
+
+Pre-built Apple Silicon and Linux executables are already published on the [Releases page](../../releases) — only build your own if you need an Intel Mac build, or a build from a specific commit.
 
 1. Install ANTs and ffprobe as described above — these are build-time requirements for whoever runs the steps below, not for whoever later downloads/runs the resulting `dist/IMPLAnT`; `MRID_GUI.spec` bundles the specific ANTs tools and ffprobe the app calls straight into the build automatically
 2. Build the executable
@@ -231,9 +233,13 @@ IMPLAnT follows a four-stage workflow:
 
 **1. Pre-surgical planning**
 1. Open *File → Start SAMRI process* to register the subject MRI to the WHS atlas. Registration time depends on image resolution and the *Num Threads* setting — typically a few hours on a modern workstation with multiple threads.
+
+   ![SAMRI registration setup](Icons/Github/samri_dock.png)
 2. Optionally, use *Create Moving Mask* to manually segment a brain mask before registration, which improves accuracy. The mask is saved as `filename-mask.nii.gz`.
 3. After successful registration, open *File → Trajectory Planning* and load the pre-surgical MRI. Position shanks in the axial, sagittal, and coronal views until the target regions are reached.
-4. Save a *Trajectory Report* — this produces a single PDF that carries the plan forward into the next step.
+4. Save a *Trajectory Report* — this produces a single PDF that carries the plan forward into the next step, with one page per shank (atlas + real MRI coronal/sagittal views, angles, and a per-channel region breakdown):
+
+   ![Trajectory Report](Icons/Github/Trajectory_Report.png)
 
 **2. Intraoperative**
 
