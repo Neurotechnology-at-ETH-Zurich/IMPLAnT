@@ -35,7 +35,7 @@ Further electrophysiology preprocessing and analysis features are planned for fu
 
 ## Screenshots
 
-**Pre-surgical trajectory planning** — plan and visualise electrode trajectories across axial, sagittal, and coronal views of the WHS rat brain atlas, with individual shanks labelled directly in 3D.
+**Pre-surgical trajectory planning** — plan and visualise electrode trajectories across axial, sagittal, and coronal views of the subject's own MRI, registered to the WHS rat brain atlas for region labels, with individual shanks labelled directly in 3D.
 
 ![Screenshot of IMPLAnT's trajectory planning view, showing three linked axial, sagittal, and coronal 3D views of the rat brain atlas with labelled electrode shanks](assets/images/Trajectory_Planning.png)
 

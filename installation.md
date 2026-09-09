@@ -11,7 +11,7 @@ nav_order: 2
 
 ## Requirements
 
-- **OS**: Linux (tested on Ubuntu 24) or macOS (dependencies pinned for both; pre-built releases are Linux-only for now, but building a standalone `.app` yourself on macOS is supported — see [Building the standalone application](#building-the-standalone-application))
+- **OS**: Linux (tested on Ubuntu 24) or macOS (dependencies pinned for both). Pre-built releases are available for both Linux and **Apple Silicon** Macs (M1/M2/M3+) — see [Download](download); not Intel Macs, which need a from-source build instead (see [Building the standalone application](#building-the-standalone-application)). The macOS build is unsigned/not notarized, so the first launch needs a right-click → Open (or `xattr -cr` if macOS reports it as damaged after a transfer).
 - **Python**: 3.10 (from source only)
 - **ANTs**: required to build from source or to build the standalone executable yourself — **not** required just to run a pre-built release, its binaries are bundled in
 - **ffprobe** (part of FFmpeg): required to run from source, for video frame-rate detection in the electrophysiology visualisation tab — **not** required for a pre-built release, it's bundled in the same way as ANTs
@@ -78,6 +78,8 @@ IMPLAnT also uses **ffprobe** (part of FFmpeg) to read a video's frame rate/fram
    ```
 
 ## Building the standalone application
+
+Pre-built Apple Silicon and Linux executables are already published on the [Download](download) page — only build your own if you need an Intel Mac build, or a build from a specific commit.
 
 1. Install ANTs and ffprobe as described above — build-time requirements only; `MRID_GUI.spec` bundles the specific ANTs tools and ffprobe the app calls straight into the build automatically.
 2. Build the executable:

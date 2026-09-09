@@ -9,14 +9,14 @@ Pre-built standalone executables — no Python installation and no separate ANTs
 
 <div class="release-table" markdown="1">
 
-| Version | Released | Linux | macOS | Windows |
+| Version | Released | Linux | macOS (Apple Silicon) | Windows |
 |:--|:--|:--:|:--:|:--:|
-| **v0.1.0** | 2026 | [🐧 Download](https://github.com/Neurotechnology-at-ETH-Zurich/IMPLAnT/releases/download/v0.1.0/IMPLAnT){: .btn .btn-blue } | *coming soon* | *coming soon* |
+| **v0.2.0** | 2026 | [🐧 Download](https://github.com/Neurotechnology-at-ETH-Zurich/IMPLAnT/releases/download/v0.2.0/IMPLAnT-linux.zip){: .btn .btn-blue } | [🍎 Download](https://github.com/Neurotechnology-at-ETH-Zurich/IMPLAnT/releases/download/v0.2.0/IMPLAnT-macos.zip){: .btn .btn-blue } | *coming soon* |
 
 </div>
 
 {: .note }
-Only Linux builds are published today. macOS/Windows columns will fill in here once those builds exist — until then, macOS users can [run from source](installation#running-from-source).
+The macOS build is for **Apple Silicon (M1/M2/M3+) only** — not Intel Macs, which need to [run from source](installation#running-from-source) or [build their own](installation#building-the-standalone-application) instead. It's also unsigned/not notarized, so the first launch needs a right-click → Open (or `xattr -cr` if macOS reports it as damaged after the download). Windows isn't available yet — no column to fill in until that build exists.
 
 ## Source code
 
