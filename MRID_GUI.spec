@@ -52,8 +52,18 @@ else:
     print(f"WARNING: {_FFPROBE_PATH} not found -- built app will be missing ffprobe "
           f"(video frame-rate detection in the Electrophysiology visualisation tab)")
 
-tmp_ret = collect_all('vtk')
-datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
+# NOT collect_all('vtk'): 'vtk' is a single-file compatibility shim
+# (site-packages/vtk.py) that unconditionally imports every VTK submodule
+# that exists (~140, including chemistry/geospatial/flow-path/parallel-
+# computing modules nothing here uses) so old code that did `import vtk`
+# instead of `from vtkmodules.X import ...` would keep working. Nothing in
+# this codebase imports bare `vtk` (verified via grep -- only direct
+# `from vtkmodules.X import ...`), but collect_all('vtk') still imports
+# that shim itself to inspect it, and PyInstaller's static analysis then
+# dutifully bundles everything the shim references. PyInstaller's own
+# per-module vtkmodules.* hooks (see the many "Processing standard module
+# hook 'hook-vtkmodules.vtkXxx.py'" lines in the build log) already collect
+# exactly what's actually imported, with no blanket collect_all needed.
 # NOT collect_all('PySide6') (and NOT collect_all('PySide6.QtSvg') either,
 # for the same reason): PyInstaller ships its own actively-maintained
 # hook-PySide6.py, which already forces in every Qt6 submodule the app
@@ -70,6 +80,15 @@ datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
 # 'PySide6.QtSvg'/'PySide6.QtXml' stay in hiddenimports below so those two
 # specific modules are still forced in, independent of this.
 tmp_ret = collect_all('SimpleITK')
+datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
+# nipype's interface classes (traits-based, samri's ants Registration/
+# ApplyTransforms/etc. included) build themselves through dynamic/traits
+# metaclass machinery that PyInstaller's static import analysis doesn't
+# fully see through -- confirmed missing at runtime (ImportError building
+# on macOS) without this collect_all. The gap is in nipype's own import
+# pattern, not anything OS-specific, so it's collected unconditionally
+# rather than gated to darwin.
+tmp_ret = collect_all('nipype')
 datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
 tmp_ret = collect_all('qdarkstyle')
 datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
@@ -171,10 +190,13 @@ a = Analysis(
     hiddenimports=hiddenimports + [
         'SimpleITK',
         'qdarkstyle',
-        'vtkmodules.all',
         'pkg_resources.py2_warn',
         'PySide6.QtSvg',
         'PySide6.QtXml',
+        'nipype.interfaces.ants',
+        'nipype.interfaces.ants.registration',
+        'nibabel',
+        'traits',
     ],
     hookspath=[],
     hooksconfig={},

@@ -19,7 +19,8 @@ As far as we are aware, IMPLAnT is the first open-source tool to bridge this ent
 
 **Pre-surgical trajectory planning** — plan and visualise electrode trajectories across axial, sagittal, and coronal views of the subject's own MRI, registered to the WHS rat brain atlas for region labels, with individual shanks labelled directly in 3D.
 
-![Trajectory Planning](Icons/Github/Trajectory_Planning.png)
+[![Trajectory Planning](Icons/Github/Trajectory_Planning.png)](Icons/Github/videos/Trajectory_Planning_Demo.mp4)
+*(click the screenshot for a recorded demo)*
 
 **Post-implant electrode localisation** — paint anatomical regions and electrode traces across the post-implant MRI, generating a heatmap that is used to automatically assign each recording channel to its atlas-defined brain region.
 
@@ -31,6 +32,11 @@ As far as we are aware, IMPLAnT is the first open-source tool to bridge this ent
 ![Ephys](Icons/Github/Ephys.png)
 
 ![Demo](Icons/Github/output.gif)
+
+**Electrophysiology analysis** — theta-event detection, ripple detection (Rippl AI), and spike-raster/correlation/spectrogram views, all linked to the same channel-region labels:
+
+[![Ephys Analysis](Icons/Github/Ephys.png)](Icons/Github/videos/Ephys_Analysis_Demo.mp4)
+*(click the screenshot for a recorded demo)*
 
 
 
@@ -176,6 +182,9 @@ IMPLAnT can register and plan against either of two atlases:
 
 Switch between them via **File → Atlas…**, or live from the dropdown on the Trajectory Planning screen itself. The first time you select the microscopy atlas, IMPLAnT downloads and converts it automatically (a one-time step, same idea as the initial WHS atlas download); every switch after that is instant.
 
+[![Atlas switching](Icons/Github/Atlas_Switch.png)](Icons/Github/videos/Atlas_Switch_Demo.mp4)
+*(click the screenshot for a recorded demo of switching atlases)*
+
 ### MRID library file
 
 The electrode localization feature requires `mrid_library.pkl`, a lookup file specific to your experimental setup. Place it in the repository root (next to `main_window.py`) or next to the `IMPLAnT` executable. If no file is found, you will be prompted to browse for it manually — click **Save** next to the browse field to remember that path in `paths_config.json` (as `mrid_library`) so it's the default on future runs too.
@@ -194,6 +203,9 @@ This is handled by the vendored [electrode2geometry](electrode2geometry/README.m
 4. **Add current run as shank**, repeating for each shank in the bundle, to assemble the full probe.
 
 The same panel (and the geometry it produces) is shared between two places in the app: **Trajectory Planning**'s Shank Info sidebar (so planned trajectories/depths account for the real bent shape) and **post-implant electrode localisation** (so channel depths are computed against that same geometry per MRID tag). It can also **Export as json** in a Kilosort4-compatible format for downstream spike sorting.
+
+[![Custom shank geometry](Icons/Github/Shank_Geometry.png)](Icons/Github/videos/Shank_Geometry_Demo.mp4)
+*(click the screenshot for a recorded demo)*
 
 If your probes are standard rigid, straight shanks, you can ignore this entirely — it's an optional refinement for bundle-style probes only.
 
@@ -244,6 +256,9 @@ IMPLAnT follows a four-stage workflow:
 **2. Intraoperative**
 
 On the day of surgery, real bregma/lambda measurements taken on the animal rarely match exactly what was picked on the pre-op MRI. *File → Intraoperative* opens the same Load Previous Session picker used throughout the app — pick a prior surgery session, or use *Load New File...* to load a saved Trajectory Report PDF instead. Type the manipulator's measured Bregma/Lambda (RL/AP, in mm from your rig's null point) to get an updated target position for each shank, shown against a fixed dorsal skull reference diagram marked with Bregma, Lambda, and each shank's planned insertion point. See [`docs/surgery_workflow.md`](docs/surgery_workflow.md) for the full walkthrough.
+
+[![Intraoperative](Icons/Github/Intraoperative.png)](Icons/Github/videos/Intraoperative_Demo.mp4)
+*(click the screenshot for a recorded demo)*
 
 **3. Post-implant electrode localisation**
 1. Load the pre-surgical MRI via *File → Load MRI Image*.

@@ -44,6 +44,38 @@ class CustomInteractorStyle(vtk.vtkInteractorStyleImage):
         self.AddObserver("MiddleButtonPressEvent", self.on_middle_button_down)
         self.AddObserver("MiddleButtonReleaseEvent", self.on_middle_button_up)
 
+    def _compute_paintbrush_pos(self, picker, picked):
+        """
+        Convert a picker's last pick position into the [z,y,x] voxel index
+        the paintbrush operates on, for the current view/data index. Shared
+        by on_left_button_down (first click, before any mouse-move has run)
+        and on_mouse_move's brush branch, which used to duplicate this and
+        left on_left_button_down reading self.paintbrush_pos before it was
+        ever set -- an AttributeError on a click that starts a brush stroke.
+        """
+        if not picked:
+            return None
+        view_name = self.interactor_view_name
+        old_indices = self.LoadMRI.slice_indices[self.interactor_data_index].copy()
+        pos = picker.GetPickPosition()  # VTK world coordinates
+        shape = self.LoadMRI.volumes[self.interactor_data_index].slices[0].shape
+        if view_name == "axial" or (self.LoadMRI.volumes[0].is_4d and view_name=='coronal')or (self.LoadMRI.volumes[0].is_4d and view_name=='sagittal'):
+            xi = shape[2] - 1 - pos[0]/self.LoadMRI.volumes[self.interactor_data_index].spacing[2]
+            yi = pos[1]/self.LoadMRI.volumes[self.interactor_data_index].spacing[1]
+            zi = old_indices[0]
+        elif view_name == "sagittal":
+            xi = old_indices[2]
+            yi = shape[1] - 1 - pos[0]/self.LoadMRI.volumes[self.interactor_data_index].spacing[1]
+            zi = pos[1]/self.LoadMRI.volumes[self.interactor_data_index].spacing[0]
+        elif view_name == "coronal":
+            xi = shape[2] - 1 - pos[0]/self.LoadMRI.volumes[self.interactor_data_index].spacing[2]
+            yi = old_indices[1]
+            zi = pos[1]/self.LoadMRI.volumes[self.interactor_data_index].spacing[0]
+        zi = max(0, min(zi, self.LoadMRI.volumes[self.interactor_data_index].slices[0].shape[0]-1))
+        yi = max(0, min(yi, self.LoadMRI.volumes[self.interactor_data_index].slices[0].shape[1]-1))
+        xi = max(0, min(xi, self.LoadMRI.volumes[self.interactor_data_index].slices[0].shape[2]-1))
+        return [int(round(zi)),int(round(yi)),int(round(xi))]
+
     def on_left_button_down(self, obj, event):
         """
         Handle left mouse button press for measurements or cursor updates.
@@ -59,6 +91,7 @@ class CustomInteractorStyle(vtk.vtkInteractorStyleImage):
             self.dragging_minimap = True
         elif self.LoadMRI.brush_on:
             self.dragging = True
+            self.paintbrush_pos = self._compute_paintbrush_pos(picker, picked)
             self.MW.Paintbrush.mouse_moves(self.paintbrush_pos,self.dragging,self.interactor_view_name,self.interactor_data_index)
         else:
             self.dragging = True
@@ -343,30 +376,9 @@ class CustomInteractorStyle(vtk.vtkInteractorStyleImage):
         elif self.LoadMRI.brush_on:
             picker = vtk.vtkPropPicker()
             renderer = interactor.GetRenderWindow().GetRenderers().GetFirstRenderer()
-            self.paintbrush_pos = None
-            if picker.Pick(x, y, 0, renderer):
-                view_name = self.interactor_view_name
-                old_indices = self.LoadMRI.slice_indices[self.interactor_data_index].copy()
-                pos = picker.GetPickPosition()  # VTK world coordinates
-                # Update slice_indices depending on view
-                shape = self.LoadMRI.volumes[self.interactor_data_index].slices[0].shape
-                if view_name == "axial" or (self.LoadMRI.volumes[0].is_4d and view_name=='coronal')or (self.LoadMRI.volumes[0].is_4d and view_name=='sagittal'):
-                    xi = shape[2] - 1 - pos[0]/self.LoadMRI.volumes[self.interactor_data_index].spacing[2]
-                    yi = pos[1]/self.LoadMRI.volumes[self.interactor_data_index].spacing[1]
-                    zi = old_indices[0]
-                elif view_name == "sagittal":
-                    xi = old_indices[2]
-                    yi = shape[1] - 1 - pos[0]/self.LoadMRI.volumes[self.interactor_data_index].spacing[1]
-                    zi = pos[1]/self.LoadMRI.volumes[self.interactor_data_index].spacing[0]
-                elif view_name == "coronal":
-                    xi = shape[2] - 1 - pos[0]/self.LoadMRI.volumes[self.interactor_data_index].spacing[2]
-                    yi = old_indices[1]
-                    zi = pos[1]/self.LoadMRI.volumes[self.interactor_data_index].spacing[0]
-                zi = max(0, min(zi, self.LoadMRI.volumes[self.interactor_data_index].slices[0].shape[0]-1))
-                yi = max(0, min(yi, self.LoadMRI.volumes[self.interactor_data_index].slices[0].shape[1]-1))
-                xi = max(0, min(xi, self.LoadMRI.volumes[self.interactor_data_index].slices[0].shape[2]-1))
-
-                self.paintbrush_pos = [int(round(zi)),int(round(yi)),int(round(xi))]
+            picked = picker.Pick(x, y, 0, renderer)
+            self.paintbrush_pos = self._compute_paintbrush_pos(picker, picked)
+            if picked:
                 self.MW.Paintbrush.mouse_moves(self.paintbrush_pos,self.dragging,self.interactor_view_name,self.interactor_data_index)
             else:
                 return
