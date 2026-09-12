@@ -5,7 +5,7 @@ from vtk.util import numpy_support
 from vtkmodules.vtkFiltersSources import vtkRegularPolygonSource
 from vtkmodules.vtkRenderingCore import vtkActor,vtkPolyDataMapper
 from PySide6.QtGui import QStandardItemModel,QFont,QStandardItem
-
+from PySide6 import QtWidgets
 
 class Segmentation:
     def __init__(self,LoadMRI):
@@ -77,23 +77,24 @@ class SegmentationInitialization:
         shape = self.LoadMRI.volumes[0].slices[0].shape
         if view_name == "axial":      # z fixed -> (x,y)
             self.center = [
-                (shape[2]-self.LoadMRI.slice_indices[0][2])*self.LoadMRI.volumes[0].spacing[2],
+                (shape[2]-1-self.LoadMRI.slice_indices[0][2])*self.LoadMRI.volumes[0].spacing[2],
                 self.LoadMRI.slice_indices[0][1]*self.LoadMRI.volumes[0].spacing[1],
                 1.1 #otherwise not visible
             ]
         elif view_name == "coronal": # y fixed -> (z,x)
             self.center = [
-                (shape[2]-self.LoadMRI.slice_indices[0][2])*self.LoadMRI.volumes[0].spacing[2],
+                (shape[2]-1-self.LoadMRI.slice_indices[0][2])*self.LoadMRI.volumes[0].spacing[2],
                 self.LoadMRI.slice_indices[0][0]*self.LoadMRI.volumes[0].spacing[0],
                 1.1 #otherwise not visible
             ]
         elif view_name == "sagittal":# x fixed -> (y,z)
             self.center = [
-                (shape[1]-self.LoadMRI.slice_indices[0][1])*self.LoadMRI.volumes[0].spacing[1],
+                (shape[1]-1-self.LoadMRI.slice_indices[0][1])*self.LoadMRI.volumes[0].spacing[1],
                 self.LoadMRI.slice_indices[0][0]*self.LoadMRI.volumes[0].spacing[0],
                 1.1 #otherwise not visible
             ]
         self.center_px = self.LoadMRI.slice_indices[0].copy()
+
 
 
     def row_selected(self,selected,deselected):
@@ -167,15 +168,13 @@ class SegmentationInitialization:
         header_font.setBold(True)
 
         self.table.setModel(self.model)
-
-        self.table.setColumnWidth(0,35)
-        self.table.setColumnWidth(1,35)
-        self.table.setColumnWidth(2,35)
-        self.table.setColumnWidth(3,60)
+        self.table.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.Stretch)
+        self.table.resizeColumnsToContents()
 
         self.table.horizontalHeader().setFont(header_font)
         self.table.verticalHeader().setVisible(False)
         self.table.show()
+
 
 
     def create_circle_around_selected_bubble(self,view_name,radius,center):
