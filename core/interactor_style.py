@@ -287,11 +287,11 @@ class CustomInteractorStyle(vtk.vtkInteractorStyleImage):
 
             if not self.LoadMRI.volumes[0].is_4d:
                 camera = self.LoadMRI.renderers[0]['axial'].GetRenderWindow().GetRenderers().GetFirstRenderer().GetActiveCamera()
-                Zoom.update_bounds('axial', camera, self.LoadMRI.renderers[self.image_index][self.interactor_view_name])
+                Zoom.update_bounds('axial', camera, self.LoadMRI.renderers[0]['axial'])
                 camera = self.LoadMRI.renderers[0]['coronal'].GetRenderWindow().GetRenderers().GetFirstRenderer().GetActiveCamera()
-                Zoom.update_bounds('coronal', camera, self.LoadMRI.renderers[self.image_index][self.interactor_view_name])
+                Zoom.update_bounds('coronal', camera, self.LoadMRI.renderers[0]['coronal'])
                 camera = self.LoadMRI.renderers[0]['sagittal'].GetRenderWindow().GetRenderers().GetFirstRenderer().GetActiveCamera()
-                Zoom.update_bounds('sagittal', camera, self.LoadMRI.renderers[self.image_index][self.interactor_view_name])
+                Zoom.update_bounds('sagittal', camera, self.LoadMRI.renderers[0]['sagittal'])
             zoom_notifier.factorChanged.emit(Zoom.global_zoom_factor)
 
         # Zooming with right mouse drag
@@ -362,13 +362,13 @@ class CustomInteractorStyle(vtk.vtkInteractorStyleImage):
             if not self.LoadMRI.volumes[0].is_4d:
                 camera = self.LoadMRI.renderers[0]['axial'].GetRenderWindow().GetRenderers().GetFirstRenderer().GetActiveCamera()
                 self.LoadMRI.scale_bar['axial'].update_bar(self.LoadMRI.renderers[0]['axial'],'axial',length_cm=1.0)
-                Zoom.update_bounds('axial', camera, self.LoadMRI.renderers[self.image_index][self.interactor_view_name])
+                Zoom.update_bounds('axial', camera, self.LoadMRI.renderers[0]['axial'])
                 camera = self.LoadMRI.renderers[0]['coronal'].GetRenderWindow().GetRenderers().GetFirstRenderer().GetActiveCamera()
                 self.LoadMRI.scale_bar['coronal'].update_bar(self.LoadMRI.renderers[0]['coronal'],'coronal',length_cm=1.0)
-                Zoom.update_bounds('coronal', camera, self.LoadMRI.renderers[self.image_index][self.interactor_view_name])
+                Zoom.update_bounds('coronal', camera, self.LoadMRI.renderers[0]['coronal'])
                 camera = self.LoadMRI.renderers[0]['sagittal'].GetRenderWindow().GetRenderers().GetFirstRenderer().GetActiveCamera()
                 self.LoadMRI.scale_bar['sagittal'].update_bar(self.LoadMRI.renderers[0]['sagittal'],'sagittal',length_cm=1.0)
-                Zoom.update_bounds('sagittal', camera, self.LoadMRI.renderers[self.image_index][self.interactor_view_name])
+                Zoom.update_bounds('sagittal', camera, self.LoadMRI.renderers[0]['sagittal'])
 
             Zoom.global_zoom_factor = scale
             Zoom.factorChanged = scale
@@ -512,12 +512,12 @@ class CustomInteractorStyle(vtk.vtkInteractorStyleImage):
                 if vn == self.interactor_view_name and image_index == self.image_index:
                     continue
 
-                camera.SetParallelScale(scale)
                 if self.LoadMRI.volumes[0].is_4d:
                     # same anatomical plane, a different loaded acquisition/
                     # timestamp panel -- pin it to the exact same view,
                     # position/focal point included (mirrors the on_mouse_move
                     # branch for this same case).
+                    camera.SetParallelScale(scale)
                     pos_xy = camera.GetPosition()
                     fp_xy = camera.GetFocalPoint()
                     camera.SetFocalPoint(fp_xy[0],fp_xy[1],fp[2])
@@ -533,6 +533,12 @@ class CustomInteractorStyle(vtk.vtkInteractorStyleImage):
                 # only the first time this ran, since afterwards every
                 # camera is left holding that same borrowed Z and re-copying
                 # an already-equal value is a no-op.
+                # Nor ParallelScale: on_mouse_move already rescaled it by the
+                # same *relative* factor as the dragged view on every step of
+                # this drag, preserving whatever scale ratio this view had
+                # against the others before the drag started. Snapping it to
+                # the dragged view's absolute scale here (as this used to do)
+                # discarded that ratio the instant the button was released.
                 widget.GetRenderWindow().Render()
                 renderer.ResetCameraClippingRange()
 
