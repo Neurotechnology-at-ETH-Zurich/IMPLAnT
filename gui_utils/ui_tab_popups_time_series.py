@@ -27,6 +27,8 @@ class Ui_tab_15(object):
     def setupUi(self, tab_15):
         if not tab_15.objectName():
             tab_15.setObjectName(u"tab_15")
+        tab_15.resize(1420, 1419)
+        tab_15.setMinimumSize(QSize(0, 50))
         self.gridLayout_104 = QGridLayout(tab_15)
         self.gridLayout_104.setObjectName(u"gridLayout_104")
         self.groupBox_register = QGroupBox(tab_15)
@@ -129,6 +131,7 @@ class Ui_tab_15(object):
         self.gridLayout_17.setObjectName(u"gridLayout_17")
         self.pushButton_resample100um = QPushButton(self.groupBox_resample)
         self.pushButton_resample100um.setObjectName(u"pushButton_resample100um")
+        self.pushButton_resample100um.setMinimumSize(QSize(0, 50))
         self.pushButton_resample100um.setAutoFillBackground(False)
         self.pushButton_resample100um.setStyleSheet(u" QPushButton { background-color: #e67e22; color: white; } QPushButton:disabled { background-color: #a9713f; color: #cccccc; }")
 
@@ -149,6 +152,7 @@ class Ui_tab_15(object):
 
         self.pushButton_resample25um = QPushButton(self.groupBox_resample)
         self.pushButton_resample25um.setObjectName(u"pushButton_resample25um")
+        self.pushButton_resample25um.setMinimumSize(QSize(0, 50))
         self.pushButton_resample25um.setAutoFillBackground(False)
         self.pushButton_resample25um.setStyleSheet(u" QPushButton { background-color: #e67e22; color: white; } QPushButton:disabled { background-color: #a9713f; color: #cccccc; }")
 
@@ -770,7 +774,7 @@ class Ui_tab_15(object):
         self.contrast_data1 = QWidget()
         self.contrast_data1.setObjectName(u"contrast_data1")
         self.contrast_data1.setEnabled(True)
-        self.contrast_data1.setGeometry(QRect(0, 0, 184, 164))
+        self.contrast_data1.setGeometry(QRect(0, 0, 376, 259))
         self.gridLayout_120 = QGridLayout(self.contrast_data1)
         self.gridLayout_120.setObjectName(u"gridLayout_120")
         self.tabWidget_5 = QTabWidget(self.contrast_data1)
@@ -958,7 +962,7 @@ class Ui_tab_15(object):
         self.contrast_data2 = QWidget()
         self.contrast_data2.setObjectName(u"contrast_data2")
         self.contrast_data2.setEnabled(True)
-        self.contrast_data2.setGeometry(QRect(0, 0, 184, 164))
+        self.contrast_data2.setGeometry(QRect(0, 0, 376, 259))
         self.gridLayout_124 = QGridLayout(self.contrast_data2)
         self.gridLayout_124.setObjectName(u"gridLayout_124")
         self.tabWidget_6 = QTabWidget(self.contrast_data2)
@@ -1150,17 +1154,20 @@ class Ui_tab_15(object):
 
         self.groupBox_segmentation = QGroupBox(tab_15)
         self.groupBox_segmentation.setObjectName(u"groupBox_segmentation")
+        self.groupBox_segmentation.setMinimumSize(QSize(0, 50))
         self.gridLayout_5 = QGridLayout(self.groupBox_segmentation)
         self.gridLayout_5.setObjectName(u"gridLayout_5")
         self.textEdit_SAMRI_reg = QTextEdit(self.groupBox_segmentation)
         self.textEdit_SAMRI_reg.setObjectName(u"textEdit_SAMRI_reg")
         self.textEdit_SAMRI_reg.setMaximumSize(QSize(300, 100))
+        self.textEdit_SAMRI_reg.setReadOnly(True)
 
         self.gridLayout_5.addWidget(self.textEdit_SAMRI_reg, 0, 0, 1, 1)
 
         self.stackedWidget_segmentation = QStackedWidget(self.groupBox_segmentation)
         self.stackedWidget_segmentation.setObjectName(u"stackedWidget_segmentation")
         self.stackedWidget_segmentation.setEnabled(True)
+        self.stackedWidget_segmentation.setMinimumSize(QSize(0, 50))
         self.stackedWidget_segmentation.setMaximumSize(QSize(300, 16777215))
         self.stackedWidget_segmentation.setStyleSheet(u" QPushButton { background-color: #e67e22; color: white; } QPushButton:disabled { background-color: #a9713f; color: #cccccc; }")
         self.page_13 = QWidget()
@@ -1169,6 +1176,7 @@ class Ui_tab_15(object):
         self.gridLayout_152.setObjectName(u"gridLayout_152")
         self.pushButton_Next1 = QPushButton(self.page_13)
         self.pushButton_Next1.setObjectName(u"pushButton_Next1")
+        self.pushButton_Next1.setMinimumSize(QSize(0, 50))
         self.pushButton_Next1.setStyleSheet(u" QPushButton { background-color: #e67e22; color: white; } QPushButton:disabled { background-color: #a9713f; color: #cccccc; }")
 
         self.gridLayout_152.addWidget(self.pushButton_Next1, 3, 1, 1, 1)
@@ -1176,6 +1184,7 @@ class Ui_tab_15(object):
         self.pushButton_Back1 = QPushButton(self.page_13)
         self.pushButton_Back1.setObjectName(u"pushButton_Back1")
         self.pushButton_Back1.setEnabled(False)
+        self.pushButton_Back1.setMinimumSize(QSize(0, 50))
 
         self.gridLayout_152.addWidget(self.pushButton_Back1, 3, 0, 1, 1)
 
@@ -1241,7 +1250,7 @@ class Ui_tab_15(object):
         self.ScrollBar_lower.setObjectName(u"ScrollBar_lower")
         self.ScrollBar_lower.setMaximum(105)
         self.ScrollBar_lower.setSingleStep(1)
-        self.ScrollBar_lower.setPageStep(10)
+        self.ScrollBar_lower.setPageStep(5)
         self.ScrollBar_lower.setValue(0)
         self.ScrollBar_lower.setOrientation(Qt.Horizontal)
 
@@ -1267,7 +1276,7 @@ class Ui_tab_15(object):
         self.ScrollBar_upper.setObjectName(u"ScrollBar_upper")
         self.ScrollBar_upper.setMaximum(105)
         self.ScrollBar_upper.setSingleStep(1)
-        self.ScrollBar_upper.setPageStep(10)
+        self.ScrollBar_upper.setPageStep(5)
         self.ScrollBar_upper.setValue(0)
         self.ScrollBar_upper.setOrientation(Qt.Horizontal)
 
@@ -1304,6 +1313,7 @@ class Ui_tab_15(object):
         self.pushButton_Next2 = QPushButton(self.initialization)
         self.pushButton_Next2.setObjectName(u"pushButton_Next2")
         self.pushButton_Next2.setEnabled(False)
+        self.pushButton_Next2.setMinimumSize(QSize(0, 50))
         self.pushButton_Next2.setStyleSheet(u" QPushButton { background-color: #e67e22; color: white; } QPushButton:disabled { background-color: #a9713f; color: #cccccc; }")
 
         self.gridLayout_153.addWidget(self.pushButton_Next2, 5, 2, 1, 1)
@@ -1311,11 +1321,13 @@ class Ui_tab_15(object):
         self.pushButton_Back2 = QPushButton(self.initialization)
         self.pushButton_Back2.setObjectName(u"pushButton_Back2")
         self.pushButton_Back2.setEnabled(True)
+        self.pushButton_Back2.setMinimumSize(QSize(0, 50))
 
         self.gridLayout_153.addWidget(self.pushButton_Back2, 5, 0, 1, 2)
 
         self.groupBox_16 = QGroupBox(self.initialization)
         self.groupBox_16.setObjectName(u"groupBox_16")
+        self.groupBox_16.setMinimumSize(QSize(0, 50))
         self.gridLayout_159 = QGridLayout(self.groupBox_16)
         self.gridLayout_159.setObjectName(u"gridLayout_159")
         self.tableView_activeBub = QTableView(self.groupBox_16)
@@ -1331,6 +1343,7 @@ class Ui_tab_15(object):
 
         self.pushButton_delete = QPushButton(self.groupBox_16)
         self.pushButton_delete.setObjectName(u"pushButton_delete")
+        self.pushButton_delete.setMinimumSize(QSize(0, 50))
         self.pushButton_delete.setStyleSheet(u" QPushButton { background-color: #e67e22; color: white; } QPushButton:disabled { background-color: #a9713f; color: #cccccc; }")
 
         self.gridLayout_159.addWidget(self.pushButton_delete, 1, 0, 1, 1)
@@ -1367,6 +1380,7 @@ class Ui_tab_15(object):
 
         self.pushButton_addBubbles = QPushButton(self.initialization)
         self.pushButton_addBubbles.setObjectName(u"pushButton_addBubbles")
+        self.pushButton_addBubbles.setMinimumSize(QSize(0, 50))
         self.pushButton_addBubbles.setStyleSheet(u" QPushButton { background-color: #e67e22; color: white; } QPushButton:disabled { background-color: #a9713f; color: #cccccc; }")
 
         self.gridLayout_153.addWidget(self.pushButton_addBubbles, 1, 0, 1, 3)
@@ -1379,12 +1393,14 @@ class Ui_tab_15(object):
         self.pushButton_Back3 = QPushButton(self.page_16)
         self.pushButton_Back3.setObjectName(u"pushButton_Back3")
         self.pushButton_Back3.setEnabled(True)
+        self.pushButton_Back3.setMinimumSize(QSize(0, 50))
 
         self.gridLayout_160.addWidget(self.pushButton_Back3, 5, 0, 1, 1)
 
         self.pushButton_Finish = QPushButton(self.page_16)
         self.pushButton_Finish.setObjectName(u"pushButton_Finish")
         self.pushButton_Finish.setEnabled(True)
+        self.pushButton_Finish.setMinimumSize(QSize(0, 50))
         self.pushButton_Finish.setStyleSheet(u" QPushButton { background-color: #e67e22; color: white; } QPushButton:disabled { background-color: #a9713f; color: #cccccc; }")
 
         self.gridLayout_160.addWidget(self.pushButton_Finish, 5, 3, 1, 1)
