@@ -1,11 +1,18 @@
 # This Python file uses the following encoding: utf-8
-from PySide6.QtWidgets import QWidget, QLabel, QVBoxLayout, QApplication, QDockWidget
-from PySide6.QtCore import Qt, QTimer, QEvent
+from PySide6.QtWidgets import (QWidget, QLabel, QVBoxLayout, QApplication, QDockWidget,
+                                QPushButton, QMessageBox)
+from PySide6.QtCore import Qt, QTimer, QEvent, Signal
 from PySide6.QtGui import QPainter, QColor
 
 
 class BusyOverlay(QWidget):
-    def __init__(self, parent, message="Processing, please wait…", cover_floating_docks=True):
+    # Emitted only once the user has confirmed ("Progress will be lost" ->
+    # Yes) -- see _on_cancel_clicked. Never emitted for a non-cancellable
+    # overlay or one of its also_cover() companions.
+    cancelled = Signal()
+
+    def __init__(self, parent, message="Processing, please wait…", cover_floating_docks=True,
+                 cancellable=False):
         super().__init__(parent)
         self.setGeometry(parent.rect())
         self._message = message
@@ -18,6 +25,15 @@ class BusyOverlay(QWidget):
         layout = QVBoxLayout(self)
         layout.addWidget(self.label, alignment=Qt.AlignCenter)
 
+        self.cancel_button = None
+        if cancellable:
+            self.cancel_button = QPushButton("Cancel", self)
+            self.cancel_button.setStyleSheet(
+                "color: white; background: rgba(255,255,255,30); border: 1px solid white; "
+                "padding: 4px 16px;")
+            self.cancel_button.clicked.connect(self._on_cancel_clicked)
+            layout.addWidget(self.cancel_button, alignment=Qt.AlignCenter)
+
         # follow the parent's size (e.g. a dock going fullscreen while we are shown)
         parent.installEventFilter(self)
 
@@ -29,6 +45,23 @@ class BusyOverlay(QWidget):
                     self.also_cover(dock)
 
         self.hide()
+
+    def _on_cancel_clicked(self):
+        """Confirm before actually cancelling -- this can throw away hours of
+        registration work, so it gets the same confirm-first treatment as
+        other destructive actions in this app (e.g. main_window.py's
+        "Registration already found! -- Re-Run?" dialog)."""
+        msg_box = QMessageBox(self)
+        msg_box.setWindowTitle("Cancel registration?")
+        msg_box.setText("Cancel registration? Progress will be lost.")
+        btn_no = msg_box.addButton("No", QMessageBox.ActionRole)
+        btn_yes = msg_box.addButton("Yes, cancel", QMessageBox.ActionRole)
+        msg_box.setDefaultButton(btn_no)
+        msg_box.exec()
+        if msg_box.clickedButton() == btn_yes:
+            self.cancel_button.setEnabled(False)
+            self.set_message("Cancelling…")
+            self.cancelled.emit()
 
     def set_message(self, text):
         """Update the overlay's text in place, e.g. to show live progress

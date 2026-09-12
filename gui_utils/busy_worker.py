@@ -9,12 +9,32 @@ import traceback
 _all_workers = []
 
 
+class WorkerCancelled(Exception):
+    """A run_callable raises this to report a deliberate user cancellation
+    (e.g. samri_main.py's _run_worker_subprocess, after SamriCancelToken.cancel()
+    kills the subprocess it was waiting on) -- BusyWorker.run() routes it to
+    `cancelled` instead of `failed`, so it's never mistaken for a real error
+    (no error dialog, no OOM-retry heuristics)."""
+    pass
+
+
 class BusyWorker(QThread):
     """Runs an arbitrary no-arg callable off the GUI thread, pairing with
     BusyOverlay: show the overlay, start this, close the overlay from a
     done/failed slot."""
     done = Signal()
     failed = Signal(str)
+    # Opt-in signals: harmless for callers that never emit/connect them.
+    # progress: run_callable can report a live status string (e.g. a
+    # subprocess's streamed stdout) -- connect with Qt.QueuedConnection to a
+    # real bound QObject method, not a lambda/closure (PySide can only tell a
+    # connection needs to be queued to the GUI thread when the slot is a
+    # bound method of a QObject it recognises -- see
+    # ephys_utils/all_channels_spectrogram.py's _on_ripple_progress) since
+    # this is emitted from this worker thread, not the GUI thread.
+    progress = Signal(str)
+    # cancelled: run_callable raised WorkerCancelled.
+    cancelled = Signal()
 
     def __init__(self, run_callable, parent=None):
         super().__init__(parent)
@@ -29,6 +49,8 @@ class BusyWorker(QThread):
         try:
             self._run_callable()
             self.done.emit()
+        except WorkerCancelled:
+            self.cancelled.emit()
         except Exception:
             self.failed.emit(traceback.format_exc())
 
