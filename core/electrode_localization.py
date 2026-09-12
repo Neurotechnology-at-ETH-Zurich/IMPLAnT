@@ -1,6 +1,7 @@
 # This Python file uses the following encoding: utf-8
 from mrid_utils import handlers, gauss_aux, warper, chmap, atlas_registry
 import numpy as np
+import pandas as pd
 import nibabel as nib
 import os
 import sys
@@ -15,9 +16,15 @@ import sys
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from core.paintbrush import Paintbrush
 from core.dfx_geometry_4d import Dfx4DGeometry
+from core.image_layer import ImageLayer
+from core.cursor import Cursor
 from file_handling.mri_volume import MRIVolume
-from utils.zoom import Zoom
+from utils.zoom import Zoom, zoom_notifier
+from utils.minimap_handler import Minimap
+from utils.contrast import Contrast
+from gui_utils.intensity_table import IntensityTable
 from gui_utils.busy_overlay import BusyOverlay
+from trajectory_planning.mri_label_overlay import parse_itk_snap_label_file, build_discrete_label_lut
 from gui_utils.busy_worker import BusyWorker, show_worker_error
 
 
@@ -79,6 +86,7 @@ class ElectrodeLoc:
         self.sessionpath = LoadMRI.session_path
         self.labelsdf = handlers.read_labels(os.path.join(self.sessionpath, "anat", "labels.txt"))
         self.electrode_actors = []
+        self.electrode_actor_gates = {}
 
 
     def get_gaussian_centers(self,transformation_files):
@@ -285,119 +293,156 @@ class ElectrodeLoc:
 
 
 
-    def add_point(self,fitted_points):
+    def add_point(self,fitted_points,atlas_points,mrid_tag=None):
         """
-        Add point of found electrode Gaussian center to 4D MRI slice.
-        """
-        for data_index in range(len(self.LoadMRI.vtk_widgets[0])):
-            self.show_warped_volume(data_index,fitted_points)
-            # redraw after every view's swap, not just once at the end: each
-            # step (layer cleanup, zoom fit, etc.) touches renderers/actors,
-            # so re-running this after each one is what actually keeps the
-            # markers on screen instead of only ever drawing them once
-            self.update_electrode_markers(fitted_points)
+        Show the electrode contacts on the WHS atlas, in atlas space --
+        not fitted_points (kept as a parameter since callers still have it,
+        but that's the subject's own scan's voxel space, a different grid
+        the atlas is never resampled onto here). Displayed in page_3D's
+        real axial/coronal/sagittal viewer (see show_atlas_3d), not the
+        single-panel "echo" view groupBox_data0 normally shows.
 
-        self.update_electrode_markers(fitted_points)
+        atlas_points alone is only the tag's own few barcode-geometry
+        reference points (fitted_mrid_points, mapped to atlas space in
+        channel_mapper.map_channels_to_atlas -- not per-contact positions).
+        The actual per-electrode-contact positions are the ones already
+        saved to channel_atlas_coordinates.xlsx for this tag, read here (see
+        _load_channel_atlas_points) and shown alongside atlas_points rather
+        than instead of it.
+        """
+        channel_points = self._load_channel_atlas_points(mrid_tag) if mrid_tag else []
+        self.show_atlas_3d(list(atlas_points) + channel_points)
 
-    @staticmethod
-    def _map_fitted_point(point, source_img, target_img):
-        """
-        fitted_points are (x,y,z) indices into source_img (the warped file as
-        SimpleITK stores it - sitk index order, not array order). When a
-        view's display image has been re-oriented (sagittal -> ASR, see
-        show_warped_volume) target_img's array axes are permuted/flipped
-        relative to source_img, so map through physical space to keep the
-        point on the same anatomical location instead of the same indices.
-        """
-        if target_img is source_img:
-            return point
-        phys = source_img.TransformContinuousIndexToPhysicalPoint(
-            (float(point[0]), float(point[1]), float(point[2]))
-        )
-        return target_img.TransformPhysicalPointToContinuousIndex(phys)
+    def _load_channel_atlas_points(self, mrid_tag):
+        """channel_atlas_coordinates.xlsx (mrid_utils/channel_mapper.py's
+        map_channels_to_atlas own per-channel export, one row per electrode
+        contact, already atlas-space) for this tag -- every contact, not
+        just atlas_points' handful of tag-geometry reference points."""
+        path = os.path.join(self.savepath, mrid_tag.lower(), "channel_atlas_coordinates.xlsx")
+        if not os.path.exists(path):
+            print(f"[atlas-underlay] no channel_atlas_coordinates.xlsx for {mrid_tag} at {path}", flush=True)
+            return []
+        try:
+            df = pd.read_excel(path)
+            return df[["Atlas x", "Atlas y", "Atlas z"]].values.tolist()
+        except Exception as e:
+            print(f"[atlas-underlay] failed reading {path}: {e}", flush=True)
+            return []
 
     # fitted centers are sub-voxel Gaussian fits, not exact voxel hits, so a
-    # point stays visible for slices within this many voxels of its own z
+    # point stays visible for slices within this many voxels of its own
+    # matching coordinate
     Z_VISIBILITY_TOLERANCE = 1
 
-    def update_electrode_markers(self,fitted_points):
+    @staticmethod
+    def _atlas_point_display_xy(point_xyz, view_name, spacing, shape):
         """
-        Draw a sphere at every fitted electrode point on top of the warped
-        volume. Unlike show_warped_volume (a one-time swap, guarded by
-        warped_swapped), this redraws on every call so switching tags
-        replaces the markers instead of only ever showing the first tag's.
+        In-plane (x_display, y_display) world coordinates for an atlas-space
+        (x,y,z) point in the given real orthogonal view, matching exactly
+        how ImageLayer.setup_vtk slices/flips a non-4d volume for that same
+        view_name (same formula trajectory_planning/rendering.py's
+        _atlas_point_display_xy already uses for its own atlas-space points).
+        spacing/shape are volume.spacing/volume.slices[0].shape (zyx).
+        Returns (x_display, y_display, gate_axis, gate_value) where gate_axis
+        is the index into slice_indices ([z,y,x]) this view holds fixed, and
+        gate_value is the point's own coordinate on that axis (for
+        visibility gating against the current cursor position).
+        """
+        x, y, z = point_xyz
+        nz, ny, nx = shape
+        if view_name == "axial":      # z fixed -> (x,y)
+            return (nx - 1 - x) * spacing[2], y * spacing[1], 0, z
+        elif view_name == "coronal":  # y fixed -> (z,x)
+            return (nx - 1 - x) * spacing[2], z * spacing[0], 1, y
+        else:                          # sagittal, x fixed -> (y,z)
+            return (ny - 1 - y) * spacing[1], z * spacing[0], 2, x
+
+    def _update_atlas_markers_3d(self, atlas_points):
+        """
+        Draw a sphere at every atlas-space electrode point on top of the
+        atlas volume, once per real view (axial/coronal/sagittal). Redraws
+        on every call so switching tags replaces the markers instead of
+        only ever showing the first tag's; visibility is refreshed
+        separately (see _update_atlas_marker_visibility_3d) whenever the
+        slice changes, so a marker only shows on the slice it's actually on.
         """
         lm = self.LoadMRI
-        views = list(lm.vtk_widgets[0].keys())
-        warped_swapped = getattr(self,'warped_swapped', set())
+        if not getattr(self, 'atlas_3d_ready', False):
+            return
 
-        for actor, image_index, data_view, idx, point_z in self.electrode_actors:
-            renderer = lm.renderers.get(image_index, {}).get(data_view)
+        for actor, view_name in self.electrode_actors:
+            renderer = lm.renderers.get(0, {}).get(view_name)
             if renderer is not None:
                 renderer.RemoveActor(actor)
         self.electrode_actors.clear()
+        self.electrode_actor_gates.clear()
 
-        touched_widgets = set()
-        for idx, data_view in enumerate(views):
-            # only views actually holding the warped volume have fitted_points'
-            # index space; a view whose warped file was missing still holds
-            # the original (unwarped) volume and would place markers wrongly
-            if idx not in warped_swapped or idx >= len(lm.volumes):
+        volume = lm.volumes[0]
+        shape = volume.slices[0].shape
+        spacing = volume.spacing  # zyx
+
+        for view_name in ('axial', 'coronal', 'sagittal'):
+            renderer = lm.renderers.get(0, {}).get(view_name)
+            if renderer is None:
                 continue
+            for point in atlas_points:
+                world_x, world_y, gate_axis, gate_value = self._atlas_point_display_xy(
+                    point, view_name, spacing, shape)
 
-            volume = lm.volumes[idx]
-            nz, ny, nx = volume.slices[0].shape
-            spacing = volume.spacing  # zyx
+                sphere = vtk.vtkSphereSource()
+                sphere.SetCenter(world_x, world_y, 1)
+                sphere.SetRadius(0.3)
 
-            for image_index in volume.slices:
-                renderer = lm.renderers.get(image_index, {}).get(data_view)
-                if renderer is None:
-                    continue
+                mapper = vtk.vtkPolyDataMapper()
+                mapper.SetInputConnection(sphere.GetOutputPort())
 
-                for point in fitted_points:
-                    # fitted_points are indices into volume.raw_ref_image; the
-                    # sagittal panel's array has been re-oriented to ASR (see
-                    # show_warped_volume), so map through physical space to
-                    # land on the same anatomical location in either case
-                    x, y, z = self._map_fitted_point(point, volume.raw_ref_image, volume.oriented_ref_image)
-                    # world position accounts for fliplr: x axis is flipped in
-                    # the axial-style layout every is_4d view uses (same
-                    # convention as cursor.py/paintbrush.py)
-                    world_x = (nx - 1 - x) * spacing[2]
-                    world_y = y * spacing[1]
+                actor = vtk.vtkActor()
+                actor.SetMapper(mapper)
+                actor.GetProperty().SetColor(1, 0, 0)  # red
 
-                    sphere = vtk.vtkSphereSource()
-                    sphere.SetCenter(world_x, world_y, 1)
-                    sphere.SetRadius(0.3)
+                renderer.AddActor(actor)
+                self.electrode_actors.append((actor, view_name))
+                self.electrode_actor_gates[actor] = (gate_axis, gate_value)
 
-                    mapper = vtk.vtkPolyDataMapper()
-                    mapper.SetInputConnection(sphere.GetOutputPort())
+        self._update_atlas_marker_visibility_3d()
 
-                    actor = vtk.vtkActor()
-                    actor.SetMapper(mapper)
-                    actor.GetProperty().SetColor(1, 0, 0)  # red
+        for view_name in ('axial', 'coronal', 'sagittal'):
+            widget = lm.vtk_widgets.get(0, {}).get(view_name)
+            if widget is not None:
+                widget.GetRenderWindow().Render()
 
-                    renderer.AddActor(actor)
-                    self.electrode_actors.append((actor, image_index, data_view, idx, z))
-
-                touched_widgets.add((image_index, data_view))
-
-        self.update_electrode_marker_visibility()
-
-        for image_index, data_view in touched_widgets:
-            lm.vtk_widgets[image_index][data_view].GetRenderWindow().Render()
+    def _update_atlas_marker_visibility_3d(self):
+        """
+        Shows each marker only on the slice it actually sits on (within
+        Z_VISIBILITY_TOLERANCE voxels, since fitted centers are sub-voxel
+        Gaussian fits, not exact voxel hits) -- scrolling through slices
+        then reveals each electrode contact at its own depth instead of
+        every contact along the whole shank showing regardless of where it
+        actually is. Called from update_electrode_marker_visibility
+        (LoadMRI.update_slices' existing hook) whenever the slice changes.
+        """
+        if not getattr(self, 'atlas_3d_ready', False):
+            return
+        lm = self.LoadMRI
+        current = lm.slice_indices.get(0)
+        if current is None:
+            return
+        gates = getattr(self, 'electrode_actor_gates', {})
+        touched = set()
+        for actor, view_name in self.electrode_actors:
+            gate_axis, gate_value = gates.get(actor, (None, None))
+            visible = gate_axis is not None and abs(gate_value - current[gate_axis]) <= self.Z_VISIBILITY_TOLERANCE
+            actor.SetVisibility(visible)
+            touched.add(view_name)
+        for view_name in touched:
+            widget = lm.vtk_widgets.get(0, {}).get(view_name)
+            if widget is not None:
+                widget.GetRenderWindow().Render()
 
     def update_electrode_marker_visibility(self):
-        """
-        Always-visible: electrode contacts along a shank are typically spread
-        across a wide z range (tens to hundreds of voxels), and the cursor
-        only centers on the first point, so gating on "is this the current
-        slice" (as trajectory_planning.rendering.check_points_in_slice does)
-        left nearly every other marker hidden. Kept as a hook: still called
-        from LoadMRI.update_slices whenever the slice changes.
-        """
-        for actor, image_index, data_view, idx, point_z in self.electrode_actors:
-            actor.SetVisibility(True)
+        """Hook LoadMRI.update_slices already calls whenever the slice
+        changes (core/load_MRI_file.py)."""
+        self._update_atlas_marker_visibility_3d()
 
 
     def visualize_4Dwarpedslice(self, img_slice,spacing,data_index,data_view):
@@ -505,168 +550,303 @@ class ElectrodeLoc:
         vtk_widget.GetRenderWindow().Render()
 
 
-    def show_warped_volume(self,data_index=None,fitted_points=None):
+    def show_atlas_3d(self, atlas_points):
         """
-        Make the warped volume the main volume of a data view, in place.
+        Shows the WHS atlas as a real 3-orthogonal-view (axial/coronal/
+        sagittal) volume in page_3D -- the same viewer trajectory planning
+        uses (vtkWidget_data_axial/coronal/sagittal, spinBox_x/y/z_data3d,
+        etc.) -- with atlas-space electrode dots on it, instead of the
+        single-panel "echo" view groupBox_data0 normally shows during
+        electrode localization. atlas_points is the current tag's atlas-
+        space coordinates (totalatlasCoordinates_pkl / channel_atlas_
+        coordinates.xlsx's "Atlas x/y/z"), already indexing directly into
+        this exact atlas volume -- no resampling needed (see
+        _atlas_point_display_xy).
 
-        The image on screen after the localisation comes from the warped file
-        (mrid_utils.warper: first timestamp resampled into the anatomical grid),
-        while volumes[data_index] is still the 4D acquisition — that mismatch is
-        why the crosshair, the scrollbar, the spinboxes and the intensity readout
-        do not fit the picture. This swaps the volume of the data view and re-runs
-        only the parts of the load that depend on its geometry, so everything stays
-        on the same page and in the same widget: no restart_gui, no layout change.
+        data_index 0 is deliberately repurposed here: vtk_widgets[0]
+        currently holds the is_4d echo-acquisition widgets (vtkWidget_data00
+        etc., one entry per loaded acquisition, keyed by acquisition name).
+        Both that mode and this one are hard-wired to reuse the SAME
+        data_index==0 slot (ButtonsGUI_TimeSeries.buttons_4D and
+        ButtonsGUI_Structural.buttons_3D each unconditionally reset
+        lm.vtk_widgets themselves), so switching to this atlas display
+        necessarily retires the echo view for the rest of this session --
+        there is no code path in this app that keeps both alive at once for
+        the same data_index (confirmed: restart_gui, the app's only other
+        mode-switch, does a full teardown for exactly this reason). This
+        only rebuilds what's scoped to data_index 0 (vtk_widgets, renderers,
+        cursor_ui, contrast, intensity table, Layers[0]/volumes[0]), not a
+        full restart_gui teardown, so the barcode panel and everything else
+        already set up during electrode localization is left alone.
 
-        The warped volume is wrapped as a 4D MRIVolume (is_4d=True, one view name,
-        the same 3D volume in all three timestamp slots) so every `is_4d` branch in
-        Cursor, update_slices and CustomInteractorStyle keeps taking the path it
-        takes now - which always slices along the array's first axis, so every
-        panel would show an axial-style plane. The array is used exactly as the
-        file stores it, except for the sagittal panel, which is re-oriented to
-        ASR first (same trick as MRIVolume.from_file for real 4D data) so that
-        same first-axis slice lands on the sagittal plane instead. Because the
-        fitted points are indices into the un-reoriented file, _map_fitted_point
-        carries them into the re-oriented index space through physical space.
-
-        data_index : one data view, or None for every loaded one (up to three).
-        fitted_points : optional, only used with a single data_index — puts the
-            cursor on the first electrode so its slice is the one shown.
-        Each view is swapped once; later calls (a tag switch) are no-ops.
+        Only does the actual load once (guarded by atlas_3d_ready); a tag
+        switch after that just redraws the markers via _update_atlas_markers_3d.
         """
         lm = self.LoadMRI
-        if not hasattr(self,'warped_swapped'):
-            self.warped_swapped = set()      # data views already swapped
+        ui = self.MW.ui
 
-        views = list(lm.vtk_widgets[0].keys())
-        targets = range(len(views)) if data_index is None else [data_index]
-
-        for idx in targets:
-            if idx in self.warped_swapped or idx >= len(views):
-                continue
-            data_view = views[idx]
-            old = lm.volumes[idx]
-
-            filename = old.file_path[0:old.file_path.find('.')]
-            filename_4d_warped = ".".join((filename + "-resampled-warped", "nii", "gz"))
-            path = os.path.join(self.savepath, filename_4d_warped)
-            if not os.path.exists(path):
-                print(f"No warped volume for view {data_view} at {path}", flush=True)
-                continue
-
-            img = sitk.ReadImage(path)
-            # is_4d forces every panel through the same z-fixed (axial-style)
-            # slicing (image_layer.py setup_vtk/update_vtk), so the "sagittal"
-            # panel would otherwise show an axial slice too. Re-orienting to
-            # ASR first (same trick as MRIVolume.from_file for real 4D data)
-            # makes that same z-fixed slice land on the sagittal plane instead.
-            img_display = sitk.DICOMOrient(img, 'ASR') if data_view == 'sagittal' else img
-            vol = sitk.GetArrayFromImage(img_display)
-            if vol.ndim != 3:
-                print(f"Warped volume for view {data_view} is not 3D", flush=True)
-                continue
-
-            lm.volumes[idx] = MRIVolume(
-                file_path=path,
-                slices={0: vol, 1: vol, 2: vol},
-                DICOMOrient=old.DICOMOrient,
-                raw_DICOMOrient=old.raw_DICOMOrient,
-                view_names=[data_view],
-                spacing=img_display.GetSpacing()[::-1],
-                oriented_ref_image=img_display,
-                raw_ref_image=img,
-                is_4d=True,
-                timestamp4D=old.timestamp4D,
-            )
-            self.warped_swapped.add(idx)
-
-            # the warped volume is one static result duplicated into all three
-            # timestamp slots (see docstring) - there is no real 4D time axis
-            # left, so the timestamp controls have nothing to switch between
-            for i in range(3):
-                getattr(self.MW.ui, f"displaytimestamp_data{idx}{i}").setEnabled(False)
-                getattr(self.MW.ui, f"changetimestamp_data{idx}{i}").setEnabled(False)
-
-            # cursor: the first electrode when the points are known, else the middle
-            nz, ny, nx = vol.shape
-            if fitted_points is not None and len(fitted_points) and data_index is not None:
-                p = self._map_fitted_point(fitted_points[0], img, img_display)
-                lm.slice_indices[idx] = [
-                    int(np.clip(round(p[2]), 0, nz - 1)),
-                    int(np.clip(round(p[1]), 0, ny - 1)),
-                    int(np.clip(round(p[0]), 0, nx - 1)),
+        if getattr(self, 'atlas_3d_ready', False):
+            ui.data_4d_3d.setCurrentIndex(1)
+            # jump the cursor to the new tag's own first point -- otherwise
+            # the view stays on the previous tag's slice, and this tag's
+            # markers (gated to their own slice, see _update_atlas_markers_3d)
+            # might not be on it at all
+            if atlas_points is not None and len(atlas_points):
+                vol = lm.volumes[0].slices[0]
+                nz, ny, nx = vol.shape
+                x0, y0, z0 = atlas_points[0]
+                lm.slice_indices[0] = [
+                    int(np.clip(round(z0), 0, nz - 1)),
+                    int(np.clip(round(y0), 0, ny - 1)),
+                    int(np.clip(round(x0), 0, nx - 1)),
                 ]
+                self.MW.Cursor.update_cursor_display(0)
+                lm.update_slices(0, 'coronal')
+            self._update_atlas_markers_3d(atlas_points)
+            return
+
+        atlas_template_path = getattr(self, 'atlas_template_path', None)
+        if not atlas_template_path or not os.path.exists(atlas_template_path):
+            print(f"No atlas template available (atlas_template_path={atlas_template_path!r})", flush=True)
+            return
+
+        # the echo view's own spin_x0/y0/z0/scroll_0 connections would
+        # otherwise keep firing against now-stale state once their (now
+        # hidden) widgets change for any other reason
+        old_cursor_ui = getattr(lm, 'cursor_ui', {})
+        for key in ("spin_x0", "spin_y0", "spin_z0", "scroll_0"):
+            old_widget = old_cursor_ui.get(key)
+            if old_widget is not None:
+                try:
+                    old_widget.valueChanged.disconnect()
+                except RuntimeError:
+                    pass
+
+        # mode switch, matching ButtonsGUI_Structural.buttons_3D's own reset
+        # (see docstring) -- vtk_widgets[0] goes from "one entry per is_4d
+        # acquisition" to "one entry per real anatomical plane"
+        page3d_widgets = {
+            "axial": ui.vtkWidget_data_axial,
+            "sagittal": ui.vtkWidget_data_sagittal,
+            "coronal": ui.vtkWidget_data_coronal,
+        }
+        # these widgets may already carry a renderer from an earlier
+        # trajectory-planning pass in this same session (same LoadMRI
+        # process, page_3D's own normal use) -- setup_renderer only ever
+        # ADDs a renderer, so a stale one left in place would double up and
+        # composite underneath/behind the atlas instead of being replaced
+        for widget in page3d_widgets.values():
+            render_window = widget.GetRenderWindow()
+            for renderer in list(render_window.GetRenderers()):
+                render_window.RemoveRenderer(renderer)
+
+        lm.vtk_widgets = {0: page3d_widgets}
+        lm.renderers[0] = {}
+
+        # a stale Minimap object (e.g. left over from an earlier trajectory-
+        # planning pass in this same session, which also used 'coronal' as
+        # a view name for data_index 0) still remembers 'coronal' as an
+        # already-added minimap -- add_minimap would then treat re-adding it
+        # as an update (removing+recreating its rectangle) before 'axial'/
+        # 'sagittal' exist yet, and create_small_rectangle's non-4d branch
+        # unconditionally needs all three already present, causing a
+        # KeyError. A fresh Minimap (same object initialize_zoom_controls
+        # would build for a genuinely first-time data_index 0 load) has no
+        # such stale entries.
+        if hasattr(lm, 'minimap'):
+            try:
+                zoom_notifier.factorChanged.disconnect(lm.minimap.create_small_rectangle)
+            except RuntimeError:
+                pass
+        lm.minimap = Minimap(lm)
+        zoom_notifier.factorChanged.connect(lm.minimap.create_small_rectangle)
+
+        lm.volumes[0] = MRIVolume.from_file(atlas_template_path)
+        vol = lm.volumes[0].slices[0]
+        nz, ny, nx = vol.shape
+
+        if atlas_points is not None and len(atlas_points):
+            x0, y0, z0 = atlas_points[0]
+            lm.slice_indices[0] = [
+                int(np.clip(round(z0), 0, nz - 1)),
+                int(np.clip(round(y0), 0, ny - 1)),
+                int(np.clip(round(x0), 0, nx - 1)),
+            ]
+        else:
+            lm.slice_indices[0] = [nz // 2, ny // 2, nx // 2]
+
+        lm.contrast_ui_elements[0] = {
+            "contrast0": ui.changeContrast_data3d,
+            "brightness0": ui.changeBrightness_data3d,
+            "display_level0": ui.display_level_data3d,
+            "display_window0": ui.display_window_data3d,
+            "auto0": ui.pushButton_auto_data3d,
+            "reset0": ui.pushButton_reset_data3d,
+        }
+        lm.contrast[0] = Contrast(lm, data_index=0, label_file=False)
+        for widget, slot in (
+            (ui.changeBrightness_data3d.valueChanged, lambda v: lm.contrast[0].changed_sliders(v, image_index=0)),
+            (ui.changeContrast_data3d.valueChanged, lambda v: lm.contrast[0].changed_sliders(v, image_index=0)),
+            (ui.pushButton_auto_data3d.clicked, lambda: lm.contrast[0].auto(image_index=0)),
+            (ui.pushButton_reset_data3d.clicked, lambda: lm.contrast[0].reset(image_index=0)),
+        ):
+            try:
+                widget.disconnect()
+            except RuntimeError:
+                pass
+            widget.connect(slot)
+
+        lm.Layers[0] = {0: ImageLayer(
+            lm.volumes[0].slices, lm.volumes[0].spacing, lm.volumes[0].view_names,
+            lm.slice_indices[0], False, lm.render, contrast_class=lm.contrast[0],
+        )}
+        lm.setup_layer('coronal', 0, 0)
+
+        lm.intensity_table[0] = IntensityTable(self.MW, 0, ui.tableintensity_data3d, vol)
+
+        lm.cursor_ui = dict(old_cursor_ui)
+        lm.cursor_ui.update({
+            'spin_x0': ui.spinBox_x_data3d,
+            'spin_y0': ui.spinBox_y_data3d,
+            'spin_z0': ui.spinBox_z_data3d,
+            'intensity0': ui.tableintensity_data3d.item(0, 2),
+            'scroll_0': ui.Scroll_data3d0,
+            'scroll_1': ui.Scroll_data3d1,
+            'scroll_2': ui.Scroll_data3d2,
+        })
+
+        self.MW.Cursor = Cursor(self.MW, lm.cursor_ui, 0, 'coronal')
+        self.MW.Cursor.update_cursor_display(0)
+        self.MW.Cursor.start_cursor(True, 0, 'coronal')
+
+        ui.data_4d_3d.setCurrentIndex(1)
+        Zoom.fit_to_window(lm.vtk_widgets[0]["coronal"], lm.vtk_widgets.values(),
+                            lm.scale_bar, lm.vtk_widgets, 0, data_3d=True)
+
+        self.atlas_3d_ready = True
+        self._populate_atlas_switch_combo()
+        self._update_atlas_markers_3d(atlas_points)
+
+    def _populate_atlas_switch_combo(self):
+        """
+        Fills comboBox_atlasSwitch with every atlas image file already on
+        disk that shares the default WHS atlas' own voxel grid (see
+        atlas_registry.py: the microscopy atlas and DWI are both resampled/
+        packaged onto that same grid specifically so this holds) -- so
+        picking one just swaps the array show_atlas_3d's layer displays, no
+        rebuild of the viewer/cursor/renderers needed (see
+        _switch_atlas_display). Atlases not yet fetched onto disk are left
+        out rather than triggering a silent download.
+        """
+        ui = self.MW.ui
+        combo = ui.comboBox_atlasSwitch
+        combo.blockSignals(True)
+        combo.clear()
+        # each option: (image_path, label_file_path or None). label_file_path
+        # set only for the categorical "atlas (labels)" options, so
+        # _switch_atlas_display knows to colour it (see build_discrete_label_lut)
+        # instead of treating it as a continuous grayscale image.
+        self._atlas_switch_options = []
+
+        def add_option(label, path, label_file_path=None):
+            if path and os.path.exists(path) and (label_file_path is None or os.path.exists(label_file_path)):
+                self._atlas_switch_options.append((path, label_file_path))
+                combo.addItem(label)
+
+        whs = atlas_registry.ATLASES[atlas_registry.DEFAULT_ATLAS]
+        whs_files = whs['files']
+        folder = _paths['atlas_folder']
+        add_option("WHS T2* template", os.path.join(folder, whs_files['atlas_template']))
+        add_option("WHS atlas (labels)", os.path.join(folder, whs_files['atlas_volume']),
+                   label_file_path=os.path.join(folder, whs_files['atlas_labels']))
+        if whs['has_dwi']:
+            # this file's 4th (diffusion-direction) axis is a trailing
+            # singleton for WHS's own DWI (confirmed against the real file),
+            # which SimpleITK already collapses on read, same as any other
+            # plain 3D volume here -- no special extraction needed
+            add_option("WHS DWI", os.path.join(folder, whs_files['atlas_dwi']))
+
+        micro = atlas_registry.ATLASES.get('whs_sd_swc_female_rat')
+        if micro is not None:
+            micro_folder = os.path.join(folder, micro.get('subfolder') or '')
+            add_option(micro['display_name'], os.path.join(micro_folder, micro['files']['atlas_template']))
+
+        current_index = next(
+            (i for i, (path, _) in enumerate(self._atlas_switch_options) if path == self.atlas_template_path), 0)
+        combo.setCurrentIndex(current_index)
+        combo.blockSignals(False)
+        combo.currentIndexChanged.connect(self._switch_atlas_display)
+
+    def _switch_atlas_display(self, index):
+        """comboBox_atlasSwitch.currentIndexChanged -- swaps the image data
+        of the already-built atlas layer in place (same array object, so
+        ImageLayer/volumes stay linked, matching the "mutate in place"
+        trick core/paintbrush.py's own comment documents), rather than
+        rebuilding the viewer. Only valid because every option in the combo
+        shares the same voxel grid (see _populate_atlas_switch_combo).
+        Reading a full-resolution atlas volume off disk is slow enough to
+        freeze the GUI for a moment, so the read itself runs on a
+        BusyWorker thread; only the (fast) VTK-touching part after runs on
+        the GUI thread in on_done."""
+        if not (0 <= index < len(getattr(self, '_atlas_switch_options', []))):
+            return
+        path, label_file_path = self._atlas_switch_options[index]
+
+        result = {}
+
+        def work():
+            img = sitk.ReadImage(path)
+            result['array'] = sitk.GetArrayFromImage(img)
+
+        def on_done():
+            overlay.close()
+            new_arr = result.get('array')
+            lm = self.LoadMRI
+            current = lm.volumes[0].slices[0]
+            if new_arr.shape != current.shape:
+                print(f"[atlas-underlay] {path} has shape {new_arr.shape}, expected "
+                      f"{current.shape} (different grid) -- skipped", flush=True)
+                return
+
+            current[:] = new_arr
+            self.atlas_template_path = path
+
+            lut = lm.contrast[0].lut_vtk[0]
+            if label_file_path is not None:
+                # categorical: colour by region instead of the usual
+                # continuous grayscale ramp, mutating the same LUT object in
+                # place (build_discrete_label_lut's own "refresh" mode) so
+                # nothing needs re-attaching to the already-built actors
+                labels = parse_itk_snap_label_file(label_file_path)
+                build_discrete_label_lut(labels, lut=lut)
+                lm.update_slices(0, 'coronal')
             else:
-                lm.slice_indices[idx] = [nz // 2, ny // 2, nx // 2]
+                # continuous: recompute_luttable both rebuilds the grayscale
+                # ramp (undoing any earlier discrete colouring) and updates
+                # the window/level sliders for this image's own intensity range.
+                # vtkLookupTable.Build() is a no-op once SetTableValue has been
+                # called directly on it (build_discrete_label_lut's doing, for
+                # a previous "labels" selection) -- it only rebuilds from the
+                # Hue/Saturation/Value ranges when its own InsertTime is older
+                # than its last Build, which SetTableValue bumps past. Without
+                # ForceBuild() here, recompute_luttable's Build() calls (and
+                # update_lut_window_level's later on) silently keep the old
+                # per-region colours forever, on every subsequent atlas too.
+                lm.contrast[0].recompute_luttable(0, 0)
+                lut.ForceBuild()
+                lm.update_slices(0, 'coronal')
 
-            # the layer's vtkImageData was sized for the old shape, so its pipeline
-            # has to be built again; the actors in the renderers are replaced with
-            # the new ones (same LUTs, so contrast stays wired)
-            layer = self.MW.Layers[idx][0]
-            for image_index, actor in list(layer.actors[data_view].items()):
-                renderer = lm.renderers.get(image_index, {}).get(data_view)
-                if renderer is not None:
-                    renderer.RemoveActor(actor)
-            layer.volume = lm.volumes[idx].slices
-            layer.spacing = lm.volumes[idx].spacing
-            for image_index, v in layer.volume.items():
-                layer.setup_vtk(lm.slice_indices[idx], image_index, v, data_view)
-                renderer = lm.renderers.get(image_index, {}).get(data_view)
-                if renderer is not None:
-                    renderer.AddActor(layer.actors[data_view][image_index])
+        def on_failed(tb):
+            overlay.close()
+            show_worker_error(self.MW, "Switching atlas display failed", tb)
 
-            # the warped result is the only thing meant to be shown from here -
-            # the anat/segmentation paint layer (Paintbrush.start_paintbrush)
-            # and any other overlay for this view are done their job earlier in
-            # the pipeline and were never deleted; left in place they are still
-            # sized to the pre-warp volume and update_slices drives them with
-            # the same (now much larger) z, going out of bounds
-            for other_index, other_layer in list(self.MW.Layers[idx].items()):
-                if other_index == 0:
-                    continue
-                for view_name, actors_by_image in list(other_layer.actors.items()):
-                    for image_index, actor in list(actors_by_image.items()):
-                        renderer = lm.renderers.get(image_index, {}).get(view_name)
-                        if renderer is not None:
-                            renderer.RemoveActor(actor)
-                del self.MW.Layers[idx][other_index]
-
-            # same reason: the heatmap actor (mrid_tags.start_heatmap) is a
-            # bare vtkImageActor outside the Layers system with its own
-            # z range, still refreshed by update_slices - delete it outright
-            # instead of leaving it to go out of bounds against the new volume
-            mrid_tags = getattr(lm, 'mrid_tags', None)
-            if mrid_tags is not None:
-                heatmap_actor = mrid_tags.actor_heatmap.pop(idx, None)
-                if heatmap_actor is not None:
-                    renderer = lm.renderers.get(3, {}).get(data_view)
-                    if renderer is not None:
-                        renderer.RemoveActor(heatmap_actor)
-                mrid_tags.heatmap_nii.pop(idx, None)
-
-            # the ranges that were sized from the old volume
-            lm.cursor_ui[f"spin_x{idx}"].setMaximum(nx)
-            lm.cursor_ui[f"spin_y{idx}"].setMaximum(ny)
-            lm.cursor_ui[f"spin_z{idx}"].setMaximum(nz)
-            scroll = lm.cursor_ui.get(f"scroll_{idx}")
-            if scroll is not None:
-                scroll.blockSignals(True)
-                scroll.setRange(0, nz - 1)
-                scroll.setValue(lm.slice_indices[idx][0])
-                scroll.blockSignals(False)
-            if idx in lm.intensity_table and lm.intensity_table[idx].intensity_volumes:
-                lm.intensity_table[idx].intensity_volumes[0] = vol
-
-            # window/level: percentiles and slider maxima come from the volume
-            contrast = lm.contrast.get(idx)
-            if contrast is not None:
-                for image_index in layer.volume:
-                    contrast.recompute_luttable(image_index, idx)
-
-            self.MW.Cursor.update_cursor_display(idx)
-            self.MW.Cursor.update_cursor_lines(idx)
-            lm.update_slices(idx, data_view)
-            Zoom.fit_to_window(lm.vtk_widgets[0][data_view], lm.vtk_widgets.values(),
-                               lm.scale_bar, lm.vtk_widgets, idx)
+        overlay = BusyOverlay(self.MW, message="Switching atlas display, please wait…")
+        overlay.raise_()
+        overlay.show()
+        self._atlas_switch_worker = BusyWorker(work, self.MW)
+        self._atlas_switch_worker.done.connect(on_done)
+        self._atlas_switch_worker.failed.connect(on_failed)
+        self._atlas_switch_worker.start()
 
 
     def get_atlas_points(self,roi_names,on_done):
@@ -715,6 +895,10 @@ class ElectrodeLoc:
         dwi_path=os.path.join(_paths['atlas_folder'], whs_files['atlas_dwi']) if whs_atlas['has_dwi'] else None
         t2s_path=os.path.join(_paths['atlas_folder'], whs_files['atlas_template'])
         mask_path=os.path.join(_paths['atlas_folder'], whs_files['atlas_mask'])
+        # kept for show_atlas_3d, which displays this same WHS template
+        # once results are shown -- always WHS specifically, same pin as
+        # self.atlas_path above (never _paths['active_atlas'])
+        self.atlas_template_path = t2s_path
 
         if mode == "uniform":
             on_done((pklfile,atlas,atlaslabelsdf,dwi_path,t2s_path,mask_path,

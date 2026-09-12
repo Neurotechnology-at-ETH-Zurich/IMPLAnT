@@ -4113,26 +4113,6 @@ class Ui_MainWindow(object):
         self.groupBox_barcode.setObjectName(u"groupBox_barcode")
         self.gridLayout_8 = QGridLayout(self.groupBox_barcode)
         self.gridLayout_8.setObjectName(u"gridLayout_8")
-        self.comboBox_mridBarcodes = QComboBox(self.groupBox_barcode)
-        self.comboBox_mridBarcodes.setObjectName(u"comboBox_mridBarcodes")
-
-        self.gridLayout_8.addWidget(self.comboBox_mridBarcodes, 0, 0, 1, 1)
-
-        self.groupbox_barcode0 = QGroupBox(self.groupBox_barcode)
-        self.groupbox_barcode0.setObjectName(u"groupbox_barcode0")
-        self.groupbox_barcode0.setMinimumSize(QSize(0, 200))
-        self.groupbox_barcode0.setMaximumSize(QSize(16777215, 1000))
-        self.gridLayout_67 = QGridLayout(self.groupbox_barcode0)
-        self.gridLayout_67.setObjectName(u"gridLayout_67")
-        self.widget_barcode_detected = MplWidget(self.groupbox_barcode0)
-        self.widget_barcode_detected.setObjectName(u"widget_barcode_detected")
-        self.widget_barcode_detected.setMinimumSize(QSize(0, 100))
-
-        self.gridLayout_67.addWidget(self.widget_barcode_detected, 0, 0, 1, 1)
-
-
-        self.gridLayout_8.addWidget(self.groupbox_barcode0, 3, 0, 1, 1)
-
         self.tableWidget_barcode = QTableWidget(self.groupBox_barcode)
         if (self.tableWidget_barcode.columnCount() < 4):
             self.tableWidget_barcode.setColumnCount(4)
@@ -4159,7 +4139,7 @@ class Ui_MainWindow(object):
         self.tableWidget_barcode.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
         self.tableWidget_barcode.setSizeAdjustPolicy(QAbstractScrollArea.AdjustToContents)
 
-        self.gridLayout_8.addWidget(self.tableWidget_barcode, 1, 0, 1, 1)
+        self.gridLayout_8.addWidget(self.tableWidget_barcode, 2, 0, 1, 1)
 
         self.groupBox_4 = QGroupBox(self.groupBox_barcode)
         self.groupBox_4.setObjectName(u"groupBox_4")
@@ -4171,7 +4151,7 @@ class Ui_MainWindow(object):
         self.gridLayout_27.addWidget(self.ca1_signal_widget, 0, 0, 1, 1)
 
 
-        self.gridLayout_8.addWidget(self.groupBox_4, 4, 0, 1, 1)
+        self.gridLayout_8.addWidget(self.groupBox_4, 5, 0, 1, 1)
 
         self.groupbox_barcode1 = QGroupBox(self.groupBox_barcode)
         self.groupbox_barcode1.setObjectName(u"groupbox_barcode1")
@@ -4186,7 +4166,32 @@ class Ui_MainWindow(object):
         self.gridLayout_6.addWidget(self.widget_barcode_reconstructed, 0, 0, 1, 1)
 
 
-        self.gridLayout_8.addWidget(self.groupbox_barcode1, 2, 0, 1, 1)
+        self.gridLayout_8.addWidget(self.groupbox_barcode1, 3, 0, 1, 1)
+
+        self.comboBox_mridBarcodes = QComboBox(self.groupBox_barcode)
+        self.comboBox_mridBarcodes.setObjectName(u"comboBox_mridBarcodes")
+
+        self.gridLayout_8.addWidget(self.comboBox_mridBarcodes, 1, 0, 1, 1)
+
+        self.groupbox_barcode0 = QGroupBox(self.groupBox_barcode)
+        self.groupbox_barcode0.setObjectName(u"groupbox_barcode0")
+        self.groupbox_barcode0.setMinimumSize(QSize(0, 200))
+        self.groupbox_barcode0.setMaximumSize(QSize(16777215, 1000))
+        self.gridLayout_67 = QGridLayout(self.groupbox_barcode0)
+        self.gridLayout_67.setObjectName(u"gridLayout_67")
+        self.widget_barcode_detected = MplWidget(self.groupbox_barcode0)
+        self.widget_barcode_detected.setObjectName(u"widget_barcode_detected")
+        self.widget_barcode_detected.setMinimumSize(QSize(0, 100))
+
+        self.gridLayout_67.addWidget(self.widget_barcode_detected, 0, 0, 1, 1)
+
+
+        self.gridLayout_8.addWidget(self.groupbox_barcode0, 4, 0, 1, 1)
+
+        self.comboBox_atlasSwitch = QComboBox(self.groupBox_barcode)
+        self.comboBox_atlasSwitch.setObjectName(u"comboBox_atlasSwitch")
+
+        self.gridLayout_8.addWidget(self.comboBox_atlasSwitch, 0, 0, 1, 1)
 
 
         self.gridLayout_70.addWidget(self.groupBox_barcode, 0, 5, 4, 1)
@@ -5889,7 +5894,7 @@ class Ui_MainWindow(object):
         self.fit_to_zoom_data00.setDefault(False)
         self.fit_to_zoom_data01.setDefault(False)
         self.fit_to_zoom_data02.setDefault(False)
-        self.stackedWidget_3d.setCurrentIndex(1)
+        self.stackedWidget_3d.setCurrentIndex(0)
         self.stackedWidget_trajectoryplanning.setCurrentIndex(0)
         self.stackedWidget_dfx.setCurrentIndex(0)
         self.stackedWidget_sagittal.setCurrentIndex(1)
@@ -5898,7 +5903,7 @@ class Ui_MainWindow(object):
         self.stackedWidget_coronal.setCurrentIndex(1)
         self.fit_to_zoom_data3d2.setDefault(False)
         self.fit_to_zoom_data3d2_3.setDefault(False)
-        self.stackedWidget_axial.setCurrentIndex(1)
+        self.stackedWidget_axial.setCurrentIndex(0)
         self.fit_to_zoom_data3d0.setDefault(False)
         self.stackedWidget_sagittal_2.setCurrentIndex(1)
         self.fit_to_zoom_data3d1_2.setDefault(False)
@@ -7109,7 +7114,7 @@ class Ui_MainWindow(object):
 #endif // QT_CONFIG(tooltip)
         self.pushButton_sagittalView.setText(QCoreApplication.translate("MainWindow", u"Change \n"
 " Sagittal View", None))
-        self.checkBox_constraint_90deg_coronal.setText(QCoreApplication.translate("MainWindow", u"Constraint Angle in Coronal to 90deg ", None))
+        self.checkBox_constraint_90deg_coronal.setText(QCoreApplication.translate("MainWindow", u"Constraint Angle in Coronal to 0deg ", None))
 #if QT_CONFIG(tooltip)
         self.pushButton_dfx_ok.setToolTip(QCoreApplication.translate("MainWindow", u"Close this panel", None))
 #endif // QT_CONFIG(tooltip)
@@ -7421,13 +7426,6 @@ class Ui_MainWindow(object):
         self.go_right_data10.setText(QCoreApplication.translate("MainWindow", u">", None))
         self.file_name_displayed.setText(QCoreApplication.translate("MainWindow", u"TextLabel", None))
         self.groupBox_barcode.setTitle(QCoreApplication.translate("MainWindow", u"MRID Barcode", None))
-#if QT_CONFIG(tooltip)
-        self.comboBox_mridBarcodes.setToolTip(QCoreApplication.translate("MainWindow", u"Select which shank/tag's barcode and CA1 signal to display below.", None))
-#endif // QT_CONFIG(tooltip)
-#if QT_CONFIG(tooltip)
-        self.groupbox_barcode0.setToolTip(QCoreApplication.translate("MainWindow", u"The raw MRID barcode pattern as detected directly from the scan.", None))
-#endif // QT_CONFIG(tooltip)
-        self.groupbox_barcode0.setTitle(QCoreApplication.translate("MainWindow", u"Barcode detected", None))
         ___qtablewidgetitem15 = self.tableWidget_barcode.horizontalHeaderItem(0)
         ___qtablewidgetitem15.setText(QCoreApplication.translate("MainWindow", u"Duo", None));
         ___qtablewidgetitem16 = self.tableWidget_barcode.horizontalHeaderItem(1)
@@ -7448,6 +7446,13 @@ class Ui_MainWindow(object):
         self.groupbox_barcode1.setToolTip(QCoreApplication.translate("MainWindow", u"The barcode re-derived from the assigned MRID tag, for comparison against the detected barcode above.", None))
 #endif // QT_CONFIG(tooltip)
         self.groupbox_barcode1.setTitle(QCoreApplication.translate("MainWindow", u"Barcode reconstructed", None))
+#if QT_CONFIG(tooltip)
+        self.comboBox_mridBarcodes.setToolTip(QCoreApplication.translate("MainWindow", u"Select which shank/tag's barcode and CA1 signal to display below.", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.groupbox_barcode0.setToolTip(QCoreApplication.translate("MainWindow", u"The raw MRID barcode pattern as detected directly from the scan.", None))
+#endif // QT_CONFIG(tooltip)
+        self.groupbox_barcode0.setTitle(QCoreApplication.translate("MainWindow", u"Barcode detected", None))
 #if QT_CONFIG(tooltip)
         self.pushButton_questionmark.setToolTip(QCoreApplication.translate("MainWindow", u"Re-show the current workflow's step-by-step instructions.", None))
 #endif // QT_CONFIG(tooltip)

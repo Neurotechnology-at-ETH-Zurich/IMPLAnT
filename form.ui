@@ -2811,7 +2811,7 @@ background-color: rgb(131, 131, 131);
                    <item row="1" column="3" rowspan="3">
                     <widget class="QStackedWidget" name="stackedWidget_3d">
                      <property name="currentIndex">
-                      <number>0</number>
+                      <number>1</number>
                      </property>
                      <widget class="QWidget" name="page">
                       <layout class="QGridLayout" name="gridLayout_141">
@@ -2833,7 +2833,7 @@ background-color: rgb(131, 131, 131);
                              </size>
                             </property>
                             <property name="currentIndex">
-                             <number>1</number>
+                             <number>0</number>
                             </property>
                             <widget class="QWidget" name="page_5">
                              <layout class="QGridLayout" name="gridLayout_75" rowstretch="0,0,0,0,0,0,0,0,0,0,0,0,0">
@@ -5121,7 +5121,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                        <item row="0" column="0">
                         <widget class="QStackedWidget" name="stackedWidget_axial">
                          <property name="currentIndex">
-                          <number>1</number>
+                          <number>0</number>
                          </property>
                          <widget class="QWidget" name="page_11">
                           <layout class="QGridLayout" name="gridLayout_178">
@@ -6739,7 +6739,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                                  </font>
                                 </property>
                                 <property name="text">
-                                 <string>Constraint Angle in Coronal to 90deg </string>
+                                 <string>Constraint Angle in Coronal to 0deg </string>
                                 </property>
                                </widget>
                               </item>
@@ -8533,48 +8533,7 @@ background-color: rgb(0, 153, 255);</string>
                <string>MRID Barcode</string>
               </property>
               <layout class="QGridLayout" name="gridLayout_8">
-               <item row="0" column="0">
-                <widget class="QComboBox" name="comboBox_mridBarcodes">
-                 <property name="toolTip">
-                  <string>Select which shank/tag's barcode and CA1 signal to display below.</string>
-                 </property>
-                </widget>
-               </item>
-               <item row="3" column="0">
-                <widget class="QGroupBox" name="groupbox_barcode0">
-                 <property name="minimumSize">
-                  <size>
-                   <width>0</width>
-                   <height>200</height>
-                  </size>
-                 </property>
-                 <property name="maximumSize">
-                  <size>
-                   <width>16777215</width>
-                   <height>1000</height>
-                  </size>
-                 </property>
-                 <property name="toolTip">
-                  <string>The raw MRID barcode pattern as detected directly from the scan.</string>
-                 </property>
-                 <property name="title">
-                  <string>Barcode detected</string>
-                 </property>
-                 <layout class="QGridLayout" name="gridLayout_67">
-                  <item row="0" column="0">
-                   <widget class="MplWidget" name="widget_barcode_detected" native="true">
-                    <property name="minimumSize">
-                     <size>
-                      <width>0</width>
-                      <height>100</height>
-                     </size>
-                    </property>
-                   </widget>
-                  </item>
-                 </layout>
-                </widget>
-               </item>
-               <item row="1" column="0">
+               <item row="2" column="0">
                 <widget class="QTableWidget" name="tableWidget_barcode">
                  <property name="sizePolicy">
                   <sizepolicy hsizetype="MinimumExpanding" vsizetype="MinimumExpanding">
@@ -8635,7 +8594,7 @@ background-color: rgb(0, 153, 255);</string>
                  </column>
                 </widget>
                </item>
-               <item row="4" column="0">
+               <item row="5" column="0">
                 <widget class="QGroupBox" name="groupBox_4">
                  <property name="toolTip">
                   <string>1D intensity profile along the selected shank's channels, colored by anatomical region with the pyramidal layer marked; shown only for shanks that cross CA1.</string>
@@ -8650,7 +8609,7 @@ background-color: rgb(0, 153, 255);</string>
                  </layout>
                 </widget>
                </item>
-               <item row="2" column="0">
+               <item row="3" column="0">
                 <widget class="QGroupBox" name="groupbox_barcode1">
                  <property name="minimumSize">
                   <size>
@@ -8683,6 +8642,50 @@ background-color: rgb(0, 153, 255);</string>
                   </item>
                  </layout>
                 </widget>
+               </item>
+               <item row="1" column="0">
+                <widget class="QComboBox" name="comboBox_mridBarcodes">
+                 <property name="toolTip">
+                  <string>Select which shank/tag's barcode and CA1 signal to display below.</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="4" column="0">
+                <widget class="QGroupBox" name="groupbox_barcode0">
+                 <property name="minimumSize">
+                  <size>
+                   <width>0</width>
+                   <height>200</height>
+                  </size>
+                 </property>
+                 <property name="maximumSize">
+                  <size>
+                   <width>16777215</width>
+                   <height>1000</height>
+                  </size>
+                 </property>
+                 <property name="toolTip">
+                  <string>The raw MRID barcode pattern as detected directly from the scan.</string>
+                 </property>
+                 <property name="title">
+                  <string>Barcode detected</string>
+                 </property>
+                 <layout class="QGridLayout" name="gridLayout_67">
+                  <item row="0" column="0">
+                   <widget class="MplWidget" name="widget_barcode_detected" native="true">
+                    <property name="minimumSize">
+                     <size>
+                      <width>0</width>
+                      <height>100</height>
+                     </size>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
+                </widget>
+               </item>
+               <item row="0" column="0">
+                <widget class="QComboBox" name="comboBox_atlasSwitch"/>
                </item>
               </layout>
              </widget>
