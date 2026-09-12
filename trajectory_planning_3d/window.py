@@ -1,5 +1,7 @@
 # This Python file uses the following encoding: utf-8
 import os
+import shutil
+import tempfile
 
 import numpy as np
 import SimpleITK as sitk
@@ -13,6 +15,7 @@ from PySide6.QtWidgets import (
 
 from gui_utils.busy_overlay import BusyOverlay
 from gui_utils.busy_worker import BusyWorker, show_worker_error
+from gui_utils.subprocess_worker import run_json_subprocess
 from trajectory_planning.shank import NEON_COLORS, _make_color_icon
 from trajectory_planning_3d.add_region_dialog import AddRegionDialog
 from ui_form_tp_3d import Ui_Form
@@ -724,53 +727,45 @@ class TrajectoryPlanning3DWindow(QDockWidget):
         result = {}
 
         def work():
+            # pv.PolyData/sitk.Image objects can't cross a process boundary --
+            # the two volumes (mri_label_vol, the MRI intensity array) cross
+            # IN as temp .npy files, and the built mesh crosses back OUT as
+            # plain points/faces/intensity arrays (trajectory_planning_3d/
+            # background_mesh_worker.py's own temp .npz -- see that file's
+            # docstring for why it can't just reuse this TemporaryDirectory).
             mri_spacing = np.array(self.tp.movingImg_resampled.GetSpacing())
-            data_zyx = self.tp.mri_label_vol[::downsample, ::downsample, ::downsample]
-            data_xyz = np.transpose(data_zyx, (2, 1, 0))
-            vol = pv.ImageData()
-            vol.dimensions = np.array(data_xyz.shape) + 1
-            vol.spacing = tuple(s * downsample for s in mri_spacing)
-            vol.origin = (0.0, 0.0, 0.0)
-            vol.cell_data['NIFTI'] = data_xyz.flatten(order='F')
-
-            background = vol.threshold(value=0.5)
-            background = background.extract_surface(algorithm='dataset_surface')
-            background = background.clean().triangulate()
-            background = background.fill_holes(hole_size=1e10)
-            background = background.clean().triangulate()
-            # this is just a translucent context shell, not something that needs
-            # to be geometrically precise -- decimating BEFORE smoothing caps its
-            # triangle count (which otherwise scales with atlas resolution) so
-            # camera rotation stays cheap every frame; smoothing afterwards hides
-            # the facets decimation introduces.
-            background = background.decimate(0.75)
-            smoothed = background.smooth_taubin(n_iter=50, pass_band=0.1)
-
-            # Already true MRI physical-mm coordinates (vol was built at the
-            # MRI's own spacing/origin above) -- just divide back to a voxel
-            # index to sample this subject's own MRI intensity there.
             mri_arr = sitk.GetArrayFromImage(self.tp.movingImg_resampled)  # zyx
-            mri_shape = mri_arr.shape
-            idx = smoothed.points / mri_spacing  # (N,3) float xyz
-            rounded = np.round(idx).astype(int)
-            in_bounds = (
-                (rounded[:, 0] >= 0) & (rounded[:, 0] < mri_shape[2]) &
-                (rounded[:, 1] >= 0) & (rounded[:, 1] < mri_shape[1]) &
-                (rounded[:, 2] >= 0) & (rounded[:, 2] < mri_shape[0])
-            )
-            clipped = np.clip(rounded, 0, np.array(mri_shape[::-1]) - 1)
-            intensity = np.where(
-                in_bounds, mri_arr[clipped[:, 2], clipped[:, 1], clipped[:, 0]], 0
-            ).astype(float)
-            smoothed.point_data['intensity'] = intensity
+
+            with tempfile.TemporaryDirectory() as tmp:
+                mri_label_vol_path = os.path.join(tmp, 'mri_label_vol.npy')
+                mri_arr_path = os.path.join(tmp, 'mri_arr.npy')
+                np.save(mri_label_vol_path, self.tp.mri_label_vol)
+                np.save(mri_arr_path, mri_arr)
+
+                payload = {
+                    'mri_label_vol_path': mri_label_vol_path,
+                    'mri_arr_path': mri_arr_path,
+                    'mri_spacing': mri_spacing.tolist(),
+                    'downsample': downsample,
+                }
+                worker_result = run_json_subprocess(
+                    'trajectory_planning_3d/background_mesh_worker.py',
+                    '--background-mesh-worker', payload,
+                )
+
+            mesh_arrays_path = worker_result['mesh_arrays_path']
+            arrays = np.load(mesh_arrays_path)
+            smoothed = pv.PolyData(arrays['points'], arrays['faces'])
             # stretch contrast to the actual (non-background) intensity range
             # instead of mapping the raw scanner range 0..max onto gray --
             # otherwise real tissue, which rarely reaches the data's true max,
             # renders far darker than it needs to.
-            nonzero = intensity[intensity > 0]
-            clim = [float(np.percentile(nonzero, 1)), float(np.percentile(nonzero, 99))] if nonzero.size else None
+            smoothed.point_data['intensity'] = arrays['intensity']
+            arrays.close()
+            shutil.rmtree(os.path.dirname(mesh_arrays_path), ignore_errors=True)
+
             result['smoothed'] = smoothed
-            result['clim'] = clim
+            result['clim'] = worker_result['clim']
 
         def on_done():
             # overlay stays up through add_mesh/reset_camera -- overlay.run()
