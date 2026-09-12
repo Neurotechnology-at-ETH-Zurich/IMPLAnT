@@ -19,6 +19,7 @@ from ephys.visualisation3D import Visualisation3D
 import time
 from gui_utils.busy_overlay import BusyOverlay
 from gui_utils.busy_worker import BusyWorker, show_worker_error
+from gui_utils.subprocess_worker import run_json_subprocess
 from PySide6.QtGui import QKeySequence, QShortcut
 
 class PopupDialog(QDialog):
@@ -666,10 +667,21 @@ class ButtonsGUI_TimeSeries:
         result = {}
 
         def work():
-            try:
-                result['skipped'] = self.LoadMRI.ElectrodeLoc.get_gaussian_centers(self.transformation_files)
-            except FileNotFoundError as e:
-                result['missing_error'] = e
+            electrode_loc = self.LoadMRI.ElectrodeLoc
+            data_views = list(self.LoadMRI.vtk_widgets[0].keys())
+            payload = {
+                'session_path': electrode_loc.sessionpath,
+                'transformation_files': [self.transformation_files[idx] for idx in range(len(data_views))],
+                'data_views': data_views,
+                'volume_file_paths': [self.LoadMRI.volumes[idx].file_path for idx in range(len(data_views))],
+            }
+            worker_result = run_json_subprocess(
+                'core/gaussian_centers_worker.py', '--gaussian-centers-worker', payload,
+            )
+            if 'missing_error' in worker_result:
+                result['missing_error'] = worker_result['missing_error']
+            else:
+                result['skipped'] = [tuple(pair) for pair in worker_result['skipped']]
 
         def on_done():
             # the overlay stays open (behind these modal dialogs) through all
@@ -779,7 +791,22 @@ class ButtonsGUI_TimeSeries:
 
         self.ui.stackedWidget_4D.setCurrentIndex(self.ui.stackedWidget_4D.currentIndex()+1)
 
-        self.ui.groupBox_barcode.setVisible(True)#
+        # Docked (same reparent-an-existing-widget recipe as
+        # initialize_paintbrush/initialize_measurement/initialize_segmentation
+        # in buttons_gui_structural.py) rather than left in place in
+        # gridLayout_70, so it can be moved/resized/floated independently --
+        # useful now that page_3D's 3-view atlas display wants more room in
+        # the same tab.
+        dock_name = "dock_barcode"
+        dock = self.MW.findChild(QDockWidget, dock_name)
+        if dock is None:
+            dock = QDockWidget("MRID Barcode", self.MW)
+            dock.setObjectName(dock_name)
+            dock.setWidget(self.ui.groupBox_barcode)
+            self.MW.addDockWidget(Qt.RightDockWidgetArea, dock)
+        self.ui.groupBox_barcode.setVisible(True)
+        dock.show()
+        dock.raise_()
         #save barcode figures
         for index, (i) in enumerate(self.totalmrid):
             #fill combobox
@@ -1001,7 +1028,7 @@ class ButtonsGUI_TimeSeries:
             self.LoadMRI.Visualisation3D.index = index
             self.LoadMRI.Visualisation3D.initialize_mridTag(self.totalmrid[index],chMap=self.chMap[index])
 
-        self.LoadMRI.ElectrodeLoc.add_point(self.fitted_points[index])
+        self.LoadMRI.ElectrodeLoc.add_point(self.fitted_points[index], self.totalatlasCoordinates_pkl[index], self.totalmrid[index])
 
         self.overlay.close()
 
