@@ -6,10 +6,10 @@ from PySide6.QtWidgets import (
     QPushButton, QGroupBox, QApplication,
 )
 
-from ephys_utils.downsample_filter_LFP import downsample_filter_LFP
 from ephys.ephysrecording import EphysRecording
 from gui_utils.busy_overlay import BusyOverlay
 from gui_utils.busy_worker import BusyWorker, show_worker_error
+from gui_utils.subprocess_worker import run_json_subprocess
 
 _DS_FACTOR = 10          # downsample factor is always 10 (e.g. 20 kHz -> 2 kHz)
 _PASSBAND = 250          # Hz: lowpass passband edge (fixed, matches MATLAB)
@@ -110,13 +110,17 @@ class LFPCreationDialog(QDialog):
         def work():
             raw_dir = os.path.dirname(self.ephys_data.file_path)
             dat_name = os.path.basename(self.ephys_data.file_path)
-            downsample_filter_LFP(
-                raw_dir, dat_name,
-                num_channels=num_channels,
-                sample_rate=sample_rate,
-                cutoff=_PASSBAND,
-                stopband=_STOPBAND,
-                filter_order=filter_order,
+            payload = {
+                'raw_dir': raw_dir,
+                'dat_name': dat_name,
+                'num_channels': num_channels,
+                'sample_rate': sample_rate,
+                'cutoff': _PASSBAND,
+                'stopband': _STOPBAND,
+                'filter_order': filter_order,
+            }
+            run_json_subprocess(
+                'ephys_utils/lfp_downsample_worker.py', '--lfp-downsample-worker', payload,
             )
 
         def on_done():

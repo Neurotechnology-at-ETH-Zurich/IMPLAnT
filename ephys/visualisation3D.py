@@ -23,9 +23,8 @@ import vtk
 from concurrent.futures import ThreadPoolExecutor
 import colorsys
 from mrid_utils import atlas_switch
-from mrid_utils.atlas_registry import ATLASES, get_active_atlas_id
-from gui_utils.busy_overlay import BusyOverlay
 from gui_utils.busy_worker import run_off_thread
+from gui_utils.subprocess_worker import run_json_subprocess
 
 class Visualisation3D:
     def __init__(self,session_path,MW,electrode_localisation=False,chMap=None,Ephys=None):
@@ -95,7 +94,6 @@ class Visualisation3D:
             # so switching the tag from here goes back through them
             self.switch_tag = self.MW.ButtonsGUI_TimeSeries.activate_fill_table_and_plots
             self.comboBox_mrid.currentIndexChanged.connect(self.switch_tag)
-            self._ensure_atlas_selector_widget()
         else:
             layout = QVBoxLayout(self.ui.vtkWidget_ephys)
             layout.setContentsMargins(0, 0, 0, 0)
@@ -138,7 +136,6 @@ class Visualisation3D:
             self.table_excel = self.MW.ui.tableWidget_ephys
             self.switch_tag = self.Ephys.change_mridTAG
             self.comboBox_mrid.currentIndexChanged.connect(self.switch_tag)
-            self._ensure_atlas_selector_widget()
 
         self.create_atlas_region_file(self.mrid_tags[self.index])
 
@@ -159,52 +156,6 @@ class Visualisation3D:
         self.plotter.renderer.AddActor2D(self.hover_label)
 
 
-
-    def _ensure_atlas_selector_widget(self):
-        """Populates and wires form.ui's own atlas combo for whichever
-        branch this view is: comboBox_atlas_3 (self.ui.frame_33, the
-        electrode-localisation "3D Visualisation" tab) when
-        electrode_localisation, otherwise comboBox_atlas_2 (ephys page,
-        self.ui.frame_32 / self.ui.gridLayout_68) -- letting the user
-        switch the reference atlas while already looking at either 3D
-        view. Mirrors trajectory_planning/rendering.py's comboBox_atlas
-        wiring. Guarded per combo so re-entering either tab (a new
-        InitEphys/Visualisation3D for another session) re-syncs the
-        existing combo instead of re-adding its items or re-connecting
-        the signal a second time."""
-        self._atlas_combo = self.ui.comboBox_atlas_3 if self.electrode_localisation else self.ui.comboBox_atlas_2
-        wired_attr = '_atlas_selector_wired_vis3D' if self.electrode_localisation else '_atlas_selector_wired_ephys'
-        if hasattr(self.ui, wired_attr):
-            self._atlas_ids = list(ATLASES.keys())
-            self._sync_atlas_selector_widget()
-            return
-        setattr(self.ui, wired_attr, True)
-        self._atlas_ids = list(ATLASES.keys())
-        for atlas_id in self._atlas_ids:
-            self._atlas_combo.addItem(ATLASES[atlas_id]['display_name'])
-        self._sync_atlas_selector_widget()
-        self._atlas_combo.currentIndexChanged.connect(self._on_atlas_selector_changed)
-
-    def _sync_atlas_selector_widget(self):
-        current_id = get_active_atlas_id(_paths)
-        if current_id in self._atlas_ids:
-            self._atlas_combo.blockSignals(True)
-            self._atlas_combo.setCurrentIndex(self._atlas_ids.index(current_id))
-            self._atlas_combo.blockSignals(False)
-
-    def _on_atlas_selector_changed(self, index):
-        atlas_id = self._atlas_ids[index]
-        if atlas_id == get_active_atlas_id(_paths):
-            return
-
-        def proceed():
-            if not self.reload_atlas_view(atlas_id):
-                self._sync_atlas_selector_widget()  # switch declined/failed -- revert the combo
-
-        atlas_name = ATLASES[atlas_id]['display_name']
-        self.MW.overlay = BusyOverlay(
-            self.MW, message=f"Switching to {atlas_name} atlas, please wait…")
-        self.MW.overlay.run(proceed)
 
     def reload_atlas_view(self, atlas_id):
         """Switches to atlas_id and redraws this already-open ephys 3D view
@@ -233,7 +184,6 @@ class Visualisation3D:
         self.manually_pick_point(point=[], idx=row, resetTo3D=True)
 
         self.add_other_mrids()
-        self._sync_atlas_selector_widget()
         self.plotter.render()
         return True
 
@@ -1492,28 +1442,14 @@ class Visualisation3D:
 
     def create_atlas_region_file(self,mrid,force=False):
         # Pure file-IO/sitk/numpy work -- no Qt/VTK object touched -- so the
-        # whole thing runs off the GUI thread via run_off_thread; callers
-        # (__init__, reload_atlas_view) keep calling this exactly as before,
-        # already covered by their own BusyOverlay, and still get a fully
-        # up-to-date self.filepath_atlas back before this returns.
+        # whole thing runs in a separate process (ephys/atlas_region_
+        # worker.py) via run_off_thread; callers (__init__, reload_atlas_
+        # view) keep calling this exactly as before, already covered by
+        # their own BusyOverlay, and still get a fully up-to-date
+        # self.filepath_atlas back before this returns.
+        self.filepath_atlas = os.path.join(self.session_path,"analysed",'atlas-regions.nii.gz')
         run_off_thread(lambda: self._create_atlas_region_file_impl(mrid, force))
 
     def _create_atlas_region_file_impl(self,mrid,force=False):
-        #new atlas with the new label
-        self.filepath_atlas = os.path.join(self.session_path,"analysed",'atlas-regions.nii.gz')
-        points_electrodes_path = os.path.join(os.path.join(self.session_path,"analysed"),mrid,'channel_atlas_coordinates.xlsx')
-
-        channel_labels = np.unique(self._load_channel_excel(points_electrodes_path).iloc[:, 1].values)
-        if not force and os.path.exists(self.filepath_atlas):
-            mesh = pv.read(self.filepath_atlas)
-            old_labels = np.unique(mesh.point_data['NIFTI'])
-            if np.array_equal(old_labels[old_labels != 0], channel_labels[channel_labels != 0]):
-                return
-
-        atlas_image = sitk.ReadImage(os.path.join(_paths['atlas_folder'], _paths['atlas_volume']))
-        volume = sitk.GetArrayFromImage(atlas_image)
-        volume[~np.isin(volume,channel_labels)]=0
-        label_image = sitk.GetImageFromArray(volume)
-        label_image.CopyInformation(atlas_image)
-        save_path = os.path.join(self.session_path,'analysed','atlas-regions.nii.gz')
-        sitk.WriteImage(label_image, save_path)
+        payload = {'session_path': self.session_path, 'mrid': mrid, 'force': force}
+        run_json_subprocess('ephys/atlas_region_worker.py', '--atlas-region-worker', payload)

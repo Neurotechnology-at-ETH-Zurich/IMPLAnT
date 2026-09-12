@@ -2,12 +2,12 @@
 import numpy as np
 import pyqtgraph as pg
 import pywt
-from scipy.signal import butter, filtfilt, hilbert
 from PySide6.QtWidgets import QWidget, QVBoxLayout
-from PySide6.QtCore import QRectF, Qt, QThread, QObject, Signal, Slot
+from PySide6.QtCore import QRectF, Qt, Signal
 
 from gui_utils.busy_overlay import BusyOverlay
 from gui_utils.busy_worker import BusyWorker
+from gui_utils.subprocess_worker import run_json_subprocess
 
 
 class AllChannelsSpectrogram(QWidget):
@@ -33,8 +33,9 @@ class AllChannelsSpectrogram(QWidget):
     ripples.peaks — rather than just the (start+end)/2 midpoint. A
     session-wide ripple-triggered map instead of a single-window one. Averaging
     over every ripple can take minutes on a session with many events, so it
-    runs on a background QThread (_RippleSpecWorker below) with a BusyOverlay
-    over this tab while it computes -- the rest of the GUI stays responsive.
+    runs in a separate process (ephys_utils/ripple_spec_worker.py, via a
+    BusyWorker) with a BusyOverlay over this tab while it computes -- the
+    rest of the GUI stays responsive.
     Cached by (ripple_events identity, channels, log_freq), so this only runs
     again when one of those actually changes, not on every scroll.
 
@@ -130,15 +131,14 @@ class AllChannelsSpectrogram(QWidget):
         self._title = ''                 # set by _window_spec / _ripple_triggered_spec
 
         # ripple-triggered mode averages over every detected ripple, which can
-        # take minutes on a session with many events -- run on a QThread (see
-        # _update_ripple_triggered / _RippleSpecWorker) so the rest of the GUI
-        # stays responsive, with a BusyOverlay over this tab while it computes.
-        self._ripple_thread = None
+        # take minutes on a session with many events -- run out-of-process
+        # (see _update_ripple_triggered / ephys_utils/ripple_spec_worker.py)
+        # so the rest of the GUI stays responsive, with a BusyOverlay over
+        # this tab while it computes.
         self._ripple_worker = None
         self._busy_overlay = None
         # context for the in-flight worker's result, read back in
-        # _on_ripple_worker_finished (see the comment in _update_ripple_triggered
-        # on why this isn't just closed over in a lambda)
+        # _on_ripple_worker_finished
         self._ripple_pending_base_key = None
         self._ripple_pending_log_freq = None
         self._ripple_pending_freqs = None
@@ -408,8 +408,8 @@ class AllChannelsSpectrogram(QWidget):
         prewarm_tabs: runs the CWT off the GUI thread instead of blocking it
         right after a file/tag load ("most of a second on a 64-channel
         probe" -- see the class docstring). Only the window-mode path is
-        backgrounded here -- ripple-triggered mode already runs on its own
-        worker thread (_update_ripple_triggered/_RippleSpecWorker) with its
+        backgrounded here -- ripple-triggered mode already runs out-of-process
+        (_update_ripple_triggered/ephys_utils/ripple_spec_worker.py) with its
         own overlay, so that case is just left to update_view as before.
         Falls through to the normal (cheap) synchronous path on a cache hit
         or a nothing-to-show case -- only the real computation, when needed,
@@ -512,10 +512,10 @@ class AllChannelsSpectrogram(QWidget):
         pick the colour scale, draw the image, depth profiles and axes.
 
         Shared tail of update_view for the window path (synchronous) and the
-        ripple-triggered path (synchronous on a cache hit, or from the
-        _RippleSpecWorker "finished" callback otherwise). Thin synchronous
-        wrapper around _compute_display/_apply_display -- see those for the
-        actual work; kept so these existing callers don't need to change."""
+        ripple-triggered path (synchronous on a cache hit, or from
+        _on_ripple_worker_finished otherwise). Thin synchronous wrapper
+        around _compute_display/_apply_display -- see those for the actual
+        work; kept so these existing callers don't need to change."""
         payload = self._compute_display(spec, freqs, channel_ids, self.log_freq,
                                         self.ripple_mode, self._title)
         if payload is None:
@@ -721,48 +721,14 @@ class AllChannelsSpectrogram(QWidget):
         title = f't = {t_mid:.3f} s ± {1000 * half:.0f} ms{cropped}'
         return spec, title
 
-    def _ripple_peak_times(self, lfp_memmap, fs, ripple_events, ripple_channels):
-        """Peak time of every ripple event: the sample of maximum ripple-band
-        envelope within its (start, end), averaged over the detection channels
-        — the MATLAB script's ripples.peaks (bandpass -> abs(hilbert) ->
-        per-event argmax), rather than the (start+end)/2 midpoint.
-
-        Falls back to the midpoint (per event) when there are no detection
-        channels, or when that event is too short to filter.
-        """
-        centers = ripple_events.mean(axis=1)
-        if not ripple_channels:
-            return centers
-
-        n_samples = lfp_memmap.shape[1]
-        nyq = fs / 2.0
-        low = max(self.RIPPLE_BAND[0] / nyq, 1e-6)
-        high = min(self.RIPPLE_BAND[1] / nyq, 0.999)
-        b, a = butter(4, [low, high], btype='band')
-
-        peaks = centers.copy()
-        for i, (t0, t1) in enumerate(ripple_events):
-            s0 = max(0, int(t0 * fs))
-            s1 = min(n_samples, int(t1 * fs))
-            if s1 - s0 < 8:
-                continue
-            try:
-                trace = lfp_memmap[ripple_channels, s0:s1].astype(np.float64) * self.BIT_TO_UV
-                trace = trace - trace.mean(axis=1, keepdims=True)
-                filtered = filtfilt(b, a, trace, axis=1)
-                envelope = np.abs(hilbert(filtered, axis=1)).mean(axis=0)
-                peaks[i] = (s0 + int(np.argmax(envelope))) / fs
-            except Exception:
-                continue
-        return peaks
-
     def _update_ripple_triggered(self, lfp_memmap, fs, freqs, channel_ids,
                                   ripple_events, ripple_channels):
         """ripple_mode branch of update_view. Renders immediately on a cache
         hit; otherwise kicks off the session-wide ripple-triggered average
-        (Peter's CWT_TOTAL) on a background QThread, since it can take minutes
-        on a session with many events, and shows a BusyOverlay over this tab
-        meanwhile so the rest of the GUI stays usable.
+        (Peter's CWT_TOTAL, ephys_utils/ripple_spec_worker.py) in a separate
+        OS process via a BusyWorker, since it can take minutes on a session
+        with many events, and shows a BusyOverlay over this tab meanwhile so
+        the rest of the GUI stays usable.
 
         Cached by (ripple_events identity, channels, ripple-detection
         channels), with a separate slot per log_freq -- so toggling the
@@ -795,7 +761,7 @@ class AllChannelsSpectrogram(QWidget):
             self._finish_update_view(spec, freqs, channel_ids)
             return
 
-        if self._ripple_thread is not None:
+        if self._ripple_worker is not None and self._ripple_worker.isRunning():
             # a computation is already running -- it will render with whatever
             # args it started with; this request is dropped rather than queued
             return
@@ -811,88 +777,65 @@ class AllChannelsSpectrogram(QWidget):
         self._busy_overlay.show()
         self.busyChanged.emit(True)
 
-        # stashed on self rather than closed over in a lambda: PySide can only
-        # tell a signal/slot connection needs to be queued to the GUI thread
-        # when the slot is a real bound method of a QObject it recognises --
-        # connecting to a lambda instead silently falls back to a DIRECT
-        # connection, so _on_ripple_worker_finished (and every pyqtgraph/Qt
-        # call inside it) would run ON THE WORKER THREAD and crash.
         self._ripple_pending_base_key = base_key
         self._ripple_pending_log_freq = self.log_freq
         self._ripple_pending_freqs = freqs
         self._ripple_pending_channel_ids = channel_ids
 
         ripple_events = np.asarray(ripple_events, dtype=float)
-        self._ripple_thread = QThread()
-        self._ripple_worker = _RippleSpecWorker(
-            self, lfp_memmap, fs, freqs, channel_ids, ripple_events, ripple_channels)
-        self._ripple_worker.moveToThread(self._ripple_thread)
-        self._ripple_thread.started.connect(self._ripple_worker.run)
-        self._ripple_worker.progress.connect(
-            self._on_ripple_progress, Qt.QueuedConnection)
-        self._ripple_worker.finished.connect(
-            self._on_ripple_worker_finished, Qt.QueuedConnection)
-        self._ripple_worker.error.connect(
-            self._on_ripple_worker_error, Qt.QueuedConnection)
-        self._ripple_worker.finished.connect(self._ripple_thread.quit)
-        self._ripple_worker.error.connect(self._ripple_thread.quit)
-        self._ripple_thread.finished.connect(self._after_ripple_thread_stopped)
-        self._ripple_thread.start()
+        # lfp_memmap is a np.memmap opened from ephys_data.lfp_path
+        # (ephys/ephysrecording.py's _load_lfp_memmap) -- .filename survives
+        # the reshape/transpose that built it, so the subprocess can reopen
+        # the same file itself instead of this (possibly huge) array having
+        # to cross the process boundary.
+        payload = {
+            'lfp_path': lfp_memmap.filename,
+            'n_channels': lfp_memmap.shape[0],
+            'fs': fs,
+            'freqs': [float(f) for f in freqs],
+            'channel_ids': [int(c) for c in channel_ids],
+            'ripple_events': ripple_events.tolist(),
+            'ripple_channels': [int(c) for c in ripple_channels] if ripple_channels else None,
+        }
+        result = {}
 
-    def _compute_ripple_triggered_spec(self, lfp_memmap, fs, freqs, channel_ids,
-                                        ripple_events, ripple_channels=None,
-                                        progress_cb=None):
-        """Mean raw power over ±RIPPLE_HALF_WINDOW_S around every detected
-        ripple's true peak, across the whole recording — the session-wide
-        ripple-triggered average from Peter's Wavlet_All_Channels_Plot.mlx
-        (CWT_TOTAL, averaged over all ripples).
+        def work():
+            worker_result = run_json_subprocess(
+                'ephys_utils/ripple_spec_worker.py', '--ripple-spec-worker', payload,
+                on_progress=lambda line: self._ripple_worker.progress.emit(line),
+            )
+            result['spec'] = (np.array(worker_result['spec'])
+                               if worker_result['spec'] is not None else None)
+            result['n_used'] = worker_result['n_used']
 
-        Pure computation -- touches no cache/Qt state, so it's safe to run
-        from _RippleSpecWorker's thread. Returns (spec, n_used); spec is None
-        if there are no usable ripples.
+        def on_done():
+            self._on_ripple_worker_finished(result['spec'], result['n_used'])
 
-        progress_cb(done, total), if given, is called after every ripple is
-        attempted (used or skipped) -- proof of life for the caller to show,
-        since a single ripple's CWT can take a couple of seconds (see the
-        class docstring), so hundreds of them can look identical to a hang.
-        """
-        n_samples = lfp_memmap.shape[1]
-        pad = int(np.ceil(self.EDGE_SIGMAS * self._sigma_t(freqs[0]) * fs))
-        half_samples = int(round(self.RIPPLE_HALF_WINDOW_S * fs))
+        def on_failed(tb):
+            self._on_ripple_worker_error(tb)
 
-        centers = self._ripple_peak_times(lfp_memmap, fs, ripple_events, ripple_channels)
-        total_n = len(centers)
-        total = np.zeros((len(channel_ids), len(freqs)), dtype=np.float64)
-        n_used = 0
-        for i, tc in enumerate(centers):
-            c = int(round(tc * fs))
-            s0, s1 = c - half_samples, c + half_samples + 1
-            p0, p1 = s0 - pad, s1 + pad
-            if not (p0 < 0 or p1 > n_samples):
-                traces = lfp_memmap[channel_ids, p0:p1].astype(np.float32) * self.BIT_TO_UV
-                traces = traces - traces.mean(axis=1, keepdims=True)
-                power = self._mean_power(traces, fs, freqs, s0 - p0, s1 - p0)
-                if power is not None:
-                    total += power
-                    n_used += 1
-            if progress_cb is not None:
-                progress_cb(i + 1, total_n)
+        self._ripple_worker = BusyWorker(work, self)
+        # progress is emitted from the worker thread -- per BusyWorker's own
+        # docstring, that needs an explicit QueuedConnection to a real bound
+        # QObject method (not a lambda/closure) to land safely on the GUI
+        # thread.
+        self._ripple_worker.progress.connect(self._on_ripple_progress, Qt.QueuedConnection)
+        self._ripple_worker.done.connect(on_done)
+        self._ripple_worker.failed.connect(on_failed)
+        self._ripple_worker.start()
 
-        if n_used == 0:
-            return None, 0
-        return total / n_used, n_used
-
-    def _on_ripple_progress(self, done, total):
-        """_RippleSpecWorker.progress, on the GUI thread: keep the overlay's
-        text moving so a long run doesn't read as a hang."""
+    def _on_ripple_progress(self, line):
+        """BusyWorker.progress, on the GUI thread: keep the overlay's text
+        moving so a long run doesn't read as a hang. `line` is already the
+        full message text (ephys_utils/ripple_spec_worker.py's progress_cb
+        prints the ready-to-show string directly, relayed here by
+        gui_utils/subprocess_worker.py's run_json_subprocess)."""
         if self._busy_overlay is not None:
-            self._busy_overlay.set_message(
-                f"Averaging ripple {done} / {total}, please wait…")
+            self._busy_overlay.set_message(line)
 
     def _on_ripple_worker_finished(self, spec, n_used):
-        """_RippleSpecWorker.finished, on the GUI thread: store the result in
-        the cache, hide the overlay, and render (or clear, if no ripple was
-        usable).
+        """BusyWorker.done, on the GUI thread: store the result in the cache,
+        hide the overlay, and render (or clear, if no ripple was usable).
 
         If the ripple set/channels changed while this run was in flight (a new
         detection, a channel skipped, ...), _ripple_cache_base_key has already
@@ -922,17 +865,6 @@ class AllChannelsSpectrogram(QWidget):
         self._clear()
         print(f"AllChannelsSpectrogram: ripple-triggered computation failed: {message}",
               flush=True)
-
-    @Slot()
-    def _after_ripple_thread_stopped(self):
-        """Mirrors SegmentationEvolution's cleanup (segmentation/evolution.py):
-        wait for the thread to actually exit before dropping references."""
-        if self._ripple_worker is not None:
-            self._ripple_worker.deleteLater()
-        if self._ripple_thread is not None:
-            self._ripple_thread.deleteLater()
-        self._ripple_worker = None
-        self._ripple_thread = None
 
     def _draw_profiles(self, norm, freqs):
         """Depth profiles of the sharp-wave and ripple bands, each min-max
@@ -1025,36 +957,3 @@ class AllChannelsSpectrogram(QWidget):
             [0.0, 0.25, 0.5, 0.75, 1.0],
             [(0, 0, 143, 255), (0, 200, 255, 255), (120, 255, 120, 255),
              (255, 180, 0, 255), (143, 0, 0, 255)])
-
-
-class _RippleSpecWorker(QObject):
-    """Runs AllChannelsSpectrogram._compute_ripple_triggered_spec off the GUI
-    thread -- looping a wavelet CWT over every detected ripple can take
-    minutes on a session with many events. Same worker/thread lifecycle as
-    segmentation/evolution.py's EvolutionWorker."""
-
-    finished = Signal(object, int)   # spec (n_channels, n_freqs) or None, n_used
-    error = Signal(str)
-    progress = Signal(int, int)      # (ripples done, ripples total)
-
-    def __init__(self, owner, lfp_memmap, fs, freqs, channel_ids, ripple_events,
-                 ripple_channels):
-        super().__init__()
-        self._owner = owner
-        self._lfp_memmap = lfp_memmap
-        self._fs = fs
-        self._freqs = freqs
-        self._channel_ids = channel_ids
-        self._ripple_events = ripple_events
-        self._ripple_channels = ripple_channels
-
-    @Slot()
-    def run(self):
-        try:
-            spec, n_used = self._owner._compute_ripple_triggered_spec(
-                self._lfp_memmap, self._fs, self._freqs, self._channel_ids,
-                self._ripple_events, self._ripple_channels,
-                progress_cb=self.progress.emit)
-            self.finished.emit(spec, n_used)
-        except Exception as e:
-            self.error.emit(str(e))

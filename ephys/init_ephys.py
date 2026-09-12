@@ -18,12 +18,9 @@ from ephys_utils.lfp_spectrogram import LFPSpectrogram
 from ephys_utils.csd_widget import CSDWidget
 from ephys_utils.all_channels_spectrogram import AllChannelsSpectrogram
 from ephys_utils import theta_detection
-from ephys_utils.hierarchical_clustering import (
-    build_activity_matrix, compute_correlation_matrix,
-    hierarchical_clustering, load_custom_colormap
-)
 from gui_utils.busy_overlay import BusyOverlay
 from gui_utils.busy_worker import BusyWorker, show_worker_error, run_off_thread
+from gui_utils.subprocess_worker import run_json_subprocess
 import pyqtgraph as pg
 from PySide6.QtWidgets import QApplication
 from PySide6.QtGui import QBrush, QColor
@@ -32,6 +29,7 @@ import subprocess
 import tempfile
 import pathlib
 import json
+import shutil
 from PySide6.QtWidgets import QTableWidgetItem
 import numpy
 from PySide6.QtWidgets import QDialog, QVBoxLayout, QComboBox, QDialogButtonBox, QLabel, QButtonGroup
@@ -84,10 +82,21 @@ class InitEphys:
 
         # MRIDInfo.from_file loops pd.read_excel over every mrid tag in the
         # session (get_mrid_tag) -- pure pandas/numpy/file-IO, no Qt/VTK
-        # object touched -- so it runs off the GUI thread via run_off_thread.
-        # Already covered by main_window.py's "Loading ephys data" overlay
-        # (do_ephys_heavy is wrapped in overlay.run()).
-        self.mrid_info = run_off_thread(lambda: MRIDInfo.from_file(filename,self.session_path,group_idx=0))
+        # object touched -- so it runs in a separate process (ephys/
+        # mrid_info_worker.py) via run_off_thread. Already covered by
+        # main_window.py's "Loading ephys data" overlay (do_ephys_heavy is
+        # wrapped in overlay.run()).
+        def _load_mrid_info():
+            payload = {'filename': filename, 'session_path': self.session_path, 'group_idx': 0}
+            result = run_json_subprocess('ephys/mrid_info_worker.py', '--mrid-info-worker', payload)
+            return MRIDInfo(
+                mrid_tags=result['mrid_tags'],
+                totalatlasCoordinates_pkl=result['totalatlasCoordinates_pkl'],
+                xml_group_idx=result['xml_group_idx'],
+                mrid=result['mrid'],
+                mrid_coordinates=result['mrid_coordinates'],
+            )
+        self.mrid_info = run_off_thread(_load_mrid_info)
         self.ephys_data = EphysRecording.from_file(filename,group_idx=0)
 
         self.Visualisation3D = Visualisation3D(self.session_path,self.MW,chMap=self.ephys_data.all_channels,Ephys=self)
@@ -1030,21 +1039,32 @@ class InitEphys:
         result_holder = {}
 
         def work():
-            result_holder['result'] = theta_detection.detect_theta(
-                self.ephys_data.lfp_path,
-                self.ephys_data.n_channels,
-                self.ephys_data.lfp_sample_rate,
-                channels=channels,
-                sel_channel_idx=0,       # channels[0] is the detection channel
-                raw_sample_rate=self.ephys_data.sample_rate,
-                f_theta=f_theta, f_delta=f_delta,
-                th2d_ratio_threshold=ratio,
-                amplitude_threshold=amplitude,
-                phase_threshold=phase,
-                duration_threshold=duration,
-                consensus=consensus,
-                progress=lambda m: print("theta:", m, flush=True),
+            payload = {
+                'lfp_path': self.ephys_data.lfp_path,
+                'n_channels': self.ephys_data.n_channels,
+                'lfp_sample_rate': self.ephys_data.lfp_sample_rate,
+                'channels': channels,
+                'sel_channel_idx': 0,       # channels[0] is the detection channel
+                'raw_sample_rate': self.ephys_data.sample_rate,
+                'f_theta': list(f_theta), 'f_delta': list(f_delta),
+                'th2d_ratio_threshold': ratio,
+                'amplitude_threshold': amplitude,
+                'phase_threshold': phase,
+                'duration_threshold': duration,
+                'consensus': consensus,
+            }
+            worker_result = run_json_subprocess(
+                'ephys_utils/theta_worker.py', '--theta-worker', payload,
             )
+            arrays_path = worker_result.pop('arrays_path')
+            arrays = numpy.load(arrays_path)
+            worker_result['segments_s'] = arrays['segments_s']
+            worker_result['segments_samples'] = arrays['segments_samples']
+            worker_result['theta_lfp'] = arrays['theta_lfp']
+            worker_result['theta_phase'] = arrays['theta_phase']
+            arrays.close()
+            shutil.rmtree(os.path.dirname(arrays_path), ignore_errors=True)
+            result_holder['result'] = worker_result
 
         def on_done():
             overlay.close()
@@ -1254,19 +1274,32 @@ class InitEphys:
             else os.path.splitext(path)[0] + '.prm'
         self._spike_sorting_path = path
 
+        # _channel_maps() reads self.Visualisation3D (GUI-owned pyvista/VTK
+        # state) -- must happen here, in the GUI process, before the
+        # subprocess call below, not inside work() (same fix already made
+        # in run_hierarchical_clustering).
+        region_map, color_map = self._channel_maps()
+
         result = {}
 
         def work():
-            region_map, color_map = self._channel_maps()
-            unit_channel_all, all_spike_times, all_spike_units = \
-                self.spike_ruster.read_and_filter_matlab_files(
-                    path, self.ephys_data.sample_rate, prm_path=prm_path,
-                )
+            payload = {
+                'path': path,
+                'sample_rate': self.ephys_data.sample_rate,
+                'prm_path': prm_path,
+            }
+            worker_result = run_json_subprocess(
+                'ephys_utils/spike_sorting_worker.py', '--spike-sorting-worker', payload,
+            )
+            arrays_path = worker_result['arrays_path']
+            arrays = numpy.load(arrays_path)
             result['region_map'] = region_map
             result['color_map'] = color_map
-            result['unit_channel_all'] = unit_channel_all
-            result['all_spike_times'] = all_spike_times
-            result['all_spike_units'] = all_spike_units
+            result['unit_channel_all'] = {int(k): v for k, v in worker_result['unit_channel_all'].items()}
+            result['all_spike_times'] = arrays['all_spike_times']
+            result['all_spike_units'] = arrays['all_spike_units']
+            arrays.close()
+            shutil.rmtree(os.path.dirname(arrays_path), ignore_errors=True)
 
         def on_done():
             # overlay stays up through apply_group/update_view/the tab switch --
@@ -1307,36 +1340,45 @@ class InitEphys:
         clim_val = self.MW.ui.doubleSpinBox_ClusterLimits.value()
         clim = (-clim_val, clim_val)
 
+        # _channel_maps() reads self.Visualisation3D (GUI-owned pyvista/VTK
+        # state) -- must happen here, in the GUI process, before the
+        # subprocess call below, not inside work().
+        region_map, color_map = self._channel_maps()
+
         result = {}
 
         def work():
             sr = self.spike_ruster
             spike_times_samples = (sr._spike_times * self.ephys_data.sample_rate).astype(np.int64)
 
-            activity, _ = build_activity_matrix(
-                spike_times_samples, sr._spike_units,
-                sr._unit_ids, self.ephys_data.sample_rate
-            )
-            corr_matrix = compute_correlation_matrix(activity)
+            with tempfile.TemporaryDirectory() as tmp:
+                spike_data_path = os.path.join(tmp, 'spike_data.npz')
+                np.savez(spike_data_path, spike_times_samples=spike_times_samples,
+                         spike_units=sr._spike_units)
 
-            # try to load Peter's custom colormap; fall back to magma
-            cmap_path = os.path.join(self.session_path, 'CustomColormap.mat')
-            result['colormap'] = load_custom_colormap(cmap_path, key='CustomColormap3')
+                payload = {
+                    'spike_data_path': spike_data_path,
+                    'unit_ids': [int(u) for u in sr._unit_ids],
+                    'sample_rate': self.ephys_data.sample_rate,
+                    'unit_labels': list(sr._unit_labels),
+                    'unit_channel': {str(k): v for k, v in sr._unit_channel.items()},
+                    'cmap_path': os.path.join(self.session_path, 'CustomColormap.mat'),
+                }
+                worker_result = run_json_subprocess(
+                    'ephys_utils/clustering_worker.py', '--clustering-worker', payload,
+                )
 
-            result['region_map'], result['color_map'] = self._channel_maps()
-            cluster_labels, result['reordered'] = hierarchical_clustering(
-                corr_matrix, list(sr._unit_labels)
-            )
-            result['unit_labels_reordered'] = [lbl for lbl, _ in cluster_labels]
-            result['channels_reordered'] = [sr._unit_channel[int(sr._unit_ids[i])]
-                                             for i in range(len(sr._unit_ids))]
+            result['lut'] = worker_result['lut']
+            result['reordered'] = np.array(worker_result['reordered'])
+            result['unit_labels_reordered'] = worker_result['unit_labels_reordered']
+            result['channels_reordered'] = worker_result['channels_reordered']
 
         def on_done():
             overlay.close()
             self._embed_clustering_heatmap(
-                result['reordered'], result['unit_labels_reordered'], clim, result['colormap'],
+                result['reordered'], result['unit_labels_reordered'], clim, result['lut'],
                 channels_reordered=result['channels_reordered'],
-                region_map=result['region_map'], color_map=result['color_map'])
+                region_map=region_map, color_map=color_map)
 
         def on_failed(tb):
             overlay.close()
@@ -1352,10 +1394,17 @@ class InitEphys:
         self._clustering_worker.failed.connect(on_failed)
         self._clustering_worker.start()
 
-    def _embed_clustering_heatmap(self, reordered, unit_labels, clim, colormap,
+    def _embed_clustering_heatmap(self, reordered, unit_labels, clim, colormap_lut,
                                   channels_reordered=None, region_map=None, color_map=None):
         """Embed the correlation matrix as a pyqtgraph ImageItem with its y-axis
-        linked to the spike ruster so each neuron row is the same pixel height."""
+        linked to the spike ruster so each neuron row is the same pixel height.
+
+        colormap_lut is a raw (256,4) uint8 LUT (list or ndarray), not a
+        matplotlib colormap object -- run_hierarchical_clustering's compute
+        step now runs in a subprocess (ephys_utils/clustering_worker.py),
+        which already resolves Peter's custom colormap (if any) to this same
+        raw form since a matplotlib colormap object can't cross a process
+        boundary."""
         container = self.MW.ui.widget_hierClustering
         layout = container.layout()
         if layout is None:
@@ -1370,8 +1419,8 @@ class InitEphys:
         n = reordered.shape[0]
 
         pg_cmap = pg.colormap.get('berlin', source='matplotlib')
-        if colormap is not None:
-            raw = (colormap(np.linspace(0, 1, 256)) * 255).astype(np.uint8)
+        if colormap_lut is not None:
+            raw = np.array(colormap_lut, dtype=np.uint8)
             pg_cmap = pg.ColorMap(pos=np.linspace(0.0, 1.0, 256), color=raw)
         lut = pg_cmap.getLookupTable(0.0, 1.0, 256)
 
