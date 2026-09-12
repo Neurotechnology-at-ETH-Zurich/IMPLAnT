@@ -1,14 +1,10 @@
 # This Python file uses the following encoding: utf-8
 import os
-import re
-import numpy as np
-import SimpleITK as sitk
-import ants
 from PySide6.QtWidgets import QDialog, QMessageBox
 from gui_utils.busy_overlay import BusyOverlay
 from trajectory_planning.shank_setup_dialog import ShankSetupDialog
-from core.registration import Registration
 from gui_utils.busy_worker import run_off_thread
+from gui_utils.subprocess_worker import run_json_subprocess
 
 class TpRegistration:
     def register_to_main_img(self,filename):
@@ -51,38 +47,30 @@ class TpRegistration:
         return new_name
 
     def _register_to_main_img_compute(self, filename):
-        """Pure sitk/ants half of register_to_main_img -- no Qt/VTK object
-        touched -- safe to run off the GUI thread (see run_off_thread
-        above). Returns new_name (the aligned volume's path, writing it to
-        disk first if it doesn't already exist)."""
-        m = re.search(r"ind_(\d+)", self.main_file)
-        fixed_ind = int(m.group(1))
-        moving_ind = int(filename.split("ind_")[1].split(".")[0])
-        transform_filename = f"transformation-ind_{moving_ind}-to-ind_{fixed_ind}.txt"
-        transform_file_path = os.path.join(self.LoadMRI.session_path, "anat", transform_filename)
-        new_name = filename[:-7]+f"-aligned_to_ind_{fixed_ind}.nii.gz"
-
-        # Registration() runs a real (slow) rigid registration and
-        # apply_transforms/image_write re-warps the full volume -- both are
-        # deterministic for a given fixed/moving pair, so skip whichever
-        # part already has its output on disk from a previous run.
-        if not os.path.exists(new_name):
-            if not os.path.exists(transform_file_path):
-                Registration(self.LoadMRI,self.MW.ButtonsGUI_Structural,0)
-
-            fixed = ants.image_read(self.main_file)
-            moving = ants.image_read(filename)
-
-            img_aligned = ants.apply_transforms(
-                fixed=fixed,
-                moving=moving,
-                transformlist=transform_file_path,
-                interpolator="lanczosWindowedSinc", #bSpline",
-            )
-
-            ants.image_write(img_aligned, new_name)
-
-        return new_name
+        """Runs trajectory_planning/registration_worker.py's
+        _do_register_to_main_img (rigid registration + a full-volume ants
+        warp) in a separate OS process instead of in this one -- same
+        reasoning as SAMRI's registration (see samri_main.py's
+        _run_worker_subprocess): this can be slow, and no longer shares the
+        GUI process's memory footprint. Called from register_to_main_img's
+        run_off_thread call (never the GUI thread directly), so blocking
+        here on the subprocess is fine. Returns new_name (the aligned
+        volume's path); a no-op (the file already exists) after the first
+        call for a given fixed/moving pair."""
+        payload = {
+            'fixed_path': self.main_file,
+            'moving_path': filename,
+            'session_path': self.LoadMRI.session_path,
+            'coarsest_index': self.LoadMRI.coarsest_index,
+            'finest_index': self.LoadMRI.finest_index,
+            'metric_index': getattr(self.LoadMRI, "metric_index", 0),
+        }
+        result = run_json_subprocess(
+            'trajectory_planning/registration_worker.py',
+            '--trajectory-registration-worker',
+            payload,
+        )
+        return result['new_name']
 
 
     def get_shank_line(self,transformPath=None):

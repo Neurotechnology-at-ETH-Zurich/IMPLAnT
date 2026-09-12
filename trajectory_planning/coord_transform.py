@@ -268,14 +268,22 @@ class CoordTransform:
         baseline), then rotating that baseline (and its matching RL
         baseline) around AP by -misalignment_deg.
 
-        The minus sign corrects for how that angle is actually measured:
-        update_misalignment_guide_line draws a line on the coronal view
-        that the user rotates onscreen until it matches the interhemispheric
-        fissure, and that view's RL/display-x axis is mirrored (radiological
-        convention -- see rendering.py's _atlas_point_display_xy). A line
-        drawn rotating by +theta on screen therefore corresponds to a
-        physical rotation of -theta around AP in raw voxel/mm space. Keep
-        this in sync with that function if either one changes.
+        No extra sign flip is applied here for the coronal display's
+        RL/display-x mirror (see rendering.py's _atlas_point_display_xy):
+        that mirror is exactly cancelled out by ap_axis's own real-world
+        polarity, not by negating theta. ap_axis is bregma->lambda, and
+        under this app's RAS-oriented volumes (file_handling/mri_volume.py)
+        bregma is anterior to lambda, so ap_axis always points POSTERIOR
+        (negative raw-Y) -- opposite the "AP points anterior" direction
+        one might naively assume. Since rl_ref = cross(ap_axis, si_ref) is
+        built directly from ap_axis, ap_axis's actual (posterior) polarity
+        already flips rl_ref's sign relative to that naive assumption, and
+        that flip is exactly what cancels the display mirror. Negating
+        theta on top of that would double-cancel it -- which is what
+        produced a coronal reference line (update_atlas_plane_line) mirrored
+        relative to update_misalignment_guide_line's own on-screen line for
+        the same dialed angle. Keep this in sync with that function if
+        either one changes.
 
         Returns (ap_axis, rl_axis, si_axis), or None if bregma == lambda.
         """
@@ -299,7 +307,7 @@ class CoordTransform:
         si_ref = si_ref / si_ref_norm
         rl_ref = np.cross(ap_axis, si_ref)
 
-        theta = np.radians(-misalignment_deg)
+        theta = np.radians(misalignment_deg)
         cos_t, sin_t = np.cos(theta), np.sin(theta)
         si_axis = si_ref * cos_t + np.cross(ap_axis, si_ref) * sin_t
         rl_axis = rl_ref * cos_t + np.cross(ap_axis, rl_ref) * sin_t

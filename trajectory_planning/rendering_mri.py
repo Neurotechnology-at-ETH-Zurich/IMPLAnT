@@ -34,12 +34,12 @@ methods that genuinely need overriding here:
 """
 
 import os
+import shutil
 import numpy as np
 import vtk
 from vtk.util import numpy_support
 from scipy import ndimage
 from PySide6.QtCore import QTimer
-import nibabel as nib
 
 from paths_config import _paths
 from mrid_utils import atlas_switch
@@ -49,6 +49,7 @@ from trajectory_planning.visualisation3D_mri import VisualisationMri
 from core.image_layer import ImageLayer
 from core.interactor_style import ObliqueInteractorStyle
 from gui_utils.busy_worker import run_off_thread
+from gui_utils.subprocess_worker import run_json_subprocess
 
 
 class RenderingMri(Rendering):
@@ -166,12 +167,17 @@ class RenderingMri(Rendering):
         if _paths.get('atlas_dwi'):
             dwi_path = os.path.join(_paths['atlas_folder'], _paths['atlas_dwi'])
             # nib.load + materializing .dataobj is pure nibabel/numpy file-IO,
-            # no Qt/VTK object touched -- backgrounded via run_off_thread;
+            # no Qt/VTK object touched -- runs in a separate process
+            # (trajectory_planning/dwi_worker.py) via run_off_thread;
             # covered by _on_atlas_selector_changed's BusyOverlay.
             def _load_dwi():
-                nii_dwi = nib.load(dwi_path)
-                dwi = np.asanyarray(nii_dwi.dataobj)
-                return dwi[:, :, :, 0]
+                result = run_json_subprocess(
+                    'trajectory_planning/dwi_worker.py', '--dwi-worker', {'dwi_path': dwi_path},
+                )
+                array_path = result['dwi_array_path']
+                dwi = np.load(array_path)
+                shutil.rmtree(os.path.dirname(array_path), ignore_errors=True)
+                return dwi
             self.dwi = run_off_thread(_load_dwi)
 
         self.draw_atlas_reference_points()
