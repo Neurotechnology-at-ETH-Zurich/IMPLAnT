@@ -163,7 +163,6 @@ class TpRegistrationMri(TpRegistration):
 
         self.ui.stackedWidget_3d_tp.setCurrentIndex(1)
         self.ui.stackedWidget_3d.setCurrentIndex(0)
-        self._ensure_atlas_selector_widget()
 
         # The registered second file (register_to_main_img) was only ever
         # needed for reference during bregma/lambda picking -- unlike the

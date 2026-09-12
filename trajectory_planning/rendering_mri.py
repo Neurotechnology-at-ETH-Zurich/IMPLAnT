@@ -168,8 +168,8 @@ class RenderingMri(Rendering):
             dwi_path = os.path.join(_paths['atlas_folder'], _paths['atlas_dwi'])
             # nib.load + materializing .dataobj is pure nibabel/numpy file-IO,
             # no Qt/VTK object touched -- runs in a separate process
-            # (trajectory_planning/dwi_worker.py) via run_off_thread;
-            # covered by _on_atlas_selector_changed's BusyOverlay.
+            # (trajectory_planning/dwi_worker.py) via run_off_thread; the
+            # caller is expected to show its own busy indicator around this.
             def _load_dwi():
                 result = run_json_subprocess(
                     'trajectory_planning/dwi_worker.py', '--dwi-worker', {'dwi_path': dwi_path},
@@ -181,7 +181,6 @@ class RenderingMri(Rendering):
             self.dwi = run_off_thread(_load_dwi)
 
         self.draw_atlas_reference_points()
-        self._sync_atlas_selector_widget()
         QTimer.singleShot(0, self.render)
         return True
 

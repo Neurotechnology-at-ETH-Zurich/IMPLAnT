@@ -4,9 +4,6 @@ import vtk
 from vtkmodules.vtkFiltersSources import vtkRegularPolygonSource
 from vtkmodules.vtkRenderingCore import vtkActor, vtkPolyDataMapper
 from core.image_layer import ImageLayer
-from gui_utils.busy_overlay import BusyOverlay
-from paths_config import _paths
-from mrid_utils.atlas_registry import ATLASES, get_active_atlas_id
 
 class Rendering:
     def render(self):
@@ -205,51 +202,6 @@ class Rendering:
         text.GetPositionCoordinate().SetValue(0.02, legend_y)
         renderer.AddActor2D(text)
         return text
-
-    def _ensure_atlas_selector_widget(self):
-        """Populates and wires form.ui's own comboBox_atlas (page_30,
-        self.ui.frame / self.ui.gridLayout_177, next to its lineEdit_83
-        "Atlas" label) the first time this page is shown, letting the user
-        switch atlases while looking at one (see reload_atlas_view) --
-        reads that real, hand-placed widget instead of creating/inserting a
-        new combo into the same grid layout at runtime, which collided
-        with the already-placed pushButton_sagittalView/coronalView."""
-        if hasattr(self.ui, '_atlas_selector_wired'):
-            self._atlas_ids = list(ATLASES.keys())
-            self._sync_atlas_selector_widget()
-            return
-        self.ui._atlas_selector_wired = True
-        self._atlas_ids = list(ATLASES.keys())
-        for atlas_id in self._atlas_ids:
-            self.ui.comboBox_atlas.addItem(ATLASES[atlas_id]['display_name'])
-        self._sync_atlas_selector_widget()
-        self.ui.comboBox_atlas.currentIndexChanged.connect(self._on_atlas_selector_changed)
-
-    def _sync_atlas_selector_widget(self):
-        current_id = get_active_atlas_id(_paths)
-        if current_id in self._atlas_ids:
-            self.ui.comboBox_atlas.blockSignals(True)
-            self.ui.comboBox_atlas.setCurrentIndex(self._atlas_ids.index(current_id))
-            self.ui.comboBox_atlas.blockSignals(False)
-
-    def _on_atlas_selector_changed(self, index):
-        atlas_id = self._atlas_ids[index]
-        if atlas_id == get_active_atlas_id(_paths):
-            return
-
-        def proceed():
-            if not self.reload_atlas_view(atlas_id):
-                self._sync_atlas_selector_widget()  # switch declined/failed -- revert the combo
-
-        # BusyOverlay.run() defers fn (QTimer.singleShot) and discards its
-        # return value -- reload_atlas_view's own True/False (whether the
-        # switch actually happened) has to be checked from inside proceed()
-        # now, not synchronously here, since run() itself always returns
-        # immediately.
-        atlas_name = ATLASES[atlas_id]['display_name']
-        self.MW.overlay = BusyOverlay(
-            self.MW, message=f"Switching to {atlas_name} atlas, please wait…")
-        self.MW.overlay.run(proceed)
 
     def _atlas_plane_segment_in_view(self, view_name, normal, plane_point):
         """Voxel-space XYZ endpoints of the reference plane's crossing of
