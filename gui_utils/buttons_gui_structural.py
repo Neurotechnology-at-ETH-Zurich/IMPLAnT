@@ -8,10 +8,10 @@ from core.measurement import Measurement
 from core.interactor_style import CustomInteractorStyle
 from utils.minimap_handler import Minimap
 from gui_utils.paintbrush_gui import PaintbrushGUI
-from core.registration import Registration
 from gui_utils.segmentation_gui import SegmentationGUI
 from gui_utils.busy_overlay import BusyOverlay
 from gui_utils.busy_worker import BusyWorker, show_worker_error
+from gui_utils.subprocess_worker import run_json_subprocess
 from PySide6.QtGui import QColor
 # This Python file uses the following encoding: utf-8
 from PySide6.QtWidgets import QDockWidget,QDialog,QVBoxLayout
@@ -405,7 +405,15 @@ class ButtonsGUI_Structural:
         result = {}
 
         def work():
-            result['default_name'] = self.LoadMRI.Resample.resampling100um(index)
+            payload = {
+                'op': 'resample100',
+                'file_path': self.LoadMRI.volumes[index].file_path,
+                'session_path': self.LoadMRI.session_path,
+                'raw_DICOMOrient': self.LoadMRI.volumes[0].raw_DICOMOrient,
+            }
+            result['default_name'] = run_json_subprocess(
+                'file_handling/resample_worker.py', '--resample-worker', payload,
+            )['default_name']
 
         def on_done():
             default_name = result['default_name']
@@ -448,7 +456,15 @@ class ButtonsGUI_Structural:
         result = {}
 
         def work():
-            result['default_name'] = self.LoadMRI.Resample.resampling25um(index)
+            payload = {
+                'op': 'resample25',
+                'file_path': self.LoadMRI.volumes[index].file_path,
+                'session_path': self.LoadMRI.session_path,
+                'raw_DICOMOrient': self.LoadMRI.volumes[0].raw_DICOMOrient,
+            }
+            result['default_name'] = run_json_subprocess(
+                'file_handling/resample_worker.py', '--resample-worker', payload,
+            )['default_name']
 
         def on_done():
             default_name = result['default_name']
@@ -518,51 +534,21 @@ class ButtonsGUI_Structural:
         aligned_paths = []
 
         def work():
-            import ants
-            self.LoadMRI.Registration = Registration(self.LoadMRI, self, index)
-            reg = self.LoadMRI.Registration
-
-            transform_filename = (
-                f"transformation-ind_{reg.moving_ind}-to-ind_{reg.fixed_ind}.txt"
+            payload = {
+                'session_path': self.LoadMRI.session_path,
+                'fixed_path': self.LoadMRI.volumes[0].file_path,
+                'moving_path_entry': self.LoadMRI.movingimg_filename[index],
+                'coarsest_index': self.LoadMRI.coarsest_index,
+                'finest_index': self.LoadMRI.finest_index,
+                'metric_index': getattr(self.LoadMRI, "metric_index", 0),
+            }
+            result = run_json_subprocess(
+                'core/structural_registration_worker.py',
+                '--structural-registration-worker',
+                payload,
             )
-            transform_path = os.path.join(
-                self.LoadMRI.session_path, "anat", transform_filename
-            )
-            if not os.path.exists(transform_path):
-                return
-
-            fixed_ants = ants.image_read(self.LoadMRI.volumes[0].file_path)
-
-            # reg.moving_image is already DICOMOrient'd to RAS and extracted to 3D
-            moving_for_apply = reg.moving_image
-            if moving_for_apply.GetNumberOfComponentsPerPixel() > 1:
-                moving_for_apply = sitk.VectorIndexSelectionCast(moving_for_apply, 0)
-            import tempfile as _tf
-            with _tf.TemporaryDirectory() as _tmpdir:
-                moving_tmp = os.path.join(_tmpdir, 'moving.nii.gz')
-                sitk.WriteImage(
-                    sitk.Cast(moving_for_apply, sitk.sitkFloat32), moving_tmp
-                )
-                moving_ants = ants.image_read(moving_tmp)
-                # linear, not lanczosWindowedSinc: sinc kernels have negative
-                # side-lobes and ring at sharp edges (skull/background etc.),
-                # producing large negative overshoot that doesn't exist in the
-                # source data; linear is a convex combination of neighbours so
-                # it can't overshoot the input's value range
-                img_aligned = ants.apply_transforms(
-                    fixed=fixed_ants,
-                    moving=moving_ants,
-                    transformlist=transform_path,
-                    interpolator="linear",
-                )
-
-            base = reg.moving_filepath
-            suffix = f"-aligned_to_ind_{reg.fixed_ind}.nii.gz"
-            aligned_path = (
-                base[:-7] if base.endswith('.nii.gz') else base[:-4]
-            ) + suffix
-            ants.image_write(img_aligned, aligned_path)
-            aligned_paths.append(aligned_path)
+            if result['aligned_path'] is not None:
+                aligned_paths.append(result['aligned_path'])
 
         def on_done():
             # keep the overlay up through loading the atlas/warped image too --
