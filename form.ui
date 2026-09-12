@@ -54,7 +54,7 @@
     <item row="0" column="0">
      <widget class="QTabWidget" name="tabWidget_visualisation">
       <property name="currentIndex">
-       <number>0</number>
+       <number>1</number>
       </property>
       <widget class="QWidget" name="tab_2">
        <attribute name="title">
@@ -6642,22 +6642,9 @@ li.checked::marker { content: &quot;\2612&quot;; }
                              <property name="frameShadow">
                               <enum>QFrame::Raised</enum>
                              </property>
-                             <layout class="QGridLayout" name="gridLayout_177" columnstretch="1,1,1">
-                              <item row="3" column="0">
-                               <widget class="QLineEdit" name="lineEdit_83">
-                                <property name="text">
-                                 <string>Atlas</string>
-                                </property>
-                                <property name="readOnly">
-                                 <bool>true</bool>
-                                </property>
-                               </widget>
-                              </item>
-                              <item row="3" column="1" colspan="2">
-                               <widget class="QComboBox" name="comboBox_atlas"/>
-                              </item>
-                              <item row="2" column="0">
-                               <widget class="QPushButton" name="pushButton_axialView">
+                             <layout class="QGridLayout" name="gridLayout_177" columnstretch="1,0,0">
+                              <item row="2" column="1">
+                               <widget class="QPushButton" name="pushButton_sagittalView">
                                 <property name="enabled">
                                  <bool>false</bool>
                                 </property>
@@ -6666,28 +6653,13 @@ li.checked::marker { content: &quot;\2612&quot;; }
                                 </property>
                                 <property name="text">
                                  <string>Change 
- Axial View</string>
+ Sagittal View</string>
                                 </property>
                                 <property name="checkable">
                                  <bool>true</bool>
                                 </property>
                                 <property name="checked">
                                  <bool>true</bool>
-                                </property>
-                               </widget>
-                              </item>
-                              <item row="0" column="0" colspan="3">
-                               <widget class="QCheckBox" name="checkBox_constraint_90deg">
-                                <property name="enabled">
-                                 <bool>true</bool>
-                                </property>
-                                <property name="font">
-                                 <font>
-                                  <pointsize>13</pointsize>
-                                 </font>
-                                </property>
-                                <property name="text">
-                                 <string>Constraint Angle in Sagittal to 90deg </string>
                                 </property>
                                </widget>
                               </item>
@@ -6711,26 +6683,6 @@ li.checked::marker { content: &quot;\2612&quot;; }
                                 </property>
                                </widget>
                               </item>
-                              <item row="2" column="1">
-                               <widget class="QPushButton" name="pushButton_sagittalView">
-                                <property name="enabled">
-                                 <bool>false</bool>
-                                </property>
-                                <property name="toolTip">
-                                 <string>Switch this panel between the 2D slice and a 3D view clipped along the trajectory</string>
-                                </property>
-                                <property name="text">
-                                 <string>Change 
- Sagittal View</string>
-                                </property>
-                                <property name="checkable">
-                                 <bool>true</bool>
-                                </property>
-                                <property name="checked">
-                                 <bool>true</bool>
-                                </property>
-                               </widget>
-                              </item>
                               <item row="1" column="0" colspan="3">
                                <widget class="QCheckBox" name="checkBox_constraint_90deg_coronal">
                                 <property name="font">
@@ -6740,6 +6692,41 @@ li.checked::marker { content: &quot;\2612&quot;; }
                                 </property>
                                 <property name="text">
                                  <string>Constraint Angle in Coronal to 0deg </string>
+                                </property>
+                               </widget>
+                              </item>
+                              <item row="0" column="0" colspan="3">
+                               <widget class="QCheckBox" name="checkBox_constraint_90deg">
+                                <property name="enabled">
+                                 <bool>true</bool>
+                                </property>
+                                <property name="font">
+                                 <font>
+                                  <pointsize>13</pointsize>
+                                 </font>
+                                </property>
+                                <property name="text">
+                                 <string>Constraint Angle in Sagittal to 90deg </string>
+                                </property>
+                               </widget>
+                              </item>
+                              <item row="2" column="0">
+                               <widget class="QPushButton" name="pushButton_axialView">
+                                <property name="enabled">
+                                 <bool>false</bool>
+                                </property>
+                                <property name="toolTip">
+                                 <string>Switch this panel between the 2D slice and a 3D view clipped along the trajectory</string>
+                                </property>
+                                <property name="text">
+                                 <string>Change 
+ Axial View</string>
+                                </property>
+                                <property name="checkable">
+                                 <bool>true</bool>
+                                </property>
+                                <property name="checked">
+                                 <bool>true</bool>
                                 </property>
                                </widget>
                               </item>
@@ -9033,7 +9020,7 @@ background-color: rgb(131, 131, 131);
                   <property name="frameShape">
                    <enum>QFrame::NoFrame</enum>
                   </property>
-                  <layout class="QGridLayout" name="gridLayout_68" rowstretch="0,0,0,0,0" columnstretch="1,1,1,1,1,1,1" rowminimumheight="0,0,0,0,0">
+                  <layout class="QGridLayout" name="gridLayout_68" rowstretch="0,0,0,0,0" columnstretch="1,1,1,1,1,1,0" rowminimumheight="0,0,0,0,0">
                    <property name="leftMargin">
                     <number>4</number>
                    </property>
@@ -9049,9 +9036,6 @@ background-color: rgb(131, 131, 131);
                    <property name="spacing">
                     <number>0</number>
                    </property>
-                   <item row="4" column="6">
-                    <widget class="QComboBox" name="comboBox_atlas_2"/>
-                   </item>
                    <item row="1" column="0" colspan="7">
                     <widget class="QGroupBox" name="groupBox_6">
                      <property name="toolTip">
@@ -9143,16 +9127,6 @@ background-color: rgb(131, 131, 131);
                        </widget>
                       </item>
                      </layout>
-                    </widget>
-                   </item>
-                   <item row="3" column="6">
-                    <widget class="QLineEdit" name="lineEdit_86">
-                     <property name="text">
-                      <string>Atlas</string>
-                     </property>
-                     <property name="readOnly">
-                      <bool>true</bool>
-                     </property>
                     </widget>
                    </item>
                    <item row="3" column="5" rowspan="2">
@@ -10662,7 +10636,7 @@ background-color: rgb(131, 131, 131);
           <property name="frameShape">
            <enum>QFrame::NoFrame</enum>
           </property>
-          <layout class="QGridLayout" name="gridLayout_147" columnstretch="1,1,1,1,1,1,1,1">
+          <layout class="QGridLayout" name="gridLayout_147" columnstretch="1,1,1,1,1,1,1,0">
            <property name="leftMargin">
             <number>4</number>
            </property>
@@ -10678,19 +10652,6 @@ background-color: rgb(131, 131, 131);
            <property name="spacing">
             <number>0</number>
            </property>
-           <item row="3" column="7">
-            <widget class="QLineEdit" name="lineEdit_110">
-             <property name="text">
-              <string>Atlas</string>
-             </property>
-             <property name="readOnly">
-              <bool>true</bool>
-             </property>
-            </widget>
-           </item>
-           <item row="4" column="7">
-            <widget class="QComboBox" name="comboBox_atlas_3"/>
-           </item>
            <item row="3" column="6" rowspan="2">
             <widget class="QPushButton" name="pushButton_slicez_vis3D">
              <property name="toolTip">
@@ -11625,8 +11586,6 @@ background-color: rgb(131, 131, 131);
   <tabstop>comboBox_Shanks</tabstop>
   <tabstop>comboBox_tpColor</tabstop>
   <tabstop>pushButton_addShank</tabstop>
-  <tabstop>lineEdit_83</tabstop>
-  <tabstop>comboBox_atlas</tabstop>
   <tabstop>pushButton_axialView</tabstop>
   <tabstop>checkBox_constraint_90deg</tabstop>
   <tabstop>pushButton_coronalView</tabstop>
@@ -11666,8 +11625,6 @@ background-color: rgb(131, 131, 131);
   <tabstop>pushButton_anatRegion</tabstop>
   <tabstop>lineEdit_60</tabstop>
   <tabstop>tabWidget_ephys</tabstop>
-  <tabstop>comboBox_atlas_2</tabstop>
-  <tabstop>lineEdit_86</tabstop>
   <tabstop>lineEdit_13</tabstop>
   <tabstop>tabWidget_LFP</tabstop>
   <tabstop>lineEdit_61</tabstop>
@@ -11701,8 +11658,6 @@ background-color: rgb(131, 131, 131);
   <tabstop>lineEdit_81</tabstop>
   <tabstop>pushButton_questionmark_2</tabstop>
   <tabstop>tableWidget</tabstop>
-  <tabstop>lineEdit_110</tabstop>
-  <tabstop>comboBox_atlas_3</tabstop>
  </tabstops>
  <resources/>
  <connections/>

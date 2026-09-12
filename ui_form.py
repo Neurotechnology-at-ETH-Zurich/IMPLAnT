@@ -3193,33 +3193,13 @@ class Ui_MainWindow(object):
         self.frame.setFrameShadow(QFrame.Raised)
         self.gridLayout_177 = QGridLayout(self.frame)
         self.gridLayout_177.setObjectName(u"gridLayout_177")
-        self.lineEdit_83 = QLineEdit(self.frame)
-        self.lineEdit_83.setObjectName(u"lineEdit_83")
-        self.lineEdit_83.setReadOnly(True)
+        self.pushButton_sagittalView = QPushButton(self.frame)
+        self.pushButton_sagittalView.setObjectName(u"pushButton_sagittalView")
+        self.pushButton_sagittalView.setEnabled(False)
+        self.pushButton_sagittalView.setCheckable(True)
+        self.pushButton_sagittalView.setChecked(True)
 
-        self.gridLayout_177.addWidget(self.lineEdit_83, 3, 0, 1, 1)
-
-        self.comboBox_atlas = QComboBox(self.frame)
-        self.comboBox_atlas.setObjectName(u"comboBox_atlas")
-
-        self.gridLayout_177.addWidget(self.comboBox_atlas, 3, 1, 1, 2)
-
-        self.pushButton_axialView = QPushButton(self.frame)
-        self.pushButton_axialView.setObjectName(u"pushButton_axialView")
-        self.pushButton_axialView.setEnabled(False)
-        self.pushButton_axialView.setCheckable(True)
-        self.pushButton_axialView.setChecked(True)
-
-        self.gridLayout_177.addWidget(self.pushButton_axialView, 2, 0, 1, 1)
-
-        self.checkBox_constraint_90deg = QCheckBox(self.frame)
-        self.checkBox_constraint_90deg.setObjectName(u"checkBox_constraint_90deg")
-        self.checkBox_constraint_90deg.setEnabled(True)
-        font7 = QFont()
-        font7.setPointSize(13)
-        self.checkBox_constraint_90deg.setFont(font7)
-
-        self.gridLayout_177.addWidget(self.checkBox_constraint_90deg, 0, 0, 1, 3)
+        self.gridLayout_177.addWidget(self.pushButton_sagittalView, 2, 1, 1, 1)
 
         self.pushButton_coronalView = QPushButton(self.frame)
         self.pushButton_coronalView.setObjectName(u"pushButton_coronalView")
@@ -3229,23 +3209,30 @@ class Ui_MainWindow(object):
 
         self.gridLayout_177.addWidget(self.pushButton_coronalView, 2, 2, 1, 1)
 
-        self.pushButton_sagittalView = QPushButton(self.frame)
-        self.pushButton_sagittalView.setObjectName(u"pushButton_sagittalView")
-        self.pushButton_sagittalView.setEnabled(False)
-        self.pushButton_sagittalView.setCheckable(True)
-        self.pushButton_sagittalView.setChecked(True)
-
-        self.gridLayout_177.addWidget(self.pushButton_sagittalView, 2, 1, 1, 1)
-
         self.checkBox_constraint_90deg_coronal = QCheckBox(self.frame)
         self.checkBox_constraint_90deg_coronal.setObjectName(u"checkBox_constraint_90deg_coronal")
+        font7 = QFont()
+        font7.setPointSize(13)
         self.checkBox_constraint_90deg_coronal.setFont(font7)
 
         self.gridLayout_177.addWidget(self.checkBox_constraint_90deg_coronal, 1, 0, 1, 3)
 
+        self.checkBox_constraint_90deg = QCheckBox(self.frame)
+        self.checkBox_constraint_90deg.setObjectName(u"checkBox_constraint_90deg")
+        self.checkBox_constraint_90deg.setEnabled(True)
+        self.checkBox_constraint_90deg.setFont(font7)
+
+        self.gridLayout_177.addWidget(self.checkBox_constraint_90deg, 0, 0, 1, 3)
+
+        self.pushButton_axialView = QPushButton(self.frame)
+        self.pushButton_axialView.setObjectName(u"pushButton_axialView")
+        self.pushButton_axialView.setEnabled(False)
+        self.pushButton_axialView.setCheckable(True)
+        self.pushButton_axialView.setChecked(True)
+
+        self.gridLayout_177.addWidget(self.pushButton_axialView, 2, 0, 1, 1)
+
         self.gridLayout_177.setColumnStretch(0, 1)
-        self.gridLayout_177.setColumnStretch(1, 1)
-        self.gridLayout_177.setColumnStretch(2, 1)
 
         self.gridLayout_214.addWidget(self.frame, 0, 3, 1, 1)
 
@@ -4347,11 +4334,6 @@ class Ui_MainWindow(object):
         self.gridLayout_68.setSpacing(0)
         self.gridLayout_68.setObjectName(u"gridLayout_68")
         self.gridLayout_68.setContentsMargins(4, 4, 4, 4)
-        self.comboBox_atlas_2 = QComboBox(self.frame_32)
-        self.comboBox_atlas_2.setObjectName(u"comboBox_atlas_2")
-
-        self.gridLayout_68.addWidget(self.comboBox_atlas_2, 4, 6, 1, 1)
-
         self.groupBox_6 = QGroupBox(self.frame_32)
         self.groupBox_6.setObjectName(u"groupBox_6")
         self.gridLayout_169 = QGridLayout(self.groupBox_6)
@@ -4405,12 +4387,6 @@ class Ui_MainWindow(object):
         self.gridLayout_169.setColumnStretch(2, 1)
 
         self.gridLayout_68.addWidget(self.groupBox_6, 1, 0, 1, 7)
-
-        self.lineEdit_86 = QLineEdit(self.frame_32)
-        self.lineEdit_86.setObjectName(u"lineEdit_86")
-        self.lineEdit_86.setReadOnly(True)
-
-        self.gridLayout_68.addWidget(self.lineEdit_86, 3, 6, 1, 1)
 
         self.pushButton_slicez = QPushButton(self.frame_32)
         self.pushButton_slicez.setObjectName(u"pushButton_slicez")
@@ -4515,7 +4491,6 @@ class Ui_MainWindow(object):
         self.gridLayout_68.setColumnStretch(3, 1)
         self.gridLayout_68.setColumnStretch(4, 1)
         self.gridLayout_68.setColumnStretch(5, 1)
-        self.gridLayout_68.setColumnStretch(6, 1)
 
         self.gridLayout_46.addWidget(self.frame_32, 0, 0, 1, 1)
 
@@ -5239,17 +5214,6 @@ class Ui_MainWindow(object):
         self.gridLayout_147.setSpacing(0)
         self.gridLayout_147.setObjectName(u"gridLayout_147")
         self.gridLayout_147.setContentsMargins(4, 4, 4, 4)
-        self.lineEdit_110 = QLineEdit(self.frame_33)
-        self.lineEdit_110.setObjectName(u"lineEdit_110")
-        self.lineEdit_110.setReadOnly(True)
-
-        self.gridLayout_147.addWidget(self.lineEdit_110, 3, 7, 1, 1)
-
-        self.comboBox_atlas_3 = QComboBox(self.frame_33)
-        self.comboBox_atlas_3.setObjectName(u"comboBox_atlas_3")
-
-        self.gridLayout_147.addWidget(self.comboBox_atlas_3, 4, 7, 1, 1)
-
         self.pushButton_slicez_vis3D = QPushButton(self.frame_33)
         self.pushButton_slicez_vis3D.setObjectName(u"pushButton_slicez_vis3D")
         self.pushButton_slicez_vis3D.setIcon(icon10)
@@ -5312,7 +5276,6 @@ class Ui_MainWindow(object):
         self.gridLayout_147.setColumnStretch(4, 1)
         self.gridLayout_147.setColumnStretch(5, 1)
         self.gridLayout_147.setColumnStretch(6, 1)
-        self.gridLayout_147.setColumnStretch(7, 1)
 
         self.gridLayout_150.addWidget(self.frame_33, 1, 0, 1, 2)
 
@@ -5757,9 +5720,7 @@ class Ui_MainWindow(object):
         QWidget.setTabOrder(self.pushButton_removeShank, self.comboBox_Shanks)
         QWidget.setTabOrder(self.comboBox_Shanks, self.comboBox_tpColor)
         QWidget.setTabOrder(self.comboBox_tpColor, self.pushButton_addShank)
-        QWidget.setTabOrder(self.pushButton_addShank, self.lineEdit_83)
-        QWidget.setTabOrder(self.lineEdit_83, self.comboBox_atlas)
-        QWidget.setTabOrder(self.comboBox_atlas, self.pushButton_axialView)
+        QWidget.setTabOrder(self.pushButton_addShank, self.pushButton_axialView)
         QWidget.setTabOrder(self.pushButton_axialView, self.checkBox_constraint_90deg)
         QWidget.setTabOrder(self.checkBox_constraint_90deg, self.pushButton_coronalView)
         QWidget.setTabOrder(self.pushButton_coronalView, self.pushButton_sagittalView)
@@ -5798,9 +5759,7 @@ class Ui_MainWindow(object):
         QWidget.setTabOrder(self.pushButton_showChannels, self.pushButton_anatRegion)
         QWidget.setTabOrder(self.pushButton_anatRegion, self.lineEdit_60)
         QWidget.setTabOrder(self.lineEdit_60, self.tabWidget_ephys)
-        QWidget.setTabOrder(self.tabWidget_ephys, self.comboBox_atlas_2)
-        QWidget.setTabOrder(self.comboBox_atlas_2, self.lineEdit_86)
-        QWidget.setTabOrder(self.lineEdit_86, self.lineEdit_13)
+        QWidget.setTabOrder(self.tabWidget_ephys, self.lineEdit_13)
         QWidget.setTabOrder(self.lineEdit_13, self.tabWidget_LFP)
         QWidget.setTabOrder(self.tabWidget_LFP, self.lineEdit_61)
         QWidget.setTabOrder(self.lineEdit_61, self.lineEdit_62)
@@ -5833,8 +5792,6 @@ class Ui_MainWindow(object):
         QWidget.setTabOrder(self.doubleSpinBox_cor_b, self.lineEdit_81)
         QWidget.setTabOrder(self.lineEdit_81, self.pushButton_questionmark_2)
         QWidget.setTabOrder(self.pushButton_questionmark_2, self.tableWidget)
-        QWidget.setTabOrder(self.tableWidget, self.lineEdit_110)
-        QWidget.setTabOrder(self.lineEdit_110, self.comboBox_atlas_3)
 
         self.menubar.addAction(self.menuGUI.menuAction())
         self.menubar.addAction(self.menuStructural_Tools.menuAction())
@@ -5882,7 +5839,7 @@ class Ui_MainWindow(object):
 
         self.retranslateUi(MainWindow)
 
-        self.tabWidget_visualisation.setCurrentIndex(0)
+        self.tabWidget_visualisation.setCurrentIndex(1)
         self.tabWidget.setCurrentIndex(0)
         self.fit_to_zoom_data20.setDefault(False)
         self.tabWidget_time2.setCurrentIndex(0)
@@ -5894,7 +5851,7 @@ class Ui_MainWindow(object):
         self.fit_to_zoom_data00.setDefault(False)
         self.fit_to_zoom_data01.setDefault(False)
         self.fit_to_zoom_data02.setDefault(False)
-        self.stackedWidget_3d.setCurrentIndex(0)
+        self.stackedWidget_3d.setCurrentIndex(1)
         self.stackedWidget_trajectoryplanning.setCurrentIndex(0)
         self.stackedWidget_dfx.setCurrentIndex(0)
         self.stackedWidget_sagittal.setCurrentIndex(1)
@@ -7097,24 +7054,23 @@ class Ui_MainWindow(object):
 #endif // QT_CONFIG(tooltip)
         self.pushButton_addShank.setText(QCoreApplication.translate("MainWindow", u"Add Another \n"
 " Shank", None))
-        self.lineEdit_83.setText(QCoreApplication.translate("MainWindow", u"Atlas", None))
-#if QT_CONFIG(tooltip)
-        self.pushButton_axialView.setToolTip(QCoreApplication.translate("MainWindow", u"Switch this panel between the 2D slice and a 3D view clipped along the trajectory", None))
-#endif // QT_CONFIG(tooltip)
-        self.pushButton_axialView.setText(QCoreApplication.translate("MainWindow", u"Change \n"
-" Axial View", None))
-        self.checkBox_constraint_90deg.setText(QCoreApplication.translate("MainWindow", u"Constraint Angle in Sagittal to 90deg ", None))
-#if QT_CONFIG(tooltip)
-        self.pushButton_coronalView.setToolTip(QCoreApplication.translate("MainWindow", u"Switch this panel between the 2D slice and a 3D view clipped along the trajectory", None))
-#endif // QT_CONFIG(tooltip)
-        self.pushButton_coronalView.setText(QCoreApplication.translate("MainWindow", u"Change \n"
-" Coronal View", None))
 #if QT_CONFIG(tooltip)
         self.pushButton_sagittalView.setToolTip(QCoreApplication.translate("MainWindow", u"Switch this panel between the 2D slice and a 3D view clipped along the trajectory", None))
 #endif // QT_CONFIG(tooltip)
         self.pushButton_sagittalView.setText(QCoreApplication.translate("MainWindow", u"Change \n"
 " Sagittal View", None))
+#if QT_CONFIG(tooltip)
+        self.pushButton_coronalView.setToolTip(QCoreApplication.translate("MainWindow", u"Switch this panel between the 2D slice and a 3D view clipped along the trajectory", None))
+#endif // QT_CONFIG(tooltip)
+        self.pushButton_coronalView.setText(QCoreApplication.translate("MainWindow", u"Change \n"
+" Coronal View", None))
         self.checkBox_constraint_90deg_coronal.setText(QCoreApplication.translate("MainWindow", u"Constraint Angle in Coronal to 0deg ", None))
+        self.checkBox_constraint_90deg.setText(QCoreApplication.translate("MainWindow", u"Constraint Angle in Sagittal to 90deg ", None))
+#if QT_CONFIG(tooltip)
+        self.pushButton_axialView.setToolTip(QCoreApplication.translate("MainWindow", u"Switch this panel between the 2D slice and a 3D view clipped along the trajectory", None))
+#endif // QT_CONFIG(tooltip)
+        self.pushButton_axialView.setText(QCoreApplication.translate("MainWindow", u"Change \n"
+" Axial View", None))
 #if QT_CONFIG(tooltip)
         self.pushButton_dfx_ok.setToolTip(QCoreApplication.translate("MainWindow", u"Close this panel", None))
 #endif // QT_CONFIG(tooltip)
@@ -7519,7 +7475,6 @@ class Ui_MainWindow(object):
 #if QT_CONFIG(tooltip)
         self.horizontalSlider_ElectrodeRegion.setToolTip(QCoreApplication.translate("MainWindow", u"Opacity of the atlas region highlighted for the currently selected channel, from transparent to fully opaque.", None))
 #endif // QT_CONFIG(tooltip)
-        self.lineEdit_86.setText(QCoreApplication.translate("MainWindow", u"Atlas", None))
 #if QT_CONFIG(tooltip)
         self.pushButton_slicez.setToolTip(QCoreApplication.translate("MainWindow", u"Axial Slicing", None))
 #endif // QT_CONFIG(tooltip)
@@ -7731,7 +7686,6 @@ class Ui_MainWindow(object):
 #if QT_CONFIG(tooltip)
         self.comboBox_mridTag_vis3D.setToolTip(QCoreApplication.translate("MainWindow", u"Switch which MRID timepoint tag is shown in this 3D view.", None))
 #endif // QT_CONFIG(tooltip)
-        self.lineEdit_110.setText(QCoreApplication.translate("MainWindow", u"Atlas", None))
 #if QT_CONFIG(tooltip)
         self.pushButton_slicez_vis3D.setToolTip(QCoreApplication.translate("MainWindow", u"Slicing in Axial Direction", None))
 #endif // QT_CONFIG(tooltip)
