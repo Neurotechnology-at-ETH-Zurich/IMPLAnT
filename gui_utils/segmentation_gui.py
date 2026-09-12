@@ -355,6 +355,9 @@ class SegmentationGUI:
             self.ui.toolButton_forwardEvo.clicked.connect(lambda: self.LoadMRI.SegEvolution.play_oneStep())
             self.ui.toolButton_backwardEvo.clicked.connect(lambda: self.LoadMRI.SegEvolution.reset())
 
+            if not hasattr(self.LoadMRI.SegEvolution, "_3d_renderer"):
+                self.LoadMRI.SegEvolution._build_3d_pipeline(self.ui.vtkWidget_data_seg3D)
+
         self.LoadMRI.SegEvolution.vtkwidget_3d = self.ui.vtkWidget_data_seg3D
         self.ui.lineEdit_vis3D.setVisible(True)
         self.ui.frame_vis3D.setVisible(True)
@@ -371,7 +374,6 @@ class SegmentationGUI:
         # that) renders at a stale/undersized geometry, showing pixelated
         # until the next resize/render forces a redraw at the right size.
         QApplication.processEvents()
-        self.ui.vtkWidget_data_seg3D.GetRenderWindow().Render()
 
 
     def seg_finish(self):
