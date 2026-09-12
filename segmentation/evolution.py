@@ -296,6 +296,16 @@ class SegmentationEvolution(QObject):
         importer = vtk.vtkImageImport()
         importer.SetDataScalarTypeToUnsignedChar()
         importer.SetNumberOfScalarComponents(1)
+        # Give the importer a valid 3D extent *before* it gets wired into a
+        # renderer that's already live — otherwise a paint event that sneaks
+        # in before visualize_3d() sets the real extent hits marching cubes
+        # with a degenerate (non-3D) default extent and VTK errors out with
+        # "Cannot contour data of dimension != 3".
+        placeholder = np.zeros(2 * 2 * 2, dtype=np.uint8)
+        importer.SetWholeExtent(0, 1, 0, 1, 0, 1)
+        importer.SetDataExtent(0, 1, 0, 1, 0, 1)
+        importer.CopyImportVoidPointer(placeholder.tobytes(), placeholder.nbytes)
+        importer.Update()
         mc = vtk.vtkDiscreteMarchingCubes()
         mc.SetInputConnection(importer.GetOutputPort())
         mc.GenerateValues(1, 1, 1)
