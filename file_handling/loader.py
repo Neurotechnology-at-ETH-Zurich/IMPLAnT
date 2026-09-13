@@ -96,6 +96,11 @@ class FileLoader:
 
         if not hasattr(self.MW,'LoadMRI') or add_another_file:
             self.initialize_file(file_name,layer_index,data_view,0)
+            # No-op the first time this file is ever opened (nothing cached
+            # yet) -- but if self.MW._evict_load_mri() snapshotted a view for
+            # this exact path before freeing LoadMRI, this is what actually
+            # reapplies it now that the file's back.
+            self.MW.reapply_view_state(file_name)
         else:
             if not self.MW._confirm_replace_session('mri'):
                 return None, None
@@ -126,6 +131,9 @@ class FileLoader:
 
         if not hasattr(self.MW,'LoadMRI'):
             self.initialize_file(file_name,0,data_view,0)
+            # Same reasoning as open_user_dialog above -- reapplies a view
+            # snapshotted by _evict_load_mri(), if any; otherwise a no-op.
+            self.MW.reapply_view_state(file_name)
         else:
             # a LoadMRI/Cursor already exists from an earlier file this session --
             # go through the same teardown-and-rebuild restart_gui() uses for a
@@ -170,9 +178,9 @@ class FileLoader:
         if data_index==0:
             self.MW.LoadMRI.session_path = os.path.dirname(os.path.dirname(vol.file_path))
             if not vol.is_4d:
-                self.MW.ButtonsGUI_Structural = ButtonsGUI_Structural(self.MW,data_index,label_file)
+                self.MW.register_module('ButtonsGUI_Structural', ButtonsGUI_Structural(self.MW,data_index,label_file))
             else:
-                self.MW.ButtonsGUI_TimeSeries = ButtonsGUI_TimeSeries(self.MW,data_index,data_view)
+                self.MW.register_module('ButtonsGUI_TimeSeries', ButtonsGUI_TimeSeries(self.MW,data_index,data_view))
         else:
             self.MW.ButtonsGUI_TimeSeries.initialize_contrast(data_index,data_view)
             self.MW.ButtonsGUI_TimeSeries.initialize_timestamps(data_index,data_view)

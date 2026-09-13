@@ -4,20 +4,13 @@ import multiprocessing
 import os
 import sys
 
-# Standalone ripple-detection worker mode: must be checked and exited before
-# any GUI import (PySide6/VTK/SimpleITK etc). ephys/init_ephys.py's
-# _run_ripple_detection re-invokes a frozen (PyInstaller) build of this
-# same exe with these args, since a frozen app has no separate python3 binary
-# to shell out to run_rippl.py the way a source checkout does. Importing
-# tensorflow into the SAME process as the already-loaded GUI stack segfaults
-# (confirmed) -- this branch keeps that process completely clean of Qt/VTK by
-# exiting before any of it is ever imported.
-if len(sys.argv) > 1 and sys.argv[1] == '--ripple-worker':
-    _worker_base_dir = getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__)))
-    sys.path.insert(0, os.path.join(_worker_base_dir, 'rippl-AI'))
-    import run_rippl
-    run_rippl.main(sys.argv[2:])
-    sys.exit(0)
+# Standalone worker-subprocess dispatch (--ripple-worker, --samri-worker,
+# ...): must run and exit before any GUI import (PySide6/VTK/SimpleITK etc)
+# -- see worker_dispatch.py's module docstring for why. Split into its own
+# module purely to keep this file's top from being ~170 lines of repetitive
+# per-worker dispatch blocks; no behavior change.
+import worker_dispatch
+worker_dispatch.maybe_run_worker_and_exit()
 
 # xcb (X11) is Linux-only -- forcing it unconditionally crashed PySide6 on
 # macOS/Windows, which don't ship that plugin at all (they use their own
@@ -45,19 +38,20 @@ from gui_utils.busy_overlay import BusyOverlay
 from PySide6 import QtWidgets
 from ephys.init_ephys import InitEphys
 from ephys.ui_dock_ephys import Ui_Dock_ephys
+from ephys.ui_tab_main_ephys import Ui_tab_ephys
 from ephys.ui_tab_popups_ephys import Ui_tab as Ui_tab_popups_ephys
 from gui_utils.ui_tab_popups_time_series import Ui_tab_15 as Ui_tab_popups_time_series
 from file_handling.ui_tab_popups_time_series_ii import Ui_tab_6 as Ui_tab_popups_time_series_ii
+from intraoperative.ui_tab_intraoperative import Ui_Form as Ui_tab_surgery
+from samri.ui_tab_samri import Ui_tab_samri
 from PySide6.QtCore import Qt, QCoreApplication, QResource, QSize
 from PySide6.QtWidgets import QLayout
 import qdarkstyle
 from utils.zoom import Zoom
 import shutil
-from samri.samri_main import InitSAMRI,SAMRI_InputDialog,SAMRI_InputDock,_ShimLoadMRI
+from samri.samri_main import InitSAMRI,SAMRI_InputDialog,SAMRI_InputDock,SamriCancelToken
 from samri.samri_logging import LogAdapter
 from gui_utils.busy_worker import BusyWorker, show_worker_error
-import nibabel as nib
-from file_handling.mri_volume import MRIVolume
 import logging
 from PySide6.QtWidgets import QWidget
 from trajectory_planning.trajectory_planning import TrajectoryPlanning
@@ -67,13 +61,12 @@ from mrid_utils.atlas_fetch import ensure_atlas_available
 from intraoperative.load_surgery_plan import LoadSurgeryPlan
 from intraoperative.surgery_controller import SurgeryController
 from pypdf import PdfReader
-import vtk
 import pandas as pd
 from file_handling.loader import FileLoader
-from file_handling.resample_data import ResampleData
 from PySide6.QtGui import QIcon, QAction, QFont
 from mrid_utils import atlas_switch
 import subprocess
+import tempfile
 from PySide6.QtCore import QTimer
 import datetime
 from PySide6.QtWidgets import QProxyStyle, QStyle
@@ -83,8 +76,45 @@ class QuickTooltipStyle(QProxyStyle):
     """Shortens the hover delay before any tooltip appears, app-wide."""
     def styleHint(self, hint, option=None, widget=None, returnData=None):
         if hint == QStyle.SH_ToolTip_WakeUpDelay:
-            return 150
+            return 300
         return super().styleHint(hint, option, widget, returnData)
+
+
+def _run_trajectory_worker_subprocess(payload):
+    """Runs the trajectory-planning resample step (trajectory_planning/
+    trajectory_worker.py) in a separate OS process instead of in this one --
+    mirrors samri/samri_main.py's _run_worker_subprocess. Always called from
+    _resample_for_trajectory_planning, which only ever runs inside a
+    BusyWorker QThread (never the GUI thread), so blocking here on the child
+    via proc.wait() is fine.
+
+    On a non-zero exit, raises RuntimeError with the last ~4000 characters of
+    combined stdout/stderr, same tail-slicing convention as
+    samri_main.py's _run_worker_subprocess."""
+    frozen = getattr(sys, 'frozen', False)
+    worker_dir = getattr(sys, '_MEIPASS', _base_dir)
+    script = os.path.join(worker_dir, 'trajectory_planning', 'trajectory_worker.py')
+    cmd = [sys.executable, '--trajectory-worker'] if frozen else [sys.executable, script]
+
+    with tempfile.TemporaryDirectory() as tmp:
+        input_path = os.path.join(tmp, 'input.json')
+        output_path = os.path.join(tmp, 'output.json')
+        with open(input_path, 'w') as f:
+            _json.dump(payload, f)
+
+        cmd = cmd + ['--input', input_path, '--output', output_path]
+        proc = subprocess.run(cmd, capture_output=True, text=True)
+        if proc.stdout:
+            print(proc.stdout, end='', flush=True)
+
+        if proc.returncode != 0:
+            outcome = 'was killed' if proc.returncode < 0 else f'failed (exit code {proc.returncode})'
+            tail = (proc.stdout + proc.stderr)[-4000:]
+            raise RuntimeError(f"Trajectory planning resample subprocess {outcome}.\n{tail}")
+
+        with open(output_path) as f:
+            return _json.load(f)
+
 
 class MainWindow(QMainWindow):
     """
@@ -102,25 +132,46 @@ class MainWindow(QMainWindow):
         self._session_view_cache = {}
         # same idea for ephys recordings (time window, zoom, mode, highlighted channel)
         self._ephys_session_view_cache = {}
+        # register_session_loaded_callback()'s registry -- see the Extension
+        # API block above register_tab below.
+        self._session_loaded_callbacks = {}
+        # register_module()'s registry -- see the Extension API block below.
+        self._registered_modules = {}
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
-        self._load_split_ui(Ui_Dock_ephys, self.ui.dockWidget_ephys.setWidget)
-        # tabWidget pages split out of form.ui: after setupUi, tabWidget only has
-        # [0]PostSurgery, [1]tab_ephys, [2]tab_samri, [3]surgery (in that order).
-        # Re-inserting at these original tabWidget indices, in ascending order, restores
-        # the original 7-tab layout: 0 PostSurgery, 1 tab_15, 2 tab_6, 3 tab_ephys,
-        # 4 tab, 5 tab_samri, 6 surgery.
-        self._load_split_ui(
+        self.load_split_ui(Ui_Dock_ephys, self.ui.dockWidget_ephys.setWidget)
+        # tabWidget pages split out of form.ui: after setupUi, tabWidget only
+        # has [0]PostSurgery. Re-inserting at these original tabWidget
+        # indices, in ascending order, then appending tab_samri/surgery last
+        # (in that order), restores the original 7-tab layout: 0 PostSurgery,
+        # 1 tab_15, 2 tab_6, 3 tab_ephys, 4 tab, 5 tab_samri, 6 surgery.
+        self.load_split_ui(
             Ui_tab_popups_time_series,
-            lambda w: self.ui.tabWidget.insertTab(1, w, "Popups for Time-Series Data"),
+            lambda w: self.register_tab(w, "Popups for Time-Series Data", index=1),
         )
-        self._load_split_ui(
+        self.load_split_ui(
             Ui_tab_popups_time_series_ii,
-            lambda w: self.ui.tabWidget.insertTab(2, w, "Popups for Time-Series Data II"),
+            lambda w: self.register_tab(w, "Popups for Time-Series Data II", index=2),
         )
-        self._load_split_ui(
+        self.load_split_ui(
+            Ui_tab_ephys,
+            lambda w: self.register_tab(w, "Ephys", index=3),
+        )
+        self.load_split_ui(
             Ui_tab_popups_ephys,
-            lambda w: self.ui.tabWidget.insertTab(4, w, "Popups for ephys"),
+            lambda w: self.register_tab(w, "Popups for ephys", index=4),
+        )
+        # tab_samri and surgery (Intraoperative tab) were originally the last
+        # two in form.ui's static tab order -- appending them here, in this
+        # order (no index, same as addTab), lands them back at the end,
+        # matching their original positions.
+        self.load_split_ui(
+            Ui_tab_samri,
+            lambda w: self.register_tab(w, "SAMRI"),
+        )
+        self.load_split_ui(
+            Ui_tab_surgery,
+            lambda w: self.register_tab(w, "Intraoperative"),
         )
         # nothing cached yet at startup -- hide until there's another file/recording to switch to
         #self.ui.comboBox_cache.setVisible(False)
@@ -132,20 +183,35 @@ class MainWindow(QMainWindow):
         # Lives for the whole app session (unlike TrajectoryPlanning, which
         # only exists while an MRI is loaded) -- see intraoperative/
         # surgery_controller.py for why the Intraoperative tab has no MRI/
-        # TrajectoryPlanning dependency at all.
-        self.surgery = SurgeryController(self)
+        # TrajectoryPlanning dependency at all. Registered (not just assigned)
+        # as the pilot for the module registry described in the Extension API
+        # block below -- see register_module()'s docstring for why this one
+        # needed no teardown() to be added.
+        self.register_module('surgery', SurgeryController(self))
         self.add_actions()
         self.ui.tabWidget.setCurrentIndex(0)
 
-    def _load_split_ui(self, ui_class, attach):
+    def load_split_ui(self, ui_class, attach):
         """
-        Loads a Designer form that was split out of form.ui into its own .ui file
-        (e.g. ephys/dock_ephys.ui) and attaches it via `attach(content_widget)` --
-        a dock's setWidget, or a tab widget's insertTab bound to the right index/title.
-        Widget attributes are flattened onto self.ui so existing self.ui.<name>
-        references elsewhere in the codebase keep working unchanged.
+        Extension API (see CONTRIBUTING.md): loads a Designer form built as
+        its own standalone .ui file (e.g. ephys/dock_ephys.ui) and attaches
+        its top-level widget via `attach(content_widget)` -- a dock's
+        setWidget, or `lambda w: self.register_tab(w, "My Tool")`. The
+        form's widgets are flattened onto self.ui (a `pushButton_go` in it
+        becomes self.ui.pushButton_go), as if built into form.ui directly.
+        Returns the generated Ui_* instance (rarely needed).
         """
-        content = QWidget()
+        # Parented to self (a real top-level window) from the start, rather
+        # than left parentless until attach() reparents it below: a widget
+        # built while genuinely parentless is briefly top-level itself, and
+        # if it (or a descendant, e.g. a native="true" VTK-hosting widget --
+        # see intraoperative/tab_intraoperative.ui's `widget`) gets its
+        # platform window created during that window, Qt can later warn
+        # "QWidgetWindow(...) must be a top level window" once attach()
+        # reparents it into its real, non-top-level home (a tab/dock).
+        # Harmless in practice, but avoidable -- attach() below still
+        # reparents content into its actual final home either way.
+        content = QWidget(self)
         sub_ui = ui_class()
         sub_ui.setupUi(content)
         attach(content)
@@ -238,9 +304,11 @@ class MainWindow(QMainWindow):
         # its own; trajectory planning and the ephys 3D view instead get
         # their own live in-view switchers (TpRegistration.reload_atlas_view,
         # Visualisation3D.reload_atlas_view in ephys/visualisation3D.py).
-        self.ui.actionAtlas = QAction("Atlas…", self)
-        self.ui.menuGUI.insertAction(self.ui.actionLoad_Prev_Session, self.ui.actionAtlas)
-        self.ui.actionAtlas.triggered.connect(self.show_atlas_selector)
+        self.ui.actionAtlas = self.register_menu_action(
+            self.ui.menuGUI, "Atlas…",
+            triggered=self.show_atlas_selector,
+            before=self.ui.actionLoad_Prev_Session,
+        )
         # per-tab "Open Session" placeholders: Structural/Time-Series Tools -> mri (filtered by
         # dimensionality), Ephys Analysis -> ephys, Surgery -> samri
         self.ui.actionOpen_Session_2.triggered.connect(lambda: self.load_previous_session(['mri'], is_4d=False))
@@ -260,8 +328,138 @@ class MainWindow(QMainWindow):
         self.ui.menuElectrode_Localization.menuAction().setEnabled(False)
 
         # Re-render if tab changed
-        self.setCursor(QtCore.Qt.CursorShape.ArrowCursor)
+        #self.setCursor(QtCore.Qt.CursorShape.ArrowCursor)
+        self.unsetCursor()
 
+    # ------------------------------------------------------------------
+    # Extension API -- see CONTRIBUTING.md's "Adding your own tab/tool to
+    # MainWindow" for the short version and the built-in-tabs caveat.
+    # ------------------------------------------------------------------
+
+    def register_tab(self, widget, title, index=None):
+        """
+        Add `widget` (built in Designer, not with runtime addWidget() calls --
+        see CONTRIBUTING.md) as a new page of self.ui.tabWidget. `index`
+        inserts at that position instead of appending. Returns the tab index
+        -- the tab bar is hidden, so switch to it later via
+        self.ui.tabWidget.setCurrentIndex(self.ui.tabWidget.indexOf(widget)),
+        not a hardcoded number (indices shift as tabs are added).
+        """
+        if index is None:
+            self.ui.tabWidget.addTab(widget, title)
+        else:
+            self.ui.tabWidget.insertTab(index, widget, title)
+        return self.ui.tabWidget.indexOf(widget)
+
+    def register_menu_action(self, menu, text, triggered=None, before=None, enabled=True):
+        """
+        Add a new QAction to an existing menu (self.ui.menuGUI, ...), same as
+        self.ui.actionAtlas in add_actions() above. `before`: an existing
+        QAction to insert in front of (else appended). `triggered`: connected
+        to the action's triggered signal if given. `enabled=False`: starts
+        greyed out, same convention as actionRegister/actionResample/... in
+        add_actions() (several built-ins do nothing until a file loads).
+        Returns the QAction.
+        """
+        action = QAction(text, self)
+        if before is not None:
+            menu.insertAction(before, action)
+        else:
+            menu.addAction(action)
+        if triggered is not None:
+            action.triggered.connect(triggered)
+        if not enabled:
+            action.setEnabled(False)
+        return action
+
+    def register_session_loaded_callback(self, kind, callback):
+        """
+        Get notified once a session of the given `kind` finishes loading
+        (not when it starts), instead of hooking the load paths yourself.
+        `kind`: 'mri'/'ephys'/'samri'/'trajectory'/'surgery' (same vocabulary
+        as load_previous_session(kinds=...)). Registering the same kind more
+        than once is fine; a raising callback is logged, others still run.
+
+        Gotchas, not obvious from the call sites alone:
+        - 'mri' fires from 4 separate places (initialize_mri_session,
+          _restore_session_entry, restart_gui, and finish_trajectory_work's
+          first-load branch) -- they don't share a helper today.
+        - a successful SAMRI *registration* fires 'mri', not 'samri' (it
+          ends by reloading the image via restart_gui) -- 'samri' only fires
+          for fetch/biascorrection (_on_bruker2bids_done/
+          _on_biascorrection_done).
+        - 'trajectory' fires after 'mri' for the same load (finish_
+          trajectory_work calls/is called alongside an 'mri' load) -- expect
+          both, in that order.
+        - 'surgery' fires from SurgeryController.load_plan()
+          (intraoperative/surgery_controller.py), not from this file --
+          that's the one place both load paths (here and load_surgery_plan.py)
+          converge.
+        """
+        self._session_loaded_callbacks.setdefault(kind, []).append(callback)
+
+    def _notify_session_loaded(self, kind):
+        for callback in self._session_loaded_callbacks.get(kind, []):
+            try:
+                callback()
+            except Exception:
+                logging.exception(
+                    "register_session_loaded_callback callback for %r failed", kind)
+
+    def register_module(self, name, module):
+        """
+        Register a feature-module controller under `name` instead of just
+        assigning self.<name> = module. Currently registered: 'surgery'
+        (__init__), 'Ephys' (do_ephys_heavy), 'Samri' (fetch_data),
+        'ButtonsGUI_Structural'/'ButtonsGUI_TimeSeries' (file_handling/
+        loader.py), 'LoadMRI.TrajPlanning' (finish_trajectory_work),
+        'Measurement' (gui_utils/buttons_gui_structural.py's
+        measurement_function) -- re-registering (a new file/recording/plan
+        replacing the previous one) is expected and just overwrites the entry.
+
+        `name` can be dotted (e.g. 'LoadMRI.TrajPlanning') for a module that
+        naturally lives on an attribute other than self -- TrajPlanning is
+        self.LoadMRI.TrajPlanning, not self.TrajPlanning, since it only
+        exists while an MRI is loaded and several places already look it up
+        that way (e.g. restart_gui's teardown, show_step_instructions). Only
+        the last segment is set; everything before it (self.LoadMRI here)
+        must already exist.
+
+        - self.<name> (or the target named by the dotted path) is set to
+          `module`, so every existing reference (self.surgery, self.Ephys,
+          self.LoadMRI.TrajPlanning, ...) keeps working unchanged.
+        - if `module` defines `teardown()`, it's called with no arguments
+          from restart_gui(), before self.ui is replaced (see
+          _teardown_registered_modules). 'Measurement' is the one module
+          above that actually defines one (core/measurement.py) -- it just
+          resets its own measurement_lines bookkeeping; the VTK side (its
+          separate overlay renderer per view) is already covered by
+          teardown_load_mri()'s renderer-wide sweep. 'surgery'/'Ephys'/
+          'Samri'/'ButtonsGUI_*'/'LoadMRI.TrajPlanning' still don't define
+          one: restart_gui doesn't touch Ephys/Samri/ButtonsGUI_* at all, and
+          LoadMRI/TrajPlanning's actual per-restart cleanup is restart_gui's
+          own hand-written VTK/signal teardown (core/load_MRI_file.py's
+          teardown_load_mri()), not routed through this registry. Registering
+          those is for discoverability (self._registered_modules lists every
+          live controller), not because any cleanup was replaced.
+        """
+        target = self
+        *parents, attr = name.split('.')
+        for part in parents:
+            target = getattr(target, part)
+        setattr(target, attr, module)
+        self._registered_modules[name] = module
+
+    def _teardown_registered_modules(self):
+        """Calls teardown() on every registered module that defines one (see
+        register_module) -- from restart_gui(), before self.ui is replaced."""
+        for name, module in self._registered_modules.items():
+            teardown = getattr(module, 'teardown', None)
+            if teardown is not None:
+                try:
+                    teardown()
+                except Exception:
+                    logging.exception("teardown() failed for registered module %r", name)
 
     def _load_session_state(self):
         if not os.path.exists(_session_state_path):
@@ -319,6 +517,17 @@ class MainWindow(QMainWindow):
     # kind -> the method that opens a brand-new file/session of that kind
     # (used by the per-tab pickers' "Load New File..." button)
     def _open_new_session(self, kind):
+        # Close any lingering tool dock (paintbrush/measurement/segmentation/
+        # ephys) whenever the user starts a different kind of session --
+        # 'overlay' is excluded since it adds to the CURRENT main image
+        # rather than switching away from it. restart_gui() (reached via the
+        # 'mri' branch) also does this itself with full_restart=True (a
+        # proper detach, since self.ui is being rebuilt there); this call is
+        # what covers ephys/samri/trajectory/surgery, and the very first
+        # 'mri' load (which never reaches restart_gui at all).
+        if kind != 'overlay':
+            self._close_tool_docks(full_restart=False)
+            self._free_previous_workflow_state(kind)
         {'mri': self.initialize_mri_session,
          'ephys': self.open_ephys_data,
          'samri': self.initialize_samri,
@@ -416,6 +625,12 @@ class MainWindow(QMainWindow):
         self._restore_session_entry(kind, entry)
 
     def _restore_session_entry(self, kind, entry):
+        # Same reasoning as _open_new_session above: close lingering tool
+        # docks and free the previous workflow's heavy state whenever
+        # restoring any kind of session except 'overlay'.
+        if kind != 'overlay':
+            self._close_tool_docks(full_restart=False)
+            self._free_previous_workflow_state(kind)
         if kind == 'mri':
             path = entry.get('path')
             if not path or not os.path.exists(path):
@@ -433,6 +648,7 @@ class MainWindow(QMainWindow):
                 tab_idx = 0 if self.FileLoader.is_4d else 1
                 self.ui.tabWidget.setCurrentIndex(0)
                 self.ui.data_4d_3d.setCurrentIndex(tab_idx)
+                self._notify_session_loaded('mri')
 
         elif kind == 'ephys':
             path = entry.get('path')
@@ -563,13 +779,14 @@ class MainWindow(QMainWindow):
 
     def do_ephys_heavy(self, file_name):
         self.snapshot_ephys_view_state()
-        self.Ephys = InitEphys(self, file_name)
+        self.register_module('Ephys', InitEphys(self, file_name))
         self.Ephys.open_dat(file_name)
         self.reapply_ephys_view_state(file_name)
         self._save_session_state('ephys', path=file_name)
         #self.refresh_ephys_cache_combo()
         #ask about the spike cluster plot once the busy overlay is gone
         QTimer.singleShot(0, self.Ephys.prompt_spike_sorting)
+        self._notify_session_loaded('ephys')
 
     def snapshot_ephys_view_state(self):
         """
@@ -687,6 +904,7 @@ class MainWindow(QMainWindow):
         tab_idx = 0 if self.FileLoader.is_4d else 1
         self.ui.tabWidget.setCurrentIndex(0)
         self.ui.data_4d_3d.setCurrentIndex(tab_idx)
+        self._notify_session_loaded('mri')
 
 
     def on_gui_resize(self):
@@ -807,7 +1025,7 @@ class MainWindow(QMainWindow):
 
     def fetch_data(self,samri_input):
         def work_init():
-            self.Samri = InitSAMRI(samri_input)
+            self.register_module('Samri', InitSAMRI(samri_input))
         # Clean up previous worker if it exists
         if hasattr(self, 'worker') and self.worker is not None:
             self.worker.done.disconnect()
@@ -874,6 +1092,7 @@ class MainWindow(QMainWindow):
         self.Samri.output_filepath = ""
         self._save_session_state('samri', animal_id=self.Samri.animal_id, raw_base_samri=self.Samri.raw_base_samri)
         self.show_samri_step_popup()
+        self._notify_session_loaded('samri')
 
 
     def start_registration(self,samri_input):
@@ -908,9 +1127,12 @@ class MainWindow(QMainWindow):
                 if msg_box.clickedButton() != btn_proceed:
                     return
 
+        cancel_token = SamriCancelToken()
+
         def work_registration():
             self.ui.dockWidget_ephys.setEnabled(False)
-            self.Samri.output_filepath =  self.Samri.start_registration(samri_input)
+            self.Samri.output_filepath = self.Samri.start_registration(
+                samri_input, on_progress=self.worker.progress.emit, cancel_token=cancel_token)
 
         # Clean up previous worker if it exists
         if hasattr(self, 'worker') and self.worker is not None:
@@ -929,7 +1151,10 @@ class MainWindow(QMainWindow):
                 # no guarantee it has a row for this session. Skip the "already
                 # registered" check rather than crashing on an empty match: if this
                 # session was never in it, there's nothing to check for yet either.
-                matches = df.loc[df['session'] == samri_input['working_session'][0]]
+                # A run that crashed before finishing bids_data_selection (e.g. the
+                # pandas/pybids column-naming mismatch) can also leave this file with
+                # no columns at all, not just no matching rows -- guard for that too.
+                matches = df.loc[df['session'] == samri_input['working_session'][0]] if 'session' in df.columns else df.iloc[0:0]
                 if not matches.empty:
                     idx = matches.index[0] #original_path?
                     path = f"{self.Samri.bids_base}/results/generic_work/_ind_type_{idx}/s_register"
@@ -974,16 +1199,20 @@ class MainWindow(QMainWindow):
                     msg_box.exec()
 
             self.worker = BusyWorker(work_registration, self)
-            overlay = BusyOverlay(self, message="Registering, please wait…")
+            overlay = BusyOverlay(self, message="Registering, please wait…", cancellable=True)
             overlay.setGeometry(self.rect())
             overlay.raise_()
             overlay.show()
+            overlay.cancelled.connect(cancel_token.cancel)
+            self.worker.progress.connect(overlay.set_message, Qt.QueuedConnection)
             self.worker.done.connect(overlay.close)
             self.worker.done.connect(lambda: self._on_registration_done(samri_input))
             self.worker.failed.connect(overlay.close)
             self.worker.failed.connect(
                 lambda tb: on_registration_failed(tb, samri_input['num_threads'])
             )
+            self.worker.cancelled.connect(overlay.close)
+            self.worker.cancelled.connect(lambda: logging.info("Registration cancelled."))
             self.worker.start()
         elif samri_input["biascorrection"]:
             def work_bias():
@@ -1114,6 +1343,7 @@ class MainWindow(QMainWindow):
         msg.setText("Done with Biascorrection")
         msg.addButton("OK", QMessageBox.ActionRole)
         msg.exec()
+        self._notify_session_loaded('samri')
 
     def initialize_trajectory_planning(self):
         if not ensure_atlas_available(self):
@@ -1217,31 +1447,18 @@ class MainWindow(QMainWindow):
         self._traj_resample_worker.start()
 
     def _resample_for_trajectory_planning(self, data):
-        """Pure resample step of finish_trajectory_work -- no Qt/VTK object
-        touched, so this is safe to call off the GUI thread (see
-        _start_trajectory_planning_work). Returns resampled_path; a no-op
-        (the file already exists) after the first call for a given
-        path/spacing."""
-        if abs(data[2] - 0.025) < 1e-9:
-            # reuse the exact file/function samri_main.py's start_registration
-            # uses to build the atlas<->MRI correspondence (ResampleData.
-            # resampling25um, fixed "_resampled.nii.gz" name) instead of
-            # resampling50um_trajectoryPlanning's own separate implementation --
-            # two different resample functions at the same nominal spacing
-            # aren't guaranteed pixel/geometry-identical, and mri_label_overlay.
-            # py's reconciliation needs them to be exactly the same file.
-            resampled_path = f"{data[0][:-7]}_resampled.nii.gz"
-            if not os.path.exists(resampled_path):
-                raw_DICOMOrient = "".join(nib.aff2axcodes(nib.load(data[0]).affine))
-                _volume = MRIVolume(file_path=data[0], slices={}, DICOMOrient=raw_DICOMOrient,
-                                     raw_DICOMOrient=raw_DICOMOrient, view_names=[])
-                _shim_loadmri = _ShimLoadMRI(volumes={0: _volume}, session_path=os.path.dirname(data[0]))
-                ResampleData(_shim_loadmri).resampling25um(0)
-        else:
-            resampled_path = f"{data[0][:-7]}_resampled{data[2]*1000:.10g}um.nii.gz"
-            if not os.path.exists(resampled_path):
-                ResampleData.resampling50um_trajectoryPlanning(data[0], new_spacing_mm=data[2])
-        return resampled_path
+        """Runs the resample step (trajectory_planning/trajectory_worker.py)
+        in a separate OS process instead of in this one -- same reasoning as
+        SAMRI's registration/biascorrection (see samri_main.py's
+        _run_worker_subprocess): a heavy first-time 25/50um resample no
+        longer shares the GUI process's memory footprint. Called from
+        _start_trajectory_planning_work's BusyWorker thread (never the GUI
+        thread), so blocking here on the subprocess is fine. Returns
+        resampled_path; a no-op (the file already exists) after the first
+        call for a given path/spacing."""
+        payload = {'file_path': data[0], 'spacing': data[2]}
+        result = _run_trajectory_worker_subprocess(payload)
+        return result['resampled_path']
 
     def finish_trajectory_work(self, data, transformPath, resampled_path):
         self.data_pre_resampled = data[0]
@@ -1254,13 +1471,14 @@ class MainWindow(QMainWindow):
             self.ui.comboBox_resamplefiles.addItem(os.path.basename(resampled_path)) #add to combobox for resampling
             self.ui.tabWidget.setCurrentIndex(0)
             self.ui.data_4d_3d.setCurrentIndex(1)
+            self._notify_session_loaded('mri')
         else:
             self.restart_gui(resampled_path,data_view='coronal')
 
         data = list(data)
         data[0] = resampled_path
 
-        self.LoadMRI.TrajPlanning = TrajectoryPlanningMri(self,self.ui,data,transformPath)
+        self.register_module('LoadMRI.TrajPlanning', TrajectoryPlanningMri(self,self.ui,data,transformPath))
 
         self.ui.stackedWidget_3d.setVisible(True)
         self.ui.stackedWidget_3d.setCurrentIndex(0)
@@ -1270,6 +1488,7 @@ class MainWindow(QMainWindow):
         layout.setColumnStretch(1, 2)
         layout.setColumnStretch(2, 2)
         layout.setColumnStretch(3, 1)
+        self._notify_session_loaded('trajectory')
 
     def open_new_window(self):
         subprocess.Popen([sys.executable] + sys.argv)
@@ -1286,176 +1505,126 @@ class MainWindow(QMainWindow):
         rather than a clean shrink."""
         self.ui.stackedWidget_3d_tp.setMaximumSize(QSize(16777215, 200 if index == 0 else 350))
 
-    def restart_gui(self, file_name, full_restart=True, label_file=False, data_view='coronal'):
+    def _free_previous_workflow_state(self, new_kind):
         """
-        Restart GUI if new main image is loaded.
+        Leaving 'samri'/'ephys' for a different kind of session frees their
+        heavy backing objects (self.Samri/self.Ephys) instead of leaving them
+        alive in memory for the rest of the app session. Moving to 'ephys',
+        'samri' or 'surgery' (none of which need the main image) additionally
+        evicts self.LoadMRI itself -- see _evict_load_mri() -- since that's
+        usually the single biggest thing in memory (VTK renderers/actors for
+        3 views plus a minimap, not just the volume data). Safe to do
+        unconditionally here: BusyOverlay blocks all navigation while any of
+        this background work (fetch/registration/biascorrection, ephys file
+        load) is actually running, so this is never reached mid-job.
+
+        'mri'/'trajectory'/'overlay' are excluded from the Samri/Ephys half:
+        'overlay' doesn't leave anything of its own to free, and switching TO
+        'mri'/'trajectory' obviously shouldn't free the very state you're
+        switching to. SurgeryController is never freed at all -- deliberately
+        session-long, see its own docstring.
+
+        Whatever's freed here can still be reopened later via "Load Previous
+        Session" -- _save_session_state() already recorded what's needed to
+        rebuild it (animal_id/raw_base_samri for samri, the file path for
+        ephys/mri) at the point each one finished loading; reopening just
+        means re-fetching/re-reading/re-rendering rather than resuming the
+        exact in-memory state.
         """
-        if hasattr(self,'LoadMRI'):
-            #deactivate interactor
-            for image_index,vtk_widget_image in self.LoadMRI.vtk_widgets.items():
-                for view_name, vtk_widget in vtk_widget_image.items():
-                    interactor = vtk_widget.GetRenderWindow().GetInteractor()
-                    interactor.SetInteractorStyle(vtk.vtkInteractorStyleImage())
-            #delete measurement actors
-            if hasattr(self,'Measurement'):
-                for view_name, line_actor,line_slice_index,text_actor,_,dashed_lines,points in self.Measurement.measurement_lines:
-                    renderer = self.Measurement.measurement_renderer[view_name]
-                    renderer.RemoveActor(line_actor)
-                    text_actor.SetVisibility(0)
-                    renderer.RemoveActor(dashed_lines[1])
-                    renderer.RemoveActor(dashed_lines[3])
-                    renderer.RemoveActor(points[2])
-                self.Measurement.measurement_lines = []
-            for idx in self.LoadMRI.minimap.minimap_renderers:
-                for vn in self.LoadMRI.minimap.minimap_renderers[idx]:
-                    self.LoadMRI.minimap.minimap_renderers[idx][vn].RemoveAllViewProps()
-                self.LoadMRI.minimap.minimap_renderers[idx] = {}
-            for idx in self.LoadMRI.renderers:
-                for vn in self.LoadMRI.renderers[idx]:
-                    self.LoadMRI.renderers[idx][vn].RemoveAllViewProps()
-                self.LoadMRI.renderers[idx] = {}
+        if new_kind != 'samri' and getattr(self, 'Samri', None) is not None:
+            self._archive_samri_log()
+            if getattr(self, 'log_adapter', None):
+                self.log_adapter.uninstall()
+                self.log_adapter = None
+            self.Samri = None
 
-            for data_index in range(len(self.LoadMRI.vtk_widgets[0])):
-                if hasattr(self.LoadMRI, f"intensity_table{data_index}"):
-                    intensity_class = self.LoadMRI.intensity_table[data_index]
-                    intensity_class.table.viewport().removeEventFilter(self)
-            #remove cursor and minimap connections
-            for key in ["scroll_0", "scroll_1", "scroll_2"]:
-                try:
-                    self.LoadMRI.cursor_ui[key].valueChanged.disconnect()
-                except RuntimeError:
-                    pass
-            if not self.LoadMRI.volumes[0].is_4d: #3d
-                self.ui.spinBox_x_data3d.valueChanged.disconnect()
-                self.ui.spinBox_y_data3d.valueChanged.disconnect()
-                self.ui.spinBox_z_data3d.valueChanged.disconnect()
-                for idx in 0,1,2:
-                    getattr(self.ui, f"go_down_data3d{idx}").clicked.disconnect()
-                    getattr(self.ui, f"go_up_data3d{idx}").clicked.disconnect()
-                    getattr(self.ui, f"go_right_data3d{idx}").clicked.disconnect()
-                    getattr(self.ui, f"go_left_data3d{idx}").clicked.disconnect()
-            else:    #4d
-                # The widgets of all three data views exist in the .ui, but only
-                # the loaded ones ever got connected (Cursor.init_widgets and
-                # initialize_zoom_controls run per data view), and disconnect()
-                # raises RuntimeError on a signal with no connections — same
-                # reason the scroll bars above are wrapped.
-                def _disconnect(signal):
-                    try:
-                        signal.disconnect()
-                    except RuntimeError:
-                        pass
+        if new_kind != 'ephys' and getattr(self, 'Ephys', None) is not None:
+            self.Ephys = None
 
-                for image_index in 0,1,2:
-                    for axis in ('x','y','z'):
-                        _disconnect(self.LoadMRI.cursor_ui[f"spin_{axis}{image_index}"].valueChanged)
-                    #self.LoadMRI.cursor_ui[f"spin_y_data{image_index}"].valueChanged.disconnect()
-                    #self.LoadMRI.cursor_ui[f"spin_z_data{image_index}"].valueChanged.disconnect()
-                    for idx in 0,1,2:
-                        _disconnect(getattr(self.ui, f"go_down_data{idx}{image_index}").clicked)
-                        _disconnect(getattr(self.ui, f"go_up_data{idx}{image_index}").clicked)
-                        _disconnect(getattr(self.ui, f"go_right_data{idx}{image_index}").clicked)
-                        _disconnect(getattr(self.ui, f"go_left_data{idx}{image_index}").clicked)
+        if new_kind in ('ephys', 'samri', 'surgery'):
+            self._evict_load_mri()
 
-            #remove old renderers
-            for image_index,vtk_widget_image in self.LoadMRI.vtk_widgets.items():
-                for view_name, vtk_widget in vtk_widget_image.items():
-                    ren_win = vtk_widget.GetRenderWindow()
-                    ren_coll = ren_win.GetRenderers()
+    def _archive_samri_log(self):
+        """
+        Writes plainTextEdit_SAMRI's accumulated log (fetch/registration/
+        biascorrection progress and errors, captured live by LogAdapter) to
+        <exe_dir>/logs/ before self.Samri is freed -- otherwise that record
+        just disappears once the widget is next cleared/reused, with nothing
+        left to show for it. Then clears the widget so the next SAMRI
+        session starts with a blank log instead of appending to the old one.
+        """
+        text = self.ui.plainTextEdit_SAMRI.toPlainText()
+        if not text.strip():
+            return
+        logs_dir = os.path.join(_exe_dir, 'logs')
+        os.makedirs(logs_dir, exist_ok=True)
+        animal_id = getattr(self.Samri, 'animal_id', 'unknown')
+        timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
+        path = os.path.join(logs_dir, f"samri_{animal_id}_{timestamp}.log")
+        with open(path, 'w') as f:
+            f.write(text)
+        self.ui.plainTextEdit_SAMRI.clear()
 
-                    renderers_to_remove = [ren_coll.GetItemAsObject(i) for i in range(ren_coll.GetNumberOfItems())]
+    def _close_tool_docks(self, full_restart):
+        """
+        Close the ephys dock and any of the lazily-created tool docks
+        (paintbrush/measurement/segmentation -- see gui_utils/
+        buttons_gui_structural.py's "check if it exists already" pattern)
+        that happen to be open.
 
-                    for old_renderer in renderers_to_remove:
-                        ren_win.RemoveRenderer(old_renderer)
+        Called from _open_new_session/_restore_session_entry (starting or
+        restoring ANY session -- mri/ephys/samri/trajectory/surgery, not just
+        an MRI reload: e.g. switching to SAMRI or trajectory planning while
+        the paintbrush/measurement/segmentation dock is open must close it
+        too, not just replacing the main image) and from restart_gui() itself
+        (replacing an existing main image, where self.ui is actually rebuilt).
 
-
-            # Disconnect any important signals
-            if hasattr(self.LoadMRI, "minimap"):
-                try:
-                    zoom_notifier.factorChanged.disconnect(self.LoadMRI.minimap.create_small_rectangle)
-                except RuntimeError:
-                    pass
-
+        `full_restart=True` (restart_gui's case) also detaches the dock right
+        now instead of just scheduling deleteLater(): that alone leaves it a
+        findable, visible child of MainWindow until the deferred deletion
+        actually runs, so a later initialize_paintbrush/_measurement/
+        _segmentation's own "does this dock already exist" findChild check
+        could resurrect the stale one (wired to the just-replaced self.ui/
+        LoadMRI) instead of building a fresh one. removeDockWidget() takes it
+        out of the dock layout immediately; setParent(None) makes it
+        unreachable via findChild() immediately too; deleteLater() still
+        handles the actual C++ destruction, just no longer on anything that
+        matters visually. `full_restart=False` (self.ui is not being rebuilt)
+        just closes it -- nothing needs detaching since the dock and its
+        content keep belonging to the same self.ui.
+        """
         for dock_name in ("dock_paintbrush4d", "dock_segmentation", "dockWidget_ephys",
                           "dock_paintbrush", "dock_measurement"):
             dock = self.findChild(QDockWidget, dock_name)
             if dock:
                 dock.close()
                 if full_restart:
+                    self.removeDockWidget(dock)
+                    dock.setParent(None)
                     dock.deleteLater()
 
-        # TrajectoryPlanning3DWindow (trajectory_planning_3d/window.py) sets
-        # no objectName -- just a window title -- so it can't be found via
-        # findChild(QDockWidget, name) like the docks above; go through
-        # TrajPlanning.tp3d_window directly instead (None if the 3D window
-        # was never opened this session).
-        tp = getattr(self.LoadMRI, 'TrajPlanning', None) if hasattr(self, 'LoadMRI') and self.LoadMRI is not None else None
-        tp3d_window = getattr(tp, 'tp3d_window', None)
-        if tp3d_window is not None:
-            tp3d_window.close()
-            if full_restart:
-                tp3d_window.deleteLater()
+    def _teardown_load_mri(self, delete_windows):
+        """Delegates to core/load_MRI_file.py's teardown_load_mri() -- see
+        there for what this actually does and why it lives there now."""
+        from core.load_MRI_file import teardown_load_mri
+        teardown_load_mri(self, delete_windows)
 
-        if full_restart:
-            # only tear down widget_pgEphys's plot when self.ui is about to be
-            # rebuilt below -- otherwise this permanently kills its ViewBox
-            # since the same widget_pgEphys is kept around
-            existing_layout = QWidget.layout(self.ui.widget_pgEphys)   # call as unbound
-            if existing_layout is not None:
-                QWidget().setLayout(existing_layout)
+    def _evict_load_mri(self):
+        """Delegates to core/load_MRI_file.py's evict_load_mri()."""
+        from core.load_MRI_file import evict_load_mri
+        evict_load_mri(self)
 
-        # Clear stored references
-        self.LoadMRI = None
-
-        #restart GUI
-        if full_restart:
-            from ui_form import Ui_MainWindow
-            self.resize_bool=False
-            self.ui = Ui_MainWindow()
-            self.ui.setupUi(self)
-            self._load_split_ui(Ui_Dock_ephys, self.ui.dockWidget_ephys.setWidget)
-            self._load_split_ui(
-                Ui_tab_popups_time_series,
-                lambda w: self.ui.tabWidget.insertTab(1, w, "Popups for Time-Series Data"),
-            )
-            self._load_split_ui(
-                Ui_tab_popups_time_series_ii,
-                lambda w: self.ui.tabWidget.insertTab(2, w, "Popups for Time-Series Data II"),
-            )
-            self._load_split_ui(
-                Ui_tab_popups_ephys,
-                lambda w: self.ui.tabWidget.insertTab(4, w, "Popups for ephys"),
-            )
-            self.add_actions()
-            self.show()
-            # setupUi() creates a brand new stackedWidget_3d_tp with none of
-            # __init__'s signal connections -- reconnect this one or its
-            # height cap silently reverts to the .ui's static default.
-            self.ui.stackedWidget_3d_tp.currentChanged.connect(self._update_3d_tp_height_cap)
-            self._update_3d_tp_height_cap(self.ui.stackedWidget_3d_tp.currentIndex())
-
-        QApplication.processEvents()
-        self.resize_bool=True
-
-        #self.LoadMRI = LoadMRI(self)
-        image = sitk.ReadImage(file_name)
-        volume = sitk.GetArrayFromImage(image)
-        self.FileLoader = FileLoader(self)
-        if volume.ndim==4:
-            self.ui.groupBox_data0.setTitle(f"View: {data_view.upper()}")
-            self.FileLoader.is_4d = True
-        else:
-            self.FileLoader.is_4d = False #3d file
-        self.FileLoader.initialize_file(file_name,0,data_view,0,full_restart=full_restart,label_file=label_file)
-        self.ui.data_4d_3d.setCurrentIndex(0 if self.FileLoader.is_4d else 1)
-        self.ui.tabWidget.setCurrentIndex(0)
-
-        zoom_notifier.factorChanged.connect(self.LoadMRI.minimap.create_small_rectangle)
-        Zoom.fit_to_window(self.LoadMRI.vtk_widgets[0][data_view], self.LoadMRI.vtk_widgets.values(), self.LoadMRI.scale_bar, self.LoadMRI.vtk_widgets,0,data_3d=True)
-        #the widgets have a size only after the rebuilt UI has been laid out, so build the minimaps now
-        QApplication.processEvents()
-        self.on_gui_resize()
-        return
+    def restart_gui(self, file_name, full_restart=True, label_file=False, data_view='coronal'):
+        """
+        Restart GUI if new main image is loaded. Delegates to
+        core/load_MRI_file.py's restart_gui() -- kept as a method here since
+        it's the documented external entry point (samri/samri_main.py,
+        file_handling/loader.py, file_handling/metadata.py,
+        file_handling/resample_data.py all call
+        self.restart_gui(...)/MW.restart_gui(...)).
+        """
+        from core.load_MRI_file import restart_gui as _restart_gui_impl
+        _restart_gui_impl(self, file_name, full_restart=full_restart, label_file=label_file, data_view=data_view)
 
     def snapshot_view_state(self):
         """

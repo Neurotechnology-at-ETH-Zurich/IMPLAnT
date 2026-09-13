@@ -296,12 +296,27 @@ class ButtonsGUI_Structural:
             dock.show()
             dock.raise_()
 
+        self.measurement_function()
+
+    def measurement_function(self):
+        """
+        Toggle measurement mode for MRI views and update interactor styles.
+        Connected to checkBox_measurement.stateChanged once, in
+        initialize_measurement above (when its dock is first created), and
+        also called directly from initialize_measurement itself for the
+        checkbox's initial state -- one implementation of this toggle, not
+        two drifting copies: this used to be duplicated between the two
+        methods, and the copy here was missing tableWidget_meaurement (plus
+        the delete-button/color-picker wiring), so re-checking the box after
+        the dock's first creation crashed with "Measurement.__init__()
+        missing 1 required positional argument: 'measurement_table'".
+        """
         checkbox = self.ui.checkBox_measurement
         data_view = 'coronal'
         if checkbox.isChecked():
             checkbox.setText("ON")
             self.MW.Cursor.start_cursor(False,0,data_view)
-            self.MW.Measurement = Measurement(self.LoadMRI,self.ui.tableWidget_meaurement)
+            self.MW.register_module('Measurement', Measurement(self.LoadMRI,self.ui.tableWidget_meaurement))
             self.ui.pushButton_deleteMeasurement.clicked.connect(self.MW.Measurement.delete_measurement)
             self.ui.comboBox_measurementColors.currentIndexChanged.connect(
                 lambda index: (setattr(self.MW.Measurement, "color_index", index), self.MW.Measurement.change_color(index))
@@ -310,22 +325,6 @@ class ButtonsGUI_Structural:
             cb_model = self.ui.comboBox_measurementColors.model()
             for i, c in enumerate(self.MW.Measurement.colors):
                 cb_model.item(i).setBackground(QColor(int(c[0]*255), int(c[1]*255), int(c[2]*255)))
-            for image_index,vtk_widget_image in self.LoadMRI.vtk_widgets.items():
-                for view_name, vtk_widget in vtk_widget_image.items():
-                    interactor = vtk_widget.GetRenderWindow().GetInteractor()
-                    interactor.SetInteractorStyle(None)
-                    interactor.SetInteractorStyle(CustomInteractorStyle(self.MW.Cursor, view_name,image_index,self.MW.Measurement,0))
-        else:
-            checkbox.setText("OFF")
-            self.MW.Cursor.start_cursor(True,0,data_view)
-
-    def measurement_function(self):
-        checkbox = self.ui.checkBox_measurement
-        data_view = 'coronal'
-        if checkbox.isChecked():
-            checkbox.setText("ON")
-            self.MW.Cursor.start_cursor(False,0,data_view)
-            self.MW.Measurement = Measurement(self.LoadMRI)
             for image_index,vtk_widget_image in self.LoadMRI.vtk_widgets.items():
                 for view_name, vtk_widget in vtk_widget_image.items():
                     interactor = vtk_widget.GetRenderWindow().GetInteractor()

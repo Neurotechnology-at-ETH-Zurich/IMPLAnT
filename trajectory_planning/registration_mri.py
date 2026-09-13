@@ -23,8 +23,8 @@ from mrid_utils.atlas_registry import ATLASES, DEFAULT_ATLAS
 from trajectory_planning.registration import TpRegistration
 from trajectory_planning.visualisation3D_mri import VisualisationMri
 from trajectory_planning.mri_label_overlay import (
-    load_or_build_mri_grid_correspondence,
-    scatter_atlas_labels_to_mri_grid,
+    build_mri_grid_correspondence,
+    load_or_build_mri_label_scatter,
     parse_itk_snap_label_file,
     build_discrete_label_lut,
 )
@@ -56,15 +56,17 @@ class TpRegistrationMri(TpRegistration):
         builds a continuous grayscale LUT, both wrong for this categorical
         label data.
 
-        The correspondence lookup (first call only) and the label scatter
-        (every call -- a real, uncached full-volume distance_transform_edt)
-        are pure sitk/numpy/scipy work, no Qt/VTK object touched -- that
-        part runs off the GUI thread via run_off_thread. Callers
-        (do_get_shank_line, reload_atlas_view) keep calling this exactly as
-        before and still get everything fully computed before it returns."""
+        The label scatter is disk-cached in the session's registration
+        folder (see load_or_build_mri_label_scatter in mri_label_
+        overlay.py); the correspondence it's built from is cheap enough
+        to just recompute on that cache's rare misses instead (see
+        build_mri_grid_correspondence). Pure sitk/numpy/scipy work, no
+        Qt/VTK object touched -- that part runs off the GUI thread via
+        run_off_thread. Callers (do_get_shank_line, reload_atlas_view) keep
+        calling this exactly as before and still get everything fully
+        computed before it returns."""
         session_registration_dir = os.path.dirname(self.transform_path)
-        (self._mri_grid_fixed_idx, self._mri_grid_mri_idx,
-         self.mri_label_vol, self.tp_labels) = run_off_thread(
+        self.mri_label_vol, self.tp_labels = run_off_thread(
             lambda: self._build_mri_label_overlay_compute(session_registration_dir))
 
         if not hasattr(self, '_mri_label_overlay_layer_index'):
@@ -115,35 +117,41 @@ class TpRegistrationMri(TpRegistration):
     def _build_mri_label_overlay_compute(self, session_registration_dir):
         """Pure sitk/numpy/scipy half of build_mri_label_overlay -- no
         Qt/VTK object touched -- safe to run off the GUI thread (see
-        run_off_thread above). Returns (mri_grid_fixed_idx, mri_grid_mri_idx,
-        mri_label_vol, tp_labels)."""
-        if not hasattr(self, '_mri_grid_fixed_idx'):
-            # samri_main.py's start_registration now builds moving_img_resampled25um-
-            # indeces.npy against ResampleData.resampling25um's actual output
-            # (<data_pre_resampled>_resampled.nii.gz), not self.movingImg's own
-            # native/anisotropic grid -- read that same file here so
-            # reconcile_raw_to_display_indices interprets the indices correctly.
-            movingImg_25um_path = self.MW.data_pre_resampled[:-len('.nii.gz')] + '_resampled.nii.gz'
-            # plain read, matching samri_main.py's own plain read of this file --
-            # reconcile_raw_to_display_indices's physical-space math already
-            # handles the orientation difference against self.movingImg_resampled
-            # (which does stay "RAS", since that's what's actually displayed).
-            movingImg_25um = sitk.ReadImage(movingImg_25um_path)
-            mri_grid_fixed_idx, mri_grid_mri_idx = load_or_build_mri_grid_correspondence(
-                session_registration_dir, movingImg_25um, self.movingImg_resampled)
-        else:
-            mri_grid_fixed_idx = self._mri_grid_fixed_idx
-            mri_grid_mri_idx = self._mri_grid_mri_idx
+        run_off_thread above). Returns (mri_label_vol, tp_labels).
+
+        get_correspondence (passed to load_or_build_mri_label_scatter) is
+        only ever called on that function's own cache miss -- so on a
+        warm label-scatter cache, self._mri_grid_fixed_idx/_mri_grid_mri_idx
+        are never touched at all. They're still memoized on self (not
+        just returned) since nothing outside this lazy callback needs
+        them -- do_get_shank_line/reload_atlas_view only ever want
+        self.mri_label_vol/self.tp_labels."""
+        def get_correspondence():
+            if not hasattr(self, '_mri_grid_fixed_idx'):
+                # samri_main.py's start_registration now builds moving_img_resampled25um-
+                # indeces.npy against ResampleData.resampling25um's actual output
+                # (<data_pre_resampled>_resampled.nii.gz), not self.movingImg's own
+                # native/anisotropic grid -- read that same file here so
+                # reconcile_raw_to_display_indices interprets the indices correctly.
+                movingImg_25um_path = self.MW.data_pre_resampled[:-len('.nii.gz')] + '_resampled.nii.gz'
+                # plain read, matching samri_main.py's own plain read of this file --
+                # reconcile_raw_to_display_indices's physical-space math already
+                # handles the orientation difference against self.movingImg_resampled
+                # (which does stay "RAS", since that's what's actually displayed).
+                movingImg_25um = sitk.ReadImage(movingImg_25um_path)
+                self._mri_grid_fixed_idx, self._mri_grid_mri_idx = build_mri_grid_correspondence(
+                    session_registration_dir, movingImg_25um, self.movingImg_resampled)
+            return self._mri_grid_fixed_idx, self._mri_grid_mri_idx
 
         atlas_label_volume_path = os.path.join(_paths['atlas_folder'], _WHS_ATLAS_FILES['atlas_volume'])
         mri_shape = self.LoadMRI.volumes[0].slices[0].shape  # zyx
-        mri_label_vol = scatter_atlas_labels_to_mri_grid(
-            atlas_label_volume_path, mri_grid_fixed_idx, mri_grid_mri_idx, mri_shape)
+        mri_label_vol = load_or_build_mri_label_scatter(
+            session_registration_dir, atlas_label_volume_path, get_correspondence, mri_shape)
 
         label_file_path = os.path.join(_paths['atlas_folder'], _WHS_ATLAS_FILES['atlas_labels'])
         tp_labels = parse_itk_snap_label_file(label_file_path)
 
-        return mri_grid_fixed_idx, mri_grid_mri_idx, mri_label_vol, tp_labels
+        return mri_label_vol, tp_labels
 
     def do_get_shank_line(self):
         self.ui.stackedWidget_trajectoryplanning.setCurrentIndex(1)
@@ -182,10 +190,10 @@ class TpRegistrationMri(TpRegistration):
         # on the MRI's own grid instead of loading the atlas itself as the
         # label_file=True base image.
         #
-        # build_mri_label_overlay does a real, uncached full-volume distance
-        # transform every single call (see its own docstring) -- this had no
-        # busy indication at all before, even though its heavy half now runs
-        # off the GUI thread (run_off_thread inside it).
+        # build_mri_label_overlay's heavy half (a full-volume distance
+        # transform, now disk-cached -- see its own docstring) runs off the
+        # GUI thread (run_off_thread inside it), but still has no busy
+        # indication of its own, so this shows one around it.
         overlay = BusyOverlay(self.MW, "Building region overlay, please wait…")
         overlay.setGeometry(self.MW.rect())
         overlay.raise_()

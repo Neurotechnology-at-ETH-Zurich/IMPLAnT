@@ -16,11 +16,15 @@ from samri.samri.pipelines.reposit import bru2bids
 from samri.samri.pipelines.preprocess import structural,biascorrect_only
 import os
 import shutil
+import signal
+import subprocess
+import threading
 from subprocess import call
 import samri.data_fetcher as data_fetcher
 import sys
 import glob
 import json
+import tempfile
 import numpy as np
 from PySide6 import QtWidgets
 import pandas as pd
@@ -177,226 +181,385 @@ def _resolve_ants_bin(raw):
         candidates = [os.path.join(_base_dir, raw)]
     return next((c for c in candidates if os.path.isdir(c)), candidates[0])
 
+def _setup_ants_env():
+    """Puts SAMRI's bundled ANTs binaries on PATH/ANTSPATH -- must run in
+    whichever process actually calls bru2bids/structural/biascorrect_only
+    (they shell out to antsRegistration etc.), so samri_worker.py calls this
+    itself instead of relying on the GUI process having done it."""
+    _ANTS_BIN = _resolve_ants_bin(_paths['ants_bin'])
+    if os.path.isdir(_ANTS_BIN) and _ANTS_BIN not in os.environ.get("PATH", "").split(os.pathsep):
+        os.environ["PATH"] = _ANTS_BIN + os.pathsep + os.environ.get("PATH", "")
+    os.environ["ANTSPATH"] = _ANTS_BIN
+
+
+def _do_bruker2bids(samri_input):
+    """Pure logic behind InitSAMRI's old start_bruker2_bids -- runs inside
+    samri_worker.py's subprocess, not here; takes/returns plain data only."""
+    server = samri_input['server']
+    password = samri_input['password']
+    animal_id = samri_input['animal_id']
+
+    # Enables bru2bids
+    bids_flag = samri_input['bids_flag'] #True
+
+    # Raw data to bids conversion
+    data_base = _paths['raw_base']   # DATA/ root, used for the final copy
+    raw_base_samri = samri_input['raw_base_samri']
+    raw_base = samri_input['raw_base_samri'] + animal_id
+    samri_reg_dir = os.path.join(samri_input['raw_base_samri'], animal_id)
+    if not samri_input['fetch']:
+        bids_base = samri_reg_dir
+        return {'animal_id': animal_id, 'data_base': data_base,
+                'raw_base_samri': raw_base_samri, 'bids_base': bids_base}
+
+    raw_base_existed = os.path.exists(raw_base)
+    samri_reg_dir_existed = os.path.exists(samri_reg_dir)
+    if not raw_base_existed:
+        os.makedirs(raw_base)
+    os.makedirs(samri_reg_dir, exist_ok=True)
+
+    bids_base = samri_reg_dir
+    call(['rm','-rf',raw_base+'/.DS_Store'])
+    #call(['chmod', '-R', 'u+rwX', raw_base]) # every new file is writeable
+
+    try:
+        #A = get_data_selection(raw_base)
+        data_fetcher.main(server=server, password=password, local_path=raw_base, animal_id=animal_id,local_fodler=samri_input['raw_base_samri'])
+    except Exception:
+        # don't leave empty folders behind for an animal ID/session that
+        # never actually fetched anything (e.g. server unreachable) --
+        # only remove them if fetching didn't get far enough to write
+        # anything into them, and they didn't already exist beforehand
+        if not raw_base_existed and os.path.exists(raw_base) and not os.listdir(raw_base):
+            os.rmdir(raw_base)
+        if not samri_reg_dir_existed and os.path.exists(samri_reg_dir) and not os.listdir(samri_reg_dir):
+            os.rmdir(samri_reg_dir)
+        raise
+
+    if bids_flag:
+        # for file in bids_base:
+        exclude_sessions = [""]
+    if samri_input['exclude_existing'] and os.path.exists(bids_base):
+        if os.path.exists(bids_base+"/bids/sub-"+animal_id):
+            #if os.path.exists(bids_base+"/bids/sub-"+animal_id):
+            for file in os.listdir(bids_base+"/bids/sub-"+animal_id):
+                filename = os.fsdecode(file)
+                if filename.startswith("ses-"):
+                    exclude_sessions.append(filename.split("ses-")[-1])
+
+    _warn_incomplete_scans(raw_base)
+
+    bids_work_dir = os.path.join(bids_base, 'bids_work')
+    if os.path.exists(bids_work_dir):
+        print(f'[SAMRI] Clearing nipype cache at {bids_work_dir}')
+        shutil.rmtree(bids_work_dir)
+
+    bru2bids(raw_base,
+            #functional_match={"acquisition": ["geEPI"]},
+            # structural_match={"acquisition": ["T2starMapMGE"]},
+            structural_match={"acquisition": ["TurboRARE", "UTE","TOF", "T1Flash", "T2TurboRARE", "T2TurboRAREhighRes", "T2MapMSME", "RAREInvRec", "TurboRARE3D", "T2starMapMGE"]},
+            out_base=bids_base,
+            exclude={"session": exclude_sessions},
+            keep_work=True,
+            )
+
+    # Run Diagnostics
+    ##diagnose(bids_base+"/bids/sub-"+animal_id) - not working: wrong mach_regex?
+
+    return {'animal_id': animal_id, 'data_base': data_base,
+            'raw_base_samri': raw_base_samri, 'bids_base': bids_base}
+
+
+def _do_biascorrection(bids_base, animal_id, samri_input):
+    """Pure logic behind InitSAMRI's old biascorrection -- runs inside
+    samri_worker.py's subprocess, not here."""
+    # Enables registering
+    #base_path= samri_input['base_path'] #"/Users/mri_registration/SAMRI/samri_output/"
+    #working_session = samri_input['working_session']
+    #register = samri_input['register'] #False
+
+    # Registers post-op images to pre-op images
+    #presurgery = samri_input['presurgery'] #False
+    # Enables elastic registering
+    #elastic = samri_input['elastic'] #True
+    register_key = samri_input['register_key'] #["TurboRARE"]
+    #num_threads = samri_input['num_threads'] #8
+    tasks = samri_input['tasks'] #["coronal"]
+
+    # Sessions to be excluded
+    sessions = [""]
+    for file in os.listdir(bids_base+"/bids/sub-"+animal_id):
+        filename = os.fsdecode(file)
+        if filename.startswith("ses-"):
+            if filename.split("ses-")[-1] != samri_input['working_session'][0]:
+                sessions.append(filename.split("ses-")[-1])
+
+    atlas = os.path.join(samri_input['atlas_folder'], _WHS_ATLAS_FILES['atlas_template'])
+    atlas_mask = []
+    if samri_input['atlas_mask']:
+        atlas_mask = os.path.join(samri_input['atlas_folder'], _WHS_ATLAS_FILES['atlas_mask'])
+
+    filepath = biascorrect_only(bids_base=bids_base+'/bids',
+        template=atlas,
+        debug=True,
+        exclude={"session": sessions},
+        functional_match={},
+        keep_work=True,
+        n_jobs=False,
+        n_jobs_percentage=0.8,
+        out_base=bids_base+'/results',
+        registration_mask=atlas_mask,
+        sessions=[],
+        structural_match={"acq": register_key, "task": tasks, "type": ["anat"]},
+        subjects=[],
+        workflow_name='generic',
+        #enforce_dummy_scans=DUMMY_SCANS,
+    )
+
+    return filepath
+
+
+def _do_registration(bids_base, animal_id, samri_input):
+    """Pure logic behind InitSAMRI's old start_registration -- runs inside
+    samri_worker.py's subprocess, not here."""
+
+    # Enables registering
+    register = samri_input['register'] #False
+
+    # Registers post-op images to pre-op images
+    presurgery = samri_input['presurgery'] #False
+    # Enables elastic registering
+    elastic = samri_input['elastic'] #True
+    register_key = samri_input['register_key'] #["TurboRARE"]
+    num_threads = samri_input['num_threads'] #8
+    tasks = samri_input['tasks'] #["coronal"]
+
+    # Sessions to be excluded
+    sessions = [""]
+    for file in os.listdir(bids_base+"/bids/sub-"+animal_id):
+        filename = os.fsdecode(file)
+        if filename.startswith("ses-"):
+            if filename.split("ses-")[-1] != samri_input['working_session'][0]:
+                sessions.append(filename.split("ses-")[-1])
+
+    # Moving image mask
+    moving_img_mask_path = []
+    if samri_input['moving_mask']:
+        moving_img_mask_path = samri_input['moving_img_mask_name']
+
+    atlas = os.path.join(samri_input['atlas_folder'], _WHS_ATLAS_FILES['atlas_template'])
+    atlas_mask = []
+    if samri_input['atlas_mask']:
+        atlas_mask = os.path.join(samri_input['atlas_folder'], _WHS_ATLAS_FILES['atlas_mask'])
+
+    if register:
+        filepath = structural(
+            bids_base=bids_base+'/bids',
+            template=atlas,
+            out_base=bids_base+'/results',
+            presurgery=presurgery,
+            structural_match={"acq": register_key, "task": tasks, "type": ["anat"]},
+            debug=True,
+            keep_work=True,
+            elastic=elastic,
+            moving_img_mask=moving_img_mask_path,
+            registration_mask=atlas_mask,
+            num_threads=num_threads,
+            reference_template=atlas,
+            # presurgery_template=presurgery_atlas,
+            exclude={"session": sessions}
+            )
+
+
+        #copy h5 file to registration folder
+        fixedImg = sitk.ReadImage(os.path.join(samri_input['atlas_folder'], _WHS_ATLAS_FILES['atlas_volume']))
+        # actually call ResampleData.resampling25um (file_handling/resample_data.py)
+        # instead of reimplementing it -- it only needs a LoadMRI-shaped
+        # object exposing .volumes[index].file_path/.raw_DICOMOrient and
+        # .session_path, which this pipeline class doesn't otherwise have.
+        raw_DICOMOrient = "".join(nib.aff2axcodes(nib.load(filepath).affine))
+        _volume = MRIVolume(file_path=filepath, slices={}, DICOMOrient=raw_DICOMOrient,
+                             raw_DICOMOrient=raw_DICOMOrient, view_names=[])
+        _shim_loadmri = _ShimLoadMRI(volumes={0: _volume}, session_path=os.path.dirname(filepath))
+        resampled25um_path = ResampleData(_shim_loadmri).resampling25um(0)
+        # plain read, no extra reorientation: TransformPhysicalPointToIndex/
+        # TransformIndexToPhysicalPoint already handle any orientation
+        # difference against whatever grid this correspondence later gets
+        # reprojected onto (mri_label_overlay.py's reconcile_raw_to_display_
+        # indices) via physical-space math -- forcing this to "RAS" here
+        # would only need to be undone consistently everywhere else that
+        # reads this same correspondence, for no actual benefit.
+        movingImg = sitk.ReadImage(resampled25um_path)
+        csv_path = f"{bids_base}/results/generic_work/data_selection.csv"
+        df = pd.read_csv(csv_path, index_col=0)
+        #original_path = f"{'_'.join(filepath.split('_')[:-1])}.nii.gz"
+        #print(df['path'],flush=True)
+        #print('op',filepath,original_path,flush=True)
+        idx = df.loc[df['path'] == filepath].index[0] #original_path?
+        transformPath = f"{bids_base}/results/generic_work/_ind_type_{idx}/s_register/output_Composite.h5"
+        transform_moving2fixed = sitk.ReadTransform(transformPath)
+
+        #save files
+        folder = f"{bids_base}/bids/sub-{animal_id}/ses-{samri_input['working_session'][0]}/registration"
+        os.makedirs(folder, exist_ok=True)
+        _build_fixed_moving_correspondence(
+            fixedImg, movingImg, transform_moving2fixed,
+            f"{folder}/fixed_img-indeces.npy",
+            f"{folder}/moving_img_resampled25um-indeces.npy",
+        )
+        shutil.copy(transformPath, f"{folder}/output_Composite.h5")
+
+
+    return filepath
+
+
+class SamriCancelToken:
+    """Bridges BusyOverlay's Cancel button (GUI thread) to the live SAMRI
+    worker subprocess spawned by _run_worker_subprocess, well after this
+    token is constructed, on a BusyWorker QThread. Plain stdlib
+    synchronization only (no Qt) -- .cancel() must be safely callable from
+    the GUI thread regardless of whether the subprocess has been created
+    yet."""
+    def __init__(self):
+        self._lock = threading.Lock()
+        self._event = threading.Event()
+        self._proc = None
+
+    def bind_process(self, proc):
+        with self._lock:
+            self._proc = proc
+            already_cancelled = self._event.is_set()
+        if already_cancelled:
+            self._terminate()
+
+    def cancel(self):
+        self._event.set()
+        self._terminate()
+
+    def is_cancelled(self):
+        return self._event.is_set()
+
+    def _terminate(self):
+        with self._lock:
+            proc = self._proc
+        if proc is None or proc.poll() is not None:
+            return
+        try:
+            if os.name == 'posix':
+                os.killpg(proc.pid, signal.SIGTERM)
+            else:
+                proc.terminate()
+        except ProcessLookupError:
+            return
+        t = threading.Timer(5.0, self._force_kill)
+        t.daemon = True
+        t.start()
+
+    def _force_kill(self):
+        with self._lock:
+            proc = self._proc
+        if proc is None or proc.poll() is not None:
+            return
+        try:
+            if os.name == 'posix':
+                os.killpg(proc.pid, signal.SIGKILL)
+            else:
+                proc.kill()
+        except ProcessLookupError:
+            pass
+
+
+def _run_worker_subprocess(op, payload, on_progress=None, cancel_token=None):
+    """Runs one SAMRI pipeline stage (op: 'init'|'register'|'biascorrect') in
+    a separate OS process (samri/samri_worker.py) instead of in this one --
+    mirrors ephys/init_ephys.py's _run_ripple_detection/--ripple-worker
+    precedent. Always called from InitSAMRI's methods, which only ever run
+    inside a BusyWorker QThread (never the GUI thread), so blocking here on
+    the child via readline is fine.
+
+    Unlike --ripple-worker (which buffers via subprocess.run(capture_output=
+    True) since ripple detection is quick), this streams the child's stdout
+    line by line into print() as it arrives -- a SAMRI registration can run
+    for hours, and sys.stdout is process-global, so if LogAdapter has
+    already redirected it (see gui_utils/busy_worker.py callers), this still
+    shows up live in plainTextEdit_SAMRI exactly like an in-process
+    print()/logging call would, just relayed from the child. on_progress,
+    if given, is called with the same stripped line -- BusyOverlay.set_message
+    wired through BusyWorker.progress by callers that want live overlay text
+    (see main_window.py's start_registration).
+
+    On a non-zero exit, raises RuntimeError with the last ~4000 characters
+    of combined stdout/stderr, following the same tail-slicing convention as
+    _run_ripple_detection's `proc.stderr[-1000:]`. If the child was killed by
+    a signal (returncode < 0, e.g. OOM-killed), the message explicitly says
+    "killed" -- main_window.py's on_registration_failed keyword-matches the
+    formatted traceback for 'killed' (among other OOM keywords) to offer a
+    "retry with fewer threads" dialog, and that must keep matching.
+
+    If cancel_token is given and .cancel() was called (regardless of the
+    resulting returncode -- we just killed it, so a nonzero exit is expected,
+    not a real failure), raises WorkerCancelled instead, which BusyWorker
+    routes to its `cancelled` signal rather than `failed`."""
+    frozen = getattr(sys, 'frozen', False)
+    worker_dir = getattr(sys, '_MEIPASS', _base_dir)
+    script = os.path.join(worker_dir, 'samri', 'samri_worker.py')
+    cmd = [sys.executable, '--samri-worker'] if frozen else [sys.executable, script]
+
+    with tempfile.TemporaryDirectory() as tmp:
+        input_path = os.path.join(tmp, 'input.json')
+        output_path = os.path.join(tmp, 'output.json')
+        with open(input_path, 'w') as f:
+            json.dump(payload, f)
+
+        cmd = cmd + ['--op', op, '--input', input_path, '--output', output_path]
+        # start_new_session so a cancel can kill this whole process's group,
+        # not just it -- nipype's MultiProc plugin spawns its own child pool
+        # under this subprocess, which a plain terminate() would orphan.
+        # POSIX only; best-effort (no process-group kill) on Windows.
+        popen_kwargs = {'start_new_session': True} if os.name == 'posix' else {}
+        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                                 text=True, bufsize=1, **popen_kwargs)
+        if cancel_token is not None:
+            cancel_token.bind_process(proc)
+
+        tail = ''
+        for line in proc.stdout:
+            print(line, end='', flush=True)
+            tail = (tail + line)[-4000:]
+            if on_progress is not None and line.strip():
+                on_progress(line.strip())
+        proc.wait()
+
+        if cancel_token is not None and cancel_token.is_cancelled():
+            from gui_utils.busy_worker import WorkerCancelled
+            raise WorkerCancelled()
+
+        if proc.returncode != 0:
+            outcome = 'was killed' if proc.returncode < 0 else f'failed (exit code {proc.returncode})'
+            raise RuntimeError(f"SAMRI {op} subprocess {outcome}.\n{tail}")
+
+        with open(output_path) as f:
+            return json.load(f)
+
+
 class InitSAMRI:
     def __init__(self,samri_input):
-        _ANTS_BIN = _resolve_ants_bin(_paths['ants_bin'])
-        if os.path.isdir(_ANTS_BIN) and _ANTS_BIN not in os.environ.get("PATH", "").split(os.pathsep):
-            os.environ["PATH"] = _ANTS_BIN + os.pathsep + os.environ.get("PATH", "")
-        os.environ["ANTSPATH"] = _ANTS_BIN
-
-        self.start_bruker2_bids(samri_input)
-
-    def start_bruker2_bids(self,samri_input):
-        server = samri_input['server']
-        password = samri_input['password']
-        self.animal_id = samri_input['animal_id']
-
-        # Enables bru2bids
-        bids_flag = samri_input['bids_flag'] #True
-
-        # Raw data to bids conversion
-        self.data_base = _paths['raw_base']   # DATA/ root, used for the final copy
-        self.raw_base_samri = samri_input['raw_base_samri']
-        raw_base = samri_input['raw_base_samri'] + self.animal_id
-        samri_reg_dir = os.path.join(samri_input['raw_base_samri'], self.animal_id)
-        if not samri_input['fetch']:
-            self.bids_base = samri_reg_dir
-            return self.bids_base
-
-        raw_base_existed = os.path.exists(raw_base)
-        samri_reg_dir_existed = os.path.exists(samri_reg_dir)
-        if not raw_base_existed:
-            os.makedirs(raw_base)
-        os.makedirs(samri_reg_dir, exist_ok=True)
-
-        self.bids_base = samri_reg_dir
-        call(['rm','-rf',raw_base+'/.DS_Store'])
-        #call(['chmod', '-R', 'u+rwX', raw_base]) # every new file is writeable
-
-        try:
-            #A = get_data_selection(raw_base)
-            data_fetcher.main(server=server, password=password, local_path=raw_base, animal_id=self.animal_id,local_fodler=samri_input['raw_base_samri'])
-        except Exception:
-            # don't leave empty folders behind for an animal ID/session that
-            # never actually fetched anything (e.g. server unreachable) --
-            # only remove them if fetching didn't get far enough to write
-            # anything into them, and they didn't already exist beforehand
-            if not raw_base_existed and os.path.exists(raw_base) and not os.listdir(raw_base):
-                os.rmdir(raw_base)
-            if not samri_reg_dir_existed and os.path.exists(samri_reg_dir) and not os.listdir(samri_reg_dir):
-                os.rmdir(samri_reg_dir)
-            raise
-
-        if bids_flag:
-            # for file in bids_base:
-            exclude_sessions = [""]
-        if samri_input['exclude_existing'] and os.path.exists(self.bids_base):
-            if os.path.exists(self.bids_base+"/bids/sub-"+self.animal_id):
-                #if os.path.exists(self.bids_base+"/bids/sub-"+self.animal_id):
-                for file in os.listdir(self.bids_base+"/bids/sub-"+self.animal_id):
-                    filename = os.fsdecode(file)
-                    if filename.startswith("ses-"):
-                        exclude_sessions.append(filename.split("ses-")[-1])
-
-        _warn_incomplete_scans(raw_base)
-
-        bids_work_dir = os.path.join(self.bids_base, 'bids_work')
-        if os.path.exists(bids_work_dir):
-            print(f'[SAMRI] Clearing nipype cache at {bids_work_dir}')
-            shutil.rmtree(bids_work_dir)
-
-        bru2bids(raw_base,
-                #functional_match={"acquisition": ["geEPI"]},
-                # structural_match={"acquisition": ["T2starMapMGE"]},
-                structural_match={"acquisition": ["TurboRARE", "UTE","TOF", "T1Flash", "T2TurboRARE", "T2TurboRAREhighRes", "T2MapMSME", "RAREInvRec", "TurboRARE3D", "T2starMapMGE"]},
-                out_base=self.bids_base,
-                exclude={"session": exclude_sessions},
-                keep_work=True,
-                )
-
-        # Run Diagnostics
-        ##diagnose(self.bids_base+"/bids/sub-"+self.animal_id) - not working: wrong mach_regex?
-
-        return self.bids_base
-
+        result = _run_worker_subprocess('init', samri_input)
+        self.animal_id = result['animal_id']
+        self.data_base = result['data_base']
+        self.raw_base_samri = result['raw_base_samri']
+        self.bids_base = result['bids_base']
 
     def biascorrection(self,samri_input):
-        # Enables registering
-        #base_path= samri_input['base_path'] #"/Users/mri_registration/SAMRI/samri_output/"
-        #working_session = samri_input['working_session']
-        #register = samri_input['register'] #False
+        payload = dict(samri_input, _bids_base=self.bids_base, _animal_id=self.animal_id)
+        result = _run_worker_subprocess('biascorrect', payload)
+        return result.get('filepath')
 
-        # Registers post-op images to pre-op images
-        #presurgery = samri_input['presurgery'] #False
-        # Enables elastic registering
-        #elastic = samri_input['elastic'] #True
-        register_key = samri_input['register_key'] #["TurboRARE"]
-        #num_threads = samri_input['num_threads'] #8
-        tasks = samri_input['tasks'] #["coronal"]
-
-        # Sessions to be excluded
-        sessions = [""]
-        for file in os.listdir(self.bids_base+"/bids/sub-"+self.animal_id):
-            filename = os.fsdecode(file)
-            if filename.startswith("ses-"):
-                if filename.split("ses-")[-1] != samri_input['working_session'][0]:
-                    sessions.append(filename.split("ses-")[-1])
-
-        atlas = os.path.join(samri_input['atlas_folder'], _WHS_ATLAS_FILES['atlas_template'])
-        atlas_mask = []
-        if samri_input['atlas_mask']:
-            atlas_mask = os.path.join(samri_input['atlas_folder'], _WHS_ATLAS_FILES['atlas_mask'])
-
-        filepath = biascorrect_only(bids_base=self.bids_base+'/bids',
-            template=atlas,
-            debug=True,
-            exclude={"session": sessions},
-            functional_match={},
-            keep_work=True,
-            n_jobs=False,
-            n_jobs_percentage=0.8,
-            out_base=self.bids_base+'/results',
-            registration_mask=atlas_mask,
-            sessions=[],
-            structural_match={"acq": register_key, "task": tasks, "type": ["anat"]},
-            subjects=[],
-            workflow_name='generic',
-            #enforce_dummy_scans=DUMMY_SCANS,
-        )
-
-        return filepath
-
-
-    def start_registration(self,samri_input):
-
-        # Enables registering
-        register = samri_input['register'] #False
-
-        # Registers post-op images to pre-op images
-        presurgery = samri_input['presurgery'] #False
-        # Enables elastic registering
-        elastic = samri_input['elastic'] #True
-        register_key = samri_input['register_key'] #["TurboRARE"]
-        num_threads = samri_input['num_threads'] #8
-        tasks = samri_input['tasks'] #["coronal"]
-
-        # Sessions to be excluded
-        sessions = [""]
-        for file in os.listdir(self.bids_base+"/bids/sub-"+self.animal_id):
-            filename = os.fsdecode(file)
-            if filename.startswith("ses-"):
-                if filename.split("ses-")[-1] != samri_input['working_session'][0]:
-                    sessions.append(filename.split("ses-")[-1])
-
-        # Moving image mask
-        moving_img_mask_path = []
-        if samri_input['moving_mask']:
-            moving_img_mask_path = samri_input['moving_img_mask_name']
-
-        atlas = os.path.join(samri_input['atlas_folder'], _WHS_ATLAS_FILES['atlas_template'])
-        atlas_mask = []
-        if samri_input['atlas_mask']:
-            atlas_mask = os.path.join(samri_input['atlas_folder'], _WHS_ATLAS_FILES['atlas_mask'])
-
-        if register:
-            filepath = structural(
-                bids_base=self.bids_base+'/bids',
-                template=atlas,
-                out_base=self.bids_base+'/results',
-                presurgery=presurgery,
-                structural_match={"acq": register_key, "task": tasks, "type": ["anat"]},
-                debug=True,
-                keep_work=True,
-                elastic=elastic,
-                moving_img_mask=moving_img_mask_path,
-                registration_mask=atlas_mask,
-                num_threads=num_threads,
-                reference_template=atlas,
-                # presurgery_template=presurgery_atlas,
-                exclude={"session": sessions}
-                )
-
-
-            #copy h5 file to registration folder
-            fixedImg = sitk.ReadImage(os.path.join(samri_input['atlas_folder'], _WHS_ATLAS_FILES['atlas_volume']))
-            # actually call ResampleData.resampling25um (file_handling/resample_data.py)
-            # instead of reimplementing it -- it only needs a LoadMRI-shaped
-            # object exposing .volumes[index].file_path/.raw_DICOMOrient and
-            # .session_path, which this pipeline class doesn't otherwise have.
-            raw_DICOMOrient = "".join(nib.aff2axcodes(nib.load(filepath).affine))
-            _volume = MRIVolume(file_path=filepath, slices={}, DICOMOrient=raw_DICOMOrient,
-                                 raw_DICOMOrient=raw_DICOMOrient, view_names=[])
-            _shim_loadmri = _ShimLoadMRI(volumes={0: _volume}, session_path=os.path.dirname(filepath))
-            resampled25um_path = ResampleData(_shim_loadmri).resampling25um(0)
-            # plain read, no extra reorientation: TransformPhysicalPointToIndex/
-            # TransformIndexToPhysicalPoint already handle any orientation
-            # difference against whatever grid this correspondence later gets
-            # reprojected onto (mri_label_overlay.py's reconcile_raw_to_display_
-            # indices) via physical-space math -- forcing this to "RAS" here
-            # would only need to be undone consistently everywhere else that
-            # reads this same correspondence, for no actual benefit.
-            movingImg = sitk.ReadImage(resampled25um_path)
-            csv_path = f"{self.bids_base}/results/generic_work/data_selection.csv"
-            df = pd.read_csv(csv_path, index_col=0)
-            #original_path = f"{'_'.join(filepath.split('_')[:-1])}.nii.gz"
-            #print(df['path'],flush=True)
-            #print('op',filepath,original_path,flush=True)
-            idx = df.loc[df['path'] == filepath].index[0] #original_path?
-            transformPath = f"{self.bids_base}/results/generic_work/_ind_type_{idx}/s_register/output_Composite.h5"
-            transform_moving2fixed = sitk.ReadTransform(transformPath)
-
-            #save files
-            folder = f"{self.bids_base}/bids/sub-{self.animal_id}/ses-{samri_input['working_session'][0]}/registration"
-            os.makedirs(folder, exist_ok=True)
-            _build_fixed_moving_correspondence(
-                fixedImg, movingImg, transform_moving2fixed,
-                f"{folder}/fixed_img-indeces.npy",
-                f"{folder}/moving_img_resampled25um-indeces.npy",
-            )
-            shutil.copy(transformPath, f"{folder}/output_Composite.h5")
-
-
-        return filepath
+    def start_registration(self,samri_input,on_progress=None,cancel_token=None):
+        payload = dict(samri_input, _bids_base=self.bids_base, _animal_id=self.animal_id)
+        result = _run_worker_subprocess('register', payload, on_progress=on_progress,
+                                         cancel_token=cancel_token)
+        return result.get('filepath')
 
 
     def visualize_results(self,MW,logging):

@@ -61,6 +61,7 @@ ephys/change_anatRegion.py
 ephys/ephysrecording.py
 ephys/init_ephys.py
 ephys/mrid_info.py
+ephys/tab_main_ephys.ui
 ephys/videoplayer.py
 ephys/visualisation3D.py
 ephys/visualisationEphys.py
@@ -97,6 +98,7 @@ gui_utils/paintbrush_gui.py
 gui_utils/segmentation_gui.py
 gui_utils/volume.frag
 gui_utils/volumer_viewer.qml
+intraoperative/tab_intraoperative.ui
 kCSD-python/run_kCSD.py
 main_window.py
 main_window.pyh
@@ -137,6 +139,7 @@ requirements.txt
 rippl-AI/run_rippl.py
 samri/bruker_info.json
 samri/samri/pipelines/parameters_reg.json
+samri/tab_samri.ui
 temp_files.txt
 test.py
 test1.py

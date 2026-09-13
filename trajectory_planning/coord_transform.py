@@ -366,16 +366,31 @@ class CoordTransform:
         rotation around the AP axis than having the user align a guide
         line to the interhemispheric fissure by eye.
 
-        Roll = angle from vertical (SI), within the RL-SI plane, dropping
-        the AP component entirely -- how far the shank leans toward RL,
-        ignoring any AP tilt. Shown in the coronal view.
-        Pitch = angle from the AP line, within the AP-SI plane, dropping
-        the RL component entirely -- how far the shank tilts off the AP
-        line, ignoring any coronal/RL tilt. Shown in the sagittal view.
+        Roll = signed angle from vertical (SI), within the RL-SI plane,
+        dropping the AP component entirely -- how far the shank leans
+        toward RL, ignoring any AP tilt, sign = which side (matching
+        rl_axis's own polarity: positive leans toward +rl_axis). Shown in
+        the coronal view.
+        Pitch = signed angle from the AP line, within the AP-SI plane,
+        dropping the RL component entirely -- how far the shank tilts off
+        the AP line, ignoring any coronal/RL tilt, sign = which way along
+        AP (positive leans toward +ap_axis, i.e. posterior -- see
+        ap_rl_si_frame_from_misalignment's own polarity note). A near-
+        vertical shank sits near +/-90 degrees here (not near 0), since
+        pitch is measured from the AP line rather than from vertical.
+        Shown in the sagittal view.
         Since each angle now discards a DIFFERENT component instead of
         both reading off the same one remaining degree of freedom, roll
         and pitch are no longer forced to sum to 90 degrees the way the
         old line-to-plane formula was whenever AP happened to be zero.
+
+        Unlike an earlier version of this function, the three axis
+        components below are NOT abs()'d before arctan2 -- callers that
+        want an unsigned magnitude (e.g. a plain degree readout) can wrap
+        the result themselves; callers that reconstruct a horizontal lean
+        DIRECTION (buttons_gui_surgery.py's dotted lean-line on the skull
+        photo) need the sign and silently got a meaningless, always-same-
+        quadrant direction back when this was unsigned.
 
         Returns (roll_deg, pitch_deg), or None if bregma/lambda or this
         shank's MRI-space insert/deepest points aren't set yet, or bregma
@@ -406,9 +421,9 @@ class CoordTransform:
             return 0.0, 0.0
 
         shank_dir = shank_vec / shank_dist
-        ap_comp = abs(float(np.dot(shank_dir, ap_axis)))
-        rl_comp = abs(float(np.dot(shank_dir, rl_axis)))
-        si_comp = abs(float(np.dot(shank_dir, si_axis)))
+        ap_comp = float(np.dot(shank_dir, ap_axis))
+        rl_comp = float(np.dot(shank_dir, rl_axis))
+        si_comp = float(np.dot(shank_dir, si_axis))
         roll_deg = float(np.degrees(np.arctan2(rl_comp, si_comp)))
         pitch_deg = float(np.degrees(np.arctan2(si_comp, ap_comp)))
 

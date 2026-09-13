@@ -11,7 +11,6 @@ from ephys.mrid_info import MRIDInfo
 from ephys.visualisationEphys import VisualisationEphys
 import xml.etree.ElementTree as ET
 from ephys.change_anatRegion import Change_AnatRegion
-from ephys_utils.filter_data import FilterData
 from ephys_utils.lfp_creation_dialog import LFPCreationDialog
 from ephys_utils.spiking_ruster import SpikeRuster
 from ephys_utils.lfp_spectrogram import LFPSpectrogram
@@ -208,17 +207,6 @@ class InitEphys:
         # zoom is the `else` branch of the mode test in pgwidget.mousePressEvent,
         # so with nothing checked in this group a left drag always zooms.
         self.MW.ui.pushButton_timeline.setChecked(True)
-
-        self.Filter = FilterData(MW)
-
-        # default channels for the Filter popup (frame_filterchannels): the last two CA1 channels
-        ca1_channels = self.Visualisation3D.get_last_ca1_channels(n=2)
-        if ca1_channels:
-            self.MW.ui.lineEdit_selectedChannels.setText(', '.join(str(c) for c in ca1_channels))
-
-        # default frequency range: theta band
-        self.MW.ui.doubleSpinBox_lowerFreq.setValue(4.0)
-        self.MW.ui.doubleSpinBox_upperFreq.setValue(10.0)
 
         # live-update the heatmap colours when the limit changes (no re-clustering)
         self.MW.ui.doubleSpinBox_ClusterLimits.valueChanged.connect(self._update_cluster_clim)
@@ -427,8 +415,23 @@ class InitEphys:
 
 
     def changeRegion(self):
+        overlay = BusyOverlay(self.MW, "Loading atlas regions, please wait…")
+        overlay.setGeometry(self.MW.rect())
+        overlay.raise_()
+        overlay.show()
+        QApplication.processEvents()
+
         dlg = Change_AnatRegion(self.MW)
+
+        overlay.close()
+
         if dlg.exec() == QtWidgets.QDialog.DialogCode.Accepted:
+            overlay = BusyOverlay(self.MW, "Updating anatomical region, please wait…")
+            overlay.setGeometry(self.MW.rect())
+            overlay.raise_()
+            overlay.show()
+            QApplication.processEvents()
+
             new_label_text = self.MW.ui.comboBox_ChangeanatRegion.currentText().split('(')[0].strip()
             points_electrodes_path = os.path.join(os.path.join(self.session_path,"analysed"),self.mrid_info.mrid,'channel_atlas_coordinates.xlsx')
             self.points_data = pd.read_excel(points_electrodes_path,header=0)
@@ -480,6 +483,8 @@ class InitEphys:
             current_pen.setColor(QColor(int(r*255), int(g*255), int(b*255), int(a*255)))
             #pen = pg.mkPen(color=(int(r*255), int(g*255), int(b*255),int(a*255)), width=0.5)
             line.setPen(current_pen)
+
+            overlay.close()
 
 
     def check_newlabel(self,new_idx):

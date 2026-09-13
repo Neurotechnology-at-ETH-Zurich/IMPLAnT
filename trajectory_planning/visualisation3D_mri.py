@@ -20,24 +20,26 @@ already works correctly once:
   dynamically to RenderingMri's MRI-space, misalignment-frame-driven
   override) both already read directly.
 
-The only thing that genuinely still needs the atlas' OWN grid is the
-background/region SHAPE itself (a reliable, ready-made brain outline with
-real atlas region indices as its 'NIFTI' cell data, which render_clipped/
-pick_label/_bg_colors_for_shank all key off unmodified) -- load_atlas below
-builds that shape from the atlas volume exactly as before, then reprojects
-every vertex into true MRI physical-mm space via atlas_points_to_mri_
-indices (same technique trajectory_planning_3d/window.py's own
-_build_background_mesh/_build_mask_mesh already use successfully),
-leaving the NIFTI cell data itself untouched -- repositioning a mesh's
-points does not change which cell each point belongs to.
+The only thing that genuinely still needs a ready-made brain-outline shape
+is the background/region SHAPE itself (real atlas region indices as its
+'NIFTI' cell data, which render_clipped/pick_label/_bg_colors_for_shank all
+key off unmodified) -- load_atlas below builds that shape directly from
+tp.mri_label_vol (registration_mri.py's build_mri_label_overlay), which is
+already the WHS atlas' region labels warped onto the MRI's own grid. This
+used to instead re-read the atlas volume file from scratch and reproject
+every vertex into MRI space via atlas_points_to_mri_indices, so that the
+mesh could track whichever atlas was currently active independent of the
+WHS-pinned overlay -- but that atlas-switch feature was removed (see
+registration_mri.py's _WHS_ATLAS_FILES comment; atlas_points_to_mri_indices,
+coord_transform.py, now has no other caller), so tp.mri_label_vol IS this
+mesh's atlas now, already on the right grid, and no second disk read or
+reprojection is needed.
 """
 
 import os
-from concurrent.futures import ThreadPoolExecutor
 
 import numpy as np
 import pyvista as pv
-import nibabel as nib
 from matplotlib.colors import ListedColormap
 
 from paths_config import _paths
@@ -48,11 +50,7 @@ from gui_utils.busy_worker import run_off_thread
 
 class VisualisationMri(Visualisation3D):
     def load_atlas(self):
-        # The ThreadPoolExecutor below (three parallel file reads) doesn't
-        # actually free the GUI thread by itself -- .result() still blocks
-        # this call without pumping the Qt event loop, and smooth_taubin
-        # runs fully synchronously after it regardless. The whole pure
-        # nibabel/numpy/pyvista/sitk computation (no Qt/VTK scene object
+        # The pure numpy/pyvista computation below (no Qt/VTK scene object
         # touched -- these meshes/colormaps aren't attached to
         # self.plotter_co/sa/ax yet) runs off the GUI thread via
         # run_off_thread instead; only the final add_axes() calls stay here.
@@ -65,20 +63,25 @@ class VisualisationMri(Visualisation3D):
         self.plotter_ax.add_axes()
 
     def _load_atlas_compute(self):
-        """Pure nibabel/numpy/pyvista/sitk half of load_atlas -- no Qt/VTK
-        scene object touched -- safe to run off the GUI thread (see
-        run_off_thread in load_atlas above). Returns (atlaslabelsdf,
-        background_small, brain_surface_small, background_full_zooms,
-        rgba, cmap, cmap_background)."""
+        """Pure numpy/pyvista half of load_atlas -- no Qt/VTK scene object
+        touched -- safe to run off the GUI thread (see run_off_thread in
+        load_atlas above). Returns (atlaslabelsdf, background_small,
+        brain_surface_small, background_full_zooms (actually MRI spacing,
+        kept under this name since visualisation3D.py's render_clipped
+        already reads it against MRI-space mesh points), rgba, cmap,
+        cmap_background)."""
+        tp = self.MW.LoadMRI.TrajPlanning
+        mri_spacing = np.array(tp.movingImg_resampled.GetSpacing())
+
         def load_background_mesh(scale):
-            background_path = os.path.join(_paths['atlas_folder'], _paths['atlas_volume'])
-            img = nib.load(background_path)
-            data = img.get_fdata().astype(int)[::scale, ::scale, ::scale]
-            zooms = img.header.get_zooms()[:3]
+            # tp.mri_label_vol is zyx (numpy convention); pv.ImageData with
+            # flatten(order='F') needs xyz-ordered array axes to match
+            # mesh.dimensions/spacing below.
+            data = np.transpose(tp.mri_label_vol, (2, 1, 0))[::scale, ::scale, ::scale].astype(int)
             mesh = pv.ImageData()
             mesh.dimensions = np.array(data.shape) + 1
-            mesh.spacing = tuple(s * scale for s in zooms)
-            mesh.origin = tuple(-s for s in zooms)
+            mesh.spacing = tuple(s * scale for s in mri_spacing)
+            mesh.origin = tuple(-s for s in mri_spacing)
             mesh.cell_data['NIFTI'] = data.flatten(order='F')
             return mesh
 
@@ -86,29 +89,10 @@ class VisualisationMri(Visualisation3D):
             labels_path = os.path.join(_paths['atlas_folder'], _paths['atlas_labels'])
             return handlers.read_itk_snap_labels(labels_path)
 
-        def load_background_full_numpy():
-            background_path = os.path.join(_paths['atlas_folder'], _paths['atlas_volume'])
-            img = nib.load(background_path)
-            return np.array(img.header.get_zooms()[:3])
-
-        with ThreadPoolExecutor(max_workers=3) as executor:
-            future_small = executor.submit(load_background_mesh, 3)
-            future_full = executor.submit(load_background_full_numpy)
-            future_labels = executor.submit(load_labels)
-
-            atlaslabelsdf = future_labels.result()
-            background_small = future_small.result().threshold(value=0.5)
-            brain_surface_small = background_small.extract_surface(algorithm='dataset_surface')
-            brain_surface_small = brain_surface_small.smooth_taubin(n_iter=50, pass_band=0.1)
-            background_full_zooms = future_full.result()
-
-        # Reproject vertex positions only -- NIFTI cell data (atlas region
-        # indices) stays exactly as built, so render_clipped/pick_label/
-        # _bg_colors_for_shank need no changes of their own.
-        tp = self.MW.LoadMRI.TrajPlanning
-        mri_spacing = np.array(tp.movingImg_resampled.GetSpacing())
-        background_small.points = tp.atlas_points_to_mri_indices(background_small.points) * mri_spacing
-        brain_surface_small.points = tp.atlas_points_to_mri_indices(brain_surface_small.points) * mri_spacing
+        atlaslabelsdf = load_labels()
+        background_small = load_background_mesh(3).threshold(value=0.5)
+        brain_surface_small = background_small.extract_surface(algorithm='dataset_surface')
+        brain_surface_small = brain_surface_small.smooth_taubin(n_iter=50, pass_band=0.1)
 
         max_idx = int(atlaslabelsdf['IDX'].max())
         rgba = np.zeros((max_idx + 1, 4))
@@ -122,4 +106,4 @@ class VisualisationMri(Visualisation3D):
         cmap_background = ListedColormap(rgba_background)
 
         return (atlaslabelsdf, background_small, brain_surface_small,
-                background_full_zooms, rgba, cmap, cmap_background)
+                mri_spacing, rgba, cmap, cmap_background)

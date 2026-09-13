@@ -32,6 +32,18 @@ class Measurement:
         self.colors=[(1,0,0),(0,1,0),(0,0,1),(1,1,0),(1,0,1)]
         self.current_view_name = None
 
+    def teardown(self):
+        """
+        Called by MainWindow._teardown_registered_modules() (see
+        register_module) whenever restart_gui() tears down the current
+        session. measurement_renderer is a separate overlay vtkRenderer per
+        view (core/load_MRI_file.py's teardown_load_mri() already removes
+        every renderer -- base and this overlay -- from each view's render
+        window wholesale, so there's nothing left to do on the VTK side here.
+        Just resets this object's own bookkeeping, so a reused Measurement
+        instance doesn't think stale lines are still there.
+        """
+        self.measurement_lines = []
 
     def add_point(self, voxel: tuple[int, int, int], view_name:str):
         """

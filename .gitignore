@@ -21,6 +21,9 @@ venv/
 paths_config.json
 last_session.json
 
+# Archived SAMRI session logs (main_window.py's _archive_samri_log)
+logs/
+
 # SAMRI Infos
 samri/bruker_info.json
 samri_bindata/

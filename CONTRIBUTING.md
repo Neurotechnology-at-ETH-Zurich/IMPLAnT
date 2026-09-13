@@ -30,6 +30,20 @@ These explain how the pieces connect; the code alone won't make that obvious.
 
 `form.ui` is large (~17k lines) and any tab you touch may be reviewed as a big XML diff — try to keep unrelated tabs untouched in the same change.
 
+## Adding your own tab/tool to MainWindow
+
+`MainWindow` (`main_window.py`) has a small extension API for attaching a new tab, dock, or menu entry without editing its `__init__`/`add_actions()` or reaching into `self.ui` internals directly. See the "Extension API" comment block in `main_window.py` (just above `register_tab`) for the full picture, caveats included — short version:
+
+- `load_split_ui(ui_class, attach)` — load a Designer form built as its own standalone `.ui` file and attach its top-level widget (e.g. `lambda w: self.register_tab(w, "My Tool")`). Build the form in Designer, not with runtime `addWidget()` calls (see above).
+- `register_tab(widget, title, index=None)` — add `widget` as a new page of the main tab strip; returns its index (use `tabWidget.indexOf(widget)` to find it again later, not a hardcoded number).
+- `register_menu_action(menu, text, triggered=None, before=None, enabled=True)` — add a `QAction` to an existing menu.
+- `register_session_loaded_callback(kind, callback)` — get notified once a `'mri'`/`'ephys'`/`'samri'`/`'trajectory'`/`'surgery'` session finishes loading, instead of hooking `restart_gui`/`do_ephys_heavy`/etc. yourself.
+- `register_module(name, module)` — register a controller object (like `SurgeryController`) under `self.<name>` (`name` can be dotted, e.g. `'LoadMRI.TrajPlanning'`, for a module that naturally lives on an attribute other than `self`); if it defines `teardown()`, that's called whenever `restart_gui()` tears down the UI for a full restart.
+
+A brand-new tool typically combines the first two: build its UI as its own `.ui` file, load it with `load_split_ui()`, attach it with `register_tab()`.
+
+The built-in tool tabs (`surgery`, `tab_ephys`, `tab_samri`, plus the earlier popup tabs) are now attached the same way a new tab would be — each was split out of the monolithic `form.ui` into its own standalone `.ui` file and is loaded via `load_split_ui`/`register_tab`, same as above. Only `PostSurgery` (the default Structural/Time-Series Tools view — the primary MRI viewer, not an optional tool) is still defined directly inside `form.ui`, left that way deliberately: it's the app's core view rather than an example of a pluggable tool, and it's far more deeply cross-referenced throughout the codebase than any tool tab, so extracting it carries materially more risk for little of the benefit this API is meant to provide.
+
 ## Code conventions
 
 There's no linter/formatter config in this repo yet — match the style of the surrounding file. Directories are organized by workflow stage (`trajectory_planning/`, `intraoperative/`, `ephys/`, `core/`, `mrid_utils/`); put new code next to the workflow it belongs to rather than in a shared catch-all.

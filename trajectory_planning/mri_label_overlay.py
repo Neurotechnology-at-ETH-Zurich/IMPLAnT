@@ -26,7 +26,6 @@ from scipy.ndimage import distance_transform_edt
 
 _FIXED_IDX_FILENAME = "fixed_img-indeces.npy"
 _MOVING_IDX_RAW_FILENAME = "moving_img_resampled25um-indeces.npy"
-_CORRESPONDENCE_CACHE_FILENAME = "mri_grid_correspondence-indices.npy"
 
 
 def _index_to_physical_affine(img):
@@ -66,46 +65,86 @@ def reconcile_raw_to_display_indices(moving_img, moving_img_resampled, raw_indic
     return np.round(display_idx).astype(np.int64)
 
 
-def load_or_build_mri_grid_correspondence(session_registration_dir, moving_img, moving_img_resampled):
+def build_mri_grid_correspondence(session_registration_dir, moving_img, moving_img_resampled):
     """(fixed_idx, mri_grid_idx): every atlas voxel index (fixed_idx, xyz)
     and its corresponding voxel index on the DISPLAYED MRI grid
     (mri_grid_idx, xyz). Reads SAMRI's cached fixed_img-indeces.npy /
     moving_img_resampled25um-indeces.npy and reconciles the raw-grid MRI
-    side into display-grid indices once, caching the reconciled result
-    alongside them -- this correspondence is independent of which atlas is
-    active (see rendering.py's reload_atlas_view: "both atlases share one
-    coordinate grid"), so it only ever needs building once per session, not
-    on every atlas switch. Rebuilt if the cache predates the SAMRI .npy
-    files it's derived from (e.g. after a re-registration), so a stale
-    cache from a previous, since-fixed or since-rerun registration doesn't
-    silently linger.
+    side into display-grid indices -- a cheap, vectorized affine re-index
+    (see reconcile_raw_to_display_indices's own docstring: "not a real
+    resample"), not the expensive part of this workflow.
 
-    The cache is keyed (via the filename) by moving_img_resampled's own
-    voxel shape, NOT just session_registration_dir -- that directory's path
-    doesn't depend on the resample spacing trajectory planning was opened
-    with (see main_window.py's finish_trajectory_work/resampled_path), so a
-    session reopened at a different resample spacing would otherwise silently
-    load a correspondence built for a different-shaped grid than the one
-    actually displayed now."""
+    Not disk-cached: its only caller (registration_mri.py's
+    get_correspondence) already calls this exclusively on a
+    load_or_build_mri_label_scatter cache miss -- i.e. exactly when that
+    function's own full-volume distance-transform is about to run anyway
+    -- and memoizes the result on self for the rest of that TrajPlanning
+    instance's lifetime, so a second, persistent disk cache here would
+    only ever help the (currently unreachable, atlas-switch-only) case of
+    rebuilding the label scatter more than once in one process run
+    without the SAMRI .npy inputs changing -- not worth the extra file and
+    staleness-tracking for a step this cheap."""
     fixed_path = os.path.join(session_registration_dir, _FIXED_IDX_FILENAME)
     moving_raw_path = os.path.join(session_registration_dir, _MOVING_IDX_RAW_FILENAME)
-    shape_tag = "x".join(str(s) for s in moving_img_resampled.GetSize())
+    fixed_idx = np.load(fixed_path).astype(np.int64)
+    moving_idx_raw = np.load(moving_raw_path)
+    mri_grid_idx = reconcile_raw_to_display_indices(moving_img, moving_img_resampled, moving_idx_raw)
+    return fixed_idx, mri_grid_idx
+
+
+_LABEL_SCATTER_CACHE_FILENAME = "mri_label_scatter.npy"
+
+
+def load_or_build_mri_label_scatter(session_registration_dir, atlas_label_path,
+                                     get_correspondence, mri_shape_zyx):
+    """(mri_label_vol): scatter_atlas_labels_to_mri_grid's own result,
+    cached to disk -- that function is otherwise a real, uncached
+    full-volume distance_transform_edt (plus a full atlas-label re-read)
+    run on every single call.
+
+    Reused as long as the cache is newer than everything it was built
+    from -- the atlas label file itself, and the SAMRI .npy files this
+    session's correspondence is ultimately derived from -- so a stale
+    cache from a previous, since-fixed or since-rerun registration, or a
+    since-changed atlas label file, doesn't silently linger; rebuilt
+    otherwise.
+
+    get_correspondence: zero-arg callable returning (fixed_idx,
+    mri_grid_idx) -- the atlas<->MRI voxel correspondence
+    build_mri_grid_correspondence computes (cheaply; not itself disk-
+    cached, see its own docstring). Nothing else in the codebase reads
+    that correspondence directly (it exists only to feed
+    scatter_atlas_labels_to_mri_grid), so it's fetched lazily and called
+    only on a cache miss here -- on a warm cache (the common case once a
+    subject has been opened once), this function never touches
+    movingImg_25um or the correspondence at all.
+
+    The cache is keyed (via the filename) by mri_shape_zyx and the atlas
+    label file's own basename, not just session_registration_dir -- a
+    session reopened at a different resample spacing must not reuse a
+    wrong-shaped array, and the atlas tag means a differently-labelled
+    atlas can never silently reuse another atlas' scatter."""
+    fixed_path = os.path.join(session_registration_dir, _FIXED_IDX_FILENAME)
+    moving_raw_path = os.path.join(session_registration_dir, _MOVING_IDX_RAW_FILENAME)
+    shape_tag = "x".join(str(s) for s in mri_shape_zyx)
+    atlas_tag = os.path.splitext(os.path.basename(atlas_label_path))[0]
     cache_path = os.path.join(
         session_registration_dir,
-        _CORRESPONDENCE_CACHE_FILENAME.replace(".npy", f"-{shape_tag}.npy"))
+        _LABEL_SCATTER_CACHE_FILENAME.replace(".npy", f"-{atlas_tag}-{shape_tag}.npy"))
 
-    fixed_idx = np.load(fixed_path).astype(np.int64)
+    dep_paths = [p for p in (atlas_label_path, fixed_path, moving_raw_path) if os.path.exists(p)]
     cache_is_stale = (
         os.path.exists(cache_path)
-        and os.path.getmtime(cache_path) < max(
-            os.path.getmtime(fixed_path), os.path.getmtime(moving_raw_path)))
+        and dep_paths
+        and os.path.getmtime(cache_path) < max(os.path.getmtime(p) for p in dep_paths))
     if os.path.exists(cache_path) and not cache_is_stale:
-        mri_grid_idx = np.load(cache_path)
-    else:
-        moving_idx_raw = np.load(moving_raw_path)
-        mri_grid_idx = reconcile_raw_to_display_indices(moving_img, moving_img_resampled, moving_idx_raw)
-        np.save(cache_path, mri_grid_idx)
-    return fixed_idx, mri_grid_idx
+        return np.load(cache_path)
+
+    fixed_idx, mri_grid_idx = get_correspondence()
+    mri_label_vol = scatter_atlas_labels_to_mri_grid(
+        atlas_label_path, fixed_idx, mri_grid_idx, mri_shape_zyx)
+    np.save(cache_path, mri_label_vol)
+    return mri_label_vol
 
 
 def scatter_atlas_labels_to_mri_grid(atlas_label_path, fixed_idx, mri_grid_idx, mri_shape_zyx):

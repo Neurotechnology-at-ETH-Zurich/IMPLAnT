@@ -128,6 +128,14 @@ class SurgeryController:
             self.show_step_popup()
             self._step_popup_shown = True
 
+        # Both places a saved plan can be loaded (main_window.py's
+        # _restore_session_entry('surgery') and the "Load Surgery Plan"
+        # dialog in intraoperative/load_surgery_plan.py) call this method
+        # directly -- this is the one place they both go through, so it's
+        # where MainWindow.register_session_loaded_callback('surgery', ...)
+        # fires from (see that method's docstring in main_window.py).
+        self.MW._notify_session_loaded('surgery')
+
     def show_step_popup(self):
         """Wired to pushButton_questionmark_2 (re-showable on demand, same
         convention as pushButton_questionmark/_samri -> show_step_

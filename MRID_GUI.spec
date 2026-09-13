@@ -249,7 +249,7 @@ exe = EXE(
     # filename (upx_exclude matches on basename, not full path).
     upx_exclude=_ANTS_TOOLS,
     runtime_tmpdir=None,
-    console=True,   # keep True until the app works, then switch to False
+    console=False,   # keep True until the app works, then switch to False
     disable_windowed_traceback=False,
     argv_emulation=False,
     target_arch=None,

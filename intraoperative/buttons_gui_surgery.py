@@ -9,7 +9,7 @@ the subject's own resampled MRI) -- the photo is a fixed reference image,
 independent of whatever plan is loaded, so there is no MRI to load/reslice
 here any more.
 
-Bregma (green) and Lambda (red) are drawn once, always, at their hand-
+Bregma (red) and Lambda (blue) are drawn once, always, at their hand-
 calibrated pixel positions in the photo (_BREGMA_PX/_LAMBDA_PX). Each
 shank's planned insertion point (from a loaded plan's ap_mm/rl_mm offset
 from Bregma) is drawn on load(), in that shank's own color -- purely
@@ -127,23 +127,16 @@ def _add_shank_markers(scene, data):
     trajectory_planning/file_input_output.py). Places each shank's planned
     insertion point at its ap_mm/rl_mm offset from Bregma, mapped into this
     photo's pixel space via the Bregma/Lambda-calibrated affine transform
-    (see _mri_to_photo_affine), plus a short dotted line from that point
-    showing which way -- and how far, in the same mm-calibrated scale as
-    the marker itself -- the shank leans as it goes down into the skull
-    (roll_deg/pitch_deg's RL/AP lean components over insertion_depth_mm;
-    see compute()'s docstring for what those two angles mean). Purely a
-    dorsal-view schematic of the horizontal lean, same small-angle drop-
-    the-other-component approximation roll/pitch already use everywhere
-    else in this app -- it can't show the DV/depth component itself,
-    since this is a top-down photo.
-
-    roll_deg and pitch_deg use DIFFERENT reference axes (coord_transform.
-    py's compute_shank_roll_pitch_mri): roll is measured FROM VERTICAL,
-    toward RL, so its horizontal fraction is sin(roll); pitch is measured
-    FROM THE AP LINE, toward vertical, so ITS horizontal (AP) fraction is
-    cos(pitch), not sin(pitch) -- sin(pitch) is the vertical/DV fraction,
-    which this top-down view can't show. Don't "fix" pitch's formula to
-    match roll's without re-checking that asymmetry first.
+    (see _mri_to_photo_affine), plus a short dotted line from that point to
+    the shank's deepest point (deep_ap_mm/deep_rl_mm), mapped through the
+    exact same affine -- a straight top-down projection of the real
+    insertion->deep segment, not a reconstruction from roll_deg/pitch_deg
+    + insertion_depth_mm (which used to get this wrong: those two angles
+    each drop a different axis component, and reconstructing a 2D direction
+    from them needs signed values, which compute_shank_roll_pitch_mri did
+    not provide until it stopped abs()-ing them -- using the deep point's
+    own saved coordinate sidesteps that reconstruction entirely). It can't
+    show the DV/depth component itself, since this is a top-down photo.
 
     Returns the list of marker items
     added (the dotted lines are added directly to the scene but not
@@ -165,16 +158,11 @@ def _add_shank_markers(scene, data):
         r, g, b = _SHANK_COLORS[i % len(_SHANK_COLORS)]
         color = QColor(round(r * 255), round(g * 255), round(b * 255))
 
-        depth_mm = entry.get("insertion_depth_mm", 0.0)
-        roll_rad = np.radians(entry.get("roll_deg", 0.0))
-        pitch_rad = np.radians(entry.get("pitch_deg", 0.0))
-        # roll is measured from vertical (sin -> horizontal RL fraction);
-        # pitch is measured from the AP line itself (cos -> horizontal AP
-        # fraction) -- see the differing conventions noted in this
-        # function's docstring above.
-        d_ap_mm = depth_mm * np.cos(pitch_rad)
-        d_rl_mm = depth_mm * np.sin(roll_rad)
-        end_px = insert_px + matrix @ np.array([-d_ap_mm, d_rl_mm])
+        # Older plan JSONs saved before deep_ap_mm/deep_rl_mm existed fall
+        # back to the insertion point itself (zero-length line).
+        deep_ap_mm = raw.get("deep_ap_mm", raw["ap_mm"])
+        deep_rl_mm = raw.get("deep_rl_mm", raw["rl_mm"])
+        end_px = origin_px + matrix @ np.array([-deep_ap_mm, deep_rl_mm])
         line = scene.addLine(insert_px[0], insert_px[1], end_px[0], end_px[1],
                               QPen(color, 1.5, Qt.DotLine))
         line.setZValue(0.5)  # above the photo, below the insertion marker
@@ -185,7 +173,7 @@ def _add_shank_markers(scene, data):
 
 def build_skull_reference_scene(data=None):
     """Builds the Intraoperative tab's skull-reference QGraphicsScene: the photo,
-    Bregma (green)/Lambda (red) markers, always; plus each shank's planned
+    Bregma (red)/Lambda (blue) markers, always; plus each shank's planned
     insertion-point marker if a parsed plan JSON is passed (see
     _add_shank_markers). Returns (scene, photo_item).
 
@@ -203,8 +191,8 @@ def build_skull_reference_scene(data=None):
     scene.addItem(photo_item)
     scene.setSceneRect(photo_item.boundingRect())
 
-    _add_marker(scene, _BREGMA_PX, QColor(0, 255, 0))
-    _add_marker(scene, _LAMBDA_PX, QColor(255, 0, 0))
+    _add_marker(scene, _BREGMA_PX, QColor(255, 0, 0))
+    _add_marker(scene, _LAMBDA_PX, QColor(0, 0, 255))
     if data is not None:
         _add_shank_markers(scene, data)
     return scene, photo_item

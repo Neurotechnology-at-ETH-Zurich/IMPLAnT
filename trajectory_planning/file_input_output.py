@@ -1097,6 +1097,16 @@ class FileOutput(QtWidgets.QDialog):
             coord_perp_bl   = float(np.dot(v, x_axis))        # Y: lateral, perpendicular to bl (ML)
             coord_dv_bl     = float(np.dot(v, plane_normal))  # Z: dorsal/ventral offset from the bl plane
 
+            # Same projection for the deepest point -- lets a consumer (the
+            # Intraoperative Tab's skull-photo dotted lean-line,
+            # buttons_gui_surgery.py) draw insertion->deep directly in this
+            # same bl_axis/x_axis frame, instead of reconstructing the
+            # horizontal lean from roll_deg/pitch_deg + insertion_depth_mm.
+            v_deep = deep_mm - bregma_mm
+            deep_ap_mm = -float(np.dot(v_deep, bl_axis))
+            deep_rl_mm = float(np.dot(v_deep, x_axis))
+            deep_dv_mm = float(np.dot(v_deep, plane_normal))
+
             # Depth between the deepest point and the insertion point
             shank_vec  = insert_mm - deep_mm
             shank_dist = float(np.linalg.norm(shank_vec))
@@ -1143,6 +1153,9 @@ class FileOutput(QtWidgets.QDialog):
                     "ap_mm": coord_along_bl,
                     "rl_mm": coord_perp_bl,
                     "dv_mm": coord_dv_bl,
+                    "deep_ap_mm": deep_ap_mm,
+                    "deep_rl_mm": deep_rl_mm,
+                    "deep_dv_mm": deep_dv_mm,
                 },
             }
 

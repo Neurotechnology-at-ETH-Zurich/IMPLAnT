@@ -1,0 +1,941 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>tab_ephys</class>
+ <widget class="QWidget" name="tab_ephys">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>898</width>
+    <height>584</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Form</string>
+  </property>
+  <layout class="QGridLayout" name="gridLayout">
+   <item row="0" column="0">
+    <widget class="QLabel" name="textEdit_ephys">
+     <property name="minimumSize">
+      <size>
+       <width>300</width>
+       <height>100</height>
+      </size>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>300</width>
+       <height>16777215</height>
+      </size>
+     </property>
+     <property name="text">
+      <string>TextLabel</string>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item row="0" column="1" rowspan="2">
+    <widget class="QTabWidget" name="tabWidget_ephys">
+     <property name="currentIndex">
+      <number>2</number>
+     </property>
+     <widget class="QWidget" name="tab_4">
+      <attribute name="title">
+       <string>Anatomy</string>
+      </attribute>
+      <layout class="QGridLayout" name="gridLayout_46">
+       <item row="1" column="0">
+        <widget class="QGroupBox" name="groupBox_37">
+         <property name="maximumSize">
+          <size>
+           <width>16777215</width>
+           <height>200</height>
+          </size>
+         </property>
+         <property name="toolTip">
+          <string>Voxel coordinates of the selected channel's electrode — updates automatically when you click a channel in the table.</string>
+         </property>
+         <property name="title">
+          <string>Coordinates of selected Channel</string>
+         </property>
+         <layout class="QGridLayout" name="gridLayout_74">
+          <item row="0" column="2">
+           <widget class="QSpinBox" name="spinBox_y_ephys">
+            <property name="maximumSize">
+             <size>
+              <width>16777215</width>
+              <height>30</height>
+             </size>
+            </property>
+            <property name="toolTip">
+             <string>Y voxel coordinate of the selected channel's electrode position.</string>
+            </property>
+            <property name="readOnly">
+             <bool>true</bool>
+            </property>
+            <property name="buttonSymbols">
+             <enum>QAbstractSpinBox::NoButtons</enum>
+            </property>
+            <property name="minimum">
+             <number>1</number>
+            </property>
+            <property name="maximum">
+             <number>1000</number>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QSpinBox" name="spinBox_x_ephys">
+            <property name="maximumSize">
+             <size>
+              <width>16777215</width>
+              <height>30</height>
+             </size>
+            </property>
+            <property name="toolTip">
+             <string>X voxel coordinate of the selected channel's electrode position.</string>
+            </property>
+            <property name="readOnly">
+             <bool>true</bool>
+            </property>
+            <property name="buttonSymbols">
+             <enum>QAbstractSpinBox::NoButtons</enum>
+            </property>
+            <property name="minimum">
+             <number>1</number>
+            </property>
+            <property name="maximum">
+             <number>1000</number>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="3">
+           <widget class="QSpinBox" name="spinBox_z_ephys">
+            <property name="maximumSize">
+             <size>
+              <width>16777215</width>
+              <height>30</height>
+             </size>
+            </property>
+            <property name="toolTip">
+             <string>Z voxel coordinate of the selected channel's electrode position.</string>
+            </property>
+            <property name="readOnly">
+             <bool>true</bool>
+            </property>
+            <property name="buttonSymbols">
+             <enum>QAbstractSpinBox::NoButtons</enum>
+            </property>
+            <property name="minimum">
+             <number>1</number>
+            </property>
+            <property name="maximum">
+             <number>1000</number>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item row="0" column="0">
+        <widget class="QFrame" name="frame_32">
+         <property name="enabled">
+          <bool>true</bool>
+         </property>
+         <property name="minimumSize">
+          <size>
+           <width>0</width>
+           <height>200</height>
+          </size>
+         </property>
+         <property name="styleSheet">
+          <string notr="true">border-color: rgb(170, 170, 170);
+background-color: rgb(131, 131, 131);
+</string>
+         </property>
+         <property name="frameShape">
+          <enum>QFrame::NoFrame</enum>
+         </property>
+         <layout class="QGridLayout" name="gridLayout_68" rowstretch="0,0,0,0,0" columnstretch="1,1,1,1,1,1,0" rowminimumheight="0,0,0,0,0">
+          <property name="leftMargin">
+           <number>4</number>
+          </property>
+          <property name="topMargin">
+           <number>4</number>
+          </property>
+          <property name="rightMargin">
+           <number>4</number>
+          </property>
+          <property name="bottomMargin">
+           <number>4</number>
+          </property>
+          <property name="spacing">
+           <number>0</number>
+          </property>
+          <item row="1" column="0" colspan="7">
+           <widget class="QGroupBox" name="groupBox_6">
+            <property name="toolTip">
+             <string>Opacity sliders for the region meshes shown in the 3D view.</string>
+            </property>
+            <property name="title">
+             <string>Change Opacity of Meshes</string>
+            </property>
+            <layout class="QGridLayout" name="gridLayout_169" columnstretch="1,1,1">
+             <item row="1" column="1">
+              <widget class="QGroupBox" name="groupBox_8">
+               <property name="toolTip">
+                <string>Opacity of the atlas regions the selected shank(s) traverse.</string>
+               </property>
+               <property name="title">
+                <string>Regions of Shank</string>
+               </property>
+               <layout class="QGridLayout" name="gridLayout_171">
+                <item row="0" column="0">
+                 <widget class="QSlider" name="horizontalSlider_OtherRegions">
+                  <property name="toolTip">
+                   <string>Opacity of the atlas regions the selected shank(s) traverse, from transparent to fully opaque.</string>
+                  </property>
+                  <property name="minimum">
+                   <number>0</number>
+                  </property>
+                  <property name="maximum">
+                   <number>100</number>
+                  </property>
+                  <property name="singleStep">
+                   <number>0</number>
+                  </property>
+                  <property name="orientation">
+                   <enum>Qt::Horizontal</enum>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </widget>
+             </item>
+             <item row="1" column="2">
+              <widget class="QGroupBox" name="groupBox_9">
+               <property name="toolTip">
+                <string>Opacity of the background brain mesh.</string>
+               </property>
+               <property name="title">
+                <string>Background</string>
+               </property>
+               <layout class="QGridLayout" name="gridLayout_172">
+                <item row="0" column="0">
+                 <widget class="QSlider" name="horizontalSlider_Background">
+                  <property name="toolTip">
+                   <string>Opacity of the background brain mesh, from transparent to fully opaque.</string>
+                  </property>
+                  <property name="maximum">
+                   <number>100</number>
+                  </property>
+                  <property name="orientation">
+                   <enum>Qt::Horizontal</enum>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </widget>
+             </item>
+             <item row="1" column="0">
+              <widget class="QGroupBox" name="groupBox_11">
+               <property name="toolTip">
+                <string>Opacity of the atlas region highlighted for the currently selected channel.</string>
+               </property>
+               <property name="title">
+                <string>Region of Selected Electrode</string>
+               </property>
+               <layout class="QGridLayout" name="gridLayout_170">
+                <item row="0" column="0">
+                 <widget class="QSlider" name="horizontalSlider_ElectrodeRegion">
+                  <property name="toolTip">
+                   <string>Opacity of the atlas region highlighted for the currently selected channel, from transparent to fully opaque.</string>
+                  </property>
+                  <property name="maximum">
+                   <number>100</number>
+                  </property>
+                  <property name="orientation">
+                   <enum>Qt::Horizontal</enum>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <item row="3" column="5" rowspan="2">
+           <widget class="QPushButton" name="pushButton_slicez">
+            <property name="toolTip">
+             <string>Axial Slicing</string>
+            </property>
+            <property name="styleSheet">
+             <string notr="true">
+            QPushButton:hover {
+                background-color: rgba(255, 255, 255, 30);
+                border-radius: 4px;
+            }</string>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+            <property name="icon">
+             <iconset>
+              <normaloff>Icons/ephys/slicing_axial_top.png</normaloff>Icons/ephys/slicing_axial_top.png</iconset>
+            </property>
+            <property name="iconSize">
+             <size>
+              <width>60</width>
+              <height>60</height>
+             </size>
+            </property>
+            <property name="checkable">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="4" rowspan="2">
+           <widget class="QPushButton" name="pushButton_slicey">
+            <property name="toolTip">
+             <string>Coronal Slicing</string>
+            </property>
+            <property name="styleSheet">
+             <string notr="true">
+            QPushButton:hover {
+                background-color: rgba(255, 255, 255, 30);
+                border-radius: 4px;
+            }</string>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+            <property name="icon">
+             <iconset>
+              <normaloff>Icons/ephys/slicing_coronal_front.png</normaloff>Icons/ephys/slicing_coronal_front.png</iconset>
+            </property>
+            <property name="iconSize">
+             <size>
+              <width>60</width>
+              <height>60</height>
+             </size>
+            </property>
+            <property name="checkable">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="3" rowspan="2">
+           <widget class="QPushButton" name="pushButton_slicex">
+            <property name="toolTip">
+             <string>Sagittal Slicing</string>
+            </property>
+            <property name="styleSheet">
+             <string notr="true">
+            QPushButton:hover {
+                background-color: rgba(255, 255, 255, 30);
+                border-radius: 4px;
+            }</string>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+            <property name="icon">
+             <iconset>
+              <normaloff>Icons/ephys/slicing_sagittal_right.png</normaloff>Icons/ephys/slicing_sagittal_right.png</iconset>
+            </property>
+            <property name="iconSize">
+             <size>
+              <width>60</width>
+              <height>60</height>
+             </size>
+            </property>
+            <property name="checkable">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="2" rowspan="2">
+           <widget class="QPushButton" name="pushButton_Noslicing">
+            <property name="toolTip">
+             <string>Exit Slicing Mode</string>
+            </property>
+            <property name="styleSheet">
+             <string notr="true">
+            QPushButton:hover {
+                background-color: rgba(255, 255, 255, 30);
+                border-radius: 4px;
+            }</string>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+            <property name="icon">
+             <iconset>
+              <normaloff>Icons/ephys/no_slicing.png</normaloff>Icons/ephys/no_slicing.png</iconset>
+            </property>
+            <property name="iconSize">
+             <size>
+              <width>60</width>
+              <height>60</height>
+             </size>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="1" rowspan="2">
+           <widget class="QPushButton" name="change_perspective_ephys">
+            <property name="toolTip">
+             <string>Change Perspective</string>
+            </property>
+            <property name="styleSheet">
+             <string notr="true">
+            QPushButton:hover {
+                background-color: rgba(255, 255, 255, 30);
+                border-radius: 4px;
+            }</string>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+            <property name="icon">
+             <iconset>
+              <normaloff>Icons/ephys/projection_parallel.png</normaloff>Icons/ephys/projection_parallel.png</iconset>
+            </property>
+            <property name="iconSize">
+             <size>
+              <width>60</width>
+              <height>60</height>
+             </size>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="0" colspan="7">
+           <widget class="QVTKRenderWindowInteractor" name="vtkWidget_ephys">
+            <property name="enabled">
+             <bool>true</bool>
+            </property>
+            <property name="minimumSize">
+             <size>
+              <width>0</width>
+              <height>0</height>
+             </size>
+            </property>
+            <property name="styleSheet">
+             <string notr="true">background-color: rgb(200, 177, 176);</string>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="0" rowspan="2">
+           <widget class="QPushButton" name="resetCamera_ephys">
+            <property name="enabled">
+             <bool>true</bool>
+            </property>
+            <property name="toolTip">
+             <string>Reset Camera View</string>
+            </property>
+            <property name="styleSheet">
+             <string notr="true">
+            QPushButton:hover {
+                background-color: rgba(255, 255, 255, 30);
+                border-radius: 4px;
+            }</string>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+            <property name="icon">
+             <iconset theme="go-home"/>
+            </property>
+            <property name="iconSize">
+             <size>
+              <width>60</width>
+              <height>60</height>
+             </size>
+            </property>
+            <property name="autoDefault">
+             <bool>false</bool>
+            </property>
+            <property name="default">
+             <bool>false</bool>
+            </property>
+            <property name="flat">
+             <bool>false</bool>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="tab_5">
+      <attribute name="title">
+       <string>Video</string>
+      </attribute>
+      <layout class="QGridLayout" name="gridLayout_166" columnstretch="0,0,0,0">
+       <item row="0" column="0" colspan="4">
+        <widget class="QStackedWidget" name="stackedWidget_video">
+         <property name="currentIndex">
+          <number>0</number>
+         </property>
+         <widget class="QWidget" name="page_12">
+          <layout class="QGridLayout" name="gridLayout_167">
+           <item row="1" column="1">
+            <widget class="QLineEdit" name="lineEdit_3">
+             <property name="text">
+              <string>Jump to Frame</string>
+             </property>
+             <property name="readOnly">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="0">
+            <widget class="QPushButton" name="pushButton_videoPlay">
+             <property name="toolTip">
+              <string>Play or pause the loaded behavior video.</string>
+             </property>
+             <property name="text">
+              <string/>
+             </property>
+             <property name="icon">
+              <iconset theme="media-playback-start"/>
+             </property>
+             <property name="iconSize">
+              <size>
+               <width>40</width>
+               <height>40</height>
+              </size>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="2">
+            <widget class="QSpinBox" name="spinBox_frame">
+             <property name="toolTip">
+              <string>Jump to this video frame.</string>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="0" colspan="3">
+            <widget class="QVideoWidget" name="widget_video" native="true"/>
+           </item>
+          </layout>
+         </widget>
+         <widget class="QWidget" name="page_15">
+          <layout class="QGridLayout" name="gridLayout_77">
+           <item row="0" column="0">
+            <widget class="QPushButton" name="pushButton_AddVideo">
+             <property name="minimumSize">
+              <size>
+               <width>0</width>
+               <height>72</height>
+              </size>
+             </property>
+             <property name="toolTip">
+              <string>Load a behavior video file to sync alongside the ephys recording.</string>
+             </property>
+             <property name="text">
+              <string>OPEN VIDEO</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="tab_7">
+      <attribute name="title">
+       <string>Analysis</string>
+      </attribute>
+      <layout class="QGridLayout" name="gridLayout_185">
+       <property name="leftMargin">
+        <number>0</number>
+       </property>
+       <property name="topMargin">
+        <number>0</number>
+       </property>
+       <property name="rightMargin">
+        <number>0</number>
+       </property>
+       <property name="bottomMargin">
+        <number>0</number>
+       </property>
+       <property name="spacing">
+        <number>0</number>
+       </property>
+       <item row="0" column="0">
+        <widget class="QLineEdit" name="lineEdit_13">
+         <property name="text">
+          <string>Spike Ruster Plot Unit/Neurons over Time [min:sec:msec] - Skipped Channels are not shown</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="1" rowspan="3">
+        <widget class="QTabWidget" name="tabWidget_LFP">
+         <property name="currentIndex">
+          <number>3</number>
+         </property>
+         <widget class="QWidget" name="tab_13">
+          <attribute name="title">
+           <string>Hierarchical Correlation</string>
+          </attribute>
+          <layout class="QGridLayout" name="gridLayout_201">
+           <item row="0" column="0">
+            <widget class="QLineEdit" name="lineEdit_61">
+             <property name="text">
+              <string>Pairwise Neuronal Spike-Count Correlation</string>
+             </property>
+             <property name="readOnly">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="1">
+            <widget class="QLineEdit" name="lineEdit_62">
+             <property name="text">
+              <string>Colour-axis Limits</string>
+             </property>
+             <property name="readOnly">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="2">
+            <widget class="QDoubleSpinBox" name="doubleSpinBox_ClusterLimits">
+             <property name="maximumSize">
+              <size>
+               <width>16777215</width>
+               <height>16777215</height>
+              </size>
+             </property>
+             <property name="toolTip">
+              <string>Symmetric color-scale limit (±value) for the hierarchical correlation heatmap.</string>
+             </property>
+             <property name="minimum">
+              <double>0.010000000000000</double>
+             </property>
+             <property name="maximum">
+              <double>2.000000000000000</double>
+             </property>
+             <property name="singleStep">
+              <double>0.050000000000000</double>
+             </property>
+             <property name="value">
+              <double>0.300000000000000</double>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="0" colspan="3">
+            <widget class="QWidget" name="widget_hierClustering" native="true"/>
+           </item>
+          </layout>
+         </widget>
+         <widget class="QWidget" name="tab_14">
+          <attribute name="title">
+           <string>Spectrogram</string>
+          </attribute>
+          <layout class="QGridLayout" name="gridLayout_202">
+           <item row="1" column="0" colspan="4">
+            <widget class="QWidget" name="widget_Spectrogram_ripple" native="true"/>
+           </item>
+           <item row="0" column="0">
+            <widget class="QLineEdit" name="lineEdit_64">
+             <property name="text">
+              <string>Spectrogram of selected Channel in same time window as ephys data displayed</string>
+             </property>
+             <property name="readOnly">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="3">
+            <widget class="QPushButton" name="pushButton_axisLog">
+             <property name="toolTip">
+              <string>Toggle the spectrogram's frequency axis between linear and logarithmic scale.</string>
+             </property>
+             <property name="text">
+              <string>Change Axis</string>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="2">
+            <widget class="QPushButton" name="pushButton_colorMap">
+             <property name="toolTip">
+              <string>Cycle through the available spectrogram colormaps.</string>
+             </property>
+             <property name="text">
+              <string>ColorMap</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+         <widget class="QWidget" name="tab_8">
+          <attribute name="title">
+           <string>CSD</string>
+          </attribute>
+          <layout class="QGridLayout" name="gridLayout_24">
+           <item row="0" column="0">
+            <widget class="QLineEdit" name="lineEdit_65">
+             <property name="text">
+              <string>Current source density estimation </string>
+             </property>
+             <property name="readOnly">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="1">
+            <widget class="QPushButton" name="pushButton_exportCSD">
+             <property name="toolTip">
+              <string>Export the current CSD (current source density) data as a binary file with a JSON sidecar.</string>
+             </property>
+             <property name="text">
+              <string>Export as Binary</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="0" colspan="2">
+            <widget class="QWidget" name="widget_CSD" native="true"/>
+           </item>
+          </layout>
+         </widget>
+         <widget class="QWidget" name="tab_9">
+          <attribute name="title">
+           <string>Spectrogram all Channels</string>
+          </attribute>
+          <layout class="QGridLayout" name="gridLayout_207">
+           <item row="0" column="1">
+            <widget class="QPushButton" name="pushButton_allChannels_axis">
+             <property name="toolTip">
+              <string>Toggle the all-channels spectrogram's frequency axis between linear and logarithmic scale.</string>
+             </property>
+             <property name="text">
+              <string>Change Axis</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="0" colspan="2">
+            <widget class="QPushButton" name="pushButton_Timeframe_spectrogram">
+             <property name="toolTip">
+              <string>Switch the all-channels spectrogram between the full recording and a window centered on a detected ripple.</string>
+             </property>
+             <property name="text">
+              <string>Entire Frame / Around Ripple</string>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="0">
+            <widget class="QLineEdit" name="lineEdit_66">
+             <property name="text">
+              <string>Spectrogram at selected time over all channels</string>
+             </property>
+             <property name="readOnly">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
+           <item row="2" column="0" colspan="2">
+            <widget class="QWidget" name="widget_Spectrogram_allChannels" native="true"/>
+           </item>
+          </layout>
+         </widget>
+        </widget>
+       </item>
+       <item row="1" column="0" rowspan="2">
+        <widget class="QWidget" name="widget_spike_ruster" native="true">
+         <layout class="QGridLayout" name="gridLayout_203"/>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </widget>
+   </item>
+   <item row="1" column="0">
+    <widget class="QFrame" name="frame_2">
+     <property name="maximumSize">
+      <size>
+       <width>300</width>
+       <height>16777215</height>
+      </size>
+     </property>
+     <property name="frameShape">
+      <enum>QFrame::StyledPanel</enum>
+     </property>
+     <property name="frameShadow">
+      <enum>QFrame::Raised</enum>
+     </property>
+     <layout class="QGridLayout" name="gridLayout_168">
+      <item row="2" column="2">
+       <widget class="QPushButton" name="pushButton_deselectAll">
+        <property name="toolTip">
+         <string>Uncheck every channel, hiding them all from the 3D view.</string>
+        </property>
+        <property name="text">
+         <string>Deselect All</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="1" colspan="2">
+       <widget class="QTableWidget" name="tableWidget_ephys">
+        <property name="maximumSize">
+         <size>
+          <width>300</width>
+          <height>16777215</height>
+         </size>
+        </property>
+        <property name="font">
+         <font>
+          <pointsize>9</pointsize>
+          <bold>false</bold>
+         </font>
+        </property>
+        <property name="sizeAdjustPolicy">
+         <enum>QAbstractScrollArea::AdjustToContents</enum>
+        </property>
+        <property name="editTriggers">
+         <set>QAbstractItemView::NoEditTriggers</set>
+        </property>
+        <property name="selectionMode">
+         <enum>QAbstractItemView::ContiguousSelection</enum>
+        </property>
+        <property name="selectionBehavior">
+         <enum>QAbstractItemView::SelectRows</enum>
+        </property>
+        <attribute name="horizontalHeaderCascadingSectionResizes">
+         <bool>false</bool>
+        </attribute>
+       </widget>
+      </item>
+      <item row="2" column="1">
+       <widget class="QPushButton" name="pushButton_selectAll">
+        <property name="toolTip">
+         <string>Check every channel, showing them all in the 3D view.</string>
+        </property>
+        <property name="text">
+         <string>Select All</string>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="1" colspan="2">
+       <widget class="QPushButton" name="pushButton_showChannels">
+        <property name="toolTip">
+         <string>Show only the checked channels in the 3D view; unchecked channels stay hidden.</string>
+        </property>
+        <property name="text">
+         <string>Show only selected Channels</string>
+        </property>
+        <property name="checkable">
+         <bool>true</bool>
+        </property>
+        <property name="checked">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="1" colspan="2">
+       <widget class="QPushButton" name="pushButton_anatRegion">
+        <property name="minimumSize">
+         <size>
+          <width>0</width>
+          <height>72</height>
+         </size>
+        </property>
+        <property name="font">
+         <font>
+          <pointsize>12</pointsize>
+          <bold>false</bold>
+         </font>
+        </property>
+        <property name="toolTip">
+         <string>Manually reassign the anatomical region label of the currently selected channel (opens a picker of nearby atlas regions).</string>
+        </property>
+        <property name="styleSheet">
+         <string notr="true"> QPushButton { background-color: #e67e22; color: white; } QPushButton:disabled { background-color: #a9713f; color: #cccccc; }</string>
+        </property>
+        <property name="text">
+         <string>CHANGE ANAT REGION</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="1" colspan="2">
+       <widget class="QGroupBox" name="groupBox_5">
+        <property name="maximumSize">
+         <size>
+          <width>16777215</width>
+          <height>300</height>
+         </size>
+        </property>
+        <property name="title">
+         <string/>
+        </property>
+        <layout class="QGridLayout" name="gridLayout_165">
+         <item row="1" column="0">
+          <widget class="QComboBox" name="comboBox_mridTag">
+           <property name="enabled">
+            <bool>true</bool>
+           </property>
+           <property name="minimumSize">
+            <size>
+             <width>0</width>
+             <height>0</height>
+            </size>
+           </property>
+           <property name="toolTip">
+            <string>Select which channel group / MRID tag to display in the 3D view.</string>
+           </property>
+           <property name="styleSheet">
+            <string notr="true">color: rgb(224, 27, 36);</string>
+           </property>
+           <property name="editable">
+            <bool>false</bool>
+           </property>
+           <property name="currentText">
+            <string/>
+           </property>
+           <property name="insertPolicy">
+            <enum>QComboBox::InsertAtBottom</enum>
+           </property>
+           <property name="sizeAdjustPolicy">
+            <enum>QComboBox::AdjustToContents</enum>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="0">
+          <widget class="QLineEdit" name="lineEdit_60">
+           <property name="text">
+            <string>Selected Shank</string>
+           </property>
+           <property name="readOnly">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>QVTKRenderWindowInteractor</class>
+   <extends>QGraphicsView</extends>
+   <header>vtkmodules.qt.QVTKRenderWindowInteractor</header>
+  </customwidget>
+  <customwidget>
+   <class>QVideoWidget</class>
+   <extends>QWidget</extends>
+   <header>PySide6.QtMultimediaWidgets</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
+ <resources/>
+ <connections/>
+</ui>
