@@ -274,6 +274,10 @@ On the day of surgery, real bregma/lambda measurements taken on the animal rarel
 3. Use the *Ephys Analysis* menu for signal analysis: *Theta Detection* and *Rippl AI* run detection directly on the loaded recording, and *Show Spiking Raster Plot* overlays externally computed spike-sorting results (a JRCLUST `_res.mat` file).
 4. Further preprocessing and analysis features are planned for future releases.
 
+## Contributing
+
+Want to add your own tool/tab, or work on the codebase generally? See [CONTRIBUTING.md](CONTRIBUTING.md) — `MainWindow` has a small, documented extension API for adding a new tab, menu entry, or session-lifecycle hook without touching its internals or `form.ui` by hand.
+
 ## License
 
 This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
