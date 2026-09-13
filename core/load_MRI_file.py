@@ -1,5 +1,6 @@
 # This Python file uses the following encoding: utf-8
 
+import os
 from PySide6.QtCore import QObject
 from PySide6.QtWidgets import QApplication, QWidget
 import vtk
@@ -378,6 +379,11 @@ def teardown_load_mri(mw, delete_windows):
             tp3d_window.deleteLater()
 
     mw.LoadMRI = None
+    # Same reasoning as MainWindow._free_previous_workflow_state: dropping
+    # LoadMRI here would otherwise leave a stale 'LoadMRI.TrajPlanning'
+    # entry in the registry, pointing at a TrajectoryPlanningMri instance
+    # that no longer exists anywhere else.
+    mw._registered_modules.pop('LoadMRI.TrajPlanning', None)
 
 
 def evict_load_mri(mw):
@@ -500,6 +506,10 @@ def restart_gui(mw, file_name, full_restart=True, label_file=False, data_view='c
     else:
         mw.FileLoader.is_4d = False #3d file
     mw.FileLoader.initialize_file(file_name,0,data_view,0,full_restart=full_restart,label_file=label_file)
+    # Every other 'mri' load path (MainWindow._finish_mri_load) adds the file
+    # here too -- this one didn't, so replacing the main image via File >
+    # Open never showed up in the resample dropdown until now.
+    mw.ui.comboBox_resamplefiles.addItem(os.path.basename(file_name))
     mw.ui.data_4d_3d.setCurrentIndex(0 if mw.FileLoader.is_4d else 1)
     mw.ui.tabWidget.setCurrentIndex(0)
 
