@@ -9,6 +9,20 @@ class Rendering:
     def render(self):
         for _,vtk_widget_image in self.LoadMRI.vtk_widgets.items():
             for view_name, widget in vtk_widget_image.items():
+                # change_view_coronal/_sagittal/_axial (below) swap
+                # stackedWidget_coronal/_sagittal/_axial to their oblique/
+                # clipped-3D page, which hides this plain view's own vtk
+                # widget without removing it from vtk_widgets. Rendering a
+                # widget that isn't actually mapped can hang the GL driver
+                # waiting on an X11/DRI3 buffer swap that never arrives --
+                # confirmed via gdb backtrace (blocked in
+                # vtkXOpenGLRenderWindow::MakeCurrent -> loader_dri3_
+                # get_buffers -> xcb_wait_for_special_event) freezing the
+                # whole GUI, since this is called via QTimer.singleShot from
+                # registration_mri.py/rendering_mri.py right after such a
+                # page switch.
+                if not widget.isVisible():
+                    continue
                 widget.GetRenderWindow().Render()
 
     def check_points_in_slice(self):
