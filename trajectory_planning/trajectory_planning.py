@@ -90,6 +90,14 @@ class TrajectoryPlanning(CoordTransform, Rendering, TpRegistration, ElecGeometry
         self.channel_points[self.shank_number] = []
         self.atlas_shank_end = {}
         self.atlas_shank_end[self.shank_number] = None
+        # [shank] -> 'ap' | 'rl' | None -- which checkBox_constraint_90deg/
+        # _coronal mode (if any) this shank is locked to. Per-shank so
+        # constraining one shank's plane doesn't leak onto any other --
+        # the two checkboxes just display/drive whichever shank is
+        # currently selected (see ShankRendering.select_shank and
+        # ElecGeometryMri.enforce_constraint_90deg/_coronal).
+        self.shank_constraint = {}
+        self.shank_constraint[self.shank_number] = None
 
         self.transform_path = transformPath
 
@@ -106,6 +114,15 @@ class TrajectoryPlanning(CoordTransform, Rendering, TpRegistration, ElecGeometry
         self._insertion_confirmed = set()
         self._insertion_guide_actor = {}
         self._insertion_guide_t_max = {}
+        # [shank] -> t (along _insertion_direction_mri, from mri_deep) of
+        # the ORIGINAL page_6 auto-guessed insertion point, set once the
+        # first time this shank's guide line is drawn and never
+        # overwritten again (see _draw_insertion_guide_line_mri) -- the
+        # floor pick_insertion_point_from_click clamps clicks to, so a
+        # refinement click can never land at or below the deepest point
+        # (t=0, insert == deep) or walk the insertion point back in past
+        # where the auto-guess already put it.
+        self._insertion_min_t = {}
         self._insertion_direction_mri = {}
         self._mri_marker_actor = {'deep': {}, 'insert': {}}
         self._overlay_layers_reloaded = False
