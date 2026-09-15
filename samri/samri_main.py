@@ -584,7 +584,6 @@ class InitSAMRI:
         idx = df.loc[df['path'] == self.output_filepath].index[0]
         img_path = f"{self.bids_base}/results/generic_work/_ind_type_{idx}/s_warp/{os.path.basename(self.output_filepath)}"
 
-        ## img_path = self.output_filepath  technically this also fine?
 
         MW.FileLoader.layer_index += 1
         MW.FileLoader.initialize_file(img_path,MW.FileLoader.layer_index,'coronal',0)
