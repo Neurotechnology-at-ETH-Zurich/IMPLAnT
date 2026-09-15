@@ -31,6 +31,8 @@ class LFPCreationDialog(QDialog):
         self.MW = MW
         self.ephys_data = ephys_data
         self.created = False
+        self._lfp_overlay = None
+        self._lfp_worker = None
 
         self.setWindowTitle("Create LFP file")
         self.setWindowFlags(Qt.Window | Qt.WindowStaysOnTopHint)
@@ -121,10 +123,11 @@ class LFPCreationDialog(QDialog):
             }
             run_json_subprocess(
                 'ephys_utils/lfp_downsample_worker.py', '--lfp-downsample-worker', payload,
+                on_progress=lambda line: self._lfp_worker.progress.emit(line),
             )
 
         def on_done():
-            overlay.close()
+            self._lfp_overlay.close()
             # keep the recording metadata consistent with the values actually used
             self.ephys_data.n_channels = num_channels
             self.ephys_data.sample_rate = sample_rate
@@ -136,18 +139,28 @@ class LFPCreationDialog(QDialog):
             self.accept()
 
         def on_failed(tb):
-            overlay.close()
+            self._lfp_overlay.close()
             show_worker_error(self.MW, "LFP creation failed", tb)
             # the popup was hidden for the overlay -- bring it back so the
             # still-open modal dialog is usable again instead of stuck hidden
             self.show()
 
-        overlay = BusyOverlay(self.MW, "Creating LFP file, please wait…")
-        overlay.setGeometry(self.MW.rect())
-        overlay.raise_()
-        overlay.show()
+        self._lfp_overlay = BusyOverlay(self.MW, "Creating LFP file, please wait…")
+        self._lfp_overlay.setGeometry(self.MW.rect())
+        self._lfp_overlay.raise_()
+        self._lfp_overlay.show()
 
         self._lfp_worker = BusyWorker(work, self.MW)
+        self._lfp_worker.progress.connect(self._on_lfp_progress, Qt.QueuedConnection)
         self._lfp_worker.done.connect(on_done)
         self._lfp_worker.failed.connect(on_failed)
         self._lfp_worker.start()
+
+    def _on_lfp_progress(self, line):
+        """BusyWorker.progress, on the GUI thread: keep the overlay's text
+        moving (e.g. "Processing channel N/M") so a long downsample run
+        doesn't read as a hang. `line` is a raw stdout line from
+        ephys_utils/lfp_downsample_worker.py, relayed by
+        gui_utils/subprocess_worker.py's run_json_subprocess."""
+        if self._lfp_overlay is not None:
+            self._lfp_overlay.set_message(line)

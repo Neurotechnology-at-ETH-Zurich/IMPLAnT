@@ -96,7 +96,7 @@ def downsample_filter_LFP(raw_data_dir, filename,
     data_ds = np.zeros((num_channels, n_ds_samples), dtype=np.float64)
 
     for ch in range(num_channels):
-        print(f"Processing channel {ch + 1}/{num_channels}")
+        print(f"Processing channel {ch + 1}/{num_channels}", flush=True)
         temp_lp = scipy.signal.filtfilt(b, [1.0], raw_data[ch])
         data_ds[ch] = temp_lp[::ds_factor]
 
