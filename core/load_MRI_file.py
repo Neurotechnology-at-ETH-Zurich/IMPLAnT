@@ -254,6 +254,17 @@ class LoadMRI(QObject):
     def render(self):
         for _,vtk_widget_image in self.vtk_widgets.items():
             for view_name, widget in vtk_widget_image.items():
+                # A view's vtk widget can be hidden (e.g. its stacked widget
+                # switched to a different page) without being removed from
+                # vtk_widgets -- Rendering a widget that isn't actually
+                # mapped can hang the GL driver waiting on an X11/DRI3
+                # buffer swap that never arrives (confirmed via gdb: blocked
+                # in vtkXOpenGLRenderWindow::MakeCurrent ->
+                # loader_dri3_get_buffers -> xcb_wait_for_special_event),
+                # freezing the whole GUI -- see trajectory_planning/
+                # rendering.py's identical guard.
+                if not widget.isVisible():
+                    continue
                 widget.GetRenderWindow().Render()
 
 

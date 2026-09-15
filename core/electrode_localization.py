@@ -332,7 +332,7 @@ class ElectrodeLoc:
     # fitted centers are sub-voxel Gaussian fits, not exact voxel hits, so a
     # point stays visible for slices within this many voxels of its own
     # matching coordinate
-    Z_VISIBILITY_TOLERANCE = 1
+    Z_VISIBILITY_TOLERANCE = 0
 
     @staticmethod
     def _atlas_point_display_xy(point_xyz, view_name, spacing, shape):
@@ -380,7 +380,6 @@ class ElectrodeLoc:
         volume = lm.volumes[0]
         shape = volume.slices[0].shape
         spacing = volume.spacing  # zyx
-
         for view_name in ('axial', 'coronal', 'sagittal'):
             renderer = lm.renderers.get(0, {}).get(view_name)
             if renderer is None:
@@ -391,7 +390,7 @@ class ElectrodeLoc:
 
                 sphere = vtk.vtkSphereSource()
                 sphere.SetCenter(world_x, world_y, 1)
-                sphere.SetRadius(0.3)
+                sphere.SetRadius(0.15)
 
                 mapper = vtk.vtkPolyDataMapper()
                 mapper.SetInputConnection(sphere.GetOutputPort())
