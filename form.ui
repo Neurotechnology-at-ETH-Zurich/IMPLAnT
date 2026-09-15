@@ -8941,27 +8941,6 @@ background-color: rgb(131, 131, 131);
    </layout>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
-  <widget class="QDockWidget" name="dockWidget_ephys">
-   <property name="minimumSize">
-    <size>
-     <width>663</width>
-     <height>1041</height>
-    </size>
-   </property>
-   <property name="styleSheet">
-    <string notr="true">QPushButton:checked {
-                background-color: palette(highlight);
-                color: palette(highlighted-text);
-            }
-            QPushButton:hover {
-                background-color: rgba(255, 255, 255, 30);
-                border-radius: 4px;
-            }</string>
-   </property>
-   <attribute name="dockWidgetArea">
-    <number>2</number>
-   </attribute>
-  </widget>
   <widget class="QMenuBar" name="menubar">
    <property name="geometry">
     <rect>
@@ -9044,6 +9023,21 @@ background-color: rgb(131, 131, 131);
    <addaction name="menuStructural_Tools"/>
    <addaction name="menuTime_Series_Tools"/>
    <addaction name="menuEphys_Analysis"/>
+  </widget>
+  <widget class="QDockWidget" name="dockWidget_ephys">
+   <property name="styleSheet">
+    <string notr="true">QPushButton:checked {
+                background-color: palette(highlight);
+                color: palette(highlighted-text);
+            }
+            QPushButton:hover {
+                background-color: rgba(255, 255, 255, 30);
+                border-radius: 4px;
+            }</string>
+   </property>
+   <attribute name="dockWidgetArea">
+    <number>2</number>
+   </attribute>
   </widget>
   <action name="actionOpen">
    <property name="text">

@@ -4315,18 +4315,6 @@ class Ui_MainWindow(object):
         self.statusbar = QStatusBar(MainWindow)
         self.statusbar.setObjectName(u"statusbar")
         MainWindow.setStatusBar(self.statusbar)
-        self.dockWidget_ephys = QDockWidget(MainWindow)
-        self.dockWidget_ephys.setObjectName(u"dockWidget_ephys")
-        self.dockWidget_ephys.setMinimumSize(QSize(663, 1041))
-        self.dockWidget_ephys.setStyleSheet(u"QPushButton:checked {\n"
-"                background-color: palette(highlight);\n"
-"                color: palette(highlighted-text);\n"
-"            }\n"
-"            QPushButton:hover {\n"
-"                background-color: rgba(255, 255, 255, 30);\n"
-"                border-radius: 4px;\n"
-"            }")
-        MainWindow.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.dockWidget_ephys)
         self.menubar = QMenuBar(MainWindow)
         self.menubar.setObjectName(u"menubar")
         self.menubar.setGeometry(QRect(0, 0, 2000, 23))
@@ -4343,6 +4331,17 @@ class Ui_MainWindow(object):
         self.menuEphys_Analysis = QMenu(self.menubar)
         self.menuEphys_Analysis.setObjectName(u"menuEphys_Analysis")
         MainWindow.setMenuBar(self.menubar)
+        self.dockWidget_ephys = QDockWidget(MainWindow)
+        self.dockWidget_ephys.setObjectName(u"dockWidget_ephys")
+        self.dockWidget_ephys.setStyleSheet(u"QPushButton:checked {\n"
+"                background-color: palette(highlight);\n"
+"                color: palette(highlighted-text);\n"
+"            }\n"
+"            QPushButton:hover {\n"
+"                background-color: rgba(255, 255, 255, 30);\n"
+"                border-radius: 4px;\n"
+"            }")
+        MainWindow.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.dockWidget_ephys)
         QWidget.setTabOrder(self.tabWidget_time0, self.changetimestamp_data00)
         QWidget.setTabOrder(self.changetimestamp_data00, self.displaytimestamp_data00)
         QWidget.setTabOrder(self.displaytimestamp_data00, self.pushButton_reset_data00)
@@ -4759,7 +4758,7 @@ class Ui_MainWindow(object):
 
         self.retranslateUi(MainWindow)
 
-        self.tabWidget_visualisation.setCurrentIndex(0)
+        self.tabWidget_visualisation.setCurrentIndex(1)
         self.tabWidget.setCurrentIndex(0)
         self.fit_to_zoom_data20.setDefault(False)
         self.tabWidget_time2.setCurrentIndex(0)
