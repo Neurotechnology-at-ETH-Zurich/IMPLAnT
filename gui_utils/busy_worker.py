@@ -39,6 +39,13 @@ class BusyWorker(QThread):
     def __init__(self, run_callable, parent=None):
         super().__init__(parent)
         self._run_callable = run_callable
+        # macOS defaults secondary-thread stacks to 512KB (vs ~8MB on Linux/
+        # Windows) -- deep recursion or heavy C-extension work (VTK, scipy,
+        # numpy) in run_callable can silently segfault there with no Python
+        # traceback, since a real stack overflow kills the process before
+        # run()'s own except Exception ever gets a chance to run. Must be
+        # set before start(), so __init__ is the only place this can go.
+        self.setStackSize(64 * 1024 * 1024)
 
     def start(self, *args, **kwargs):
         _all_workers[:] = [w for w in _all_workers if w.isRunning()]
