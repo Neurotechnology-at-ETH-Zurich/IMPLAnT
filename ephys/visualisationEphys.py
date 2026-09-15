@@ -107,6 +107,13 @@ class VisualisationEphys:
         self.Vis3D.fill_table(self.Ephys.ephys_data.all_channels,self.Ephys.ephys_data.dead_channels)
         self.Vis3D.table_excel.cellClicked.connect(self.Vis3D.on_table_click)
 
+        # export ephys plots to PNG (groupBox_3 on the "Popups for ephys" tab)
+        self.MW.ui.pushButton_saveData.setText("Export Plots...")
+        self.MW.ui.pushButton_saveData.clicked.connect(self.open_save_plots_popup)
+        self.MW.ui.pushButton_folder.clicked.connect(self.browse_save_plots_folder)
+        self.MW.ui.buttonBox_okcancel.accepted.connect(self.save_selected_plots)
+        self.MW.ui.buttonBox_okcancel.rejected.connect(self.cancel_save_plots)
+
 
     def show_broadband(self):
         self.current_mode = 'broadband'
@@ -170,6 +177,22 @@ class VisualisationEphys:
         self.update_spectrogram()
         self.update_csd()
         self.update_channel_spectrogram()
+
+    def teardown(self):
+        """Stops any in-flight prewarm worker on the spectrogram/CSD widgets
+        this view owns -- called from InitEphys.teardown() before the ephys
+        dock is closed/deleteLater()d, so a prewarm still running from
+        prewarm_tabs() can't have its late done/failed signal race pyvistaqt's
+        own parent().destroyed -> plotter.close() teardown of the dock's VTK
+        widget (see each widget's own teardown() / stop_worker)."""
+        for spec in getattr(self, 'spectrograms', []):
+            spec.teardown()
+        csd = getattr(self, 'csd_widget', None)
+        if csd is not None:
+            csd.teardown()
+        channel_spec = getattr(self, 'channel_spectrogram', None)
+        if channel_spec is not None:
+            channel_spec.teardown()
 
     def prewarm_tabs(self):
         """Force-compute the LFP spectrogram, CSD and all-channels spectrogram
@@ -401,6 +424,112 @@ class VisualisationEphys:
             QMessageBox.critical(self.MW, 'Export CSD', f'Export failed: {e}')
         finally:
             dlg.close()
+
+    def _save_plots_targets(self):
+        """(checkbox, filename lineEdit, plot widget-or-None) for each row of
+        groupBox_3 on the 'Popups for ephys' tab. Widget is None when that
+        plot hasn't been created yet (e.g. no spike sorting loaded)."""
+        specs = getattr(self, 'spectrograms', [])
+        return [
+            (self.MW.ui.checkBox_saveTrace, self.MW.ui.lineEdit_saveTrace,
+             self.MW.ui.widget_pgEphys),
+            (self.MW.ui.checkBox_saveSpikeRuster, self.MW.ui.lineEdit_saveSpikeRuster,
+             getattr(self, 'spike_ruster', None)),
+            (self.MW.ui.checkBox_saveSpectrogram, self.MW.ui.lineEdit_saveSpectrogram,
+             specs[0] if specs else None),
+            (self.MW.ui.checkBox_saveCSD, self.MW.ui.lineEdit_saveCSD,
+             getattr(self, 'csd_widget', None)),
+            (self.MW.ui.checkBox_saveChannelSpectrogram, self.MW.ui.lineEdit_saveChannelSpectrogram,
+             getattr(self, 'channel_spectrogram', None)),
+        ]
+
+    def open_save_plots_popup(self):
+        """Wired to pushButton_saveData: greys out rows whose plot doesn't
+        exist yet, then shows groupBox_3 as a floating, non-modal popup
+        (reparented the same way change_anatRegion.py pulls
+        groupBox_ChangeanatRegion into its own dialog -- see
+        Change_AnatRegion.__init__). Non-modal + an explicit Qt.Window flag
+        keeps it a fully independent top-level window: an application-modal
+        dialog (.exec()) gets treated as attached to its parent by some
+        window managers, so dragging it also drags/resizes the main window."""
+        from datetime import datetime
+        timestamp = datetime.now().strftime('%H%M')
+        trace_name = 'raw_data' if self.current_mode == 'broadband' else 'lfp_data'
+        default_names = {
+            self.MW.ui.lineEdit_saveTrace: trace_name,
+            self.MW.ui.lineEdit_saveSpikeRuster: 'spike_ruster',
+            self.MW.ui.lineEdit_saveSpectrogram: 'lfp_spectrogram',
+            self.MW.ui.lineEdit_saveCSD: 'current_source_density',
+            self.MW.ui.lineEdit_saveChannelSpectrogram: 'channel_spectrogram',
+        }
+        for line_edit, name in default_names.items():
+            line_edit.setText(f"{name}_{timestamp}.png")
+
+        # default output folder to where the recording's .dat file lives;
+        # only if not already set, so a folder picked earlier is kept on reopen
+        if not self.MW.ui.lineEdit.text().strip():
+            self.MW.ui.lineEdit.setText(os.path.dirname(self.Ephys.ephys_data.file_path))
+
+        for checkbox, line_edit, widget in self._save_plots_targets():
+            available = widget is not None
+            checkbox.setEnabled(available)
+            line_edit.setEnabled(available)
+            if not available:
+                checkbox.setChecked(False)
+
+        if getattr(self, '_save_plots_dialog', None) is None:
+            from PySide6.QtCore import Qt
+            from PySide6.QtWidgets import QDialog, QVBoxLayout, QLayout
+            dialog = QDialog(self.MW, Qt.Window)
+            dialog.setWindowTitle('Export Plots')
+            dialog.setModal(False)
+            layout = QVBoxLayout(dialog)
+            layout.setContentsMargins(0, 0, 0, 0)
+            layout.addWidget(self.MW.ui.groupBox_3)
+            # fit the dialog exactly to groupBox_3's own layout instead of an
+            # arbitrary default window size -- otherwise Qt stretches every
+            # checkbox row evenly to fill the extra space, making each one
+            # look like a big square.
+            layout.setSizeConstraint(QLayout.SizeConstraint.SetFixedSize)
+            self._save_plots_dialog = dialog
+
+        self._save_plots_dialog.show()
+        self._save_plots_dialog.raise_()
+        self._save_plots_dialog.activateWindow()
+
+    def browse_save_plots_folder(self):
+        from PySide6.QtWidgets import QFileDialog
+        folder = QFileDialog.getExistingDirectory(self.MW, 'Select Output Folder')
+        if folder:
+            self.MW.ui.lineEdit.setText(folder)
+
+    def save_selected_plots(self):
+        """Wired to buttonBox_okcancel.accepted: grabs each checked widget's
+        current on-screen appearance and writes it out as a PNG."""
+        from PySide6.QtWidgets import QMessageBox
+
+        folder = self.MW.ui.lineEdit.text().strip()
+        if not folder or not os.path.isdir(folder):
+            QMessageBox.warning(self.MW, 'Export Plots', 'Please choose a valid output folder first.')
+            return
+
+        saved = []
+        for checkbox, line_edit, widget in self._save_plots_targets():
+            if not checkbox.isChecked() or widget is None:
+                continue
+            name = line_edit.text().strip() or checkbox.text().replace(' ', '_')
+            if not name.lower().endswith(('.png', '.jpg', '.jpeg')):
+                name += '.png'
+            widget.grab().save(os.path.join(folder, name), 'PNG')
+            saved.append(name)
+
+        if saved:
+            QMessageBox.information(self.MW, 'Export Plots',
+                                     f"Saved {len(saved)} image(s) to:\n{folder}")
+        self._save_plots_dialog.accept()
+
+    def cancel_save_plots(self):
+        self._save_plots_dialog.reject()
 
     def change_start_end_time(self):
         self.time_start = min(self.MW.ui.spinBox_startMin.value()*60 + self.MW.ui.spinBox_startS.value() + self.MW.ui.spinBox_startMs.value()/1000,self.Ephys.ephys_data.t_stop.magnitude-self.MW.ui.spinBox_duration.value()/1000)
