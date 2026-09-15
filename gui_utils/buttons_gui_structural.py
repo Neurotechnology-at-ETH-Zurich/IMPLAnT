@@ -3,7 +3,7 @@ import os
 from core.paintbrush import Paintbrush
 from utils.contrast import Contrast
 from file_handling.resample_data import ResampleData
-from utils.zoom import Zoom
+from utils.zoom import Zoom, zoom_notifier
 from core.measurement import Measurement
 from core.interactor_style import CustomInteractorStyle
 from utils.minimap_handler import Minimap
@@ -244,6 +244,19 @@ class ButtonsGUI_Structural:
 
         # initialize Minimap class
         if data_index==0:
+            # disconnect the outgoing Minimap's create_small_rectangle before
+            # dropping the only reference to it -- otherwise it can be
+            # garbage-collected while still connected to the global
+            # zoom_notifier.factorChanged signal, and a later object
+            # allocated at the same address ends up on the receiving end of
+            # that dangling slot the next time the signal fires (see
+            # core/electrode_localization.py's show_atlas_3d for the same
+            # pattern).
+            if hasattr(self.LoadMRI, 'minimap'):
+                try:
+                    zoom_notifier.factorChanged.disconnect(self.LoadMRI.minimap.create_small_rectangle)
+                except RuntimeError:
+                    pass
             self.LoadMRI.minimap = Minimap(self.LoadMRI)
         idx=2
         pan_distance = 0.4
@@ -292,6 +305,13 @@ class ButtonsGUI_Structural:
             self.MW.addDockWidget(Qt.RightDockWidgetArea, dock)
 
             self.ui.checkBox_measurement.stateChanged.connect(self.measurement_function)
+            # Closing this dock on its own (its native close button, not via
+            # a workflow switch/MRI reload) doesn't otherwise go through
+            # register_module's teardown() at all -- same pattern as
+            # initialize_paintbrush's own visibilityChanged connection below.
+            dock.visibilityChanged.connect(
+                lambda visible: self.MW.Measurement.teardown()
+                if not visible and hasattr(self.MW, 'Measurement') else None)
         else:
             dock.show()
             dock.raise_()
