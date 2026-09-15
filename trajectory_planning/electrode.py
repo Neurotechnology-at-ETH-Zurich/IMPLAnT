@@ -184,6 +184,15 @@ class ElecGeometry:
         base_t = float(np.linalg.norm(seg))
         direction = seg / base_t if base_t > 1e-9 else np.array([0.0, 0.0, 1.0])
         self._insertion_direction_mri[shank] = direction
+        # Set once, the first time this shank's guide line is ever drawn --
+        # at that point insert is still the untouched page_6 auto-guess, so
+        # base_t is exactly that original point's own t. Never overwritten
+        # on later calls (a refinement click, or just switching back to
+        # this shank), so it stays the floor pick_insertion_point_from_click
+        # clamps to, regardless of how many times the insertion point has
+        # since been refined.
+        if shank not in self._insertion_min_t:
+            self._insertion_min_t[shank] = base_t
         # extend a bit past the current insertion point so there's room to
         # click the true skull surface even if it sits slightly beyond
         # today's guess
