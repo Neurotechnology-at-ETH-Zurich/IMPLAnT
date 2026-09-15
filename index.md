@@ -29,7 +29,7 @@ IMPLAnT (Integrated Multimodal Planning, Localisation, Analysis Toolbox) is an o
 - **Pre-surgical planning** — register subject MRI data to the Waxholm Space (WHS) rat brain atlas, letting you plan and visualise multi-shank electrode trajectories before surgery, with a switchable [MRI or microscopy atlas](configuration#atlas).
 - **Intraoperative correction** — re-anchor the planned targets to bregma/lambda measured on the animal on surgery day, so pre-op MRI planning still holds up against real stereotaxic coordinates.
 - **Post-implant localisation** — a semi-supervised pipeline for MR identification (MRID) tags localises electrodes after implantation and automatically assigns atlas-defined brain region labels to each recording channel.
-- **Electrophysiology visualisation & analysis** — visualise and curate signal data channel-by-channel, directly linked to the anatomical labels from previous steps, with built-in theta-event detection, ripple detection, and a spike-raster view for externally computed spike-sorting results.
+- **Electrophysiology visualisation & analysis** — visualise and curate signal data channel-by-channel, directly linked to the anatomical labels from previous steps, with built-in theta-event detection, ripple detection, current source density and spectrogram views, and a spike-raster view for externally computed spike-sorting results.
 
 Further electrophysiology preprocessing and analysis features are planned for future releases.
 
@@ -51,9 +51,13 @@ Further electrophysiology preprocessing and analysis features are planned for fu
 
 ![Animated demo of IMPLAnT's electrophysiology visualisation tab, browsing channel-by-channel signal traces linked to their atlas region labels](assets/images/output.gif)
 
-**Electrophysiology analysis** — theta-event detection, ripple detection (Rippl AI), and spike-raster/correlation/spectrogram views, all linked to the same channel-region labels:
+**Electrophysiology analysis** — theta-event detection, ripple detection (Rippl AI), current source density, and spike-raster/correlation/spectrogram views, all linked to the same channel-region labels — export any of them as image files with **Export Plots...**:
 
 <video src="assets/videos/Ephys_Analysis_Demo.mp4" controls muted loop playsinline style="max-width:100%"></video>
+
+## Contributing
+
+Want to add your own tool/tab, or work on the codebase generally? See [CONTRIBUTING.md](https://github.com/Neurotechnology-at-ETH-Zurich/IMPLAnT/blob/main/CONTRIBUTING.md) on GitHub — the app now has a small, documented extension API for adding a new tab, menu entry, or session-lifecycle hook without touching its internals by hand.
 
 ## License
 
