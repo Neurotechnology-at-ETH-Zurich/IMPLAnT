@@ -55,6 +55,34 @@ class BusyWorker(QThread):
             self.failed.emit(traceback.format_exc())
 
 
+def stop_worker(worker):
+    """Detaches a BusyWorker so tearing down its owner (closing/deleting the
+    dock or widget it's parented under) doesn't race its still-in-flight
+    run_callable, which -- per this module's own docstring above -- has no
+    cancellation point and so can't actually be stopped, only kept from
+    touching things that are about to be destroyed:
+
+    - disconnects done/failed/cancelled so a completion that arrives after
+      this call is silently dropped instead of running its slot (which
+      typically touches a VTK plotter/other Qt widget) against a widget tree
+      that's mid-teardown.
+    - if still running, reparents it off that widget tree (QThread objects
+      must not be destroyed while running -- Qt aborts the process) and
+      schedules its own deleteLater() once it actually finishes on its own.
+
+    No-op if worker is None (nothing was ever started) or already finished."""
+    if worker is None:
+        return
+    for sig in (worker.done, worker.failed, worker.cancelled):
+        try:
+            sig.disconnect()
+        except (RuntimeError, TypeError):
+            pass
+    if worker.isRunning():
+        worker.setParent(None)
+        worker.finished.connect(worker.deleteLater)
+
+
 def any_running():
     """True if some BusyWorker's run_callable is still executing -- used to
     warn before a close/quit that would otherwise leave the process running
