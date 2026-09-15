@@ -33,8 +33,9 @@ class ElecGeometryMri(ElecGeometry):
         ap_on/rl_on is ever true here -- this doesn't need to pick
         between them itself. No-op entirely if neither is checked.
         """
-        ap_on = self.ui.checkBox_constraint_90deg.isChecked()
-        rl_on = self.ui.checkBox_constraint_90deg_coronal.isChecked()
+        mode = self.shank_constraint.get(shank_number)
+        ap_on = mode == 'ap'
+        rl_on = mode == 'rl'
         if not ap_on and not rl_on:
             return
         if ap_on:
@@ -79,6 +80,17 @@ class ElecGeometryMri(ElecGeometry):
         the thing on screen the moment insertion is set, not just correct
         in the background.
 
+        Also reverts each panel back to the plain page (index 0) when THIS
+        shank ISN'T constrained on that axis -- shank_constraint is now
+        per-shank (see ElecGeometryMri.enforce_constraint_90deg/_coronal),
+        so switching from a constrained shank to an unconstrained (or
+        differently-constrained) one needs to actively turn the oblique
+        page back off, not just skip turning it on: left alone, the panel
+        stayed on page 1 showing the PREVIOUS shank's stale oblique
+        render, which is what looked like "the constrained image doesn't
+        render" when really it was never re-rendered for the new shank at
+        all.
+
         No-op entirely while picking_insertion_point is True (the final
         skull-point-click refinement step, page_31) -- same guard create_
         channel_list (above) and check_points_in_slice (rendering.py) use.
@@ -95,36 +107,46 @@ class ElecGeometryMri(ElecGeometry):
             return
         if shank_number != self.shank_number:
             return
-        if self.ui.checkBox_constraint_90deg.isChecked():
+        mode = self.shank_constraint.get(shank_number)
+        if mode == 'ap':
             self.update_oblique_coronal_view()
             self.update_oblique_coronal_crossing_line()
             self.ui.stackedWidget_coronal.setCurrentIndex(1)
             self.force_oblique_repaint('coronal')
-        if self.ui.checkBox_constraint_90deg_coronal.isChecked():
+        else:
+            self.ui.stackedWidget_coronal.setCurrentIndex(0)
+            self.hide_oblique_coronal_crossing_line()
+        if mode == 'rl':
             self.update_oblique_sagittal_view()
             self.update_oblique_sagittal_crossing_line()
             self.ui.stackedWidget_sagittal.setCurrentIndex(1)
             self.force_oblique_repaint('sagittal')
+        else:
+            self.ui.stackedWidget_sagittal.setCurrentIndex(0)
+            self.hide_oblique_sagittal_crossing_line()
 
     def enforce_constraint_90deg(self, checked):
-        """checkBox_constraint_90deg.toggled: snap every already-placed
+        """checkBox_constraint_90deg.toggled: snap the CURRENTLY SELECTED
         shank to perpendicular the moment the box is checked, not just on
-        the next drag. Also swaps the coronal panel to the oblique,
-        true-AP-perpendicular reslice (stackedWidget_coronal page 1,
-        vtkWidget_data_coronal_3, page_32) while checked, since the AP=0-
-        constrained shank generally isn't contained in any single
-        fixed-y axis-aligned coronal slice -- reverts to the normal
+        the next drag, and remember that mode in self.shank_constraint[
+        self.shank_number] -- other shanks are untouched, and each keeps
+        its own mode independently (select_shank restores it, checked or
+        not, whenever that shank is reselected). Also swaps the coronal
+        panel to the oblique, true-AP-perpendicular reslice (stackedWidget_
+        coronal page 1, vtkWidget_data_coronal_3, page_32) while checked,
+        since the AP=0-constrained shank generally isn't contained in any
+        single fixed-y axis-aligned coronal slice -- reverts to the normal
         coronal view (page 0) when unchecked. page_32 (index 1) used to
         hold the "clipped 3D view" feature (change_view_coronal's
         Vis3D.render_clipped, vtkWidget_trajPlan_1) -- that's been moved
         to page_10 (index 2, see change_view_coronal/create_channel_list)
         to make room.
 
-        Mutually exclusive with checkBox_constraint_90deg_coronal --
-        forcing AP to zero AND RL to zero simultaneously would leave no
-        remaining direction for the shank (fully vertical, no freedom at
-        all), so checking this one unchecks the other first, same as a
-        radio button. setChecked(False) below re-enters enforce_
+        Mutually exclusive with checkBox_constraint_90deg_coronal, for THIS
+        shank -- forcing AP to zero AND RL to zero simultaneously would
+        leave no remaining direction for the shank (fully vertical, no
+        freedom at all), so checking this one unchecks the other first,
+        same as a radio button. setChecked(False) below re-enters enforce_
         constraint_90deg_coronal(False) synchronously (Qt direct
         connections), so its own oblique view/page is already reverted
         by the time this continues."""
@@ -142,26 +164,30 @@ class ElecGeometryMri(ElecGeometry):
             self.hide_oblique_coronal_crossing_line()
 
         if not checked:
+            self.shank_constraint[self.shank_number] = None
             return
-        current_shank = self.shank_number
-        for shank_number in sorted(self.mri_deep):
-            if self.mri_deep.get(shank_number) is None or self.mri_insert.get(shank_number) is None:
-                continue
-            self.shank_number = shank_number
+        self.shank_constraint[self.shank_number] = 'ap'
+        shank_number = self.shank_number
+        if self.mri_deep.get(shank_number) is not None and self.mri_insert.get(shank_number) is not None:
             self.constrain_shank_ap_to_zero(shank_number)
             self.set_value(list(self.mri_deep[shank_number]), self.ui.spinBox_tp_deep_x, self.ui.spinBox_tp_deep_y, self.ui.spinBox_tp_deep_z)
             self.draw_point(self.mri_deep[shank_number], (0, 1, 0), 'deep')
             self.calculate_distance(self.mri_deep[shank_number], self.mri_insert[shank_number])
             self.create_channel_list()
-        self.shank_number = current_shank
+        # full re-sync (angle display, region sidebar, Vis3D clipped view,
+        # tp3d selection) for this shank -- select_shank just re-checks
+        # this same checkbox against shank_constraint (already set above),
+        # it won't re-enter enforce_constraint_90deg.
         self.select_shank(self.shank_number)
         self.render()
 
     def enforce_constraint_90deg_coronal(self, checked):
         """checkBox_constraint_90deg_coronal.toggled: coronal-angle
-        analogue of enforce_constraint_90deg -- snaps every already-
-        placed shank to perpendicular-to-RL the moment the box is
-        checked, not just on the next drag. Also swaps the sagittal panel
+        analogue of enforce_constraint_90deg -- snaps the CURRENTLY
+        SELECTED shank to perpendicular-to-RL the moment the box is
+        checked, not just on the next drag, remembering that mode per-
+        shank the same way (see enforce_constraint_90deg's docstring).
+        Also swaps the sagittal panel
         to the oblique, true-RL-perpendicular reslice (stackedWidget_
         sagittal page 1, vtkWidget_data_sagittal_3, page_33) while
         checked, since the RL=0-constrained shank generally isn't
@@ -188,18 +214,20 @@ class ElecGeometryMri(ElecGeometry):
             self.hide_oblique_sagittal_crossing_line()
 
         if not checked:
+            self.shank_constraint[self.shank_number] = None
             return
-        current_shank = self.shank_number
-        for shank_number in sorted(self.mri_deep):
-            if self.mri_deep.get(shank_number) is None or self.mri_insert.get(shank_number) is None:
-                continue
-            self.shank_number = shank_number
+        self.shank_constraint[self.shank_number] = 'rl'
+        shank_number = self.shank_number
+        if self.mri_deep.get(shank_number) is not None and self.mri_insert.get(shank_number) is not None:
             self.constrain_shank_rl_to_zero(shank_number)
             self.set_value(list(self.mri_deep[shank_number]), self.ui.spinBox_tp_deep_x, self.ui.spinBox_tp_deep_y, self.ui.spinBox_tp_deep_z)
             self.draw_point(self.mri_deep[shank_number], (0, 1, 0), 'deep')
             self.calculate_distance(self.mri_deep[shank_number], self.mri_insert[shank_number])
             self.create_channel_list()
-        self.shank_number = current_shank
+        # full re-sync (angle display, region sidebar, Vis3D clipped view,
+        # tp3d selection) for this shank -- select_shank just re-checks
+        # this same checkbox against shank_constraint (already set above),
+        # it won't re-enter enforce_constraint_90deg_coronal.
         self.select_shank(self.shank_number)
         self.render()
 
@@ -340,10 +368,11 @@ class ElecGeometryMri(ElecGeometry):
             # view" symptom (a stale click elsewhere, e.g. a spinbox, was
             # what actually fixed it, not the click on the oblique widget
             # itself, which never recomputes shank geometry).
-            if self.ui.checkBox_constraint_90deg.isChecked():
+            mode = self.shank_constraint.get(self.shank_number)
+            if mode == 'ap':
                 self.update_oblique_coronal_view()
                 self.update_oblique_coronal_crossing_line()
-            if self.ui.checkBox_constraint_90deg_coronal.isChecked():
+            if mode == 'rl':
                 self.update_oblique_sagittal_view()
                 self.update_oblique_sagittal_crossing_line()
 
@@ -561,8 +590,17 @@ class ElecGeometryMri(ElecGeometry):
         click_pt = np.array(self.LoadMRI.slice_indices[0][::-1], dtype=float)
         deep_arr = np.array(deep, dtype=float)
         t = float(np.dot(click_pt - deep_arr, direction))
+        # Floor at the ORIGINAL (page_6 auto-guessed) insertion point's own
+        # t, not 0 -- clamping to 0 would let a click land exactly on (or
+        # past) the deepest point itself, making insert == deep (a
+        # zero-length, direction-less trajectory). _insertion_min_t is set
+        # once per shank the first time its guide line is drawn (see
+        # _draw_insertion_guide_line_mri) and never moves after that, so
+        # refinement clicks can only push the insertion point further OUT
+        # from the auto-guess, never back in past it.
+        t_min = self._insertion_min_t.get(shank, 0.0)
         t_max = self._insertion_guide_t_max.get(shank)
-        t = max(0.0, min(t, t_max)) if t_max is not None else max(0.0, t)
+        t = max(t_min, min(t, t_max)) if t_max is not None else max(t_min, t)
         proj = deep_arr + t * direction
 
         shape = self.LoadMRI.volumes[0].slices[0].shape  # zyx, MRI shape
@@ -590,7 +628,13 @@ class ElecGeometryMri(ElecGeometry):
 
         self.set_value(list(self.mri_insert[shank]), self.ui.spinBox_insertion_x,
                         self.ui.spinBox_insertion_y, self.ui.spinBox_insertion_z)
-        self._draw_mri_shank_markers()
+        # _apply_constraints above can re-snap mri_deep -- redraw the guide
+        # line too (not just the markers), or it stays anchored to the OLD
+        # deep point/direction cached at shank-selection time
+        # (_switch_insertion_shank_mri), leaving the dots visibly off the
+        # line. _draw_insertion_guide_line_mri recomputes from the current
+        # mri_deep/mri_insert and redraws the markers itself.
+        self._draw_insertion_guide_line_mri()
         # This is the final skull-point click -- deliberately the OPPOSITE
         # of _refresh_oblique_views_for_insert's usual "open/refresh the
         # constraint view" behavior everywhere else: force back to the
