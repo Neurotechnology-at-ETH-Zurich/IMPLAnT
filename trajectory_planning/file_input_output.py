@@ -382,15 +382,6 @@ class FileOutput(QtWidgets.QDialog):
         pages = []
         vis = getattr(tp, "Vis3D", None)
         have_mri = getattr(tp, 'movingImg_resampled', None) is not None
-        # Which axis, if any, is currently 90deg-constrained (mutually
-        # exclusive, see ElecGeometryMri.enforce_constraint_90deg/
-        # _coronal) -- when set, that axis's MRI panel below shows the
-        # real on-screen oblique/constrained view instead of the plain
-        # axis-aligned reslice, since a constrained shank's cutting plane
-        # is fixed to the true AP=0/RL=0 axis.
-        ap_on = tp.ui.checkBox_constraint_90deg.isChecked()
-        rl_on = tp.ui.checkBox_constraint_90deg_coronal.isChecked()
-
         # The clipped-slice VTK panes sit behind a default page in their
         # stacked widgets until a trajectory toggles them into view; force
         # them visible here or the render window is never actually shown
@@ -407,6 +398,14 @@ class FileOutput(QtWidgets.QDialog):
             tp.ui.stackedWidget_coronal.setCurrentIndex(2)
             tp.ui.stackedWidget_sagittal.setCurrentIndex(2)
             QtWidgets.QApplication.processEvents()
+
+        # Captured now (not read back out of the per-shank loop below,
+        # which no longer holds a single answer once each shank can be
+        # constrained independently) so the `finally` block can re-anchor
+        # the oblique view on whichever shank the user actually had
+        # selected before this export started.
+        original_shank_number = tp.shank_number
+        original_mode = tp.shank_constraint.get(original_shank_number)
 
         axis_y = np.array([0.0, 1.0, 0.0])
         axis_x = np.array([1.0, 0.0, 0.0])
@@ -434,6 +433,19 @@ class FileOutput(QtWidgets.QDialog):
                 direction = tp.direction_atlas.get(shank_num)
                 if direction is None:
                     continue
+
+                # Which axis, if any, THIS shank is 90deg-constrained on
+                # (per-shank, see ElecGeometryMri.enforce_constraint_90deg/
+                # _coronal / self.shank_constraint) -- when set, that
+                # axis's MRI panel below shows the real on-screen oblique/
+                # constrained view instead of the plain axis-aligned
+                # reslice, since a constrained shank's cutting plane is
+                # fixed to the true AP=0/RL=0 axis. Looked up per shank_num
+                # here, not once globally -- different shanks in the same
+                # report can be constrained differently, or not at all.
+                mode = tp.shank_constraint.get(shank_num)
+                ap_on = mode == 'ap'
+                rl_on = mode == 'rl'
 
                 img_atlas_co = img_atlas_sa = None
                 if vis is not None:
@@ -522,11 +534,11 @@ class FileOutput(QtWidgets.QDialog):
             # on the now-restored (originally selected) shank so the on-
             # screen constrained view isn't left showing a different shank's
             # plane than what the user had selected before saving.
-            if ap_on:
+            if original_mode == 'ap':
                 tp.update_oblique_coronal_view()
                 tp.update_oblique_coronal_crossing_line()
                 tp.refresh_oblique_markers('coronal')
-            if rl_on:
+            if original_mode == 'rl':
                 tp.update_oblique_sagittal_view()
                 tp.update_oblique_sagittal_crossing_line()
                 tp.refresh_oblique_markers('sagittal')
@@ -600,9 +612,33 @@ class FileOutput(QtWidgets.QDialog):
         stacked = tp.ui.stackedWidget_coronal if view == 'coronal' else tp.ui.stackedWidget_sagittal
         target_index = 1 if oblique else 0
         prev_index = stacked.currentIndex()
+        if oblique:
+            settle_widget = tp.ui.vtkWidget_data_coronal_3 if view == 'coronal' else tp.ui.vtkWidget_data_sagittal_3
+        else:
+            settle_widget = tp.ui.vtkWidget_data_coronal if view == 'coronal' else tp.ui.vtkWidget_data_sagittal
         if prev_index != target_index:
             stacked.setCurrentIndex(target_index)
-            QtWidgets.QApplication.processEvents()
+            # A single processEvents() often isn't enough for Qt to actually
+            # finish laying out the page just switched to -- and checking
+            # only for ANY nonzero size isn't a reliable stopping point
+            # either: a multi-step layout pass can report a real but not-
+            # yet-final size (e.g. growing across a couple of frames)
+            # before settling, and that's still enough to send Zoom.
+            # fit_to_window's aspect_window (utils/zoom.py) wrong and leave
+            # the panel zoomed out to a speck -- the same symptom the
+            # original 0-width case here was written to catch. Wait for
+            # the actual vtk render widget's size (not just its page
+            # container's) to stop CHANGING across consecutive checks
+            # instead of just becoming nonzero once.
+            prev_size = None
+            for _ in range(10):
+                QtWidgets.QApplication.processEvents()
+                settle_widget.repaint()
+                size = (settle_widget.width(), settle_widget.height())
+                if size[0] > 1 and size[1] > 1 and size == prev_size:
+                    break
+                prev_size = size
+                time.sleep(0.02)
 
         # coords_insert_point/coords_deepest_point are [x, y, z];
         # LoadMRI.slice_indices[0] is [z, y, x].
@@ -610,7 +646,16 @@ class FileOutput(QtWidgets.QDialog):
         slice_axis = 1 if view == 'coronal' else 2
         prev_slice = tp.LoadMRI.slice_indices[0][slice_axis]
 
-        saved_cameras = None if oblique else self._save_view_cameras(tp)
+        # The oblique branch below re-fits (ResetCamera) the constrained
+        # view's own camera -- see the comment at that call site -- which,
+        # via _register_zoom_camera's cross-view zoom link, also resyncs
+        # EVERY other linked camera's ParallelScale: the real axial/
+        # coronal/sagittal cameras, and the *other* oblique renderer's
+        # camera too (not just the one actually being captured). So all
+        # of that needs saving/restoring here, not just for the plain
+        # axis-aligned branch.
+        saved_cameras = self._save_view_cameras(tp)
+        saved_oblique_cameras = self._save_oblique_cameras(tp) if oblique else None
 
         prev_shank = tp.shank_number
         tp.shank_number = shank_num
@@ -635,6 +680,42 @@ class FileOutput(QtWidgets.QDialog):
                 # ImageLayer -- _save_and_hide_region_layers above doesn't
                 # reach them, so they're hidden separately here.
                 saved_oblique_labels = self._save_and_hide_oblique_label_actors(tp)
+                # The constrained view's camera is normally ResetCamera'd
+                # only once, at initial setup (rendering_mri.py's setup_
+                # oblique_coronal_view/setup_oblique_sagittal_view), and
+                # assumed stable ever after -- but that one-time reset can
+                # itself land on stale/incomplete bounds if the reslice
+                # pipeline (just rebuilt by update_oblique_coronal_view/
+                # update_oblique_sagittal_view above) hadn't caught up yet,
+                # baking in a wrong zoom for the rest of the session,
+                # including every later PDF export (this is what made the
+                # "Constrained" panel come out zoomed in on a few blurry
+                # voxels instead of the actual slice). Force the pipeline
+                # to catch up (same ComputeVisiblePropBounds()-based
+                # reasoning as _warm_up_render's own docstring) and re-fit
+                # the camera here, right before every capture, instead of
+                # trusting whatever the live camera happens to be at.
+                #
+                # A plain renderer.ResetCamera() is the wrong tool here: it
+                # fits the 3D bounding SPHERE of every prop's bounds,
+                # diameter included -- and this view deliberately stacks its
+                # image/crosshair/markers/reference-line/angle-arc actors at
+                # slightly different Z depths (roughly 0 to 1.13mm) purely
+                # to avoid z-fighting, with no visual meaning of its own.
+                # ResetCamera has no way to know that Z spread is
+                # incidental, so it folds it into the sphere it fits,
+                # landing on a ParallelScale bigger than the flat 2D slice
+                # actually needs (confirmed empirically: logged bounds of
+                # (-9.17..9.17, -5.97..5.97, 0..1.13) -- half-height 5.97 --
+                # came out to ParallelScale 11.99, matching a 3D diagonal-
+                # sphere fit, not a 2D one). Fit width/height directly
+                # instead, same aspect-aware math as Zoom.fit_to_window
+                # (utils/zoom.py) uses for the real axis-aligned views, just
+                # scoped to this one renderer/widget instead of the whole
+                # linked group.
+                self._warm_up_render(widget)
+                oblique_renderer = tp.oblique_renderer if view == 'coronal' else tp.oblique_sagittal_renderer
+                self._fit_2d_renderer_to_window(oblique_renderer, widget)
             else:
                 widget = tp.ui.vtkWidget_data_coronal if view == 'coronal' else tp.ui.vtkWidget_data_sagittal
                 insert = tp.coords_insert_point[shank_num]
@@ -683,14 +764,33 @@ class FileOutput(QtWidgets.QDialog):
                 self._warm_up_render(widget)
                 Zoom.fit_to_window(widget, tp.LoadMRI.vtk_widgets.values(), tp.LoadMRI.scale_bar,
                                     tp.LoadMRI.vtk_widgets, 0, data_3d=True)
-            # Oblique/constrained views never call fit_to_window at all (their
-            # camera is set once at construction and assumed stable -- see
-            # rendering_mri.py's setup_oblique_coronal_view), but update_
-            # oblique_coronal_view/update_oblique_sagittal_view still repaint
-            # via QTimer.singleShot(0, ...Render) -- a queued Qt callback, not
-            # a synchronous VTK call -- so it's genuinely racy whether that
-            # repaint has actually run by the time _screenshot_render_window
-            # grabs the back buffer below. Same warm-up here guarantees it has.
+                # fit_to_window's own SetParallelScale calls (both on this
+                # widget's camera and on axial/coronal/sagittal's, to keep
+                # them in relative sync) each fire a ModifiedEvent that
+                # _register_zoom_camera's cross-view zoom link (rendering_
+                # mri.py -- wired for the oblique/constrained views, but it
+                # links ALL FIVE cameras: real axial/coronal/sagittal AND
+                # both oblique) reacts to by force-copying its own ABSOLUTE
+                # ParallelScale onto every other linked camera, including
+                # this one, right after we just set it -- the two sync
+                # mechanisms fight, and whichever fires last (not
+                # necessarily THIS widget's own fit) wins. Confirmed
+                # empirically: bounds/widget-size math says ParallelScale
+                # should land near 14.75, it was landing at 35.68 instead.
+                # Re-pin this widget's own camera to its own correct fit
+                # one more time, after all of that cross-view noise has
+                # already happened, right before the screenshot -- same
+                # aspect-aware 2D math as the oblique branch's own fit,
+                # just scoped to this renderer/widget again.
+                renderer = widget.GetRenderWindow().GetRenderers().GetFirstRenderer()
+                self._fit_2d_renderer_to_window(renderer, widget)
+            # update_oblique_coronal_view/update_oblique_sagittal_view (and
+            # the ResetCamera() just above, for the oblique branch) still
+            # repaint via QTimer.singleShot(0, ...Render) -- a queued Qt
+            # callback, not a synchronous VTK call -- so it's genuinely racy
+            # whether that repaint has actually run by the time
+            # _screenshot_render_window grabs the back buffer below. Same
+            # warm-up here guarantees it has.
             self._warm_up_render(widget)
             return self._screenshot_render_window(widget.GetRenderWindow())
         finally:
@@ -712,9 +812,51 @@ class FileOutput(QtWidgets.QDialog):
                     tp.update_shank_angle_display()
                 finally:
                     tp.LoadMRI.picking_insertion_point = True
-                self._restore_view_cameras(tp, saved_cameras)
+            # Restore the real views first, then the oblique ones -- the
+            # real views' own SetParallelScale calls re-trigger the zoom
+            # link (_register_zoom_camera) and would otherwise clobber an
+            # oblique restore done before them.
+            self._restore_view_cameras(tp, saved_cameras)
+            if oblique:
+                self._restore_oblique_cameras(saved_oblique_cameras)
             if stacked.currentIndex() != prev_index:
                 stacked.setCurrentIndex(prev_index)
+
+    def _fit_2d_renderer_to_window(self, renderer, widget):
+        """Aspect-aware fit for a single flat 2D renderer, e.g. the oblique/
+        constrained views -- same width/height-vs-widget-aspect math as
+        Zoom.fit_to_window (utils/zoom.py), just against renderer/widget
+        directly instead of the whole linked axial/coronal/sagittal group,
+        and using ONLY the X/Y extent of ComputeVisiblePropBounds().
+        Deliberately NOT a plain renderer.ResetCamera() call: that fits the
+        3D bounding SPHERE of every prop's bounds (diagonal, Z included),
+        and this view's own actors (image/crosshair/markers/reference-line/
+        angle-arc) are deliberately stacked at slightly different Z depths
+        (roughly 0 to 1.13mm) purely to avoid z-fighting -- ResetCamera has
+        no way to know that spread is incidental, so it folds it into the
+        sphere it fits, landing on a bigger (more zoomed out) ParallelScale
+        than the flat slice actually needs. Confirmed empirically: bounds
+        of (-9.17..9.17, -5.97..5.97, 0..1.13) -- true half-height 5.97 --
+        made ResetCamera land on ParallelScale 11.99, matching a 3D
+        diagonal-sphere fit, not a 2D one."""
+        xmin, xmax, ymin, ymax, _zmin, _zmax = renderer.ComputeVisiblePropBounds()
+        width = xmax - xmin
+        height = ymax - ymin
+        if width <= 0 or height <= 0 or not widget.height():
+            renderer.ResetCamera()
+            return
+
+        cx, cy = (xmin + xmax) / 2.0, (ymin + ymax) / 2.0
+        aspect_window = widget.width() / widget.height()
+        aspect_image = width / height
+        factor = width / (2 * aspect_window) if aspect_image > aspect_window else height / 2.0
+
+        camera = renderer.GetActiveCamera()
+        camera.SetFocalPoint(cx, cy, camera.GetFocalPoint()[2])
+        camera.SetParallelScale(factor)
+        pos = camera.GetPosition()
+        camera.SetPosition(cx, cy, pos[2])
+        renderer.ResetCameraClippingRange()
 
     def _warm_up_render(self, widget):
         """Force widget's renderer to fully catch up with whatever was just
@@ -736,11 +878,36 @@ class FileOutput(QtWidgets.QDialog):
         rather than trusting one pass to be enough. Not fully root-caused;
         if this still isn't reliable, the next step is forcing an update on
         the specific image mapper (core/image_layer.py's ImageLayer) rather
-        than the whole renderer."""
+        than the whole renderer.
+
+        Also calls widget.repaint() each pass (a synchronous, immediate
+        repaint -- unlike processEvents(), which only dispatches whatever
+        paint event happens to already be queued) and checks widget.
+        isVisible(): LoadMRI.render() (core/load_MRI_file.py) silently
+        skips Render()-ing any widget it finds not-yet-isVisible(), so a
+        slice-scroll issued right after a stacked-widget page switch (the
+        plain axis-aligned MRI panels, right after _capture_mri_screenshot
+        switches stackedWidget_coronal/_sagittal back to page 0) can have
+        its repaint dropped entirely by that guard -- the image DATA is
+        there (ComputeVisiblePropBounds() already reports correct, real
+        bounds) but nothing was ever drawn into the frame, so the capture
+        comes out solid black despite the zoom being correct. Widens the
+        retry budget from 3 to 8 passes for the same reason -- a page
+        switch is a bigger, possibly longer async wait than the plain
+        slice-scroll race this was first written for."""
         renderer = widget.GetRenderWindow().GetRenderers().GetFirstRenderer()
-        for _ in range(3):
+        for _ in range(8):
             renderer.ComputeVisiblePropBounds()
             QtWidgets.QApplication.processEvents()
+            widget.repaint()
+            # Deliberately unconditional -- this direct vtkRenderWindow.
+            # Render() call is what bypasses LoadMRI.render()'s own
+            # isVisible() skip-guard in the first place (that guard is what
+            # drops the repaint from a plain scroll_slice() call). Gating
+            # this one on isVisible() too defeats the entire point of
+            # calling it directly: the working oblique/constrained panel
+            # goes through this exact same call and paints fine regardless
+            # of what widget.isVisible() reports here.
             widget.GetRenderWindow().Render()
             QtWidgets.QApplication.processEvents()
             time.sleep(0.05)
@@ -775,6 +942,37 @@ class FileOutput(QtWidgets.QDialog):
             bar = getattr(tp.LoadMRI, 'scale_bar', {}).get(vn)
             if bar is not None:
                 bar.update_bar(renderer, vn, length_cm=1.0)
+
+    _OBLIQUE_VIEW_NAMES = ('coronal', 'sagittal')
+
+    def _save_oblique_cameras(self, tp):
+        """Save both oblique (constrained) renderers' camera state --
+        same reasoning as _save_view_cameras, but for the two oblique
+        cameras: _register_zoom_camera's cross-view zoom link connects
+        axial/coronal/sagittal AND both oblique cameras into one group,
+        so _capture_mri_screenshot's ResetCamera() on whichever single
+        oblique renderer it's capturing can resync the *other* oblique
+        camera's ParallelScale too, even though that one was never
+        touched directly."""
+        saved = {}
+        for vn in self._OBLIQUE_VIEW_NAMES:
+            renderer = tp.oblique_renderer if vn == 'coronal' else tp.oblique_sagittal_renderer
+            if renderer is None:
+                continue
+            camera = renderer.GetActiveCamera()
+            saved[vn] = (renderer, camera.GetParallelScale(), camera.GetPosition(),
+                         camera.GetFocalPoint(), camera.GetViewUp())
+        return saved
+
+    def _restore_oblique_cameras(self, saved):
+        """Undo _save_oblique_cameras."""
+        for renderer, scale, position, focal_point, view_up in saved.values():
+            camera = renderer.GetActiveCamera()
+            camera.SetParallelScale(scale)
+            camera.SetPosition(position)
+            camera.SetFocalPoint(focal_point)
+            camera.SetViewUp(view_up)
+            renderer.ResetCameraClippingRange()
 
     def _apply_auto_contrast(self, tp):
         """Temporarily switch the MRI's window/level to its auto-computed
