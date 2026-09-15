@@ -25,7 +25,7 @@ except ImportError as _kcsd_err:
           flush=True)
 
 from ephys_utils.spiking_ruster import TimeAxisItem
-from gui_utils.busy_worker import BusyWorker
+from gui_utils.busy_worker import BusyWorker, stop_worker
 
 
 class CSDWidget(QWidget):
@@ -205,6 +205,13 @@ class CSDWidget(QWidget):
             self._clear()
             return
         self._apply_csd(result)
+
+    def teardown(self):
+        """Detaches self._prewarm_worker so tearing down this widget (its
+        parent dock closing/deleteLater()ing) can't race the worker's
+        still-in-flight run_callable -- see stop_worker's own docstring."""
+        stop_worker(getattr(self, '_prewarm_worker', None))
+        self._prewarm_worker = None
 
     def prewarm(self, lfp_memmap, lfp_sample_rate, t_start, t_end, active_channels,
                ele_pos_1d=None, on_finished=None):

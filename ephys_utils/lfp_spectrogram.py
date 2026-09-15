@@ -6,7 +6,7 @@ from PySide6.QtWidgets import QWidget, QVBoxLayout
 from PySide6.QtCore import QRectF
 
 from ephys_utils.spiking_ruster import TimeAxisItem
-from gui_utils.busy_worker import BusyWorker
+from gui_utils.busy_worker import BusyWorker, stop_worker
 
 
 class HzAxisItem(pg.AxisItem):
@@ -305,6 +305,13 @@ class LFPSpectrogram(QWidget):
             return
         self._cache[self.log_freq] = payload
         self._render(payload, t_start, t_end)
+
+    def teardown(self):
+        """Detaches self._prewarm_worker so tearing down this widget (its
+        parent dock closing/deleteLater()ing) can't race the worker's
+        still-in-flight run_callable -- see stop_worker's own docstring."""
+        stop_worker(getattr(self, '_prewarm_worker', None))
+        self._prewarm_worker = None
 
     def prewarm(self, lfp_memmap, lfp_sample_rate, t_start, t_end, channel=None,
                on_finished=None):

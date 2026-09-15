@@ -6,7 +6,7 @@ from PySide6.QtWidgets import QWidget, QVBoxLayout
 from PySide6.QtCore import QRectF, Qt, Signal
 
 from gui_utils.busy_overlay import BusyOverlay
-from gui_utils.busy_worker import BusyWorker
+from gui_utils.busy_worker import BusyWorker, stop_worker
 from gui_utils.subprocess_worker import run_json_subprocess
 
 
@@ -400,6 +400,16 @@ class AllChannelsSpectrogram(QWidget):
         self._title = title
         self._window_cache[self.log_freq] = (spec, freqs, channel_ids, title)
         self._finish_update_view(spec, freqs, channel_ids)
+
+    def teardown(self):
+        """Detaches self._prewarm_worker/_ripple_worker so tearing down this
+        widget (its parent dock closing/deleteLater()ing) can't race either
+        worker's still-in-flight run_callable -- see stop_worker's own
+        docstring."""
+        stop_worker(getattr(self, '_prewarm_worker', None))
+        self._prewarm_worker = None
+        stop_worker(getattr(self, '_ripple_worker', None))
+        self._ripple_worker = None
 
     def prewarm(self, lfp_memmap, lfp_sample_rate, t_start, t_end, active_channels,
                ele_pos_1d=None, ripple_events=None, ripple_channels=None,
