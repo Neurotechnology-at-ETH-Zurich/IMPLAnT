@@ -9,7 +9,7 @@ The GUI currently provides:
 
 - **Pre-surgical planning** — register subject MRI data to the WHS brain atlas, letting you plan and visualise electrode trajectories before surgery — switch between the bundled MRI/DTI atlas and a higher-resolution microscopy atlas at any time (see [Atlas](#atlas))
 - **Post-implant localisation** — uses a semi-supervised pipeline for MR identification tags to localise electrodes after implantation and automatically assign atlas-defined region labels to each channel to facilitate a more accurate analysis
-- **Electrophysiology data visualisation & analysis** — visualises and curates signal data channel-by-channel, directly linked to the anatomical labels from previous steps; includes theta-event detection, ripple detection (Rippl AI), and a spike-raster view for externally computed spike-sorting results
+- **Electrophysiology data visualisation & analysis** — visualises and curates signal data channel-by-channel, directly linked to the anatomical labels from previous steps; includes theta-event detection, ripple detection (Rippl AI), current source density and spectrogram views, and a spike-raster view for externally computed spike-sorting results
 
 Further electrophysiology preprocessing and analysis features are planned for future releases.
 As far as we are aware, IMPLAnT is the first open-source tool to bridge this entire pipeline in one interface. It's designed to adapt to a range of experimental protocols.
@@ -33,7 +33,7 @@ As far as we are aware, IMPLAnT is the first open-source tool to bridge this ent
 
 ![Demo](Icons/Github/output.gif)
 
-**Electrophysiology analysis** — theta-event detection, ripple detection (Rippl AI), and spike-raster/correlation/spectrogram views, all linked to the same channel-region labels:
+**Electrophysiology analysis** — theta-event detection, ripple detection (Rippl AI), current source density, and spike-raster/correlation/spectrogram views, all linked to the same channel-region labels — export any of them as image files with **Export Plots...**:
 
 [![Ephys Analysis](Icons/Github/Ephys.png)](Icons/Github/videos/Ephys_Analysis_Demo.mp4)
 *(click the screenshot for a recorded demo)*
@@ -271,8 +271,9 @@ On the day of surgery, real bregma/lambda measurements taken on the animal rarel
 **4. Electrophysiology visualisation & analysis**
 1. Load your recording via *File → Load ephys data*.
 2. Channels are displayed with their anatomical labels from the localisation step, allowing direct comparison of signal traces across brain regions.
-3. Use the *Ephys Analysis* menu for signal analysis: *Theta Detection* and *Rippl AI* run detection directly on the loaded recording, and *Show Spiking Raster Plot* overlays externally computed spike-sorting results (a JRCLUST `_res.mat` file).
-4. Further preprocessing and analysis features are planned for future releases.
+3. Use the *Ephys Analysis* menu for signal analysis: *Theta Detection* and *Rippl AI* run detection directly on the loaded recording, and *Show Spiking Raster Plot* overlays externally computed spike-sorting results (a JRCLUST `_res.mat` file). The ephys tab also includes per-channel spectrogram, all-channel spectrogram, hierarchical spike-count correlation, and current source density (CSD) views.
+4. Use *Export Plots...* to save any combination of the raw/LFP trace, spike raster, spectrogram, current source density, and channel spectrogram views as image files to a folder of your choice.
+5. Further preprocessing and analysis features are planned for future releases.
 
 ## Contributing
 
