@@ -44,6 +44,7 @@ class ShankRendering:
         self.coords_insert_point[n] = None
         self.direction_atlas[n] = None
         self.atlas_shank_end[n] = None
+        self.shank_constraint[n] = None
         self.reset_shank_gui()
 
         # Re-arm the one-time popups so they're available again for this new
@@ -74,7 +75,7 @@ class ShankRendering:
             self.line_actor, self.label_actor, self.channel_points, self.dfx_shank_data,
             self.point_actor_deep, self.point_actor_insert, self.mri_deep, self.mri_insert,
             self.coords_deepest_point, self.coords_insert_point, self.direction_atlas,
-            self.atlas_shank_end, self.shank_colors,
+            self.atlas_shank_end, self.shank_colors, self.shank_constraint,
         )
         for d in per_shank_dicts:
             d.pop(shank_idx, None)
@@ -123,6 +124,24 @@ class ShankRendering:
 
     def select_shank(self, index):
         self.shank_number = index
+        # checkBox_constraint_90deg/_coronal are single, shared widgets --
+        # they display and drive whichever shank is currently selected,
+        # while self.shank_constraint is the actual per-shank memory (see
+        # ElecGeometryMri.enforce_constraint_90deg/_coronal). Sync them to
+        # this shank's own remembered mode here, blocked so it doesn't
+        # re-enter enforce_constraint_90deg*/re-apply a constraint -- this
+        # is just a display update, not a new user action. Everything else
+        # that reacts to the checkboxes (_refresh_oblique_views_for_insert
+        # below, the stacked-widget page reset a few lines down) already
+        # runs after this and will pick up the restored state.
+        if hasattr(self, 'shank_constraint'):
+            mode = self.shank_constraint.get(index)
+            self.ui.checkBox_constraint_90deg.blockSignals(True)
+            self.ui.checkBox_constraint_90deg_coronal.blockSignals(True)
+            self.ui.checkBox_constraint_90deg.setChecked(mode == 'ap')
+            self.ui.checkBox_constraint_90deg_coronal.setChecked(mode == 'rl')
+            self.ui.checkBox_constraint_90deg.blockSignals(False)
+            self.ui.checkBox_constraint_90deg_coronal.blockSignals(False)
         # comboBox_Shanks, comboBox_geometry_shanks and comboBox_insertion_shank
         # always show the same shank; whichever one the user just changed
         # drives, the others follow (blocked so they don't re-enter this method).
@@ -217,6 +236,11 @@ class ShankRendering:
             # for every shank here would reintroduce the exact per-click
             # lag that caching it in refresh_shanks was meant to avoid.
             self.tp3d_window._select_shank(index, sync_combo=True, sync_table=True)
+            # roll/pitch nudge buttons are locked based on the SELECTED
+            # shank's own constraint (see _update_roll_pitch_enabled) -- the
+            # checkBox_constraint_90deg*.toggled signals that normally drive
+            # this were just blocked above, so refresh it explicitly here.
+            self.tp3d_window._update_roll_pitch_enabled()
 
         # Switching shanks changes which insert point the oblique
         # constraint view(s) should be anchored on -- without this, picking
