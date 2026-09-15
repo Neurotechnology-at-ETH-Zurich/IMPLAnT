@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>2000</width>
+    <width>1600</width>
     <height>2307</height>
    </rect>
   </property>
@@ -54,7 +54,7 @@
     <item row="0" column="0">
      <widget class="QTabWidget" name="tabWidget_visualisation">
       <property name="currentIndex">
-       <number>1</number>
+       <number>0</number>
       </property>
       <widget class="QWidget" name="tab_2">
        <attribute name="title">
@@ -2811,7 +2811,7 @@ background-color: rgb(131, 131, 131);
                    <item row="1" column="3" rowspan="3">
                     <widget class="QStackedWidget" name="stackedWidget_3d">
                      <property name="currentIndex">
-                      <number>1</number>
+                      <number>0</number>
                      </property>
                      <widget class="QWidget" name="page">
                       <layout class="QGridLayout" name="gridLayout_141">
@@ -2833,7 +2833,7 @@ background-color: rgb(131, 131, 131);
                              </size>
                             </property>
                             <property name="currentIndex">
-                             <number>0</number>
+                             <number>1</number>
                             </property>
                             <widget class="QWidget" name="page_5">
                              <layout class="QGridLayout" name="gridLayout_75" rowstretch="0,0,0,0,0,0,0,0,0,0,0,0,0">
@@ -4098,7 +4098,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                       </font>
                      </property>
                      <property name="currentIndex">
-                      <number>0</number>
+                      <number>1</number>
                      </property>
                      <widget class="QWidget" name="page_23">
                       <layout class="QGridLayout" name="gridLayout_143" columnstretch="1,1,1">
@@ -4613,7 +4613,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                        <item row="0" column="2">
                         <widget class="QStackedWidget" name="stackedWidget_coronal">
                          <property name="currentIndex">
-                          <number>1</number>
+                          <number>2</number>
                          </property>
                          <widget class="QWidget" name="page_7">
                           <layout class="QGridLayout" name="gridLayout_182">
@@ -5666,7 +5666,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                           </size>
                          </property>
                          <property name="currentIndex">
-                          <number>1</number>
+                          <number>0</number>
                          </property>
                          <widget class="QWidget" name="page_29">
                           <property name="maximumSize">
@@ -8946,7 +8946,7 @@ background-color: rgb(131, 131, 131);
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>2000</width>
+     <width>1600</width>
      <height>23</height>
     </rect>
    </property>
