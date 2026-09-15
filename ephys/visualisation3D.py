@@ -784,7 +784,12 @@ class Visualisation3D:
             if marker.any():
                 self._pyr_channel_excel = int(raw.loc[marker, 'Channel'].iloc[0])
         self.points_data = self._load_channel_excel(points_electrodes_path)
-        self.coords_list = self.points_data.iloc[:, -3:].values*self.spacing
+        # By column name, not position (.iloc[:, -3:]) -- any extra trailing
+        # column (e.g. an older file's now-removed 'Manually Corrected' flag)
+        # would otherwise get swept in as one of the "coordinates", mixing a
+        # non-numeric column into coords_list and making np.array() produce
+        # an unusable dtype=object array instead of real numbers.
+        self.coords_list = self.points_data[['Atlas x', 'Atlas y', 'Atlas z']].values*self.spacing
 
         point_colors = []
         rgb = self.atlaslabelsdf[['R', 'G', 'B']].values / 255
