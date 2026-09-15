@@ -14,7 +14,7 @@ from PySide6.QtWidgets import (
 )
 
 from gui_utils.busy_overlay import BusyOverlay
-from gui_utils.busy_worker import BusyWorker, show_worker_error
+from gui_utils.busy_worker import BusyWorker, show_worker_error, stop_worker
 from gui_utils.subprocess_worker import run_json_subprocess
 from trajectory_planning.shank import NEON_COLORS, _make_color_icon
 from trajectory_planning_3d.add_region_dialog import AddRegionDialog
@@ -184,12 +184,46 @@ class TrajectoryPlanning3DWindow(QDockWidget):
             return
         if self.width() <= 10 or self.height() <= 10:
             return
+        if not self.isVisible():
+            return
         self._camera_reset_pending = False
         self.plotter.reset_camera()
 
+    def _render_if_visible(self):
+        """self.plotter.render() flips this dock's native VTK render window's
+        GL buffers -- doing that while the window is unmapped (the dock
+        closed/hidden, not destroyed -- see closeEvent, this dock is never
+        actually destroyed by a plain close) can hang the GL driver/
+        compositor instead of just being a no-op. That's what was freezing
+        the GUI: refresh_shanks()/_select_shank() are reached from the 2D
+        view (trajectory_planning/shank.py, electrode_mri.py) any time a
+        shank is added/removed/selected/edited, completely independent of
+        whether this dock happens to be open -- so an ordinary 2D-view
+        action right after closing this dock could still drive a render()
+        on the now-hidden interactor. Skipped while hidden; the actors are
+        still rebuilt (add_mesh/remove_actor don't swap buffers), so the
+        next showEvent's refresh_shanks() draws the up-to-date scene as soon
+        as it calls render() itself, now that the window is mapped again."""
+        if self.isVisible():
+            self.plotter.render()
+
     def closeEvent(self, event):
-        # temporary instrumentation: closing this dock reportedly freezes
-        # the GUI -- run from a terminal and see which of these actually
+        # _rebuild_background_mesh's BusyWorker runs a several-second
+        # subprocess with no cancellation point (see busy_worker.py) -- if
+        # this dock gets close()d/deleteLater()d while it's still running,
+        # its queued done/failed signal (on_done/on_failed touch self.plotter)
+        # can land after (or race) pyvistaqt's own parent().destroyed ->
+        # plotter.close() teardown, which runs synchronously mid-destructor
+        # once the widget tree is actually deleted -- this was freezing the
+        # GUI. stop_worker() drops that race by disconnecting the signal and
+        # detaching the still-running worker instead of letting it touch a
+        # torn-down plotter.
+        stop_worker(getattr(self, '_background_mesh_worker', None))
+        self._background_mesh_worker = None
+        overlay = getattr(self, '_background_mesh_overlay', None)
+        if overlay is not None:
+            overlay.close()
+            self._background_mesh_overlay = None
         super().closeEvent(event)
 
     def _current_shank_indices(self):
@@ -330,7 +364,7 @@ class TrajectoryPlanning3DWindow(QDockWidget):
                 actor.GetProperty().SetLineWidth(width)
         self._update_angle_legend()
         self._update_axis_indicator()
-        self.plotter.render()
+        self._render_if_visible()
 
         if sync_combo:
             combo = self.ui.comboBox_Shanks_tp3d
@@ -371,7 +405,7 @@ class TrajectoryPlanning3DWindow(QDockWidget):
         spacing = np.array(self.tp.movingImg_resampled.GetSpacing())
         mid = (np.array(insert, dtype=float) + np.array(deep, dtype=float)) / 2 * spacing
         self.plotter.set_focus(mid)
-        self.plotter.render()
+        self._render_if_visible()
 
     def _on_shank_table_clicked(self, row, column):
         """Clicking anywhere on a shank's row selects it (bolder in 3D,
@@ -460,7 +494,7 @@ class TrajectoryPlanning3DWindow(QDockWidget):
             actor = self._build_shank_actor(idx)
             if actor is not None:
                 self.shank_actors[idx] = actor
-        self.plotter.render()
+        self._render_if_visible()
 
     def _current_space_insert_deep_mm(self, shank_idx):
         """This shank's insert/deep points, in MRI physical mm -- shared by
@@ -602,7 +636,7 @@ class TrajectoryPlanning3DWindow(QDockWidget):
                 color = self.tp.tp_labels[val][:3]
                 self.region_actors[val] = self.plotter.add_mesh(
                     mesh, color=color, opacity=self.opacityRegions, name=f'region_{val}',
-                    reset_camera=False)
+                    reset_camera=False, render=False)
             else:
                 actor.SetVisibility(True)
         else:
@@ -610,7 +644,7 @@ class TrajectoryPlanning3DWindow(QDockWidget):
             if actor is not None:
                 actor.SetVisibility(False)
         self._update_depth_peeling()
-        self.plotter.render()
+        self._render_if_visible()
 
     def _update_depth_peeling(self):
         """Depth peeling costs real per-frame render time (several extra
@@ -659,13 +693,14 @@ class TrajectoryPlanning3DWindow(QDockWidget):
                 if mesh is None or mesh.n_points == 0:
                     return
                 self.forbidden_area_actor = self.plotter.add_mesh(
-                    mesh, color='red', opacity=self.opacityRegions, name='forbidden_area')
+                    mesh, color='red', opacity=self.opacityRegions, name='forbidden_area',
+                    render=False)
             else:
                 self.forbidden_area_actor.SetVisibility(True)
         elif self.forbidden_area_actor is not None:
             self.forbidden_area_actor.SetVisibility(False)
         self._update_depth_peeling()
-        self.plotter.render()
+        self._render_if_visible()
 
     def _get_region_mesh(self, val):
         if val in self._region_meshes:
@@ -798,6 +833,7 @@ class TrajectoryPlanning3DWindow(QDockWidget):
         overlay.setGeometry(self.widget().rect())
         overlay.raise_()
         overlay.show()
+        self._background_mesh_overlay = overlay
 
         self._background_mesh_worker = BusyWorker(work, self.widget())
         self._background_mesh_worker.done.connect(on_done)
@@ -889,13 +925,14 @@ class TrajectoryPlanning3DWindow(QDockWidget):
 
         self._update_depth_peeling()
         self._update_angle_legend()
+        self._render_if_visible()
 
     def _on_hide_planes_toggled(self, checked):
         for name in self._PLANE_ACTOR_NAMES:
             if name in self.plotter.actors:
                 self.plotter.actors[name].SetVisibility(not checked)
         self._update_depth_peeling()
-        self.plotter.render()
+        self._render_if_visible()
 
     _AXIS_INDICATOR_NAME = 'axis_indicator'
 
@@ -1042,7 +1079,8 @@ class TrajectoryPlanning3DWindow(QDockWidget):
             f"pitch: {pitch_deg:.1f}°",
         ]
         self.plotter.add_text(
-            "\n".join(lines), position='upper_right', font_size=10, color='white', name=name)
+            "\n".join(lines), position='upper_right', font_size=10, color='white', name=name,
+            render=False)
 
     # ---- camera -------------------------------------------------------------
 
@@ -1072,10 +1110,13 @@ class TrajectoryPlanning3DWindow(QDockWidget):
     _ARMED_STYLE = "background-color: #e67e22; color: white;"
 
     def _update_roll_pitch_enabled(self, *_args):
-        """checkBox_constraint_90deg/checkBox_constraint_90deg_coronal
-        (main window -- see ElecGeometryMri.enforce_constraint_90deg/
-        _coronal) lock the shank's AP or RL component to exactly zero,
-        and re-enforce that lock on every subsequent deep/insert change
+        """self.tp.shank_constraint[selected shank] (mirrored onto
+        checkBox_constraint_90deg/checkBox_constraint_90deg_coronal, main
+        window, whenever this IS the selected shank -- see ShankRendering.
+        select_shank and ElecGeometryMri.enforce_constraint_90deg/
+        _coronal) locks the SELECTED shank's own AP or RL component to
+        exactly zero, and re-enforces that lock on every subsequent deep/
+        insert change
         (ElecGeometryMri._apply_constraints, which change_insert_point/
         change_deepest_point call -- the same path _nudge_shank drives).
         _nudge_shank's roll/pitch rotations each stay within their own
@@ -1087,8 +1128,9 @@ class TrajectoryPlanning3DWindow(QDockWidget):
         lock. So each button is disabled by the OTHER constraint, not its
         own -- while a constraint is active, its own matching button is
         exactly the one still safe (and useful) to nudge."""
-        ap_locked = self.tp.ui.checkBox_constraint_90deg.isChecked()
-        rl_locked = self.tp.ui.checkBox_constraint_90deg_coronal.isChecked()
+        mode = self.tp.shank_constraint.get(self.selected_shank_idx) if self.selected_shank_idx is not None else None
+        ap_locked = mode == 'ap'
+        rl_locked = mode == 'rl'
         self.ui.pushButton_roll.setEnabled(not rl_locked)
         self.ui.pushButton_pitch.setEnabled(not ap_locked)
         if ((rl_locked and self._armed_axis == 'roll')
@@ -1097,7 +1139,7 @@ class TrajectoryPlanning3DWindow(QDockWidget):
             self._armed_axis = None
             self._update_axis_arm_ui()
             self._update_axis_indicator()
-            self.plotter.render()
+            self._render_if_visible()
 
     def _toggle_axis_arm(self, axis):
         """Clicking one of the 6 axis buttons arms/disarms it -- only one
@@ -1108,7 +1150,7 @@ class TrajectoryPlanning3DWindow(QDockWidget):
         self._armed_axis = None if self._armed_axis == axis else axis
         self._update_axis_arm_ui()
         self._update_axis_indicator()
-        self.plotter.render()
+        self._render_if_visible()
 
     def _update_axis_arm_ui(self):
         for axis, btn in self._axis_buttons.items():
