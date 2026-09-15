@@ -3232,6 +3232,8 @@ class Ui_MainWindow(object):
         self.gridLayout_177.addWidget(self.pushButton_axialView, 2, 0, 1, 1)
 
         self.gridLayout_177.setColumnStretch(0, 1)
+        self.gridLayout_177.setColumnStretch(1, 1)
+        self.gridLayout_177.setColumnStretch(2, 1)
 
         self.gridLayout_214.addWidget(self.frame, 0, 3, 1, 1)
 
