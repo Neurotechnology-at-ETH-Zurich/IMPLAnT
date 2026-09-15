@@ -6,6 +6,7 @@ build/
 __pycache__/
 *.pyc
 .qtc_clangd/
+.pytest_cache/
 
 # Qt Creator per-machine project state (interpreter path, build/run
 # directories -- see README's Qt Creator section for what to set these to)
