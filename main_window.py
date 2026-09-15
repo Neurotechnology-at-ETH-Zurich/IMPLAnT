@@ -262,9 +262,11 @@ class MainWindow(QMainWindow):
         self.ui.stackedWidget_3d_tp.currentChanged.connect(self._update_3d_tp_height_cap)
         self._update_3d_tp_height_cap(0)
 
-        #resize to inital size
-        self.resize(1600, 900)
-        self.setMinimumSize(1500,800)
+        #resize to inital size, clamped to whatever screen we're actually on
+        # (1600x900/1500x800 min don't fit smaller laptop displays otherwise)
+        screen_geo = QApplication.primaryScreen().availableGeometry()
+        self.resize(min(1600, screen_geo.width()), min(900, screen_geo.height()))
+        self.setMinimumSize(min(1500, screen_geo.width()), min(800, screen_geo.height()))
 
         # Connect all buttons to open file. Like the per-tab "Open Session"
         # actions below, these go through load_previous_session() first so
