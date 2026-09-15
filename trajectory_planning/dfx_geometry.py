@@ -29,7 +29,7 @@ def ensure_dfx_plot(widget_dfx):
     plot.showGrid(x=True, y=True, alpha=0.3)
     plot.setLabel("bottom", "ML from center (µm)")
     plot.setLabel("left", "DV (µm)")
-    plot.addLegend()
+    plot.addLegend(labelTextSize="14pt")
 
     if layout is None:
         layout = QVBoxLayout(widget_dfx)
