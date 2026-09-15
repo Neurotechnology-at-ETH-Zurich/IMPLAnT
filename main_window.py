@@ -454,12 +454,21 @@ class MainWindow(QMainWindow):
         """Calls teardown() on every registered module that defines one (see
         register_module) -- from restart_gui(), before self.ui is replaced."""
         for name, module in self._registered_modules.items():
-            teardown = getattr(module, 'teardown', None)
-            if teardown is not None:
-                try:
-                    teardown()
-                except Exception:
-                    logging.exception("teardown() failed for registered module %r", name)
+            self._call_module_teardown(name, module)
+
+    def _call_module_teardown(self, name, module):
+        """Calls module.teardown() if it defines one, logging (not raising)
+        on failure. Shared by _teardown_registered_modules (restart_gui's
+        full replace) and _free_previous_workflow_state (leaving a workflow
+        for a different one) -- the two places a registered module gets
+        discarded, so a teardown() fires the same way regardless of which
+        path discarded it."""
+        teardown = getattr(module, 'teardown', None)
+        if teardown is not None:
+            try:
+                teardown()
+            except Exception:
+                logging.exception("teardown() failed for registered module %r", name)
 
     def _load_session_state(self):
         if not os.path.exists(_session_state_path):
@@ -639,16 +648,7 @@ class MainWindow(QMainWindow):
             self.FileLoader = FileLoader(self)
             file_name, data_view = self.FileLoader.restore_file(path)
             if file_name is not None:
-                zoom_notifier.factorChanged.connect(self.LoadMRI.minimap.create_small_rectangle)
-                if not self.FileLoader.is_4d:
-                    Zoom.fit_to_window(self.LoadMRI.vtk_widgets[0]["coronal"], self.LoadMRI.vtk_widgets.values(), self.LoadMRI.scale_bar, self.LoadMRI.vtk_widgets,0,data_3d=True)
-                self.ui.comboBox_resamplefiles.addItem(os.path.basename(file_name))
-                if self.FileLoader.is_4d:
-                    self.ui.groupBox_data0.setTitle(f"View: {data_view.upper()}")
-                tab_idx = 0 if self.FileLoader.is_4d else 1
-                self.ui.tabWidget.setCurrentIndex(0)
-                self.ui.data_4d_3d.setCurrentIndex(tab_idx)
-                self._notify_session_loaded('mri')
+                self._finish_mri_load(file_name, data_view, self.FileLoader.is_4d)
 
         elif kind == 'ephys':
             path = entry.get('path')
@@ -891,17 +891,35 @@ class MainWindow(QMainWindow):
         if file_name is None:
             return
         self._save_session_state('mri', path=file_name, is_4d=self.FileLoader.is_4d)
+        self._finish_mri_load(file_name, data_view, self.FileLoader.is_4d)
+
+    def _finish_mri_load(self, file_name, data_view, is_4d):
+        """
+        Shared tail for the two places a plain MRI (re)load finishes without
+        going through restart_gui()'s full-UI-rebuild path --
+        initialize_mri_session (brand new file) and _restore_session_entry
+        (reopening a recent one): connects the zoom notifier to the new
+        minimap, fits the coronal view to window for 3D data, adds the file
+        to the resample combobox, sets the 4D view title if needed, and
+        switches to the default tab/view.
+
+        restart_gui() (core/load_MRI_file.py) and finish_trajectory_work()'s
+        first-load branch do something similar but not identical -- not
+        folded in here, since forcing them to match this exactly would
+        change real behavior, not just remove duplication (e.g. restart_gui
+        doesn't currently add the file to comboBox_resamplefiles at all,
+        unlike every other load path -- worth checking whether that's
+        deliberate).
+        """
         zoom_notifier.factorChanged.connect(self.LoadMRI.minimap.create_small_rectangle)
-        if not self.FileLoader.is_4d:
+        if not is_4d:
             Zoom.fit_to_window(self.LoadMRI.vtk_widgets[0]["coronal"], self.LoadMRI.vtk_widgets.values(), self.LoadMRI.scale_bar, self.LoadMRI.vtk_widgets,0,data_3d=True)
 
         self.ui.comboBox_resamplefiles.addItem(os.path.basename(file_name)) #add to combobox for resampling
-        if self.FileLoader.is_4d:
+        if is_4d:
             self.ui.groupBox_data0.setTitle(f"View: {data_view.upper()}")
-        else:
-            data_view = "coronal"
 
-        tab_idx = 0 if self.FileLoader.is_4d else 1
+        tab_idx = 0 if is_4d else 1
         self.ui.tabWidget.setCurrentIndex(0)
         self.ui.data_4d_3d.setCurrentIndex(tab_idx)
         self._notify_session_loaded('mri')
@@ -911,28 +929,27 @@ class MainWindow(QMainWindow):
         """
         Re-render VTK widgets when GUI size changes.
         """
-        self.ui.vtkWidget_data_sagittal.GetRenderWindow().Render()
-        self.ui.vtkWidget_data_coronal.GetRenderWindow().Render()
-        self.ui.vtkWidget_data_axial.GetRenderWindow().Render()
-        self.ui.vtkWidget_data_seg3D.GetRenderWindow().Render()
-        self.ui.vtkWidget_data00.GetRenderWindow().Render()
-        self.ui.vtkWidget_data01.GetRenderWindow().Render()
-        self.ui.vtkWidget_data02.GetRenderWindow().Render()
-        self.ui.vtkWidget_data03.GetRenderWindow().Render()
-        self.ui.vtkWidget_legend0.GetRenderWindow().Render()
-        self.ui.vtkWidget_data10.GetRenderWindow().Render()
-        self.ui.vtkWidget_data11.GetRenderWindow().Render()
-        self.ui.vtkWidget_data12.GetRenderWindow().Render()
-        self.ui.vtkWidget_data13.GetRenderWindow().Render()
-        self.ui.vtkWidget_legend1.GetRenderWindow().Render()
-        self.ui.vtkWidget_data10.GetRenderWindow().Render()
-        self.ui.vtkWidget_data11.GetRenderWindow().Render()
-        self.ui.vtkWidget_data12.GetRenderWindow().Render()
-        self.ui.vtkWidget_data13.GetRenderWindow().Render()
-        self.ui.vtkWidget_legend2.GetRenderWindow().Render()
-        self.ui.vtkWidget_trajPlan_1.GetRenderWindow().Render()
-        #barcode sachen
-        self.ui.vtkWidget_ephys.GetRenderWindow().Render()
+        for widget in (
+            self.ui.vtkWidget_data_sagittal, self.ui.vtkWidget_data_coronal, self.ui.vtkWidget_data_axial,
+            self.ui.vtkWidget_data_seg3D,
+            self.ui.vtkWidget_data00, self.ui.vtkWidget_data01, self.ui.vtkWidget_data02, self.ui.vtkWidget_data03,
+            self.ui.vtkWidget_legend0,
+            self.ui.vtkWidget_data10, self.ui.vtkWidget_data11, self.ui.vtkWidget_data12, self.ui.vtkWidget_data13,
+            self.ui.vtkWidget_legend1,
+            self.ui.vtkWidget_data10, self.ui.vtkWidget_data11, self.ui.vtkWidget_data12, self.ui.vtkWidget_data13,
+            self.ui.vtkWidget_legend2,
+            self.ui.vtkWidget_trajPlan_1,
+            self.ui.vtkWidget_ephys,  # barcode sachen
+        ):
+            # A widget can be hidden (a different tab or stacked-widget page
+            # active) while still existing -- Render()ing it while unmapped
+            # can hang the GL driver on an X11/DRI3 buffer-swap wait that
+            # never arrives (confirmed via gdb backtrace: blocked in
+            # vtkXOpenGLRenderWindow::MakeCurrent -> loader_dri3_get_buffers
+            # -> xcb_wait_for_special_event), freezing the whole GUI -- see
+            # trajectory_planning/rendering.py's identical guard.
+            if widget.isVisible():
+                widget.GetRenderWindow().Render()
 
         if hasattr(self, 'LoadMRI'):
             # the scale bar's length/position is computed from the render
@@ -1423,6 +1440,17 @@ class MainWindow(QMainWindow):
         overlay.raise_()
         overlay.show()
 
+        # keep re-asserting the overlay on top for the same reason
+        # BusyOverlay.run() does (see its docstring/comment there): on every
+        # run after the first, finish_trajectory_work's sync GUI rebuild
+        # below goes through restart_gui(), which rebuilds mw.ui from
+        # scratch (setupUi/show()/processEvents()) -- those freshly
+        # (re)painted VTK widgets are new siblings of the overlay and slip
+        # in front of a one-off raise_() the moment they repaint.
+        keepalive = QTimer(self)
+        keepalive.timeout.connect(lambda: (overlay.raise_(), overlay.repaint()))
+        keepalive.start(100)
+
         result = {}
 
         def work():
@@ -1435,9 +1463,11 @@ class MainWindow(QMainWindow):
             # so closing it before this would leave that whole stretch with
             # no overlay at all, same mistake as prewarm_tabs
             self.finish_trajectory_work(data, transformPath, result['resampled_path'])
+            keepalive.stop()
             overlay.close()
 
         def on_failed(tb):
+            keepalive.stop()
             overlay.close()
             show_worker_error(self, "Trajectory planning setup failed", tb)
 
@@ -1509,7 +1539,10 @@ class MainWindow(QMainWindow):
         """
         Leaving 'samri'/'ephys' for a different kind of session frees their
         heavy backing objects (self.Samri/self.Ephys) instead of leaving them
-        alive in memory for the rest of the app session. Moving to 'ephys',
+        alive in memory for the rest of the app session -- calling
+        teardown() on each first (see _call_module_teardown) if it defines
+        one, same as restart_gui's full replace does via
+        _teardown_registered_modules. Moving to 'ephys',
         'samri' or 'surgery' (none of which need the main image) additionally
         evicts self.LoadMRI itself -- see _evict_load_mri() -- since that's
         usually the single biggest thing in memory (VTK renderers/actors for
@@ -1530,16 +1563,27 @@ class MainWindow(QMainWindow):
         ephys/mri) at the point each one finished loading; reopening just
         means re-fetching/re-reading/re-rendering rather than resuming the
         exact in-memory state.
+
+        Also pops the freed entry out of self._registered_modules -- setting
+        self.Samri/self.Ephys to None alone would leave the registry still
+        holding a reference to the discarded instance (self._registered_
+        modules['Samri'] pointing at a "freed" object that self.Samri no
+        longer does), which both misrepresents "every live controller" and
+        keeps that instance from actually being garbage-collected.
         """
         if new_kind != 'samri' and getattr(self, 'Samri', None) is not None:
             self._archive_samri_log()
+            self._call_module_teardown('Samri', self.Samri)
             if getattr(self, 'log_adapter', None):
                 self.log_adapter.uninstall()
                 self.log_adapter = None
             self.Samri = None
+            self._registered_modules.pop('Samri', None)
 
         if new_kind != 'ephys' and getattr(self, 'Ephys', None) is not None:
+            self._call_module_teardown('Ephys', self.Ephys)
             self.Ephys = None
+            self._registered_modules.pop('Ephys', None)
 
         if new_kind in ('ephys', 'samri', 'surgery'):
             self._evict_load_mri()
