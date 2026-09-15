@@ -29,17 +29,9 @@ class Ui_tab_ephys(object):
     def setupUi(self, tab_ephys):
         if not tab_ephys.objectName():
             tab_ephys.setObjectName(u"tab_ephys")
-        tab_ephys.resize(898, 584)
+        tab_ephys.resize(1528, 791)
         self.gridLayout = QGridLayout(tab_ephys)
         self.gridLayout.setObjectName(u"gridLayout")
-        self.textEdit_ephys = QLabel(tab_ephys)
-        self.textEdit_ephys.setObjectName(u"textEdit_ephys")
-        self.textEdit_ephys.setMinimumSize(QSize(300, 100))
-        self.textEdit_ephys.setMaximumSize(QSize(300, 16777215))
-        self.textEdit_ephys.setWordWrap(True)
-
-        self.gridLayout.addWidget(self.textEdit_ephys, 0, 0, 1, 1)
-
         self.tabWidget_ephys = QTabWidget(tab_ephys)
         self.tabWidget_ephys.setObjectName(u"tabWidget_ephys")
         self.tab_4 = QWidget()
@@ -320,22 +312,11 @@ class Ui_tab_ephys(object):
 
         self.tabWidget_LFP = QTabWidget(self.tab_7)
         self.tabWidget_LFP.setObjectName(u"tabWidget_LFP")
+        self.tabWidget_LFP.setMaximumSize(QSize(16777215, 16777215))
         self.tab_13 = QWidget()
         self.tab_13.setObjectName(u"tab_13")
         self.gridLayout_201 = QGridLayout(self.tab_13)
         self.gridLayout_201.setObjectName(u"gridLayout_201")
-        self.lineEdit_61 = QLineEdit(self.tab_13)
-        self.lineEdit_61.setObjectName(u"lineEdit_61")
-        self.lineEdit_61.setReadOnly(True)
-
-        self.gridLayout_201.addWidget(self.lineEdit_61, 0, 0, 1, 1)
-
-        self.lineEdit_62 = QLineEdit(self.tab_13)
-        self.lineEdit_62.setObjectName(u"lineEdit_62")
-        self.lineEdit_62.setReadOnly(True)
-
-        self.gridLayout_201.addWidget(self.lineEdit_62, 0, 1, 1, 1)
-
         self.doubleSpinBox_ClusterLimits = QDoubleSpinBox(self.tab_13)
         self.doubleSpinBox_ClusterLimits.setObjectName(u"doubleSpinBox_ClusterLimits")
         self.doubleSpinBox_ClusterLimits.setMaximumSize(QSize(16777215, 16777215))
@@ -344,12 +325,24 @@ class Ui_tab_ephys(object):
         self.doubleSpinBox_ClusterLimits.setSingleStep(0.050000000000000)
         self.doubleSpinBox_ClusterLimits.setValue(0.300000000000000)
 
-        self.gridLayout_201.addWidget(self.doubleSpinBox_ClusterLimits, 0, 2, 1, 1)
+        self.gridLayout_201.addWidget(self.doubleSpinBox_ClusterLimits, 0, 3, 1, 1)
+
+        self.lineEdit_62 = QLineEdit(self.tab_13)
+        self.lineEdit_62.setObjectName(u"lineEdit_62")
+        self.lineEdit_62.setReadOnly(True)
+
+        self.gridLayout_201.addWidget(self.lineEdit_62, 0, 2, 1, 1)
+
+        self.lineEdit_61 = QLineEdit(self.tab_13)
+        self.lineEdit_61.setObjectName(u"lineEdit_61")
+        self.lineEdit_61.setReadOnly(True)
+
+        self.gridLayout_201.addWidget(self.lineEdit_61, 0, 1, 1, 1)
 
         self.widget_hierClustering = QWidget(self.tab_13)
         self.widget_hierClustering.setObjectName(u"widget_hierClustering")
 
-        self.gridLayout_201.addWidget(self.widget_hierClustering, 1, 0, 1, 3)
+        self.gridLayout_201.addWidget(self.widget_hierClustering, 1, 1, 1, 3)
 
         self.tabWidget_LFP.addTab(self.tab_13, "")
         self.tab_14 = QWidget()
@@ -428,12 +421,19 @@ class Ui_tab_ephys(object):
 
         self.gridLayout_185.addWidget(self.tabWidget_LFP, 0, 1, 3, 1)
 
+        self.pushButton_saveData = QPushButton(self.tab_7)
+        self.pushButton_saveData.setObjectName(u"pushButton_saveData")
+        self.pushButton_saveData.setMinimumSize(QSize(0, 50))
+        self.pushButton_saveData.setStyleSheet(u" QPushButton { background-color: #e67e22; color: white; } QPushButton:disabled { background-color: #a9713f; color: #cccccc; }")
+
+        self.gridLayout_185.addWidget(self.pushButton_saveData, 3, 1, 1, 1)
+
         self.widget_spike_ruster = QWidget(self.tab_7)
         self.widget_spike_ruster.setObjectName(u"widget_spike_ruster")
         self.gridLayout_203 = QGridLayout(self.widget_spike_ruster)
         self.gridLayout_203.setObjectName(u"gridLayout_203")
 
-        self.gridLayout_185.addWidget(self.widget_spike_ruster, 1, 0, 2, 1)
+        self.gridLayout_185.addWidget(self.widget_spike_ruster, 1, 0, 3, 1)
 
         self.tabWidget_ephys.addTab(self.tab_7, "")
 
@@ -517,13 +517,21 @@ class Ui_tab_ephys(object):
 
         self.gridLayout.addWidget(self.frame_2, 1, 0, 1, 1)
 
+        self.textEdit_ephys = QLabel(tab_ephys)
+        self.textEdit_ephys.setObjectName(u"textEdit_ephys")
+        self.textEdit_ephys.setMinimumSize(QSize(300, 100))
+        self.textEdit_ephys.setMaximumSize(QSize(300, 16777215))
+        self.textEdit_ephys.setWordWrap(True)
+
+        self.gridLayout.addWidget(self.textEdit_ephys, 0, 0, 1, 1)
+
 
         self.retranslateUi(tab_ephys)
 
         self.tabWidget_ephys.setCurrentIndex(2)
         self.resetCamera_ephys.setDefault(False)
         self.stackedWidget_video.setCurrentIndex(0)
-        self.tabWidget_LFP.setCurrentIndex(3)
+        self.tabWidget_LFP.setCurrentIndex(0)
 
 
         QMetaObject.connectSlotsByName(tab_ephys)
@@ -531,7 +539,6 @@ class Ui_tab_ephys(object):
 
     def retranslateUi(self, tab_ephys):
         tab_ephys.setWindowTitle(QCoreApplication.translate("tab_ephys", u"Form", None))
-        self.textEdit_ephys.setText(QCoreApplication.translate("tab_ephys", u"TextLabel", None))
 #if QT_CONFIG(tooltip)
         self.groupBox_37.setToolTip(QCoreApplication.translate("tab_ephys", u"Voxel coordinates of the selected channel's electrode \u2014 updates automatically when you click a channel in the table.", None))
 #endif // QT_CONFIG(tooltip)
@@ -609,11 +616,11 @@ class Ui_tab_ephys(object):
         self.pushButton_AddVideo.setText(QCoreApplication.translate("tab_ephys", u"OPEN VIDEO", None))
         self.tabWidget_ephys.setTabText(self.tabWidget_ephys.indexOf(self.tab_5), QCoreApplication.translate("tab_ephys", u"Video", None))
         self.lineEdit_13.setText(QCoreApplication.translate("tab_ephys", u"Spike Ruster Plot Unit/Neurons over Time [min:sec:msec] - Skipped Channels are not shown", None))
-        self.lineEdit_61.setText(QCoreApplication.translate("tab_ephys", u"Pairwise Neuronal Spike-Count Correlation", None))
-        self.lineEdit_62.setText(QCoreApplication.translate("tab_ephys", u"Colour-axis Limits", None))
 #if QT_CONFIG(tooltip)
         self.doubleSpinBox_ClusterLimits.setToolTip(QCoreApplication.translate("tab_ephys", u"Symmetric color-scale limit (\u00b1value) for the hierarchical correlation heatmap.", None))
 #endif // QT_CONFIG(tooltip)
+        self.lineEdit_62.setText(QCoreApplication.translate("tab_ephys", u"Colour-axis Limits", None))
+        self.lineEdit_61.setText(QCoreApplication.translate("tab_ephys", u"Pairwise Neuronal Spike-Count Correlation", None))
         self.tabWidget_LFP.setTabText(self.tabWidget_LFP.indexOf(self.tab_13), QCoreApplication.translate("tab_ephys", u"Hierarchical Correlation", None))
         self.lineEdit_64.setText(QCoreApplication.translate("tab_ephys", u"Spectrogram of selected Channel in same time window as ephys data displayed", None))
 #if QT_CONFIG(tooltip)
@@ -641,6 +648,7 @@ class Ui_tab_ephys(object):
         self.pushButton_Timeframe_spectrogram.setText(QCoreApplication.translate("tab_ephys", u"Entire Frame / Around Ripple", None))
         self.lineEdit_66.setText(QCoreApplication.translate("tab_ephys", u"Spectrogram at selected time over all channels", None))
         self.tabWidget_LFP.setTabText(self.tabWidget_LFP.indexOf(self.tab_9), QCoreApplication.translate("tab_ephys", u"Spectrogram all Channels", None))
+        self.pushButton_saveData.setText(QCoreApplication.translate("tab_ephys", u"Save ", None))
         self.tabWidget_ephys.setTabText(self.tabWidget_ephys.indexOf(self.tab_7), QCoreApplication.translate("tab_ephys", u"Analysis", None))
 #if QT_CONFIG(tooltip)
         self.pushButton_deselectAll.setToolTip(QCoreApplication.translate("tab_ephys", u"Uncheck every channel, hiding them all from the 3D view.", None))
@@ -664,5 +672,6 @@ class Ui_tab_ephys(object):
 #endif // QT_CONFIG(tooltip)
         self.comboBox_mridTag.setCurrentText("")
         self.lineEdit_60.setText(QCoreApplication.translate("tab_ephys", u"Selected Shank", None))
+        self.textEdit_ephys.setText(QCoreApplication.translate("tab_ephys", u"TextLabel", None))
     # retranslateUi
 
