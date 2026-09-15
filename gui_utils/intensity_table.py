@@ -95,12 +95,11 @@ class IntensityTable(QObject):
 
         btn = QToolButton()
         # Layer 0 (the main image) can never be hidden -- disabled and
-        # locked to the closed-eye icon, same as every other intensity
-        # table (tableintensity_data3d/data0/data1/data2).
+        # locked to the open-eye icon.
         btn.setCheckable(False)
         btn.setChecked(True)
         btn.setEnabled(False)
-        btn.setIcon(self.icon_hidden)
+        btn.setIcon(self.icon_visible)
         btn.setToolTip("Main image is always visible and cannot be hidden")
         btn.setAutoRaise(True)
         row0 = self.index
