@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1428</width>
+    <width>1490</width>
     <height>990</height>
    </rect>
   </property>
@@ -236,8 +236,41 @@
       <enum>QFrame::Raised</enum>
      </property>
      <layout class="QGridLayout" name="gridLayout_139" columnstretch="0,0,0,0">
-      <item row="16" column="2" colspan="2">
-       <widget class="QPushButton" name="pushButton_register">
+      <item row="15" column="1">
+       <widget class="QCheckBox" name="checkBox_elastic">
+        <property name="toolTip">
+         <string>Use elastic (deformable) registration instead of rigid/affine.</string>
+        </property>
+        <property name="text">
+         <string>Elastic</string>
+        </property>
+        <property name="checked">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="1" colspan="3">
+       <widget class="QLineEdit" name="lineEdit_animalID">
+        <property name="styleSheet">
+         <string notr="true">color: rgb(224, 27, 36);</string>
+        </property>
+        <property name="text">
+         <string>Animal ID</string>
+        </property>
+        <property name="readOnly">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item row="8" column="2" colspan="2">
+       <widget class="QSpinBox" name="spinBox_num_threads">
+        <property name="toolTip">
+         <string>Number of CPU threads to use for registration (1–8).</string>
+        </property>
+       </widget>
+      </item>
+      <item row="16" column="1">
+       <widget class="QPushButton" name="pushButton_biascorrection">
         <property name="minimumSize">
          <size>
           <width>0</width>
@@ -245,13 +278,33 @@
          </size>
         </property>
         <property name="toolTip">
-         <string>Run registration using the settings configured on this tab.</string>
+         <string>Run bias-field correction only, without registration.</string>
         </property>
         <property name="styleSheet">
          <string notr="true"> QPushButton { background-color: #e67e22; color: white; } QPushButton:disabled { background-color: #a9713f; color: #cccccc; }</string>
         </property>
         <property name="text">
-         <string>Register</string>
+         <string>Biascorrection ONLY</string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="2">
+       <widget class="QTextEdit" name="lineEdit_base_path">
+        <property name="maximumSize">
+         <size>
+          <width>16777215</width>
+          <height>70</height>
+         </size>
+        </property>
+       </widget>
+      </item>
+      <item row="5" column="1">
+       <widget class="QLineEdit" name="lineEdit_15">
+        <property name="text">
+         <string>Working Session</string>
+        </property>
+        <property name="readOnly">
+         <bool>true</bool>
         </property>
        </widget>
       </item>
@@ -265,83 +318,30 @@
         </property>
        </widget>
       </item>
-      <item row="1" column="3">
-       <widget class="QPushButton" name="pushButton_browseBru2">
+      <item row="12" column="1">
+       <widget class="QLineEdit" name="lineEdit_11">
+        <property name="text">
+         <string>Moving Mask</string>
+        </property>
+        <property name="readOnly">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item row="6" column="1">
+       <widget class="QLineEdit" name="lineEdit_17">
+        <property name="text">
+         <string>Tasks</string>
+        </property>
+        <property name="readOnly">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item row="7" column="2" colspan="2">
+       <widget class="QComboBox" name="comboBox_register_key">
         <property name="toolTip">
-         <string>Browse for the raw Bruker2Bids data folder.</string>
-        </property>
-        <property name="text">
-         <string>Browse</string>
-        </property>
-       </widget>
-      </item>
-      <item row="2" column="1">
-       <widget class="QLineEdit" name="lineEdit_7">
-        <property name="text">
-         <string>Base path</string>
-        </property>
-        <property name="readOnly">
-         <bool>true</bool>
-        </property>
-       </widget>
-      </item>
-      <item row="12" column="2">
-       <widget class="QTextEdit" name="lineEdit_movMask">
-        <property name="maximumSize">
-         <size>
-          <width>16777215</width>
-          <height>100</height>
-         </size>
-        </property>
-        <property name="readOnly">
-         <bool>true</bool>
-        </property>
-       </widget>
-      </item>
-      <item row="14" column="1">
-       <widget class="QCheckBox" name="checkBox_presurgery">
-        <property name="toolTip">
-         <string>Mark this session as the pre-surgery scan (affects how it's registered).</string>
-        </property>
-        <property name="text">
-         <string>Presurgery</string>
-        </property>
-       </widget>
-      </item>
-      <item row="1" column="2">
-       <widget class="QTextEdit" name="lineEdit_bru2_path">
-        <property name="maximumSize">
-         <size>
-          <width>16777215</width>
-          <height>70</height>
-         </size>
-        </property>
-       </widget>
-      </item>
-      <item row="5" column="2" colspan="2">
-       <widget class="QComboBox" name="comboBox_working_session">
-        <property name="toolTip">
-         <string>Which session (ses-*) of this animal to register.</string>
-        </property>
-       </widget>
-      </item>
-      <item row="1" column="1">
-       <widget class="QLineEdit" name="lineEdit_5">
-        <property name="text">
-         <string>Bru2 path</string>
-        </property>
-        <property name="readOnly">
-         <bool>true</bool>
-        </property>
-       </widget>
-      </item>
-      <item row="3" column="1">
-       <widget class="QLineEdit" name="lineEdit_10">
-        <property name="text">
-         <string>Atlas Files</string>
-        </property>
-        <property name="readOnly">
-         <bool>true</bool>
+         <string>Which scan sequence (protocol name) to use for registration.</string>
         </property>
        </widget>
       </item>
@@ -352,29 +352,6 @@
         </property>
         <property name="text">
          <string>Browse</string>
-        </property>
-       </widget>
-      </item>
-      <item row="4" column="1">
-       <widget class="QCheckBox" name="checkBox_atlasmask">
-        <property name="toolTip">
-         <string>Restrict the registration metric to the atlas mask region instead of the whole brain volume.</string>
-        </property>
-        <property name="text">
-         <string>Use Atlas Mask</string>
-        </property>
-        <property name="checked">
-         <bool>true</bool>
-        </property>
-       </widget>
-      </item>
-      <item row="8" column="1">
-       <widget class="QLineEdit" name="lineEdit_14">
-        <property name="text">
-         <string>Num Threads</string>
-        </property>
-        <property name="readOnly">
-         <bool>true</bool>
         </property>
        </widget>
       </item>
@@ -414,18 +391,68 @@
         </layout>
        </widget>
       </item>
-      <item row="3" column="2">
-       <widget class="QTextEdit" name="lineEdit_atlas_path">
-        <property name="maximumSize">
-         <size>
-          <width>16777215</width>
-          <height>70</height>
-         </size>
+      <item row="1" column="1">
+       <widget class="QLineEdit" name="lineEdit_5">
+        <property name="text">
+         <string>Bru2 path</string>
+        </property>
+        <property name="readOnly">
+         <bool>true</bool>
         </property>
        </widget>
       </item>
-      <item row="16" column="1">
-       <widget class="QPushButton" name="pushButton_biascorrection">
+      <item row="15" column="2" colspan="2">
+       <widget class="QPushButton" name="pushButton_paths">
+        <property name="text">
+         <string>Save  all paths</string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="1">
+       <widget class="QLineEdit" name="lineEdit_7">
+        <property name="text">
+         <string>Base path</string>
+        </property>
+        <property name="readOnly">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="1">
+       <widget class="QLineEdit" name="lineEdit_10">
+        <property name="text">
+         <string>Atlas Files</string>
+        </property>
+        <property name="readOnly">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="3">
+       <widget class="QPushButton" name="pushButton_browseBru2">
+        <property name="toolTip">
+         <string>Browse for the raw Bruker2Bids data folder.</string>
+        </property>
+        <property name="text">
+         <string>Browse</string>
+        </property>
+       </widget>
+      </item>
+      <item row="12" column="2">
+       <widget class="QTextEdit" name="lineEdit_movMask">
+        <property name="maximumSize">
+         <size>
+          <width>16777215</width>
+          <height>100</height>
+         </size>
+        </property>
+        <property name="readOnly">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item row="16" column="2" colspan="2">
+       <widget class="QPushButton" name="pushButton_register">
         <property name="minimumSize">
          <size>
           <width>0</width>
@@ -433,20 +460,50 @@
          </size>
         </property>
         <property name="toolTip">
-         <string>Run bias-field correction only, without registration.</string>
+         <string>Run registration using the settings configured on this tab.</string>
         </property>
         <property name="styleSheet">
          <string notr="true"> QPushButton { background-color: #e67e22; color: white; } QPushButton:disabled { background-color: #a9713f; color: #cccccc; }</string>
         </property>
         <property name="text">
-         <string>Biascorrection ONLY</string>
+         <string>Register</string>
         </property>
        </widget>
       </item>
-      <item row="8" column="2" colspan="2">
-       <widget class="QSpinBox" name="spinBox_num_threads">
+      <item row="8" column="1">
+       <widget class="QLineEdit" name="lineEdit_14">
+        <property name="text">
+         <string>Num Threads</string>
+        </property>
+        <property name="readOnly">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item row="14" column="1">
+       <widget class="QCheckBox" name="checkBox_presurgery">
         <property name="toolTip">
-         <string>Number of CPU threads to use for registration (1–8).</string>
+         <string>Mark this session as the pre-surgery scan (affects how it's registered).</string>
+        </property>
+        <property name="text">
+         <string>Presurgery</string>
+        </property>
+       </widget>
+      </item>
+      <item row="5" column="2" colspan="2">
+       <widget class="QComboBox" name="comboBox_working_session">
+        <property name="toolTip">
+         <string>Which session (ses-*) of this animal to register.</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="2">
+       <widget class="QTextEdit" name="lineEdit_bru2_path">
+        <property name="maximumSize">
+         <size>
+          <width>16777215</width>
+          <height>70</height>
+         </size>
         </property>
        </widget>
       </item>
@@ -463,23 +520,23 @@
         </property>
        </widget>
       </item>
-      <item row="12" column="1">
-       <widget class="QLineEdit" name="lineEdit_11">
-        <property name="text">
-         <string>Moving Mask</string>
+      <item row="4" column="1">
+       <widget class="QCheckBox" name="checkBox_atlasmask">
+        <property name="toolTip">
+         <string>Restrict the registration metric to the atlas mask region instead of the whole brain volume.</string>
         </property>
-        <property name="readOnly">
+        <property name="text">
+         <string>Use Atlas Mask</string>
+        </property>
+        <property name="checked">
          <bool>true</bool>
         </property>
        </widget>
       </item>
-      <item row="6" column="1">
-       <widget class="QLineEdit" name="lineEdit_17">
-        <property name="text">
-         <string>Tasks</string>
-        </property>
-        <property name="readOnly">
-         <bool>true</bool>
+      <item row="6" column="2" colspan="2">
+       <widget class="QComboBox" name="comboBox_tasks">
+        <property name="toolTip">
+         <string>Anatomical view/orientation (coronal, sagittal, or axial) of the acquired scan to register.</string>
         </property>
        </widget>
       </item>
@@ -493,70 +550,13 @@
         </property>
        </widget>
       </item>
-      <item row="15" column="1">
-       <widget class="QCheckBox" name="checkBox_elastic">
-        <property name="toolTip">
-         <string>Use elastic (deformable) registration instead of rigid/affine.</string>
-        </property>
-        <property name="text">
-         <string>Elastic</string>
-        </property>
-        <property name="checked">
-         <bool>true</bool>
-        </property>
-       </widget>
-      </item>
-      <item row="7" column="2" colspan="2">
-       <widget class="QComboBox" name="comboBox_register_key">
-        <property name="toolTip">
-         <string>Which scan sequence (protocol name) to use for registration.</string>
-        </property>
-       </widget>
-      </item>
-      <item row="2" column="2">
-       <widget class="QTextEdit" name="lineEdit_base_path">
+      <item row="3" column="2">
+       <widget class="QTextEdit" name="lineEdit_atlas_path">
         <property name="maximumSize">
          <size>
           <width>16777215</width>
           <height>70</height>
          </size>
-        </property>
-       </widget>
-      </item>
-      <item row="0" column="1" colspan="3">
-       <widget class="QLineEdit" name="lineEdit_animalID">
-        <property name="styleSheet">
-         <string notr="true">color: rgb(224, 27, 36);</string>
-        </property>
-        <property name="text">
-         <string>Animal ID</string>
-        </property>
-        <property name="readOnly">
-         <bool>true</bool>
-        </property>
-       </widget>
-      </item>
-      <item row="5" column="1">
-       <widget class="QLineEdit" name="lineEdit_15">
-        <property name="text">
-         <string>Working Session</string>
-        </property>
-        <property name="readOnly">
-         <bool>true</bool>
-        </property>
-       </widget>
-      </item>
-      <item row="6" column="2" colspan="2">
-       <widget class="QComboBox" name="comboBox_tasks">
-        <property name="toolTip">
-         <string>Anatomical view/orientation (coronal, sagittal, or axial) of the acquired scan to register.</string>
-        </property>
-       </widget>
-      </item>
-      <item row="15" column="2" colspan="2">
-       <widget class="QPushButton" name="pushButton_paths">
-        <property name="text">
-         <string>Save  all paths</string>
         </property>
        </widget>
       </item>
