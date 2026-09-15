@@ -18,7 +18,7 @@ from ephys_utils.csd_widget import CSDWidget
 from ephys_utils.all_channels_spectrogram import AllChannelsSpectrogram
 from ephys_utils import theta_detection
 from gui_utils.busy_overlay import BusyOverlay
-from gui_utils.busy_worker import BusyWorker, show_worker_error, run_off_thread
+from gui_utils.busy_worker import BusyWorker, show_worker_error, run_off_thread, stop_worker
 from gui_utils.subprocess_worker import run_json_subprocess
 import pyqtgraph as pg
 from PySide6.QtWidgets import QApplication
@@ -216,6 +216,32 @@ class InitEphys:
         self.MW.ui.horizontalSlider_OtherRegions.valueChanged.connect(self.Visualisation3D.change_opacityOtherRegions)
         self.MW.ui.horizontalSlider_Background.valueChanged.connect(self.Visualisation3D.change_opacityBackground)
         self.MW.ui.tabWidget_ephys.setCurrentIndex(0)
+
+    def teardown(self):
+        """Called via MainWindow._call_module_teardown ('Ephys' is the
+        registered name for this instance) before dockWidget_ephys is
+        closed/deleteLater()d -- restart_gui runs
+        mw._teardown_registered_modules() ahead of mw._close_tool_docks(),
+        so this always runs before that dock (and the VTK plotter embedded
+        in it, self.Visualisation3D.plotter) is torn down.
+
+        Stops every BusyWorker this instance or VisEphys owns: each one is
+        parented somewhere under dockWidget_ephys (directly, or via self.MW
+        for the ones below) and its done/failed slot typically touches a
+        widget in that dock -- if the worker is still running when the dock
+        gets deleteLater()d, that slot (or pyvistaqt's own
+        parent().destroyed -> plotter.close() teardown, which runs
+        synchronously mid-destructor) can end up racing a half-destroyed
+        widget tree, which is what was freezing the GUI on close. See
+        stop_worker's own docstring -- none of these can actually be
+        cancelled, only kept from touching things that are about to be
+        destroyed."""
+        if getattr(self, 'VisEphys', None) is not None:
+            self.VisEphys.teardown()
+        for attr in ('_ripple_worker', '_theta_worker',
+                     '_spike_sorting_worker', '_clustering_worker'):
+            stop_worker(getattr(self, attr, None))
+            setattr(self, attr, None)
 
     def _set_spectrogram_log_axis(self, checked):
         """pushButton_axisLog: log or linear frequency axis on the spectrogram."""
@@ -447,13 +473,6 @@ class InitEphys:
 
             self.points_data.loc[channel_numb,'Channel Label'] = new_label
             self.points_data.loc[channel_numb,'Channel'] = new_idx
-            # flag this row as hand-corrected so a later reader can tell a
-            # judgement call from an atlas-assigned label -- see changeRegion's
-            # caller (fill_combobox lists the atlas's own nearest regions,
-            # this just records that one of them was picked over the atlas's)
-            if 'Manually Corrected' not in self.points_data.columns:
-                self.points_data['Manually Corrected'] = False
-            self.points_data.loc[channel_numb,'Manually Corrected'] = True
             #save back in excel
             df = pd.DataFrame(self.points_data)
             excel_path = os.path.join(os.path.join(self.session_path,"analysed"),self.mrid_info.mrid,'channel_atlas_coordinates.xlsx')
