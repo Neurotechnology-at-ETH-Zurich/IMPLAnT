@@ -652,10 +652,11 @@ class RenderingMri(Rendering):
         self.update_misalignment_guide_line()
         if hasattr(self, 'atlas_bregma_coords'):
             self.update_shank_angle_display()
-        if self.ui.checkBox_constraint_90deg.isChecked():
+        mode = self.shank_constraint.get(self.shank_number)
+        if mode == 'ap':
             self.update_oblique_coronal_view()
             self.update_oblique_coronal_crossing_line()
-        if self.ui.checkBox_constraint_90deg_coronal.isChecked():
+        if mode == 'rl':
             self.update_oblique_sagittal_view()
             self.update_oblique_sagittal_crossing_line()
 
